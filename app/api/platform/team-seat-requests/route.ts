@@ -30,7 +30,7 @@ export async function GET(req:Request){
   const seats=(await pool.query(
    "SELECT business_id,COUNT(*)::int AS count FROM business_team_seat_requests WHERE status='approved' GROUP BY business_id"
   )).rows;
-  const seatMap=new Map(seats.map((s:any)=>[s.business_id,s.count]));
+  const seatMap=new Map<string,number>(seats.map((s:any)=>[String(s.business_id),Number(s.count)] as [string,number]));
   const requests=rows.map((r:any)=>{
    let staff=0;try{staff=JSON.parse(r.studio_data||'{}')?.staff?.length||0;}catch{}
    return {id:r.id,businessId:r.business_id,businessName:r.business_name,slug:r.business_slug,
