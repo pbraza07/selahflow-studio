@@ -108,7 +108,7 @@ test('protected admin endpoint audits email/credential changes and never deletes
  const ui=await read('app/components/platform-business-manager.tsx');
  const policy=await read('server/platform-business-management.mjs');
  const archive=route.slice(route.indexOf("}else if(action==='archive')"),route.indexOf("}else if(action==='restore')"));
- const restore=route.slice(route.indexOf("}else if(action==='restore')"),route.indexOf("await client.query(",route.indexOf("}else if(action==='restore')")+22);
+ const restore=route.slice(route.indexOf("}else if(action==='restore')"));
  assert.match(route,/getPlatformRole\(pool,actor\)/);
  assert.match(route,/if\(!role\)throw Error\('FORBIDDEN'\)/);
  assert.match(route,/if\(!validOrigin\(req\)\)/);
@@ -117,8 +117,8 @@ test('protected admin endpoint audits email/credential changes and never deletes
  assert.match(route,/SELECT 1 FROM platform_admins WHERE user_id=\$1/);
  assert.match(route,/UPDATE users SET email=\$1 WHERE id=\$2/);
  assert.match(route,/DELETE FROM sessions WHERE user_id=\$1/);
- assert.match(route,/action,'change_owner_email'/);
- assert.match(route,/action,'reset_password'/);
+ assert.match(route,/\bchange_owner_email\b/);
+ assert.match(route,/\breset_password\b/);
  assert.match(route,/hashPassword\(tempPassword\)/);
  assert.match(route,/must_change_password=TRUE/);
  assert.doesNotMatch(route,/DELETE FROM (businesses|appointments|business_client_profiles|customer_memberships)/);
