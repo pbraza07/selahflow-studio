@@ -1,5 +1,6 @@
 import {db} from './database';
 import {getPool} from '../server/database.mjs';
+import {bookableTeamLimit} from '../server/team-seat-policy.mjs';
 import {appointmentData,overlaps,easternClock,bookingDateRange,computeDayAvailability,selectedSession,sessionsForDate,validateBookableSessions,validateExistingSessionReservations} from '../server/session-scheduling.mjs';
 import {validateBookingFields,sanitizeBookingAnswers} from '../server/booking-custom-fields.mjs';
 import {validateApprovalVisibleFields} from '../server/booking-approval-display.mjs';
@@ -21,14 +22,12 @@ if(b.action==='settings'){const c=b.config;
  validateBookingFields(c?.bookingCustomFields||[],c?.bookingPushFields||['customerName','services','date']);
  validateApprovalVisibleFields(c);
  if(!c||!Array.isArray(c.staff)||!Array.isArray(c.services)||c.staff.length>100||c.services.length>150)throw Error('Check team and service catalog.');
- const plan=await db().prepare('SELECT s.plan_code,s.status FROM business_subscriptions s JOIN businesses b ON b.id=s.business_id WHERE b.owner_id=?').bind(owner).first<{plan_code:string;status:string}>();
- const cap=plan?.status==='active'?({free:1,professional:3,business:10} as Record<string,number>)[plan.plan_code]||1:1;
- const oldTeam=Array.isArray(config.staff)?config.staff:[];
- if(c.staff.length>cap&&c.staff.some((member:any)=>!oldTeam.some((previous:any)=>previous.id===member.id)))throw Error('Team member limit reached for your subscription. Existing members remain; upgrade before adding another.');
+ // Team capacity is enforced inside the same advisory-locked transaction as
+ // subscription entitlements and admin-approved per-business extra seats.
  if(new Set(c.staff.map((p:any)=>p.id)).size!==c.staff.length||new Set(c.services.map((p:any)=>p.id)).size!==c.services.length)throw Error('Duplicate service or team IDs.');
  if(!c.staff.every((p:any)=>typeof p.id==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(p.id)&&typeof p.name==='string'&&p.name.trim()&&p.name.length<=100&&typeof p.role==='string'&&p.role.length<=100&&Array.isArray(p.services)&&p.services.every((id:any)=>c.services.some((v:any)=>v.id===id))))throw Error('Check team members and assigned services.');
  if(!c.services.every((p:any)=>typeof p.id==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(p.id)&&typeof p.name==='string'&&p.name.trim()&&p.name.length<=100&&typeof p.category==='string'&&p.category.trim()&&p.category.length<=60))throw Error('Check service types and names.');
- for(const id of oldTeam.filter((p:any)=>!c.staff.some((q:any)=>q.id===p.id)).map((p:any)=>p.id)){const pending=await db().prepare("SELECT 1 FROM appointments WHERE owner=? AND staff=? AND date>=? AND status NOT IN ('Cancelled','No-show','Completed') LIMIT 1").bind(owner,id,today()).first();if(pending)throw Error('Cancel or complete future bookings before removing this team member.');}
+ for(const id of (Array.isArray(config.staff)?config.staff:[]).filter((p:any)=>!c.staff.some((q:any)=>q.id===p.id)).map((p:any)=>p.id)){const pending=await db().prepare("SELECT 1 FROM appointments WHERE owner=? AND staff=? AND date>=? AND status NOT IN ('Cancelled','No-show','Completed') LIMIT 1").bind(owner,id,today()).first();if(pending)throw Error('Cancel or complete future bookings before removing this team member.');}
 if((c.city!==undefined&&(typeof c.city!=='string'||c.city.length>80))||(c.region!==undefined&&(typeof c.region!=='string'||c.region.length>80))||(typeof c.address!=='string'||c.address.length>350||/[<>\u0000-\u001f]/.test(c.address)))throw Error('Check business address and location.');
 if(!c?.name?.trim()||c.name.length>100||!Array.isArray(c.services)||!Array.isArray(c.staff)||!Number.isInteger(c.open)||!Number.isInteger(c.close)||c.open<0||c.close>24||c.open>=c.close||!Number.isInteger(c.buffer)||c.buffer<0||c.buffer>60||c.buffer%15!==0||!Number.isFinite(c.tax)||c.tax<0||c.tax>20)throw Error('Check business name, whole-hour opening times, 15-minute buffer and tax.');if(!c.staff.every((m:any)=>(m.notificationEmail===undefined||m.notificationEmail===''||validEmail(m.notificationEmail))&&(m.notificationPhone===undefined||m.notificationPhone===''||validE164(m.notificationPhone))))throw Error('Team notification contacts require valid email and phone in +1XXXXXXXXXX format.');
  if(c.bookingNotifyOwnerEmail!==undefined&&c.bookingNotifyOwnerEmail!==''&&!validEmail(c.bookingNotifyOwnerEmail))throw Error('Enter a valid owner notification email.');
@@ -50,6 +49,13 @@ try{
  await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
  const persisted=(await client.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0];
  const oldConfig=persisted?JSON.parse(persisted.data):config;
+ const planRow=(await client.query(
+  "SELECT s.plan_code,s.status,(SELECT COUNT(*)::int FROM business_team_seat_requests r WHERE r.business_id=b.id AND r.status='approved') AS approved_seats FROM businesses b LEFT JOIN business_subscriptions s ON s.business_id=b.id WHERE b.owner_id=$1",
+  [owner])).rows[0];
+ const effectiveCap=bookableTeamLimit(planRow?.plan_code,planRow?.status,planRow?.approved_seats||0);
+ const oldTeam=Array.isArray(oldConfig.staff)?oldConfig.staff:[];
+ if(c.staff.length>effectiveCap&&c.staff.some((member:any)=>!oldTeam.some((previous:any)=>previous.id===member.id)))
+  throw Error('Team member limit reached. Submit an ad hoc extra team member request in Settings → Team members and wait for platform administrator approval.');
  const reservationRows=(await client.query(
   "SELECT date,staff,start,duration,data,status FROM appointments WHERE owner=$1 AND status NOT IN ('Cancelled','No-show') AND data LIKE '%sessionId%'",
   [owner])).rows;
