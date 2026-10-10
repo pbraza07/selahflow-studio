@@ -1,6 +1,6 @@
 'use client';
 import {useMemo,useState} from 'react';
-import {Building2,Check,Copy,Eye,EyeOff,KeyRound,Pencil,Plus,RotateCcw,Search,ShieldAlert,Trash2,X} from 'lucide-react';
+import {Building2,Check,Copy,Eye,EyeOff,KeyRound,Mail,Pencil,Plus,RotateCcw,Search,ShieldAlert,Trash2,X} from 'lucide-react';
 import {BUSINESS_INDUSTRIES,US_STATES} from '../../lib/business-options';
 import type {BusinessSummary} from './platform-business-directory';
 
@@ -16,6 +16,7 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
  const [search,setSearch]=useState(''),[working,setWorking]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [credentials,setCredentials]=useState<{email:string;temporaryPassword:string;business:string;status:string;kind:'create'|'reset'}|null>(null);
  const [revealCredential,setRevealCredential]=useState(false),[resetting,setResetting]=useState<BusinessSummary|null>(null),[resetConfirmation,setResetConfirmation]=useState('');
+ const [changingEmail,setChangingEmail]=useState<BusinessSummary|null>(null),[newLoginEmail,setNewLoginEmail]=useState(''),[emailConfirmation,setEmailConfirmation]=useState(''),[oldEmailConfirmation,setOldEmailConfirmation]=useState('');
  const [removing,setRemoving]=useState<BusinessSummary|null>(null),[confirmation,setConfirmation]=useState('');
  const items=useMemo(()=>businesses.filter(b=>
   !search.trim()||[b.name,b.slug,b.owner_email,b.industry,b.city,b.status].join(' ').toLowerCase().includes(search.toLowerCase().trim())
@@ -70,14 +71,26 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
   }catch(e){setError((e as Error).message);}finally{setWorking(false);}
  }
  async function resetOwnerPassword(){
-  if(!resetting||!primary)return;
+  if(!resetting)return;
   setWorking(true);setError('');setNotice('');
   try{
-   const result=await post({action:'resetPassword',id:resetting.id,confirmName:resetConfirmation});
+   const result=await post({action:'resetPassword',id:resetting.id,confirmName:resetConfirmation,expectedEmail:resetting.owner_email});
    setCredentials({email:result.ownerEmail,temporaryPassword:result.temporaryPassword,
     business:resetting.name,status:resetting.status,kind:'reset'});
    setRevealCredential(false);setResetting(null);setResetConfirmation('');
    setNotice(result.message||'Temporary password generated. Existing sessions have been revoked.');
+   await onChanged();
+  }catch(e){setError((e as Error).message);}finally{setWorking(false);}
+ }
+ async function updateOwnerLoginEmail(){
+  if(!changingEmail)return;
+  setWorking(true);setError('');setNotice('');setCredentials(null);
+  try{
+   const result=await post({action:'changeOwnerEmail',id:changingEmail.id,
+    newEmail:newLoginEmail,expectedEmail:oldEmailConfirmation,confirmName:emailConfirmation});
+   setNotice('Owner login for '+changingEmail.name+' changed to '+result.ownerEmail+
+    '. All existing owner sessions were signed out. Inform the owner securely. No business data was changed.');
+   setChangingEmail(null);setNewLoginEmail('');setEmailConfirmation('');setOldEmailConfirmation('');
    await onChanged();
   }catch(e){setError((e as Error).message);}finally{setWorking(false);}
  }
@@ -91,7 +104,7 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
  return <section className="sf-platform-manage" id="manage-businesses" aria-label="Platform business administration">
   <header className="sf-platform-manage-head">
    <div><span className="sf-platform-eyebrow"><Building2 size={14}/> PLATFORM ADMINISTRATORS</span>
-    <h2>Manage businesses</h2><p>Create businesses, edit profiles, or remove them from public access. Removal is reversible and preserves bookings, clients, and financial records.</p></div>
+    <h2>Manage businesses</h2><p>Create businesses, edit profiles, or remove them from public access. Removal is reversible. Archived businesses retain their original owners, logins, branding, services, clients, bookings, session history and financial records.</p></div>
    <button className="primary" type="button" onClick={add}><Plus size={17}/> Add business</button>
   </header>
   {error&&<p className="sf-platform-error" role="alert">{error}</p>}
@@ -110,12 +123,12 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
   {mode&&<section id="sf-admin-business-form" className="sf-platform-business-editor">
    <header><h3>{mode==='create'?'Add a new business':'Edit business profile'}</h3><button className="outline" type="button" onClick={()=>{setMode(null);setError('')}} disabled={working}><X size={17}/> Close</button></header>
    <p>{mode==='create'?'Create a separate owner account and business workspace. Existing business accounts and data will remain untouched.':
-     'Business profile edits update the existing workspace; services, members, appointments and client data are preserved.'}</p>
+     'Business profile edits update the existing workspace; services, members, appointments and client data are preserved. To change the owner sign-in address, use Update login email in the business list.'}</p>
    <form onSubmit={save}>
     <div className="sf-platform-form-row"><label>Business name<input required maxLength={100} minLength={2} value={values.name} onChange={set('name')}/></label>
      <label>Business booking URL slug<input required maxLength={60} pattern="[a-z0-9][a-z0-9-]{1,58}[a-z0-9]" value={values.slug} onChange={set('slug')}/></label></div>
     {mode==='create'?<label>New owner email<input type="email" required maxLength={254} value={values.ownerEmail} onChange={set('ownerEmail')} placeholder="business.owner@example.com"/></label>:
-     <label>Business owner (unchanged)<input readOnly value={values.ownerEmail}/></label>}
+     <label>Registered owner login email (manage separately)<input readOnly value={values.ownerEmail}/></label>}
     <div className="sf-platform-form-row"><label>Business category<select value={values.industry} onChange={set('industry')}>{BUSINESS_INDUSTRIES.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
      <label>State / region<select value={values.region} onChange={set('region')}><option value="">Not specified</option>{US_STATES.map(([abbr,name])=><option key={abbr} value={name}>{name}</option>)}</select></label></div>
     <label>City<input maxLength={80} value={values.city} onChange={set('city')}/></label>
@@ -136,18 +149,43 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
   <div className="sf-platform-manage-search"><Search size={18}/><input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find business to edit, remove or restore" aria-label="Search businesses to manage"/>
    <span>{items.length} businesses</span></div>
   <div className="sf-platform-business-rows">{items.map(b=><article key={b.id} className="sf-platform-business-row">
-   <div><strong>{b.name}</strong><small><b>Owner email:</b> {b.owner_email}</small><small>/{b.slug} · {b.industry}</small><small>Password: protected · existing password cannot be displayed</small></div>
+   <div><strong>{b.name}</strong><small><b>Owner login email:</b> {b.owner_email}</small>
+    <small>/{b.slug} · {b.industry}</small><small>Password: protected · existing password cannot be displayed</small>
+    {b.status==='archived'&&<small><b>Archived — historical business data retained for restoration</b>{b.archived_at?' · '+new Date(b.archived_at).toLocaleDateString():''}</small>}
+   </div>
    <span className={'sf-platform-business-status status-'+b.status}>{b.status}</span>
    <div className="sf-platform-business-actions">
-    {primary&&<button type="button" className="outline" disabled={working}
+    <button type="button" className="outline" disabled={working}
+     onClick={()=>{setChangingEmail(b);setNewLoginEmail(b.owner_email);setEmailConfirmation('');setOldEmailConfirmation('');setCredentials(null);setError('');}}>
+     <Mail size={15}/> Update login email</button>
+    <button type="button" className="outline" disabled={working}
      onClick={()=>{setResetting(b);setResetConfirmation('');setCredentials(null);setRevealCredential(false);setError('');}}>
-      <KeyRound size={15}/> Reset password</button>}
+     <KeyRound size={15}/> Reset password</button>
     {b.status==='archived'?<button type="button" className="outline" disabled={working} onClick={()=>void restore(b)}><RotateCcw size={15}/> Restore</button>:
      <><button type="button" className="outline" onClick={()=>edit(b)} disabled={working}><Pencil size={15}/> Edit</button>
       <button type="button" className="outline sf-platform-remove-btn" disabled={working} onClick={()=>{setRemoving(b);setConfirmation('');setError('')}}><Trash2 size={15}/> Remove</button></>}
    </div>
   </article>)}</div>
   {!items.length&&<p>No businesses match the search.</p>}
+  {changingEmail&&<div className="sf-platform-confirm-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!working)setChangingEmail(null)}}>
+   <section role="dialog" aria-modal="true" aria-labelledby="sf-platform-email-title" className="sf-platform-confirm">
+    <h3 id="sf-platform-email-title"><Mail size={20}/> Update owner's login email</h3>
+    <p><b>Business:</b> {changingEmail.name}</p>
+    <p>The new email will be used for owner sign-in. All existing sign-in sessions will be revoked. The original business workspace, bookings, customers, staff, branding, subscription and archived history will stay attached to the same owner account.</p>
+    <div className="sf-platform-confirm-fields">
+     <label>New owner login email<input type="email" autoComplete="off" required maxLength={254} value={newLoginEmail} onChange={e=>setNewLoginEmail(e.target.value)} placeholder="owner@example.com"/></label>
+     <label>Confirm current owner email<input type="email" autoComplete="off" value={oldEmailConfirmation} onChange={e=>setOldEmailConfirmation(e.target.value)} placeholder={changingEmail.owner_email}/></label>
+     <label>Type the business name to confirm<input value={emailConfirmation} onChange={e=>setEmailConfirmation(e.target.value)} placeholder={changingEmail.name}/></label>
+    </div>
+    <p><small>Inform the owner of the updated login email through a trusted channel. This change does not automatically send an email or reveal their password.</small></p>
+    <div><button type="button" className="outline" onClick={()=>setChangingEmail(null)} disabled={working}>Cancel</button>
+     <button type="button" className="primary" disabled={working||emailConfirmation!==changingEmail.name||
+      oldEmailConfirmation.trim().toLowerCase()!==changingEmail.owner_email.toLowerCase()||
+      newLoginEmail.trim().toLowerCase()===changingEmail.owner_email.toLowerCase()||
+      !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(newLoginEmail.trim())}
+      onClick={()=>void updateOwnerLoginEmail()}><Mail size={16}/>{working?'Updating…':'Update owner login email'}</button></div>
+   </section>
+  </div>}
   {resetting&&<div className="sf-platform-confirm-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!working)setResetting(null)}}>
    <section role="dialog" aria-modal="true" aria-labelledby="sf-platform-reset-title" className="sf-platform-confirm">
     <h3 id="sf-platform-reset-title"><KeyRound size={20}/> Reset owner password?</h3>
@@ -161,11 +199,12 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
   </div>}
   {removing&&<div className="sf-platform-confirm-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!working)setRemoving(null)}}>
    <section role="dialog" aria-modal="true" aria-labelledby="sf-platform-archive-title" className="sf-platform-confirm">
-    <h3 id="sf-platform-archive-title"><ShieldAlert size={20}/> Remove {removing.name}?</h3>
-    <p>This business will be hidden from public discovery and booking. Customer appointments, history, business settings, and payment records will not be deleted. Active or pending recurring payments must be resolved before removal.</p>
+    <h3 id="sf-platform-archive-title"><ShieldAlert size={20}/> Archive {removing.name}?</h3>
+    <p><b>This does not permanently delete the business.</b> Its original owner account, services, team, calendar, client records, attendance, booking questions, appointments, memberships, transactions and branding remain in the database. Public discovery and booking access are disabled while archived.</p>
+    <p>Restore the same business later to recover its history and settings, then review and reactivate it. Active or pending recurring payments must be resolved before archiving.</p>
     <label>Type the exact business name to confirm<input autoFocus value={confirmation} onChange={e=>setConfirmation(e.target.value)}/></label>
     <div><button type="button" className="outline" onClick={()=>setRemoving(null)} disabled={working}>Cancel</button>
-     <button type="button" className="primary" disabled={working||confirmation!==removing.name} onClick={()=>void archive()}><Trash2 size={16}/> {working?'Removing…':'Remove business'}</button></div>
+     <button type="button" className="primary" disabled={working||confirmation!==removing.name} onClick={()=>void archive()}><Trash2 size={16}/> {working?'Archiving…':'Archive business (keep history)'}</button></div>
    </section>
   </div>}
  </section>;

@@ -67,6 +67,6 @@ test('platform business CRUD endpoints are authenticated, origin checked, audite
  assert.match(dashboard,/PlatformBusinessManager/);
  assert.match(ui,/Add business/);
  assert.match(ui,/Save business changes/);
- assert.match(ui,/Remove business/);
+ assert.match(ui,/Archive business/);
  assert.match(ui,/Restore/);
 });

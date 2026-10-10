@@ -6,7 +6,7 @@ import {getPlatformRole} from '../../../../../server/platform-roles.mjs';
 import {isReservedBusinessSlug} from '../../../../../server/route-slugs.mjs';
 import {BUSINESS_INDUSTRIES,canonicalState} from '../../../../../lib/business-options';
 import {defaultSettings} from '../../../../../lib/defaults';
-import {validateManagedBusiness,canChangeManagedStatus,canArchiveBusiness} from '../../../../../server/platform-business-management.mjs';
+import {validateManagedBusiness,canChangeManagedStatus,canArchiveBusiness,validateEmailChangeConfirmation} from '../../../../../server/platform-business-management.mjs';
 
 export const runtime='nodejs';export const dynamic='force-dynamic';
 const h={'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'};
@@ -31,7 +31,7 @@ export async function POST(req:Request){
   if(!role)throw Error('FORBIDDEN');
   const raw=await req.text();if(raw.length>8000)throw Error('Invalid business request size.');
   const payload=JSON.parse(raw),action=payload.action;
-  if(!['create','edit','archive','restore','resetPassword'].includes(action))throw Error('Invalid business operation.');
+  if(!['create','edit','archive','restore','resetPassword','changeOwnerEmail'].includes(action))throw Error('Invalid business operation.');
   client=await pool.connect();
   await client.query('BEGIN');
   if(action==='create'){
@@ -66,8 +66,30 @@ export async function POST(req:Request){
   const loaded=await client.query('SELECT * FROM businesses WHERE id=$1 FOR UPDATE',[payload.id]);
   const before=loaded.rows[0];if(!before)throw Error('Business not found.');
   let after:any={...before},kind=action;
+  if(action==='changeOwnerEmail'){
+   // A platform administrator may update a business owner's sign-in address,
+   // but cannot change credentials for any platform administrator account.
+   if(payload.confirmName!==before.name)throw Error('Confirm the exact business name before changing the owner login.');
+   const target=(await client.query('SELECT id,email FROM users WHERE id=$1 FOR UPDATE',[before.owner_id])).rows[0];
+   if(!target)throw Error('Business owner account not found.');
+   const privileged=(await client.query('SELECT 1 FROM platform_admins WHERE user_id=$1',[target.id])).rowCount;
+   if(privileged)throw Error('Platform administrator login emails cannot be changed through business management.');
+   const {oldEmail,newEmail}=validateEmailChangeConfirmation(payload,before.name,target.email);
+   const taken=await client.query('SELECT 1 FROM users WHERE lower(email)=lower($1) AND id<>$2',[newEmail,target.id]);
+   if(taken.rowCount)throw Error('The new login email is already registered to another account.');
+   await client.query('UPDATE users SET email=$1 WHERE id=$2',[newEmail,target.id]);
+   // Expire old sign-ins. The owner must sign in again using the new email,
+   // while keeping the same user ID and all linked business records.
+   await client.query('DELETE FROM sessions WHERE user_id=$1',[target.id]);
+   await client.query('INSERT INTO platform_business_audit(id,business_id,actor_id,action,before_record,after_record) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb)',
+    [randomUUID(),before.id,actor,'change_owner_email',
+     JSON.stringify({owner_id:target.id,email:oldEmail}),
+     JSON.stringify({owner_id:target.id,email:newEmail,sessions_revoked:true,owner_identity_preserved:true})]);
+   await client.query('COMMIT');client.release();client=null;
+   return Response.json({ok:true,ownerEmail:newEmail,previousEmail:oldEmail,
+    message:'Owner login email updated. The owner was signed out on every device and must use the new email to sign in. All business records were preserved. Inform the owner securely.'},{headers:h});
+  }
   if(action==='resetPassword'){
-   if(role!=='primary')throw Error('Only the primary platform administrator may reset business owner passwords.');
    if(payload.confirmName!==before.name)throw Error('Confirm the exact business name before resetting the owner password.');
    const target=(await client.query(
     'SELECT u.id,u.email,u.must_change_password FROM users u WHERE u.id=$1 FOR UPDATE',
@@ -75,6 +97,7 @@ export async function POST(req:Request){
    if(!target)throw Error('Business owner account not found.');
    const platformRole=(await client.query('SELECT role FROM platform_admins WHERE user_id=$1',[target.id])).rows[0]?.role;
    if(platformRole)throw Error('Administrator accounts must change their own passwords through account settings.');
+   if(payload.expectedEmail!==target.email)throw Error('Owner email has changed. Refresh the business directory before resetting credentials.');
    const tempPassword=randomBytes(24).toString('base64url');
    await client.query('UPDATE users SET password_hash=$1,must_change_password=TRUE WHERE id=$2',
     [hashPassword(tempPassword),target.id]);
@@ -118,23 +141,31 @@ export async function POST(req:Request){
    const subscribed=!!platformSub.rows[0]?.stripe_subscription_id&&platformSub.rows[0]?.status==='active';
    if(!canArchiveBusiness({members:pay.rows[0]?.count||0,subscribed}))
     throw Error('Cannot remove a business with active or pending paid memberships/subscriptions. Resolve recurring billing first.');
+   // Archive instead of deleting. Re-registration uses the same unchanged
+   // owner ID, business ID, URL, settings, customers and historical records.
+   const snapshot=(await client.query(
+    "SELECT (SELECT COUNT(*)::int FROM appointments WHERE owner=$1) AS appointments, (SELECT COUNT(*)::int FROM business_client_profiles WHERE owner=$1) AS client_profiles, (SELECT COUNT(*)::int FROM booking_requests WHERE business_id=$2) AS booking_requests, (SELECT COUNT(*)::int FROM customer_memberships WHERE business_id=$2) AS memberships, (SELECT COUNT(*)::int FROM settings WHERE owner=$1) AS settings_records",
+    [before.owner_id,before.id])).rows[0];
    const changed=await client.query(
-    "UPDATE businesses SET status='archived',is_listed=FALSE,listing_requested=FALSE,updated_at=now() WHERE id=$1 RETURNING *",
+    "UPDATE businesses SET status='archived',is_listed=FALSE,listing_requested=FALSE,archived_at=now(),restored_at=NULL,updated_at=now() WHERE id=$1 RETURNING *",
     [before.id]);after=changed.rows[0];
+   after.archive_record_counts=snapshot;
   }else if(action==='restore'){
    if(before.status!=='archived')throw Error('Only archived businesses can be restored.');
    // Restore privately as suspended, so no public booking is re-enabled
    // before the platform administrator reviews the old record.
    const changed=await client.query(
-    "UPDATE businesses SET status='suspended',is_listed=FALSE,listing_requested=FALSE,updated_at=now() WHERE id=$1 RETURNING *",
+    "UPDATE businesses SET status='suspended',is_listed=FALSE,listing_requested=FALSE,restored_at=now(),archived_at=NULL,updated_at=now() WHERE id=$1 RETURNING *",
     [before.id]);after=changed.rows[0];
   }
   await client.query(
    'INSERT INTO platform_business_audit(id,business_id,actor_id,action,before_record,after_record) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb)',
-   [randomUUID(),before.id,actor,kind,JSON.stringify(loggable(before)),JSON.stringify(loggable(after))]);
+   [randomUUID(),before.id,actor,kind,JSON.stringify(loggable(before)),JSON.stringify({
+     ...loggable(after),...(action==='archive'?{retained_record_counts:after.archive_record_counts,archive_method:'non_destructive_status_change'}:{})
+   })]);
   await client.query('COMMIT');client.release();client=null;
   return Response.json({ok:true,business:loggable(after),
-   message:action==='archive'?'Business removed from public access; records retained.':action==='restore'?'Business restored as suspended. Review and reactivate when ready.':'Business information saved.'},{headers:h});
+   message:action==='archive'?'Business archived, not deleted. All business data and history remain stored for future restoration.':action==='restore'?'Business restored with its original owner, settings, services, customers and history. Review and reactivate when ready.':'Business information saved.'},{headers:h});
  }catch(e){
   if(client){try{await client.query('ROLLBACK')}catch{}client.release();}
   if((e as {code?:string})?.code==='23505')return Response.json({error:'Business URL or owner email is already in use.'},{status:409,headers:h});

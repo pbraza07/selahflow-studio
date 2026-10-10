@@ -32,9 +32,10 @@ test('password rotation migration flags owners without altering existing account
   assert.equal((await db.query("SELECT must_change_password FROM users WHERE id='owner1'")).rows[0].must_change_password,false);
  }finally{await db.close();}
 });
-test('only primary admins can reset business owner credentials and sessions are revoked',async()=>{
+test('platform admins can reset a business owner account but not platform admin credentials, and sessions are revoked',async()=>{
  const route=await read('app/api/platform/businesses/manage/route.ts');
- assert.match(route,/if\(role!=='primary'\)/);
+ assert.match(route,/getPlatformRole\(pool,actor\)/);
+ assert.match(route,/if\(!role\)throw Error\('FORBIDDEN'\)/);
  assert.match(route,/payload.confirmName!==before.name/);
  assert.match(route,/randomBytes\(24\)/);
  assert.match(route,/hashPassword\(tempPassword\)/);
@@ -42,6 +43,7 @@ test('only primary admins can reset business owner credentials and sessions are 
  assert.match(route,/DELETE FROM sessions WHERE user_id=\$1/);
  assert.match(route,/INSERT INTO platform_business_audit/);
  assert.match(route,/Administrator accounts must change their own passwords/);
+ assert.match(route,/payload\.expectedEmail!==target\.email/);
  assert.doesNotMatch(route,/SELECT [^;\n]*password_hash AS password/);
  assert.doesNotMatch(route,/return Response\.json\(\{[^}]*password_hash/);
 });

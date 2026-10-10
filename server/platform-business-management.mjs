@@ -26,3 +26,20 @@ export function canChangeManagedStatus(role,prior,next){
 export function canArchiveBusiness({members=0,subscribed=false}){
  return Number(members)<=0&&subscribed!==true;
 }
+
+export function validateOwnerLoginEmail(input){
+ if(typeof input!=='string')throw Error('Enter a valid owner login email.');
+ const email=input.trim().toLowerCase();
+ if(email.length<5||email.length>254||! /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)||
+    /[\u0000-\u001f\u007f]/.test(email))throw Error('Enter a valid owner login email.');
+ return email;
+}
+export function validateEmailChangeConfirmation({confirmName,expectedEmail,newEmail},businessName,registeredEmail){
+ if(confirmName!==businessName)throw Error('Confirm the exact business name before changing the owner login.');
+ const current=validateOwnerLoginEmail(registeredEmail);
+ if(typeof expectedEmail!=='string'||validateOwnerLoginEmail(expectedEmail)!==current)
+  throw Error('Owner email has changed. Refresh the business directory before trying again.');
+ const next=validateOwnerLoginEmail(newEmail);
+ if(next===current)throw Error('The new login email must differ from the current email.');
+ return {oldEmail:current,newEmail:next};
+}
