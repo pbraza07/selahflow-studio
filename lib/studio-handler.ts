@@ -66,7 +66,7 @@ try{
   const key=a.date+'|'+a.staff;
   if(!cache.has(key))cache.set(key,sessionsForDate(c,a.date,a.staff));
   const ownSessionId=appointmentData(a).sessionId;
-  if(cache.get(key).some(session=>
+  if(cache.get(key).some((session:any)=>
     ownSessionId!==session.id&&overlaps(
       session.start,session.duration+c.buffer,
       Number(a.start),Number(a.duration)+c.buffer)))
