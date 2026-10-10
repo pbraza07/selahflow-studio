@@ -1575,3 +1575,60 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
  .app-shell[data-selah-theme] .sf-session-capacity-preserved{padding:11px}
  .app-shell[data-selah-theme] .sf-session-capacity-preserved input[type="number"]{font-size:16px}
 }
+
+
+/* SelahFlow v1.3.28 — the branded business identity card returns to its own
+   public business homepage, with keyboard/touch accessibility on all screens. */
+.app-shell[data-selah-theme] .sidebar a.studio-switch-link{
+ display:flex;align-items:center;gap:10px;min-width:0;
+ color:var(--sf-on-header)!important;
+ background:var(--sf-header)!important;
+ border:1px solid var(--sf-on-header)!important;
+ text-decoration:none!important;cursor:pointer;
+ transition:box-shadow .18s ease,transform .18s ease;
+ -webkit-tap-highlight-color:transparent;
+}
+.app-shell[data-selah-theme] .sidebar a.studio-switch-link .studio-switch-text{
+ min-width:0;flex:1;display:grid;gap:3px;
+}
+.app-shell[data-selah-theme] .sidebar a.studio-switch-link b{
+ display:block;color:var(--sf-on-header)!important;
+ overflow-wrap:anywhere;font-size:13px;line-height:1.35;
+}
+.app-shell[data-selah-theme] .sidebar a.studio-switch-link small{
+ display:block;color:var(--sf-on-header)!important;opacity:.85;
+ font-size:11px;line-height:1.4;
+}
+.app-shell[data-selah-theme] .sidebar a.studio-switch-link .studio-switch-go{
+ flex-shrink:0;color:var(--sf-on-header)!important;
+ opacity:.85;transition:transform .18s ease;
+}
+.app-shell[data-selah-theme] .sidebar a.studio-switch-link:hover{
+ box-shadow:inset 0 0 0 2px var(--sf-on-header)!important;
+}
+.app-shell[data-selah-theme] .sidebar a.studio-switch-link:hover .studio-switch-go{
+ transform:translate(2px,-2px);opacity:1;
+}
+.app-shell[data-selah-theme] .sidebar a.studio-switch-link:focus-visible{
+ outline:3px solid var(--sf-on-header)!important;
+ outline-offset:4px;
+}
+.app-shell[data-selah-theme] .sidebar a.studio-switch-link:active{
+ transform:scale(.99);
+}
+.app-shell[data-selah-theme] .sidebar a.studio-switch-link img{
+ flex-shrink:0;max-width:40px;max-height:40px;
+}
+@media(max-width:750px){
+ .app-shell[data-selah-theme] .sidebar a.studio-switch-link{
+  min-height:72px;gap:8px;padding:10px;
+ }
+ .app-shell[data-selah-theme] .sidebar a.studio-switch-link b{font-size:12px}
+ .app-shell[data-selah-theme] .sidebar a.studio-switch-link small{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ .app-shell[data-selah-theme] .sidebar a.studio-switch-link,
+ .app-shell[data-selah-theme] .sidebar a.studio-switch-link .studio-switch-go{
+  transition:none;
+ }
+}
