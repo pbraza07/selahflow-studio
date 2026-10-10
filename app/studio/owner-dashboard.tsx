@@ -66,7 +66,8 @@ function openSessionReschedule(occurrence:Any,fromCalendar=false){
  setRescheduling({sessionId:occurrence.id,seriesId:occurrence.seriesId||occurrence.id,
   sourceDate:occurrence.date,expectedStart:occurrence.start,expectedStaff:occurrence.staff,
   expectedService:occurrence.service,date:occurrence.date,start:occurrence.start,
-  staff:occurrence.staff,service:occurrence.service,capacity:occurrence.capacity});
+  staff:occurrence.staff,service:occurrence.service,
+  expectedCapacity:occurrence.capacity,capacity:occurrence.capacity,capacityEdited:false});
  if(fromCalendar){setSettingsTab('sessions');setView('Settings');}
 }
 async function saveSessionReschedule(){
@@ -77,12 +78,14 @@ async function saveSessionReschedule(){
   setRescheduleError('Choose a valid service and team member.');return;
  }
  const count=sessionBookings(rescheduling.sessionId);
- if(rescheduling.capacity<count){
+ const capacity=rescheduling.capacityEdited?rescheduling.capacity:rescheduling.expectedCapacity;
+ if(capacity<count){
   setRescheduleError('There are '+count+' confirmed customers. Session capacity must be at least '+count+'.');return;
  }
  const message='Reschedule this session to '+rescheduling.date+' at '+timeLabel(rescheduling.start)+
   ' Eastern with '+destinationStaff.name+' for '+destinationService.name+'?\n\n'+
-  count+' confirmed customer(s) will keep their booking IDs and original customer answers. Pending requests will move too. Payments are not modified.\n\nSave other business settings first; this change takes effect immediately.';
+  count+' confirmed customer(s) will keep their booking IDs and original customer answers. Pending requests will move too. Payments are not modified.\n\n'+
+  (rescheduling.capacityEdited?'Capacity will be '+capacity+' seats.':'All '+rescheduling.expectedCapacity+' total seats and remaining availability will stay exactly the same.')+'\n\nSave other business settings first; this change takes effect immediately.';
  if(!window.confirm(message))return;
  setRescheduleBusy(true);setRescheduleError('');
  try{
@@ -95,7 +98,7 @@ async function saveSessionReschedule(){
   await refresh();
   setRescheduling(null);
   setDate(rescheduling.date);
-  setToast('Session updated · '+result.confirmedCustomersRetained+' confirmed customer(s) retained · '+
+  setToast('Session transferred · '+result.seatsAfter?.remaining+'/'+result.seatsAfter?.capacity+' slots left · '+result.confirmedCustomersRetained+' confirmed customer(s) retained · '+
    result.pendingRequestsRetained+' pending request(s) retained. Notify customers of their new schedule.');
   window.dispatchEvent(new Event('selahflow:booking-reviewed'));
  }catch(error){setRescheduleError((error as Error).message);}
@@ -244,11 +247,21 @@ return <div className="app-shell" data-selah-theme="true" style={{...themeStyles
     <label>Assigned team member<select value={rescheduling.staff} onChange={e=>setRescheduling((v:Any)=>({...v,staff:e.target.value}))}>
      {config.staff.filter((member:Any)=>member.services.includes(rescheduling.service)).map((member:Any)=><option key={member.id} value={member.id}>{member.name}</option>)}
     </select></label>
-    <label>Total customer capacity<input type="number" min={1} max={100} value={rescheduling.capacity} onChange={e=>setRescheduling((v:Any)=>({...v,capacity:Number(e.target.value)}))}/></label>
+    <div className="sf-session-capacity-preserved">
+     <b>Session capacity: {rescheduling.expectedCapacity} total seats</b>
+     <small>Moving a session to another team member keeps the same capacity, booked customers and remaining slots.</small>
+     <label className="sf-session-capacity-edit-toggle"><input type="checkbox" checked={rescheduling.capacityEdited===true}
+      onChange={e=>setRescheduling((v:Any)=>({...v,capacityEdited:e.target.checked,
+       capacity:e.target.checked?v.capacity:v.expectedCapacity}))}/>
+      <span>Change customer capacity separately</span>
+     </label>
+     {rescheduling.capacityEdited&&<label>New total customer capacity<input type="number" min={1} max={100}
+      value={rescheduling.capacity} onChange={e=>setRescheduling((v:Any)=>({...v,capacity:Number(e.target.value)}))}/></label>}
+    </div>
    </div>
    <div className="sf-session-retained-summary"><Users size={16}/>
     <span><strong>{sessionBookings(rescheduling.sessionId)} confirmed customers retained</strong>
-     · {Math.max(0,rescheduling.capacity-sessionBookings(rescheduling.sessionId))}/{rescheduling.capacity} seats available after this change</span></div>
+     · {Math.max(0,(rescheduling.capacityEdited?rescheduling.capacity:rescheduling.expectedCapacity)-sessionBookings(rescheduling.sessionId))}/{rescheduling.capacityEdited?rescheduling.capacity:rescheduling.expectedCapacity} slots left after transfer</span></div>
    {rescheduleError&&<p className="sf-session-reschedule-error" role="alert">{rescheduleError}</p>}
    <div className="sf-session-reschedule-actions">
     <button type="button" className="primary" disabled={rescheduleBusy} onClick={()=>void saveSessionReschedule()}>
@@ -256,7 +269,7 @@ return <div className="app-shell" data-selah-theme="true" style={{...themeStyles
     </button>
     <button type="button" className="outline" disabled={rescheduleBusy} onClick={()=>setRescheduling(null)}>Cancel</button>
    </div>
-   <p className="sf-session-reschedule-footnote">Changes take effect immediately. Customers are not automatically emailed by this action; let them know about new session times separately. This does not change or refund payments.</p>
+   <p className="sf-session-reschedule-footnote">Session seat counts belong to the original session ID, not the assigned coach. Capacity changes only when you explicitly choose to edit it. Customers are not automatically emailed; inform them of changed dates, times, or coaches. Payments are not changed.</p>
   </section>}
  </div>)}
  <p className="muted sf-session-save-hint">Use <b>Reschedule · keep customers</b> to change an already-booked date, time, service, assigned team member or capacity without losing customers. That operation saves immediately and keeps each booking linked to the same session. Use <b>Save business settings</b> below for other session configuration changes. Recurring reschedules change only the selected date; other occurrences remain unchanged.</p>
