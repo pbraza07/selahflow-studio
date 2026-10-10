@@ -2,7 +2,8 @@ import {randomUUID} from 'node:crypto';
 import {getPool} from './database.mjs';
 import {
  appointmentData,activeAppointment,overlaps,easternClock,nextQuarterHour,
- sessionsForDate,validateBookableSessions,validateExistingSessionReservations
+ sessionsForDate,validateBookableSessions,validateExistingSessionReservations,
+ bookedSessionCount,sessionRemaining
 } from './session-scheduling.mjs';
 import {sessionInstances,originalSessionOccurrence} from './session-recurrence.mjs';
 
@@ -16,7 +17,7 @@ const validDate=date=>typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date)&&
 const conflict=message=>{const error=new Error(message);error.status=409;return error;};
 export function validateSessionMoveInput(raw){
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('Enter a valid session change.');
- const {sessionId,sourceDate,date,staff,service,start,capacity,expectedStart,expectedStaff,expectedService}=raw;
+ const {sessionId,sourceDate,date,staff,service,start,capacity,expectedStart,expectedStaff,expectedService,expectedCapacity,capacityEdited}=raw;
  if(typeof sessionId!=='string'||!/^[a-zA-Z0-9_-]{1,90}$/.test(sessionId)||
     !validDate(sourceDate)||!validDate(date)||typeof staff!=='string'||!staff||
     typeof service!=='string'||!service||
@@ -24,13 +25,27 @@ export function validateSessionMoveInput(raw){
     !Number.isInteger(capacity)||capacity<1||capacity>100||
     !Number.isInteger(expectedStart)||expectedStart<0||expectedStart>=1440||
     typeof expectedStaff!=='string'||!expectedStaff||
-    typeof expectedService!=='string'||!expectedService)
+    typeof expectedService!=='string'||!expectedService||
+    (expectedCapacity!==undefined&&(!Number.isInteger(expectedCapacity)||expectedCapacity<1||expectedCapacity>100))||
+    (capacityEdited!==undefined&&typeof capacityEdited!=='boolean'))
   throw Error('Choose a valid session, date, time, service, team member and 1–100 customers.');
- return {sessionId,sourceDate,date,staff,service,start,capacity,expectedStart,expectedStaff,expectedService};
+ return {sessionId,sourceDate,date,staff,service,start,capacity,expectedStart,expectedStaff,expectedService,
+  ...(expectedCapacity!==undefined?{expectedCapacity}:{}),
+  ...(capacityEdited!==undefined?{capacityEdited}:{})};
+}
+/** Reassigning a coach must not reset capacity. New capacity is accepted only
+ * if the owner explicitly switched on Edit capacity. Older clients that lack
+ * this flag retain the former behavior so existing integrations still work.
+ */
+export function transferredSessionCapacity(current,move){
+ if(move.expectedCapacity!==undefined&&move.expectedCapacity!==current.capacity)
+  throw conflict('Session capacity changed since the editor was opened. Refresh and try again.');
+ return move.capacityEdited===false?current.capacity:move.capacity;
 }
 export function rescheduledConfig(config,current,move){
  const next=structuredClone(config);
- const destination={date:move.date,start:move.start,staff:move.staff,service:move.service,capacity:move.capacity};
+ const destination={date:move.date,start:move.start,staff:move.staff,service:move.service,
+  capacity:transferredSessionCapacity(current,move)};
  const original=originalSessionOccurrence(config,current.id);
  if(!original)throw conflict('Session was changed. Refresh and try again.');
  if(original.recurring){
@@ -75,7 +90,8 @@ export async function rescheduleSessionForOwner({owner,input,pool=getPool()}){
   const config=JSON.parse(persisted.data);
   const current=sessionInstances(config,move.sourceDate).find(s=>s.id===move.sessionId);
   if(!current)throw conflict('Session is no longer on that date. Refresh your calendar and try again.');
-  if(current.start!==move.expectedStart||current.staff!==move.expectedStaff||current.service!==move.expectedService)
+  if(current.start!==move.expectedStart||current.staff!==move.expectedStaff||current.service!==move.expectedService||
+    (move.expectedCapacity!==undefined&&move.expectedCapacity!==current.capacity))
    throw conflict('Session details have changed. Refresh your calendar before rescheduling.');
   const today=easternClock(),currentService=(config.services||[]).find(s=>s.id===current.service);
   const service=(config.services||[]).find(s=>s.id===move.service);
@@ -105,10 +121,16 @@ export async function rescheduleSessionForOwner({owner,input,pool=getPool()}){
    [owner,move.sourceDate,move.date])).rows;
   const impacted=existing.filter(a=>a.date===move.sourceDate&&
    getData(a).sessionId===current.id&&activeAppointment(a));
+  // Capacity belongs to the session occurrence, never to a team member.
+  // Count bookings by stable session ID independently of the staff filter.
+  const originalCapacity=current.capacity;
+  const originalBooked=bookedSessionCount(impacted,current.id);
+  const originalRemaining=sessionRemaining(current,impacted);
+  const destinationCapacity=transferredSessionCapacity(current,move);
   if(impacted.some(a=>['Completed','Checked in'].includes(a.status)))
    throw conflict('A customer has already checked in or completed this session. Keep attendance history unchanged.');
-  if(impacted.length>move.capacity)
-   throw conflict('This session has '+impacted.length+' confirmed customers. Capacity must remain at least '+impacted.length+'.');
+  if(originalBooked>destinationCapacity)
+   throw conflict('This session has '+originalBooked+' confirmed customers. Capacity must remain at least '+originalBooked+'.');
   const movedIds=new Set(impacted.map(a=>a.id));
   const remaining=existing.filter(a=>!movedIds.has(a.id));
   validateExistingSessionReservations(config,next,remaining);
@@ -128,6 +150,14 @@ export async function rescheduleSessionForOwner({owner,input,pool=getPool()}){
   const from={date:current.date,staff:current.staff,start:current.start,service:current.service,duration:currentService.duration};
   const to={date:move.date,staff:move.staff,start:move.start,service:move.service,duration:service.duration};
 
+  // The updated session retains exactly the same booking IDs and bookings;
+  // changing only the assigned staff cannot alter booked/available seats.
+  const targetCount=bookedSessionCount(impacted,target.id);
+  const newRemaining=Math.max(0,target.capacity-targetCount);
+  if(targetCount!==originalBooked||
+    (move.capacityEdited===false&&
+     (target.capacity!==originalCapacity||newRemaining!==originalRemaining)))
+   throw conflict('Session seats could not be preserved. Refresh and try again.');
   for(const appointment of impacted){
    const data=getData(appointment);
    const updated={...data,services:[service.name],serviceIds:[service.id],
@@ -147,15 +177,26 @@ export async function rescheduleSessionForOwner({owner,input,pool=getPool()}){
     "UPDATE booking_requests SET date=$1,staff_id=$2,start_minute=$3,duration=$4,details=$5 WHERE id=$6 AND owner_id=$7 AND status='pending'",
     [move.date,move.staff,move.start,service.duration,JSON.stringify(updated),request.id,owner]);
   }
+  // Historical group bookings created by earlier versions could retain
+  // individual minute locks. A shared-seat group session must not leave those
+  // locks behind on the former coach, or have them copied to the new coach.
+  // The group capacity/occupancy is enforced by booking IDs instead.
+  if(impacted.length)await client.query(
+   'DELETE FROM slots WHERE owner=$1 AND appointment = ANY($2::text[])',
+   [owner,impacted.map(a=>a.id)]);
   await client.query('UPDATE settings SET data=$1 WHERE owner=$2',[JSON.stringify(next),owner]);
   await client.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5)',
    [randomUUID(),owner,new Date().toISOString(),'session_rescheduled',JSON.stringify({
     sessionId:current.id,seriesId:current.seriesId,from,to,
-    confirmedCustomersRetained:impacted.length,pendingRequestsRetained:pending.length
+    confirmedCustomersRetained:impacted.length,pendingRequestsRetained:pending.length,
+    seatsBefore:{capacity:originalCapacity,booked:originalBooked,remaining:originalRemaining},
+    seatsAfter:{capacity:target.capacity,booked:targetCount,remaining:newRemaining}
    })]);
   await client.query('COMMIT');
   return {ok:true,sessionId:current.id,seriesId:current.seriesId,from,to,
    confirmedCustomersRetained:impacted.length,pendingRequestsRetained:pending.length,
+   seatsBefore:{capacity:originalCapacity,booked:originalBooked,remaining:originalRemaining},
+   seatsAfter:{capacity:target.capacity,booked:targetCount,remaining:newRemaining},
    message:'Session updated. '+impacted.length+' confirmed customer(s) and '+pending.length+
     ' pending request(s) remain attached to the same session.'};
  }catch(error){
