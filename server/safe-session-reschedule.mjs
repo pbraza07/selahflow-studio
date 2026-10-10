@@ -90,9 +90,10 @@ export async function rescheduleSessionForOwner({owner,input,pool=getPool()}){
   const config=JSON.parse(persisted.data);
   const current=sessionInstances(config,move.sourceDate).find(s=>s.id===move.sessionId);
   if(!current)throw conflict('Session is no longer on that date. Refresh your calendar and try again.');
-  if(current.start!==move.expectedStart||current.staff!==move.expectedStaff||current.service!==move.expectedService||
-    (move.expectedCapacity!==undefined&&move.expectedCapacity!==current.capacity))
+  if(current.start!==move.expectedStart||current.staff!==move.expectedStaff||current.service!==move.expectedService)
    throw conflict('Session details have changed. Refresh your calendar before rescheduling.');
+  if(move.expectedCapacity!==undefined&&move.expectedCapacity!==current.capacity)
+   throw conflict('Session capacity changed since the editor was opened. Refresh and try again.');
   const today=easternClock(),currentService=(config.services||[]).find(s=>s.id===current.service);
   const service=(config.services||[]).find(s=>s.id===move.service);
   const staff=(config.staff||[]).find(s=>s.id===move.staff);
