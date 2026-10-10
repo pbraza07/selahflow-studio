@@ -66,7 +66,8 @@ function openSessionReschedule(occurrence:Any,fromCalendar=false){
  setRescheduling({sessionId:occurrence.id,seriesId:occurrence.seriesId||occurrence.id,
   sourceDate:occurrence.date,expectedStart:occurrence.start,expectedStaff:occurrence.staff,
   expectedService:occurrence.service,date:occurrence.date,start:occurrence.start,
-  staff:occurrence.staff,service:occurrence.service,capacity:occurrence.capacity});
+  staff:occurrence.staff,service:occurrence.service,
+  expectedCapacity:occurrence.capacity,capacity:occurrence.capacity,capacityEdited:false});
  if(fromCalendar){setSettingsTab('sessions');setView('Settings');}
 }
 async function saveSessionReschedule(){
@@ -77,12 +78,14 @@ async function saveSessionReschedule(){
   setRescheduleError('Choose a valid service and team member.');return;
  }
  const count=sessionBookings(rescheduling.sessionId);
- if(rescheduling.capacity<count){
+ const capacity=rescheduling.capacityEdited?rescheduling.capacity:rescheduling.expectedCapacity;
+ if(capacity<count){
   setRescheduleError('There are '+count+' confirmed customers. Session capacity must be at least '+count+'.');return;
  }
  const message='Reschedule this session to '+rescheduling.date+' at '+timeLabel(rescheduling.start)+
   ' Eastern with '+destinationStaff.name+' for '+destinationService.name+'?\n\n'+
-  count+' confirmed customer(s) will keep their booking IDs and original customer answers. Pending requests will move too. Payments are not modified.\n\nSave other business settings first; this change takes effect immediately.';
+  count+' confirmed customer(s) will keep their booking IDs and original customer answers. Pending requests will move too. Payments are not modified.\n\n'+
+  (rescheduling.capacityEdited?'Capacity will be '+capacity+' seats.':'All '+rescheduling.expectedCapacity+' total seats and remaining availability will stay exactly the same.')+'\n\nSave other business settings first; this change takes effect immediately.';
  if(!window.confirm(message))return;
  setRescheduleBusy(true);setRescheduleError('');
  try{
@@ -95,7 +98,7 @@ async function saveSessionReschedule(){
   await refresh();
   setRescheduling(null);
   setDate(rescheduling.date);
-  setToast('Session updated · '+result.confirmedCustomersRetained+' confirmed customer(s) retained · '+
+  setToast('Session transferred · '+result.seatsAfter?.remaining+'/'+result.seatsAfter?.capacity+' slots left · '+result.confirmedCustomersRetained+' confirmed customer(s) retained · '+
    result.pendingRequestsRetained+' pending request(s) retained. Notify customers of their new schedule.');
   window.dispatchEvent(new Event('selahflow:booking-reviewed'));
  }catch(error){setRescheduleError((error as Error).message);}
@@ -119,7 +122,7 @@ function add(item:Any){setCart(old=>old.some(x=>x.id===item.id)?old.map(x=>x.id=
 async function send(text=query){if(!text.trim())return;setMessages(m=>[...m,{from:'you',text}]);setQuery('');const q=text.toLowerCase();let answer='I’m a guided FAQ assistant. I can answer about services, hours and policies, or open the booking form. A connected AI provider is needed for free-form multilingual conversations.';if(/book|appointment|agend|reserv/.test(q)){answer='Use “Book an appointment” below to choose services and see verified available times. You will review the details before confirming.';}else if(/hour|open|hor[aá]rio/.test(q))answer=`Our configured hours are ${timeLabel(config.open*60)}–${timeLabel(config.close*60)}, in America/New_York. Holiday closures and staff breaks are not yet configured.`;else if(/price|cost|service|pre[cç]o/.test(q))answer=config.services.map((s:Any)=>`${s.name}: ${cash(s.price)} · ${s.duration} min`).join('\n');else if(/cancel|policy/.test(q))answer=config.policy;else if(/location|address|where/.test(q))answer=config.address;else if(/human|help|complaint|refund/.test(q)){const d=await action({action:'handoff',message:text});answer=d?'Your request was saved in the owner’s handoff inbox. No email or text has been sent.':'I could not save your request. Please contact the studio directly.';}setMessages(m=>[...m,{from:'bot',text:answer}]);}
 const title=view==='Overview'?'A good day starts here.':view==='Calendar'?'Your day, beautifully in sync.':view==='Clients'?'Know every client.':view==='Services'?'Explore your business services.':view==='Memberships'?'Membership plans, simple recurring payments.':view==='Checkout'?'The finishing touch.':view==='Reports'?'A clear view of your studio.':view==='Receptionist'?'Your front desk, supported.':'Make it your studio.';
 return <div className="app-shell" data-selah-theme="true" style={{...themeStyles(savedTheme,brandPrimary,brandBackground),'--brand-primary':brandPrimary,'--purple':brandPrimary,'--bg':brandBackground} as CSSProperties}><aside className={mobile?'sidebar show':'sidebar'}><a className="brand" href="/" aria-label="SelahFlow home"><img className="selah-logo" src="/brand/logo-reversed.svg" alt="SelahFlow" width="380" height="68"/></a><div className="studio-switch">{hasLogo?<img src={'/api/branding/logo?slug='+encodeURIComponent(businessSlug)} alt="Business logo" style={{width:40,height:40,objectFit:'contain'}}/>:<span className="mini-logo">SF</span>}<div><b>{config.name}</b><small>Business workspace</small></div></div><div className="nav-label">WORKSPACE</div><nav>{nav.map(([n,I])=><button key={n} className={view===n?'nav-item selected':'nav-item'} onClick={()=>{setView(n);setMobile(false);setSearch('');}}><I size={19}/>{n}{n==='Receptionist'&&<span className="tiny-new">BETA</span>}</button>)}</nav><div className="sidebar-bottom"><div className="booking-link"><div className="small-icon"><ExternalLink size={19}/></div><b>Customer booking link</b><p>Share your booking page. No customer login required.</p><a className="outline full" href={publicSlug?`/book/${publicSlug}`:"/book"} target="_blank" rel="noopener noreferrer">Open booking page <ExternalLink size={14}/></a><button onClick={async()=>{try{await navigator.clipboard.writeText(window.location.origin+(publicSlug?'/book/'+publicSlug:'/book'));setToast('Customer booking link copied.');}catch{setToast('Your customer link: '+window.location.origin+'/book');}}}>Copy customer link</button><a className="outline full" href={"/"+publicSlug}>Public business page</a><a className="outline full" href="/business">Manage business profile</a><a className="outline full" href="/pricing">Subscription plans</a><a className="outline full" href="/discover">Discover businesses</a></div><div className="account"><span className="avatar dark">SF</span><div><b>Studio owner</b><small>Owner account</small></div><Settings size={17}/></div></div></aside>
-<div className="main-wrap"><header className="topbar"><div className="breadcrumb"><button className="mobile-menu icon-btn" onClick={()=>setMobile(!mobile)} aria-label="Toggle menu"><Menu/></button><span>Workspace</span><span>/</span><b>{view}</b></div><div className="top-actions">{isPlatformAdmin&&<a className="outline small" href="/admin/platform" aria-label="Open platform administrator dashboard"><Settings size={15}/> Platform admin</a>}<OwnerNotificationBell onOpen={()=>{setView('Overview');setMobile(false);setTimeout(()=>document.getElementById('booking-notifications')?.scrollIntoView({behavior:'smooth'}),80);}}/><span className="private-label">Studio manager · v1.3.26</span><a className="outline small" href={publicSlug?"/book/"+publicSlug:"/book"} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Customer booking</a><button className="outline small" onClick={async()=>{const r=await fetch('/api/auth/logout',{method:'POST'});if(r.ok)window.location.assign('/login');else setToast('Could not sign out. Try again.');}}>Sign out</button></div></header><main><div className="page-heading"><div><div className="eyebrow">{view==='Overview'?'YOUR STUDIO AT A GLANCE':'SELAHFLOW / '+view.toUpperCase()}</div><h1>{title}</h1><p>{view==='Overview'?'A little less admin. A lot more doing what you love.':view==='Calendar'?'Appointments, people, and a little room to breathe.':view==='Receptionist'?'Approved answers, booking guidance, and a human when it matters.':config.name}</p></div><button className="primary" onClick={()=>startBooking()}><Plus size={18}/> New appointment</button></div>
+<div className="main-wrap"><header className="topbar"><div className="breadcrumb"><button className="mobile-menu icon-btn" onClick={()=>setMobile(!mobile)} aria-label="Toggle menu"><Menu/></button><span>Workspace</span><span>/</span><b>{view}</b></div><div className="top-actions">{isPlatformAdmin&&<a className="outline small" href="/admin/platform" aria-label="Open platform administrator dashboard"><Settings size={15}/> Platform admin</a>}<OwnerNotificationBell onOpen={()=>{setView('Overview');setMobile(false);setTimeout(()=>document.getElementById('booking-notifications')?.scrollIntoView({behavior:'smooth'}),80);}}/><span className="private-label">Studio manager · v1.3.27</span><a className="outline small" href={publicSlug?"/book/"+publicSlug:"/book"} target="_blank" rel="noopener noreferrer"><ExternalLink size={15}/> Customer booking</a><button className="outline small" onClick={async()=>{const r=await fetch('/api/auth/logout',{method:'POST'});if(r.ok)window.location.assign('/login');else setToast('Could not sign out. Try again.');}}>Sign out</button></div></header><main><div className="page-heading"><div><div className="eyebrow">{view==='Overview'?'YOUR STUDIO AT A GLANCE':'SELAHFLOW / '+view.toUpperCase()}</div><h1>{title}</h1><p>{view==='Overview'?'A little less admin. A lot more doing what you love.':view==='Calendar'?'Appointments, people, and a little room to breathe.':view==='Receptionist'?'Approved answers, booking guidance, and a human when it matters.':config.name}</p></div><button className="primary" onClick={()=>startBooking()}><Plus size={18}/> New appointment</button></div>
 {error&&<div className="alert"><b>Studio data could not be loaded.</b> {error} <button onClick={refresh}>Retry</button></div>}
 {loading&&<div className="notice">Loading your studio…</div>}
 {!loading&&appointments.length===0&&['Overview','Calendar','Clients'].includes(view)&&<div className="demo-notice"><span><Sparkles size={16}/>{demo?'Sample schedule shown to help you explore. Your real records start with your first booking.':'Your calendar is ready for its first booking.'}</span><button onClick={()=>setDemo(!demo)}>{demo?'Hide samples':'Show samples'}</button></div>}
@@ -244,11 +247,21 @@ return <div className="app-shell" data-selah-theme="true" style={{...themeStyles
     <label>Assigned team member<select value={rescheduling.staff} onChange={e=>setRescheduling((v:Any)=>({...v,staff:e.target.value}))}>
      {config.staff.filter((member:Any)=>member.services.includes(rescheduling.service)).map((member:Any)=><option key={member.id} value={member.id}>{member.name}</option>)}
     </select></label>
-    <label>Total customer capacity<input type="number" min={1} max={100} value={rescheduling.capacity} onChange={e=>setRescheduling((v:Any)=>({...v,capacity:Number(e.target.value)}))}/></label>
+    <div className="sf-session-capacity-preserved">
+     <b>Session capacity: {rescheduling.expectedCapacity} total seats</b>
+     <small>Moving a session to another team member keeps the same capacity, booked customers and remaining slots.</small>
+     <label className="sf-session-capacity-edit-toggle"><input type="checkbox" checked={rescheduling.capacityEdited===true}
+      onChange={e=>setRescheduling((v:Any)=>({...v,capacityEdited:e.target.checked,
+       capacity:e.target.checked?v.capacity:v.expectedCapacity}))}/>
+      <span>Change customer capacity separately</span>
+     </label>
+     {rescheduling.capacityEdited&&<label>New total customer capacity<input type="number" min={1} max={100}
+      value={rescheduling.capacity} onChange={e=>setRescheduling((v:Any)=>({...v,capacity:Number(e.target.value)}))}/></label>}
+    </div>
    </div>
    <div className="sf-session-retained-summary"><Users size={16}/>
     <span><strong>{sessionBookings(rescheduling.sessionId)} confirmed customers retained</strong>
-     · {Math.max(0,rescheduling.capacity-sessionBookings(rescheduling.sessionId))}/{rescheduling.capacity} seats available after this change</span></div>
+     · {Math.max(0,(rescheduling.capacityEdited?rescheduling.capacity:rescheduling.expectedCapacity)-sessionBookings(rescheduling.sessionId))}/{rescheduling.capacityEdited?rescheduling.capacity:rescheduling.expectedCapacity} slots left after transfer</span></div>
    {rescheduleError&&<p className="sf-session-reschedule-error" role="alert">{rescheduleError}</p>}
    <div className="sf-session-reschedule-actions">
     <button type="button" className="primary" disabled={rescheduleBusy} onClick={()=>void saveSessionReschedule()}>
@@ -256,7 +269,7 @@ return <div className="app-shell" data-selah-theme="true" style={{...themeStyles
     </button>
     <button type="button" className="outline" disabled={rescheduleBusy} onClick={()=>setRescheduling(null)}>Cancel</button>
    </div>
-   <p className="sf-session-reschedule-footnote">Changes take effect immediately. Customers are not automatically emailed by this action; let them know about new session times separately. This does not change or refund payments.</p>
+   <p className="sf-session-reschedule-footnote">Session seat counts belong to the original session ID, not the assigned coach. Capacity changes only when you explicitly choose to edit it. Customers are not automatically emailed; inform them of changed dates, times, or coaches. Payments are not changed.</p>
   </section>}
  </div>)}
  <p className="muted sf-session-save-hint">Use <b>Reschedule · keep customers</b> to change an already-booked date, time, service, assigned team member or capacity without losing customers. That operation saves immediately and keeps each booking linked to the same session. Use <b>Save business settings</b> below for other session configuration changes. Recurring reschedules change only the selected date; other occurrences remain unchanged.</p>
