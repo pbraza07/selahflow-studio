@@ -68,7 +68,7 @@ test('owner cannot self-approve, review requires platform admin and no subscript
  assert.match(review,/validOrigin\(req\)/);
  assert.match(review,/FOR UPDATE/);
  assert.match(review,/pg_advisory_xact_lock/);
- assert.match(review,/status===/); // not actually in code? check after
+ assert.match(review,/request\.status!==expected/);
  assert.doesNotMatch(review,/UPDATE business_subscriptions/i);
  assert.doesNotMatch(review,/INSERT INTO business_subscriptions/i);
  assert.match(review,/source\.business_status!=='active'/);
