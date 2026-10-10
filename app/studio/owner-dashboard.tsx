@@ -50,6 +50,7 @@ const serviceAccent=(name:string)=>{const service=(config.services||[]).find((v:
 const visibleApprovalFields:string[]=config.bookingApprovalVisibleFields??[...APPROVAL_CARD_OPTIONS.map(o=>o[0]),...(config.bookingCustomFields||[]).map((f:Any)=>f.id)];
 const setApprovalField=(id:string,enabled:boolean)=>setConfig((previous:Any)=>({...previous,bookingApprovalVisibleFields:enabled?[...new Set([...(previous.bookingApprovalVisibleFields??[...APPROVAL_CARD_OPTIONS.map(o=>o[0]),...(previous.bookingCustomFields||[]).map((f:Any)=>f.id)]),id])]: (previous.bookingApprovalVisibleFields??[...APPROVAL_CARD_OPTIONS.map(o=>o[0]),...(previous.bookingCustomFields||[]).map((f:Any)=>f.id)]).filter((x:string)=>x!==id)}));
 const recurrenceEndDefault=(starting:string)=>{const d=new Date(starting+'T12:00:00Z');if(Number.isNaN(d.getTime()))return starting;d.setUTCDate(d.getUTCDate()+84);return d.toISOString().slice(0,10);};
+const recurrenceMaxDate=(start:string)=>{const d=new Date(start+'T12:00:00Z');if(Number.isNaN(d.getTime()))return start;d.setUTCDate(d.getUTCDate()+730);return d.toISOString().slice(0,10);};
 const safeOccurrenceCount=(session:Any)=>{try{return recurrenceDates(session).length;}catch{return 0;}};
 const updateSession=(id:string,update:Any)=>setConfig((c:Any)=>({...c,bookableSessions:(c.bookableSessions||[]).map((item:Any)=>item.id===id?{...item,...update}:item)}));
 const removeSession=(id:string)=>setConfig((c:Any)=>({...c,bookableSessions:(c.bookableSessions||[]).filter((item:Any)=>item.id!==id)}));
@@ -150,7 +151,7 @@ return <div className="app-shell" data-selah-theme="true" style={{...themeStyles
     <label>Repeat every <span className="sf-session-number-inline">
      <input type="number" min={1} max={12} step={1} value={x.repeat.every} onChange={e=>updateSession(x.id,{repeat:{...x.repeat,every:Number(e.target.value)}})}/>
      <span>{x.repeat.frequency==='daily'?'day(s)':x.repeat.frequency==='weekly'?'week(s)':'month(s)'}</span></span></label>
-    <label>End date (inclusive)<input type="date" min={x.date} max={(()=>{const d=new Date(x.date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+730);return d.toISOString().slice(0,10);})()} value={x.repeat.until}
+    <label>End date (inclusive)<input type="date" min={x.date} max={recurrenceMaxDate(x.date)} value={x.repeat.until}
      onChange={e=>updateSession(x.id,{repeat:{...x.repeat,until:e.target.value}})}/></label>
    </div>
    <p className="sf-session-repeat-description">
