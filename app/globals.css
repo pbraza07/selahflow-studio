@@ -1365,3 +1365,55 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
  .app-shell[data-selah-theme] .sf-extra-seat-form>button{width:100%}
  .app-shell[data-selah-theme] .sf-extra-seat-heading>button{width:100%}
 }
+
+
+/* v1.3.25: accessible owner-login email administration and archived records */
+.sf-platform-confirm .sf-platform-confirm-fields{
+ display:grid;gap:12px;margin:15px 0;
+}
+.sf-platform-confirm .sf-platform-confirm-fields label{
+ display:grid;gap:7px;font-size:12px;font-weight:700;
+ color:var(--brand-ink,#173e33);
+}
+.sf-platform-confirm .sf-platform-confirm-fields input{
+ width:100%;max-width:100%;box-sizing:border-box;
+ min-height:44px;border:1px solid var(--brand-border,#bdcfc2);
+ border-radius:9px;background:var(--brand-surface,#fff);
+ padding:10px 12px;color:var(--brand-ink,#173e33);
+ font-family:var(--sf-body-font);font-size:13px;
+}
+.sf-platform-confirm .sf-platform-confirm-fields input:focus-visible{
+ outline:2px solid var(--brand-primary,#123f3a);outline-offset:1px;
+}
+.sf-platform-confirm p small{
+ font-size:11px;line-height:1.65;color:var(--brand-muted,#55695c);
+}
+.sf-platform-business-row .sf-platform-business-actions{
+ display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+}
+.sf-platform-business-row .sf-platform-business-actions button{
+ display:inline-flex;gap:6px;align-items:center;justify-content:center;
+ min-height:43px;padding:9px 12px;
+}
+.sf-platform-business-row .sf-platform-business-actions button:focus-visible{
+ outline:2px solid var(--brand-primary,#123f3a);outline-offset:2px;
+}
+.sf-platform-business-row .sf-platform-business-status.status-archived{
+ background:var(--brand-selected,#edf1e8);
+ color:var(--brand-primary,#123f3a);
+}
+@media(max-width:600px){
+ .sf-platform-confirm .sf-platform-confirm-fields{gap:13px}
+ .sf-platform-confirm .sf-platform-confirm-fields input{font-size:16px}
+ .sf-platform-business-row .sf-platform-business-actions{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;
+ }
+ .sf-platform-business-row .sf-platform-business-actions button{
+  white-space:normal;min-width:0;font-size:11px;line-height:1.4;
+ }
+}
+@media(max-width:390px){
+ .sf-platform-business-row .sf-platform-business-actions{
+  grid-template-columns:minmax(0,1fr);
+ }
+}
