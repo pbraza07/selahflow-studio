@@ -64,7 +64,7 @@ export default function OwnerExtraTeamSeatRequest({plan,teamLimit,onRefreshLimit
     <p><b>Reason:</b> {pending.reason}</p>
     <small>Submitted {when(pending.created_at)}</small>
     <button type="button" className="outline" disabled={busy} onClick={()=>void send('withdraw',pending.id)}>Withdraw request</button>
-   </article>:<form className="sf-extra-seat-form" onSubmit={e=>{e.preventDefault();void send('submit');}}>
+   </article>:<div className="sf-extra-seat-form">
     <label>Additional team member's name
      <input required minLength={2} maxLength={100} value={name}
       onChange={e=>setName(e.target.value)} placeholder="Name of the team member you wish to add"/>
@@ -73,11 +73,11 @@ export default function OwnerExtraTeamSeatRequest({plan,teamLimit,onRefreshLimit
      <textarea required minLength={5} maxLength={1000} rows={3} value={reason}
       onChange={e=>setReason(e.target.value)} placeholder="Example: Temporary holiday support without changing our monthly subscription"/>
     </label>
-    <button type="submit" className="primary" disabled={busy||name.trim().length<2||reason.trim().length<5}>
+    <button type="button" className="primary" onClick={()=>void send('submit')} disabled={busy||name.trim().length<2||reason.trim().length<5}>
      <Send size={16}/>{busy?'Submitting request…':'Send request to platform administrator'}
     </button>
     <small>Submitting does not add the member automatically. Once approved, refresh this section and select <b>Add team member</b> above, then save business settings.</small>
-   </form>}
+   </div>}
   {!!data?.requests.length&&<div className="sf-extra-seat-history">
    <h4>Request history</h4>
    {data.requests.slice(0,8).map(r=><article key={r.id} className="sf-extra-seat-history-row">
