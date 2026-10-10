@@ -1,4 +1,4 @@
-import {sessionInstances,expandAllSessions,validateRecurrence} from './session-recurrence.mjs';
+import {sessionInstances,expandAllSessions,validateRecurrence,originalSessionOccurrence} from './session-recurrence.mjs';
 /** Pure, business-scoped session and appointment availability helpers.
  * Pending booking requests do not consume capacity until accepted.
  */
@@ -71,6 +71,32 @@ export function validateBookableSessions(config) {
       throw Error('Check each session date, service, team member, start time, capacity and business hours.');
     validateRecurrence(session);
     ids.add(session.id);
+  }
+  // Overrides are a single-date reschedule of an existing recurring session.
+  // Preserve the ID so already registered customers remain assigned.
+  const overrides=config.sessionOverrides||[];
+  if(!Array.isArray(overrides)||overrides.length>500)throw Error('Too many rescheduled occurrences.');
+  const overrideIds=new Set();
+  for(const override of overrides){
+    if(!override||typeof override!=='object'||typeof override.id!=='string'||
+        overrideIds.has(override.id))throw Error('Invalid or duplicate session reschedule.');
+    const original=originalSessionOccurrence(config,override.id);
+    if(!original||!original.recurring||original.seriesId!==override.seriesId||
+       original.date!==override.originalDate)
+      throw Error('This rescheduled date no longer belongs to the recurring series. Restore the series before editing its rule.');
+    const service=config.services.find(s=>s.id===override.service);
+    const member=config.staff.find(s=>s.id===override.staff);
+    if(typeof override.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(override.date)||
+       Number.isNaN(Date.parse(override.date+'T12:00:00Z'))||
+       new Date(override.date+'T12:00:00Z').toISOString().slice(0,10)!==override.date||
+       !Number.isInteger(override.start)||override.start%15!==0||
+       !Number.isInteger(override.capacity)||override.capacity<1||override.capacity>100||
+       !service||!member||!member.services.includes(service.id)||
+       !Number.isInteger(service.duration)||service.duration<15||service.duration>480||
+       override.start<config.open*60||
+       override.start+service.duration+config.buffer>config.close*60)
+      throw Error('Check the rescheduled session date, time, service, team member, capacity and business hours.');
+    overrideIds.add(override.id);
   }
   // Validation expands a bounded two-year date horizon. Each occurrence is
   // checked against one-offs and other recurring series for staff collisions.

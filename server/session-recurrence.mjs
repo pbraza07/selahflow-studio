@@ -48,10 +48,32 @@ export function recurringSessionForDate(session,date){
  return {...session,date,id:session.id+'__'+date.replaceAll('-',''),
    seriesId:session.id,recurring:true};
 }
+/**
+ * Resolve one original calendar occurrence by its stable identifier. Used for
+ * validating per-occurrence overrides, never to look up private customer data.
+ */
+export function originalSessionOccurrence(config,id){
+ for(const base of config.bookableSessions||[]){
+  if(base.id===id)return recurringSessionForDate(base,base.date);
+  if(!base.repeat)continue;
+  for(const date of recurrenceDates(base)){
+   const occurrence=recurringSessionForDate(base,date);
+   if(occurrence?.id===id)return occurrence;
+  }
+ }
+ return null;
+}
+/** An override moves one recurring date without changing the underlying rule.
+ * Its stable ID follows the booking, not the date, preserving customer records.
+ */
 export function sessionInstances(config,date,staffId){
- return (Array.isArray(config.bookableSessions)?config.bookableSessions:[])
-  .filter(s=>!staffId||s.staff===staffId)
-  .map(s=>recurringSessionForDate(s,date)).filter(Boolean);
+ const overrides=Array.isArray(config.sessionOverrides)?config.sessionOverrides:[];
+ const overriddenIds=new Set(overrides.map(o=>o.id));
+ const generated=(Array.isArray(config.bookableSessions)?config.bookableSessions:[])
+  .map(s=>recurringSessionForDate(s,date))
+  .filter(s=>s&&!overriddenIds.has(s.id));
+ const moved=overrides.filter(s=>s.date===date).map(s=>({...s,recurring:true,overridden:true}));
+ return [...generated,...moved].filter(s=>!staffId||s.staff===staffId);
 }
 export function recurrenceDates(session){
  if(!dateOK(session?.date))return [];
@@ -63,14 +85,30 @@ export function recurrenceDates(session){
  }
  return out;
 }
+export function seriesOccurrences(config,seriesId){
+ const base=(config.bookableSessions||[]).find(x=>x.id===seriesId);
+ if(!base)return [];
+ const candidates=new Set([
+  ...recurrenceDates(base),
+  ...(config.sessionOverrides||[]).filter(x=>x.seriesId===seriesId).map(x=>x.date)
+ ]);
+ return [...candidates].flatMap(date=>sessionInstances(config,date).filter(x=>x.seriesId===seriesId))
+  .sort((a,b)=>a.date.localeCompare(b.date)||a.start-b.start);
+}
 export function expandAllSessions(config,maxOccurrences=25000){
  let count=0;
- const sessions=[];
+ const sessions=[],overrideIds=new Set((config.sessionOverrides||[]).map(x=>x.id));
  for(const base of config.bookableSessions||[]){
   for(const date of recurrenceDates(base)){
+   const item=recurringSessionForDate(base,date);
+   if(overrideIds.has(item.id))continue;
    if(++count>maxOccurrences)throw Error('Too many recurring sessions. Reduce the number of series or shorten their end dates.');
-   sessions.push(recurringSessionForDate(base,date));
+   sessions.push(item);
   }
+ }
+ for(const item of config.sessionOverrides||[]){
+  if(++count>maxOccurrences)throw Error('Too many recurring sessions. Reduce the number of series or shorten their end dates.');
+  sessions.push({...item,recurring:true,overridden:true});
  }
  return sessions;
 }

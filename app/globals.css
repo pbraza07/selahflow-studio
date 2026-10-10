@@ -1417,3 +1417,122 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
   grid-template-columns:minmax(0,1fr);
  }
 }
+
+
+/* v1.3.26 — reschedule a booked one-off or recurring occurrence without deleting clients */
+.app-shell[data-selah-theme] .sf-recurring-session-editor .sf-session-editor-buttons{
+ display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0;
+}
+.app-shell[data-selah-theme] .sf-recurring-session-editor .sf-session-change{
+ display:inline-flex;align-items:center;justify-content:center;gap:7px;
+ min-height:43px;font-size:12px;font-weight:700;
+ border:1px solid var(--sf-border)!important;
+ color:var(--sf-on-card)!important;background:var(--sf-card)!important;
+ border-radius:9px;white-space:normal;
+}
+.app-shell[data-selah-theme] .sf-recurring-session-editor .sf-session-change:hover{
+ background:var(--sf-selected)!important;color:var(--sf-on-selected)!important;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-panel{
+ box-sizing:border-box;min-width:0;margin:16px 0 2px;padding:clamp(12px,2vw,18px);
+ background:var(--sf-surface)!important;color:var(--sf-on-surface)!important;
+ border:1px solid var(--sf-border);border-radius:12px;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-heading{
+ display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+ border-bottom:1px solid var(--sf-border);margin-bottom:16px;padding-bottom:12px;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-heading>div{min-width:0;flex:1}
+.app-shell[data-selah-theme] .sf-session-reschedule-heading>div>span{
+ font-size:10px;letter-spacing:.1em;font-weight:800;color:var(--sf-on-surface)!important;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-heading h3{
+ font-size:16px;font-family:var(--sf-heading-font);color:var(--sf-on-surface)!important;
+ line-height:1.35;margin:7px 0;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-heading p{
+ font-size:12px;line-height:1.7;color:var(--sf-on-surface)!important;margin:0;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-heading>button{
+ min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;
+ padding:0;border-radius:8px;
+}
+.app-shell[data-selah-theme] .sf-session-occurrence-picker{
+ display:grid;gap:8px;margin-bottom:16px;font-size:12px;
+ font-weight:700;color:var(--sf-on-surface)!important;
+}
+.app-shell[data-selah-theme] .sf-session-occurrence-picker>select{
+ width:100%;max-width:100%;min-height:46px;
+ padding:10px 12px;font-size:13px;box-sizing:border-box;
+ color:var(--sf-on-input)!important;background:var(--sf-input)!important;
+ border:1px solid var(--sf-border)!important;border-radius:9px;
+}
+.app-shell[data-selah-theme] .sf-session-occurrence-picker>small{
+ font-size:11px;font-weight:400;line-height:1.6;color:var(--sf-on-surface)!important;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-panel .sf-session-reschedule-grid{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-grid label{
+ display:grid;gap:7px;font-size:12px;
+ font-weight:700;color:var(--sf-on-surface)!important;min-width:0;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-grid :is(input,select){
+ min-height:44px;min-width:0;width:100%;max-width:100%;box-sizing:border-box;
+ padding:10px 12px;border-radius:9px;border:1px solid var(--sf-border)!important;
+ background:var(--sf-input)!important;color:var(--sf-on-input)!important;
+ font-size:13px;font-family:var(--sf-body-font);
+}
+.app-shell[data-selah-theme] .sf-session-retained-summary{
+ display:flex;align-items:center;gap:9px;margin:16px 0 14px;padding:11px 13px;
+ background:var(--sf-selected)!important;color:var(--sf-on-selected)!important;
+ border-radius:9px;font-size:12px;line-height:1.6;overflow-wrap:anywhere;
+}
+.app-shell[data-selah-theme] .sf-session-retained-summary :is(svg,strong,span){
+ color:var(--sf-on-selected)!important;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-error{
+ border-left:3px solid var(--sf-accent);padding:11px;margin:12px 0;
+ background:var(--sf-step);color:var(--sf-on-step)!important;
+ border-radius:8px;font-size:12px;line-height:1.6;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-actions{
+ display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-top:12px;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-actions button{
+ min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+ white-space:normal;border-radius:9px;font-size:12px;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-actions .primary{
+ color:var(--sf-on-button)!important;background:var(--sf-button)!important;
+ border:1px solid var(--sf-button)!important;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-actions .outline{
+ color:var(--sf-on-card)!important;background:var(--sf-card)!important;
+ border:1px solid var(--sf-border)!important;
+}
+.app-shell[data-selah-theme] .sf-session-reschedule-footnote{
+ margin:14px 0 0;font-size:11px;line-height:1.7;
+ color:var(--sf-on-surface)!important;
+}
+@media(max-width:760px){
+ .app-shell[data-selah-theme] .sf-recurring-session-editor .sf-session-editor-buttons{
+  width:100%;
+ }
+ .app-shell[data-selah-theme] .sf-recurring-session-editor .sf-session-editor-buttons>button{
+  flex:1 1 auto;
+ }
+}
+@media(max-width:520px){
+ .app-shell[data-selah-theme] .sf-session-reschedule-panel .sf-session-reschedule-grid{
+  grid-template-columns:minmax(0,1fr);
+ }
+ .app-shell[data-selah-theme] .sf-session-reschedule-grid :is(input,select),
+ .app-shell[data-selah-theme] .sf-session-occurrence-picker select{
+  font-size:16px;
+ }
+ .app-shell[data-selah-theme] .sf-session-reschedule-actions>button{flex:1 1 100%}
+ .app-shell[data-selah-theme] .sf-recurring-session-editor .sf-session-editor-buttons{
+  display:grid;grid-template-columns:minmax(0,1fr);
+ }
+}
