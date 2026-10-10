@@ -1,6 +1,6 @@
 import {db} from './database';
 import {getPool} from '../server/database.mjs';
-import {appointmentData,overlaps,easternClock,bookingDateRange,computeDayAvailability,selectedSession,validateBookableSessions,validateExistingSessionReservations} from '../server/session-scheduling.mjs';
+import {appointmentData,overlaps,easternClock,bookingDateRange,computeDayAvailability,selectedSession,sessionsForDate,validateBookableSessions,validateExistingSessionReservations} from '../server/session-scheduling.mjs';
 import {validateBookingFields,sanitizeBookingAnswers} from '../server/booking-custom-fields.mjs';
 import {validateApprovalVisibleFields} from '../server/booking-approval-display.mjs';
 import {requireOwner} from './auth';
@@ -51,26 +51,26 @@ try{
  const persisted=(await client.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0];
  const oldConfig=persisted?JSON.parse(persisted.data):config;
  const reservationRows=(await client.query(
-  "SELECT data,status FROM appointments WHERE owner=$1 AND status NOT IN ('Cancelled','No-show') AND data LIKE '%sessionId%'",
+  "SELECT date,staff,start,duration,data,status FROM appointments WHERE owner=$1 AND status NOT IN ('Cancelled','No-show') AND data LIKE '%sessionId%'",
   [owner])).rows;
- validateExistingSessionReservations(oldConfig.bookableSessions||[],c.bookableSessions||[],reservationRows);
+ validateExistingSessionReservations(oldConfig,c,reservationRows);
 
  const existingSchedules=(await client.query(
   "SELECT date,staff,start,duration,status,data FROM appointments WHERE owner=$1 AND status NOT IN ('Cancelled','No-show')",
   [owner])).rows;
- for(const session of c.bookableSessions||[]){
-  const service=c.services.find((x:any)=>x.id===session.service);
-  if(existingSchedules.some((a:any)=>a.date===session.date&&a.staff===session.staff&&
-   appointmentData(a).sessionId!==session.id&&
-   overlaps(session.start,service.duration+c.buffer,Number(a.start),Number(a.duration)+c.buffer)))
-   throw Error('This session overlaps a confirmed appointment for the selected team member.');
- }
-
- for(const session of oldConfig.bookableSessions||[]){
-  if(!reservationRows.some((a:any)=>{try{return JSON.parse(a.data).sessionId===session.id}catch{return false}}))continue;
-  const previousDuration=oldConfig.services.find((x:any)=>x.id===session.service)?.duration;
-  const nextDuration=c.services.find((x:any)=>x.id===session.service)?.duration;
-  if(previousDuration!==nextDuration)throw Error('A service with confirmed session customers cannot change duration.');
+ // Any generated occurrence must not overlap an existing ordinary booking or
+ // a different booked group session. Reservations on edited series are already
+ // protected by validateExistingSessionReservations.
+ const cache=new Map();
+ for(const a of existingSchedules){
+  const key=a.date+'|'+a.staff;
+  if(!cache.has(key))cache.set(key,sessionsForDate(c,a.date,a.staff));
+  const ownSessionId=appointmentData(a).sessionId;
+  if(cache.get(key).some(session=>
+    ownSessionId!==session.id&&overlaps(
+      session.start,session.duration+c.buffer,
+      Number(a.start),Number(a.duration)+c.buffer)))
+    throw Error('A scheduled or recurring session overlaps an existing confirmed appointment for the selected team member.');
  }
  await client.query('INSERT INTO settings(owner,data) VALUES($1,$2) ON CONFLICT(owner) DO UPDATE SET data=excluded.data',[owner,JSON.stringify(c)]);
  await client.query('UPDATE businesses SET name=$1,city=COALESCE($2,city),region=COALESCE($3,region),updated_at=now() WHERE owner_id=$4',
