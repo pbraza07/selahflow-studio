@@ -1,3 +1,4 @@
+import {sessionInstances,expandAllSessions,validateRecurrence} from './session-recurrence.mjs';
 /** Pure, business-scoped session and appointment availability helpers.
  * Pending booking requests do not consume capacity until accepted.
  */
@@ -38,8 +39,7 @@ export function sessionRemaining(session, appointments) {
 }
 export function sessionsForDate(config, date, staffId) {
   const services = Array.isArray(config.services) ? config.services : [];
-  return (Array.isArray(config.bookableSessions) ? config.bookableSessions : [])
-    .filter(x => x.date === date && (!staffId || x.staff === staffId))
+  return sessionInstances(config,date,staffId)
     .map(x => ({...x, duration:services.find(s => s.id === x.service)?.duration || 0}))
     .filter(x => x.duration > 0);
 }
@@ -69,32 +69,59 @@ export function validateBookableSessions(config) {
         session.start < config.open * 60 ||
         session.start + service.duration + config.buffer > config.close * 60)
       throw Error('Check each session date, service, team member, start time, capacity and business hours.');
+    validateRecurrence(session);
     ids.add(session.id);
   }
-  for (let i = 0; i < sessions.length; i++) {
-    const one = sessions[i];
-    const aDuration = config.services.find(s => s.id === one.service).duration + config.buffer;
-    for (let j = i + 1; j < sessions.length; j++) {
-      const two = sessions[j];
-      const bDuration = config.services.find(s => s.id === two.service).duration + config.buffer;
-      if (one.date === two.date && one.staff === two.staff &&
-          overlaps(one.start, aDuration, two.start, bDuration))
+  // Validation expands a bounded two-year date horizon. Each occurrence is
+  // checked against one-offs and other recurring series for staff collisions.
+  const occurrenceIds=new Set(),byStaffDay=new Map();
+  for(const instance of expandAllSessions(config)){
+    if(occurrenceIds.has(instance.id))throw Error('Recurring session occurrence IDs must be unique.');
+    occurrenceIds.add(instance.id);
+    const key=instance.staff+'|'+instance.date;
+    if(!byStaffDay.has(key))byStaffDay.set(key,[]);
+    byStaffDay.get(key).push(instance);
+  }
+  for(const occurrences of byStaffDay.values()){
+    occurrences.sort((a,b)=>a.start-b.start);
+    for(let i=1;i<occurrences.length;i++){
+      const previous=occurrences[i-1],current=occurrences[i];
+      const duration=config.services.find(s=>s.id===previous.service).duration+config.buffer;
+      if(overlaps(previous.start,duration,current.start,
+        config.services.find(s=>s.id===current.service).duration+config.buffer))
         throw Error('Sessions for the same team member cannot overlap, including cleanup time.');
     }
   }
   return sessions;
 }
-export function validateExistingSessionReservations(oldSessions, newSessions, appointments) {
-  for (const old of oldSessions || []) {
-    const reserved = bookedSessionCount(appointments, old.id);
-    if (!reserved) continue;
-    const next = newSessions.find(s => s.id === old.id);
-    if (!next || next.date !== old.date || next.staff !== old.staff ||
-        next.start !== old.start || next.service !== old.service ||
-        next.capacity < reserved) {
-      throw Error('This session has confirmed customers. Keep its schedule and capacity at or above the booked count.');
-    }
+export function validateExistingSessionReservations(oldInput,newInput,appointments) {
+ const oldConfig=Array.isArray(oldInput)?{bookableSessions:oldInput}:oldInput||{};
+ const newConfig=Array.isArray(newInput)?{bookableSessions:newInput}:newInput||{};
+ const counts=new Map();
+ for(const appointment of appointments||[]){
+  if(!activeAppointment(appointment))continue;
+  const id=appointmentData(appointment).sessionId;
+  if(!id)continue;
+  const date=appointment.date||oldConfig.bookableSessions?.find(x=>x.id===id)?.date;
+  if(!date)continue;
+  const old=sessionInstances(oldConfig,date).find(x=>x.id===id);
+  if(!old)continue; // Legacy bookings with obsolete settings remain untouched.
+  const key=date+'|'+id;
+  counts.set(key,{old,date,id,count:(counts.get(key)?.count||0)+1});
+ }
+ for(const {old,date,id,count} of counts.values()){
+  const next=sessionInstances(newConfig,date).find(x=>x.id===id);
+  if(!next||next.date!==old.date||next.staff!==old.staff||
+     next.start!==old.start||next.service!==old.service||
+     next.capacity<count)
+    throw Error('This session has confirmed customers. Keep its schedule and capacity at or above the booked count.');
+  if(oldConfig.services?.length&&newConfig.services?.length){
+   const oldDuration=oldConfig.services.find(s=>s.id===old.service)?.duration;
+   const nextDuration=newConfig.services.find(s=>s.id===next.service)?.duration;
+   if(oldDuration!==nextDuration)
+    throw Error('A service with confirmed session customers cannot change duration.');
   }
+ }
 }
 export function bookingDateRange(anchor, mode) {
   if (typeof anchor !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(anchor) ||
