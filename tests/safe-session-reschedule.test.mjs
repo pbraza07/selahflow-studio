@@ -184,6 +184,91 @@ test('one-off session date, time, service, staff and capacity are updated in ori
   assert.equal(JSON.parse(appointment.data).customAnswers.injuries,'None');
  }finally{await db.close();}
 });
+
+test('staff-only transfer keeps 9/10 slots left, even when the request sends an unrelated capacity value',async()=>{
+ const {db,pool}=await setup();
+ try{
+  // Use ten seats with one registered customer to match the customer's
+  // 9/10 snapshot. Capacity belongs to session ID, never to the coach.
+  const current={...config,bookableSessions:[{...base,capacity:10}]};
+  await db.query("UPDATE settings SET data=$1 WHERE owner='owner'",[JSON.stringify(current)]);
+  await db.query("DELETE FROM appointments WHERE id='customer-2'");
+  const input={sessionId:recurringId,sourceDate:'2026-11-09',
+   expectedStart:720,expectedStaff:'coach-a',expectedService:'training',
+   expectedCapacity:10,capacity:1,capacityEdited:false,
+   date:'2026-11-09',start:720,staff:'coach-b',service:'training'};
+  const before=(await rows(db,"SELECT id,date,staff,start,duration,status,data FROM appointments WHERE owner='owner'"))[0];
+  const original=computeDayAvailability({config:current,date:'2026-11-09',
+   staff:'coach-a',services:[training],appointments:[before],reservedSlots:[],
+   today:'2026-11-01',nowMinutes:540,capacityOpen:serviceCapacityOpen});
+  assert.deepEqual(original.sessionAvailability[720].remaining,9);
+  assert.deepEqual(original.sessionAvailability[720].capacity,10);
+  const result=await rescheduleSessionForOwner({owner:'owner',input,pool});
+  assert.deepEqual(result.seatsBefore,{capacity:10,booked:1,remaining:9});
+  assert.deepEqual(result.seatsAfter,{capacity:10,booked:1,remaining:9});
+  const currentSettings=JSON.parse((await rows(db,"SELECT data FROM settings WHERE owner='owner'"))[0].data);
+  const afterAppointments=await rows(db,"SELECT id,date,staff,start,duration,status,data FROM appointments WHERE owner='owner'");
+  const transferred=computeDayAvailability({config:currentSettings,date:'2026-11-09',
+   staff:'coach-b',services:[training],appointments:afterAppointments,reservedSlots:[],
+   today:'2026-11-01',nowMinutes:540,capacityOpen:serviceCapacityOpen});
+  assert.equal(transferred.sessionAvailability[720].remaining,9);
+  assert.equal(transferred.sessionAvailability[720].capacity,10);
+  assert.equal(sessionInstances(currentSettings,'2026-11-09','coach-a').length,0);
+  assert.equal(sessionInstances(currentSettings,'2026-11-09','coach-b')[0].capacity,10);
+  assert.equal(afterAppointments.length,1);
+  assert.equal(afterAppointments[0].staff,'coach-b');
+  assert.equal(JSON.parse(afterAppointments[0].data).sessionId,recurringId);
+  assert.equal((await rows(db,"SELECT details FROM booking_requests WHERE id='pending-1'"))[0].details.includes('coach-b'),true);
+ }finally{await db.close();}
+});
+test('transferred coach keeps previous booked sessions and cleanup removes legacy minute locks',async()=>{
+ const {db,pool}=await setup();
+ try{
+  await db.query("INSERT INTO slots(owner,date,staff,minute,appointment) VALUES ('owner','2026-11-09','coach-a',720,'customer-1')");
+  const input={sessionId:recurringId,sourceDate:'2026-11-09',
+   expectedStart:720,expectedStaff:'coach-a',expectedService:'training',
+   expectedCapacity:3,capacity:3,capacityEdited:false,
+   date:'2026-11-09',start:720,staff:'coach-b',service:'training'};
+  const result=await rescheduleSessionForOwner({owner:'owner',input,pool});
+  assert.deepEqual(result.seatsBefore,{capacity:3,booked:2,remaining:1});
+  assert.deepEqual(result.seatsAfter,{capacity:3,booked:2,remaining:1});
+  const oldLocks=await rows(db,"SELECT * FROM slots WHERE owner='owner' AND appointment='customer-1'");
+  assert.equal(oldLocks.length,0,'obsolete staff minute locks do not remain after group transfer');
+  const targetConfig=JSON.parse((await rows(db,"SELECT data FROM settings WHERE owner='owner'"))[0].data);
+  const booked=await rows(db,"SELECT id,date,staff,start,duration,status,data FROM appointments WHERE owner='owner'");
+  const display=computeDayAvailability({config:targetConfig,date:'2026-11-09',
+   staff:'coach-b',services:[training],appointments:booked,reservedSlots:[],
+   today:'2026-11-01',nowMinutes:540,capacityOpen:serviceCapacityOpen});
+  assert.equal(display.sessionAvailability[720].remaining,1);
+  assert.equal(display.sessionAvailability[720].capacity,3);
+  assert.equal(booked.filter(b=>b.staff==='coach-b').length,2);
+  const final=await confirmBooking({pool,owner:'owner',staff:'coach-b',services:[training],
+   date:'2026-11-09',start:720,duration:60,buffer:15,id:'new-attendee',
+   data:{name:'Client 3',sessionId:recurringId,serviceIds:['training']}});
+  assert.equal(final.sessionId,recurringId);
+  const full=await rows(db,"SELECT date,staff,start,duration,status,data FROM appointments WHERE owner='owner' AND date='2026-11-09'");
+  const after=computeDayAvailability({config:targetConfig,date:'2026-11-09',
+   staff:'coach-b',services:[training],appointments:full,reservedSlots:[],
+   today:'2026-11-01',nowMinutes:540,capacityOpen:serviceCapacityOpen});
+  assert.equal(after.sessionAvailability[720].remaining,0);
+  assert.equal(after.sessionAvailability[720].capacity,3);
+ }finally{await db.close();}
+});
+test('explicit capacity changes are allowed, stale capacity and inadequate capacity fail without changing roster',async()=>{
+ const {db,pool}=await setup();
+ try{
+  const transfer={sessionId:recurringId,sourceDate:'2026-11-09',
+   expectedStart:720,expectedStaff:'coach-a',expectedService:'training',
+   expectedCapacity:3,capacity:4,capacityEdited:true,
+   date:'2026-11-09',start:720,staff:'coach-b',service:'training'};
+  await assert.rejects(rescheduleSessionForOwner({owner:'owner',pool,input:{...transfer,expectedCapacity:9}}),/capacity changed/i);
+  await assert.rejects(rescheduleSessionForOwner({owner:'owner',pool,input:{...transfer,capacity:1}}),/at least 2/i);
+  assert.equal((await rows(db,"SELECT staff FROM appointments WHERE id='customer-1'"))[0].staff,'coach-a');
+  const result=await rescheduleSessionForOwner({owner:'owner',pool,input:transfer});
+  assert.deepEqual(result.seatsBefore,{capacity:3,booked:2,remaining:1});
+  assert.deepEqual(result.seatsAfter,{capacity:4,booked:2,remaining:2});
+ }finally{await db.close();}
+});
 test('owner UI offers date/service/staff/time editor with an occurrence selector, and all calendars read overridable sessions',async()=>{
  const owner=await readFile(new URL('../app/studio/owner-dashboard.tsx',import.meta.url),'utf8');
  const route=await readFile(new URL('../app/api/studio/sessions/reschedule/route.ts',import.meta.url),'utf8');
