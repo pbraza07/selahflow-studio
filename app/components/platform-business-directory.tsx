@@ -4,7 +4,7 @@ import styles from '../platform-pages.module.css';
 import {BUSINESS_INDUSTRIES} from '../../lib/business-options';
 import {googleMapsDirections,displayBusinessAddress} from '../../lib/maps';
 
-export type BusinessSummary={id:string;slug:string;name:string;industry:string;description?:string;city:string;region:string;status:string;is_listed:boolean;created_at:string;owner_email:string;plan_code:string;appointment_count:number};
+export type BusinessSummary={id:string;slug:string;name:string;industry:string;description?:string;city:string;region:string;status:string;is_listed:boolean;created_at:string;archived_at?:string|null;restored_at?:string|null;owner_email:string;plan_code:string;appointment_count:number};
 type Client={name:string;email:string;visits:number;lastDate:string};
 type Appointment={id:string;date:string;start:number;duration:number;status:string;customerName:string;customerEmail:string;customerPhone:string;services:string[];quotedPrice:number;channel:string};
 type Term={id:string;service_name:string;duration_value:number;duration_unit:string;client_name:string;starts_on:string;ends_on:string;status:string};
