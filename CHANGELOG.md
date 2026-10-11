@@ -1,3 +1,23 @@
+## v1.3.30 — Private enrolled-client roster from owner calendars (October 11, 2026)
+- Owners select sessions in daily, weekly or monthly business calendars to view private enrolled client information, booking status and session availability.
+- Retains the business-scoped entitlement and pricing changes from v1.3.29. Does not reveal customer details to public booking visitors.
+- Delivered on Render deployment `dep-db5eurou01pc73ek74qg` (snapshot; check LIVE deployment status again for future versions).
+
+## v1.3.29 — Plan comparisons and enforced entitlements (October 11, 2026)
+- Replaced Crawford-specific promotion on the SelahFlow homepage with expandable Free/Professional/Business plan details.
+- Centralized enforceable service, staff, booking-question, session-template and membership-offer limits per business subscription, retaining existing records on downgrade.
+- Authorized platform admins can assign plan entitlements manually with audit history; paid subscription checkout is **not** active and manual plan assignment does not collect payment.
+
+## v1.3.28 — Business identity card homepage link (October 10, 2026)
+- Clicking the business workspace card in the owner's sidebar opens that specific business's public homepage on mobile or desktop.
+
+## v1.3.27 — Group session capacity preserved across coach transfers (October 10, 2026)
+- Transferring a session to a different team member preserves session ID, registered customers, total capacity and remaining seats unless the owner explicitly changes capacity.
+
+**Important:** Older entries below are retained as historical release notes. Current project and deployment guidance lives in `AGENTS.md` and `docs/CHATGPT_PROJECT_CONTINUITY.md`. The current version must be verified from LIVE Render + `package.json` `main`.
+
+---
+
 ## v1.3.14 — Universal business-neutral service icon
 - Replaces hair-salon-specific scissors in the Services navigation and Checkout service cards with Lucide Shapes, a neutral symbol for services across all supported industries.
 - Replaces scissors on the public booking loading state with the same universal service symbol.
