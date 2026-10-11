@@ -1,3 +1,9 @@
+## v1.3.31 — Calendar export and owner appointment details (October 11, 2026)
+- Confirmed customers can export an Apple/Outlook-compatible ICS calendar event or open a Google Calendar event with service, staff, date, time and business address.
+- Pending approval requests do not show calendar actions.
+- Owner daily calendar appointments open a private details dialog with contact, status, price, duration and booking answers.
+- Group session roster functionality from v1.3.30 remains unchanged.
+
 ## v1.3.30 — Private enrolled-client roster from owner calendars (October 11, 2026)
 - Owners select sessions in daily, weekly or monthly business calendars to view private enrolled client information, booking status and session availability.
 - Retains the business-scoped entitlement and pricing changes from v1.3.29. Does not reveal customer details to public booking visitors.
