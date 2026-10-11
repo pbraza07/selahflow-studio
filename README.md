@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Current source snapshot (2026-10-11): v1.3.33 deployment pending verification** on Render (`selahflow-studio`), at https://salonflow-hf3w.onrender.com. Verify the latest live Render deployment and `package.json` on GitHub `main` before quoting the version. Earlier version-specific notes below are historic, not the latest release status.
+**Current source snapshot (2026-10-11): v1.3.34 deployment pending verification** on Render (`selahflow-studio`), at https://salonflow-hf3w.onrender.com. Verify the latest live Render deployment and `package.json` on GitHub `main` before quoting the version. Earlier version-specific notes below are historic, not the latest release status.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 
