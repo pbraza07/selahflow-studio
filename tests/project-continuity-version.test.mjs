@@ -23,5 +23,5 @@ test('durable project context points to live-deployment verification rather than
  assert.match(agents,/v1\.3\.30/);
  assert.match(project,/Project Instructions/);
  assert.match(project,/v1\.3\.30/);
- assert.match(project,/does not automatically/i);
+ assert.match(project,/not automatically injected/i);
 });
