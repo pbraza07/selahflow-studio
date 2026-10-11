@@ -1,3 +1,9 @@
+## v1.3.39 — Permanent deletion of archived businesses
+- Primary platform administrators can permanently delete archived businesses with exact-name and PERMANENTLY DELETE confirmation.
+- Transactional cleanup removes tenant-scoped appointments, booking requests, clients, configuration and dependent records from the active database.
+- Delete owner login only when it is not shared with another business and is not a platform administrator.
+- Block deletion for connected Stripe merchant accounts or subscription history requiring reconciliation; external providers and backups have separate retention.
+
 ## v1.3.38 — Private session registration verification
 - Customers can verify their own booking using reference and matching email in the existing day/week/month booking calendar.
 - Display booking status and jump to the verified session date without revealing other participants.
