@@ -1,3 +1,8 @@
+## v1.3.38 — Private session registration verification
+- Customers can verify their own booking using reference and matching email in the existing day/week/month booking calendar.
+- Display booking status and jump to the verified session date without revealing other participants.
+- Limit verification attempts and scope queries to the current business.
+
 ## v1.3.37 — Owner email update form validation guidance
 - Explain exactly why the administrator email-change button is disabled, with live per-field requirements.
 - Accept surrounding whitespace in the business-name confirmation while preserving account verification safeguards.
