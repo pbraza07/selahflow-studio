@@ -136,3 +136,61 @@
  .planAdminLabel :is(input,select,textarea){font-size:16px}
  .planAdminForm .button{width:100%;justify-content:center}
 }
+
+
+/* v1.3.29 — primary administrator audited, manual plan entitlement controls. */
+.planEntitlements{
+ background:var(--brand-surface,#fff);border:1px solid var(--brand-border,#ccd9cb);
+ border-radius:17px;padding:clamp(17px,2.5vw,26px);margin:24px 0;
+ color:var(--brand-ink,#173e33);
+ box-shadow:0 12px 35px rgba(24,78,73,.05);
+}
+.planAdminHeader{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:15px;margin-bottom:18px}
+.planAdminEyebrow{display:flex;align-items:center;gap:8px;color:var(--brand-primary,#184e49);font-size:10px;font-weight:800;letter-spacing:.09em}
+.planAdminHeader h2{font-size:24px;font-weight:800;margin:9px 0;color:var(--brand-primary,#184e49)}
+.planAdminHeader p{max-width:730px;color:var(--brand-muted,#62766b);line-height:1.7;font-size:13px;margin:0}
+.planAdminRefresh{
+ display:flex;align-items:center;justify-content:center;gap:8px;
+ padding:10px 14px;background:var(--brand-selected,#e3eee3);
+ border:1px solid var(--brand-border,#b4cbb7);color:var(--brand-primary,#184e49);
+ min-height:44px;border-radius:9px;font-weight:750;cursor:pointer;
+}
+.planAdminGrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:18px}
+.planAdminGrid>div{min-width:0}
+.planAdminLabel{display:grid;gap:7px;margin:0 0 15px!important;color:var(--brand-primary,#184e49);font-size:12px;font-weight:750}
+.planAdminLabel input,.planAdminLabel select,.planAdminLabel textarea{
+ display:block;min-height:44px;width:100%;max-width:100%;box-sizing:border-box;
+ padding:11px 12px;background:#fff;border:1px solid var(--brand-border,#b4cbb7);
+ border-radius:9px;color:var(--brand-ink,#173e33);font-size:13px;font-weight:500;
+}
+.planAdminLabel textarea{resize:vertical}
+.planAdminCheck{
+ display:flex;align-items:flex-start;gap:9px;margin:14px 0;
+ color:var(--brand-ink,#173e33);font-size:12px;line-height:1.6;cursor:pointer;
+}
+.planAdminCheck input{width:18px;height:18px;min-width:18px;margin:1px 0 0;accent-color:var(--brand-primary,#184e49)}
+.planAdminCurrent{
+ padding:13px;border:1px solid var(--brand-border,#b4cbb7);
+ background:var(--brand-selected,#eef2eb);border-radius:10px;margin:0 0 16px;
+}
+.planAdminCurrent h3{font-size:17px;color:var(--brand-primary,#184e49);margin:0 0 8px}
+.planAdminCurrent p{font-size:12px;line-height:1.65;color:var(--brand-ink,#173e33);margin:6px 0}
+.planAdminForm{padding-top:4px}
+.planAdminHistory{
+ padding:16px;background:var(--brand-background,#f7f5ec);
+ border:1px solid var(--brand-border,#b4cbb7);border-radius:11px;
+ max-height:560px;overflow:auto;
+}
+.planAdminHistory h3{font-size:15px;color:var(--brand-primary,#184e49);margin:0 0 13px}
+.planAdminHistory article{
+ padding:12px 0;border-bottom:1px solid var(--brand-border,#b4cbb7);font-size:12px;
+ overflow-wrap:anywhere;
+}
+.planAdminHistory article b{color:var(--brand-primary,#184e49)}
+.planAdminHistory article p{display:flex;align-items:center;gap:7px;flex-wrap:wrap;color:var(--brand-ink,#173e33);margin:8px 0}
+.planAdminHistory article small{font-size:11px;line-height:1.6;color:var(--brand-muted,#62766b)}
+.planAdminNotice{font-size:11px;line-height:1.7;color:var(--brand-muted,#62766b);margin:15px 0 0}
+.planEntitlements .button{display:inline-flex;align-items:center;gap:8px;min-height:44px}
+.planEntitlements :is(input,select,textarea,button):focus-visible{outline:3px solid var(--brand-primary,#184e49);outline-offset:2px}
+@media(max-width:800px){.planAdminGrid{grid-template-columns:minmax(0,1fr)}.planAdminHistory{max-height:360px}}
+@media(max-width:550px){.planEntitlements{padding:15px}.planAdminLabel input,.planAdminLabel select,.planAdminLabel textarea{font-size:16px}.planEntitlements .button{width:100%;justify-content:center}.planAdminHeader h2{font-size:21px}}
