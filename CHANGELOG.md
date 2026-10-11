@@ -1,3 +1,8 @@
+## v1.3.35 — Calendar sync for pending booking requests (October 11, 2026)
+- Allow iPhone and Android calendar actions on both pending and confirmed booking confirmation screens.
+- Pending events are explicitly tentative and marked not confirmed; saving a reminder never reserves a seat or bypasses business approval.
+- Preserve all approval workflows and capacity enforcement.
+
 ## v1.3.34 — Manage session roster from business calendar (October 11, 2026)
 - Business owners can add a customer to an available session from its calendar roster using name, email and optional phone.
 - Business owners can remove a customer after confirmation, cancelling their booking and releasing the seat.
