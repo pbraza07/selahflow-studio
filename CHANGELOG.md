@@ -1,3 +1,8 @@
+## v1.3.34 — Manage session roster from business calendar (October 11, 2026)
+- Business owners can add a customer to an available session from its calendar roster using name, email and optional phone.
+- Business owners can remove a customer after confirmation, cancelling their booking and releasing the seat.
+- Existing owner authentication, server-side capacity checks and booking records remain authoritative.
+
 ## v1.3.33 — Mobile Settings navigation fix (October 11, 2026)
 - Make mobile owner sidebar independently scrollable with iOS safe-area spacing so Settings and all menu items remain tappable.
 - Improve touch targets and reset content scroll when switching owner sections.
