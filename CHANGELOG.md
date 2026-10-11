@@ -1,3 +1,7 @@
+## v1.3.37 — Owner email update form validation guidance
+- Explain exactly why the administrator email-change button is disabled, with live per-field requirements.
+- Accept surrounding whitespace in the business-name confirmation while preserving account verification safeguards.
+
 ## v1.3.36 — Pending session approval verification guidance (October 11, 2026)
 - Show guidance on pending booking confirmation pages to check the session participant list when available, and contact the business if no confirmation is visible.
 - Explain that calendar reminders do not constitute approval or hold a seat.
