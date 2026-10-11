@@ -177,9 +177,15 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
      <label>Confirm current owner email<input type="email" autoComplete="off" value={oldEmailConfirmation} onChange={e=>setOldEmailConfirmation(e.target.value)} placeholder={changingEmail.owner_email}/></label>
      <label>Type the business name to confirm<input value={emailConfirmation} onChange={e=>setEmailConfirmation(e.target.value)} placeholder={changingEmail.name}/></label>
     </div>
+    <div role="status" style={{margin:'12px 0',fontSize:14,lineHeight:1.6}}>
+     <strong>Required before updating:</strong>
+     <div style={{color:oldEmailConfirmation.trim().toLowerCase()===changingEmail.owner_email.toLowerCase()?'#176b48':'#a13d25'}}>{oldEmailConfirmation.trim().toLowerCase()===changingEmail.owner_email.toLowerCase()?'✓':'○'} Current owner email must match the registered address.</div>
+     <div style={{color:emailConfirmation.trim()===changingEmail.name?'#176b48':'#a13d25'}}>{emailConfirmation.trim()===changingEmail.name?'✓':'○'} Enter the business name exactly: <strong>{changingEmail.name}</strong> (not an email address).</div>
+     <div style={{color:/^[^\\s@<>]+@[^\\s@<>]+\\.[^\\s@<>]+$/.test(newLoginEmail.trim())&&newLoginEmail.trim().toLowerCase()!==changingEmail.owner_email.toLowerCase()?'#176b48':'#a13d25'}}>{/^[^\\s@<>]+@[^\\s@<>]+\\.[^\\s@<>]+$/.test(newLoginEmail.trim())&&newLoginEmail.trim().toLowerCase()!==changingEmail.owner_email.toLowerCase()?'✓':'○'} New email must be valid and different from the current email.</div>
+    </div>
     <p><small>Inform the owner of the updated login email through a trusted channel. This change does not automatically send an email or reveal their password.</small></p>
     <div><button type="button" className="outline" onClick={()=>setChangingEmail(null)} disabled={working}>Cancel</button>
-     <button type="button" className="primary" disabled={working||emailConfirmation!==changingEmail.name||
+     <button type="button" className="primary" disabled={working||emailConfirmation.trim()!==changingEmail.name||
       oldEmailConfirmation.trim().toLowerCase()!==changingEmail.owner_email.toLowerCase()||
       newLoginEmail.trim().toLowerCase()===changingEmail.owner_email.toLowerCase()||
       !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(newLoginEmail.trim())}
