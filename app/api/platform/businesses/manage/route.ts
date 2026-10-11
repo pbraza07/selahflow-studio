@@ -31,7 +31,7 @@ export async function POST(req:Request){
   if(!role)throw Error('FORBIDDEN');
   const raw=await req.text();if(raw.length>8000)throw Error('Invalid business request size.');
   const payload=JSON.parse(raw),action=payload.action;
-  if(!['create','edit','archive','restore','resetPassword','changeOwnerEmail'].includes(action))throw Error('Invalid business operation.');
+  if(!['create','edit','archive','restore','purge','resetPassword','changeOwnerEmail'].includes(action))throw Error('Invalid business operation.');
   client=await pool.connect();
   await client.query('BEGIN');
   if(action==='create'){
@@ -66,6 +66,44 @@ export async function POST(req:Request){
   const loaded=await client.query('SELECT * FROM businesses WHERE id=$1 FOR UPDATE',[payload.id]);
   const before=loaded.rows[0];if(!before)throw Error('Business not found.');
   let after:any={...before},kind=action;
+  if(action==='purge'){
+   if(role!=='primary')throw Error('Only the primary platform administrator can permanently delete a business.');
+   if(before.status!=='archived')throw Error('Archive the business before permanently deleting it.');
+   if(payload.confirmName!==before.name||payload.confirmPhrase!=='PERMANENTLY DELETE')throw Error('Confirm the exact business name and PERMANENTLY DELETE.');
+   if(before.owner_id===actor)throw Error('Cannot delete your own platform account.');
+   const admin=await client.query('SELECT 1 FROM platform_admins WHERE user_id=$1',[before.owner_id]);
+   const otherBusinesses=await client.query('SELECT 1 FROM businesses WHERE owner_id=$1 AND id<>$2',[before.owner_id,before.id]);
+   const otherMemberships=await client.query('SELECT 1 FROM business_memberships WHERE user_id=$1 AND business_id<>$2',[before.owner_id,before.id]);
+   const deleteOwner=admin.rowCount===0&&otherBusinesses.rowCount===0&&otherMemberships.rowCount===0;
+   const subscription=await client.query('SELECT stripe_subscription_id,status FROM business_subscriptions WHERE business_id=$1',[before.id]);
+   const customerSubs=await client.query("SELECT COUNT(*)::int AS n FROM customer_memberships WHERE business_id=$1 AND (status IN ('active','past_due','pending_payment') OR stripe_subscription_id IS NOT NULL)",[before.id]);
+   const merchant=await client.query('SELECT external_account_id FROM merchant_accounts WHERE business_id=$1',[before.id]);
+   if(subscription.rows[0]?.stripe_subscription_id||Number(customerSubs.rows[0]?.n)>0||merchant.rows[0]?.external_account_id)
+    throw Error('Connected payment accounts or subscription history require external billing reconciliation before permanent deletion. Remove external payment obligations first.');
+   // Clear child records before parents; retain other tenants and shared accounts.
+   await client.query('DELETE FROM platform_business_audit WHERE business_id=$1',[before.id]);
+   await client.query('DELETE FROM business_plan_entitlement_audit WHERE business_id=$1',[before.id]);
+   await client.query('DELETE FROM marketplace_referrals WHERE business_id=$1 OR appointment_id IN (SELECT id FROM appointments WHERE owner=$2)',[before.id,before.owner_id]);
+   await client.query('DELETE FROM customer_memberships WHERE business_id=$1',[before.id]);
+   await client.query('DELETE FROM booking_action_tokens WHERE request_id IN (SELECT id FROM booking_requests WHERE business_id=$1)',[before.id]);
+   await client.query('DELETE FROM booking_notification_attempts WHERE request_id IN (SELECT id FROM booking_requests WHERE business_id=$1)',[before.id]);
+   await client.query('DELETE FROM booking_request_edits WHERE business_id=$1',[before.id]);
+   await client.query('DELETE FROM business_notification_reads WHERE business_id=$1',[before.id]);
+   await client.query('DELETE FROM booking_review_links WHERE business_id=$1',[before.id]);
+   await client.query('DELETE FROM booking_requests WHERE business_id=$1',[before.id]);
+   await client.query('DELETE FROM slots WHERE owner=$1',[before.owner_id]);
+   await client.query('DELETE FROM appointments WHERE owner=$1',[before.owner_id]);
+   await client.query('DELETE FROM events WHERE owner=$1',[before.owner_id]);
+   await client.query('DELETE FROM business_client_profiles WHERE owner=$1',[before.owner_id]);
+   await client.query('DELETE FROM settings WHERE owner=$1',[before.owner_id]);
+   await client.query('DELETE FROM businesses WHERE id=$1',[before.id]);
+   if(deleteOwner){
+    await client.query('DELETE FROM sessions WHERE user_id=$1',[before.owner_id]);
+    await client.query('DELETE FROM users WHERE id=$1',[before.owner_id]);
+   }
+   await client.query('COMMIT');client.release();client=null;
+   return Response.json({ok:true,ownerDeleted:deleteOwner,message:'Archived business permanently deleted from the active database. '+(deleteOwner?'The unshared owner login was also deleted.':'The shared or privileged owner login was preserved.')+' Backups and external providers may retain data according to their retention policies.'},{headers:h});
+  }
   if(action==='changeOwnerEmail'){
    // A platform administrator may update a business owner's sign-in address,
    // but cannot change credentials for any platform administrator account.
