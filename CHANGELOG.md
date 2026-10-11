@@ -1,3 +1,7 @@
+## v1.3.32 — Remaining seats displayed on custom-session booking times (October 11, 2026)
+- Show clear remaining-seat counts on available session time buttons, with total capacity and an almost-full warning at two or fewer seats.
+- Preserve existing server-calculated session capacity, booking validation, and business session roster.
+
 ## v1.3.31 — Calendar export and owner appointment details (October 11, 2026)
 - Confirmed customers can export an Apple/Outlook-compatible ICS calendar event or open a Google Calendar event with service, staff, date, time and business address.
 - Pending approval requests do not show calendar actions.
