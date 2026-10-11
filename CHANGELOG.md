@@ -1,3 +1,9 @@
+## v1.3.40 — Email-only registration lookup
+- Customers enter their booking email and verify ownership using a six-digit single-use code, rather than a booking reference.
+- Verified customers can review their registrations and navigate the booking calendar to each session.
+- Requires Resend transactional email configuration; code expiry and attempt limits protect privacy.
+- Migration 019 adds verification code storage.
+
 ## v1.3.39 — Permanent deletion of archived businesses
 - Primary platform administrators can permanently delete archived businesses with exact-name and PERMANENTLY DELETE confirmation.
 - Transactional cleanup removes tenant-scoped appointments, booking requests, clients, configuration and dependent records from the active database.
