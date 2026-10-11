@@ -1,3 +1,4 @@
+import {planEntitlements} from './plan-entitlements.mjs';
 /** No-charge, platform-approved one-off team seat grants.
  * Approved requests count as exactly one extra seat for a single business.
  * Subscriptions, amounts and entitlements of other businesses are unaffected.
@@ -26,8 +27,7 @@ export function teamSeatReviewInput(input){
  return {action:input.action,id:input.id,note};
 }
 export function bookableTeamLimit(planCode,subscriptionStatus,approvedSeats=0){
- const regular=subscriptionStatus==='active'?
-  ({free:1,professional:3,business:10})[planCode]||1:1;
+ const regular=planEntitlements(planCode,subscriptionStatus).bookableStaff;
  if(!Number.isInteger(approvedSeats)||approvedSeats<0||approvedSeats>MAX_AD_HOC_TEAM_SEATS)
   throw Error('Invalid extra seat count.');
  return Math.min(100,regular+approvedSeats);
