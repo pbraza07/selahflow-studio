@@ -1,3 +1,7 @@
+## v1.3.36 — Pending session approval verification guidance (October 11, 2026)
+- Show guidance on pending booking confirmation pages to check the session participant list when available, and contact the business if no confirmation is visible.
+- Explain that calendar reminders do not constitute approval or hold a seat.
+
 ## v1.3.35 — Calendar sync for pending booking requests (October 11, 2026)
 - Allow iPhone and Android calendar actions on both pending and confirmed booking confirmation screens.
 - Pending events are explicitly tentative and marked not confirmed; saving a reminder never reserves a seat or bypasses business approval.
