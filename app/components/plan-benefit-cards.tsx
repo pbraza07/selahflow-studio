@@ -18,7 +18,7 @@ export default function PlanBenefitCards({placement='home'}:{placement?:'home'|'
    {(Object.entries(PLANS) as [PlanCode,(typeof PLANS)[PlanCode]][]).map(([code,plan])=>{
     const opened=expanded===code;
     const isPaid=code!=='free';
-    return <article key={code} className={styles.planCard} data-plan={code}>
+    return <article key={code} id={placement==='pricing'?code:undefined} className={styles.planCard} data-plan={code}>
      <div className={styles.planCardTop}>
       <span className={styles.planTier}>{code==='professional'?'POPULAR FOR GROWING TEAMS':code==='business'?'MORE ROOM TO SCALE':'GET STARTED'}</span>
       <h3>{plan.name}</h3>
