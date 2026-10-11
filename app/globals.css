@@ -1686,3 +1686,170 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
  .app-shell[data-selah-theme] .sf-settings-plan-limits{gap:6px}
  .app-shell[data-selah-theme] .sf-settings-plan-limits>span{font-size:10px}
 }
+
+
+/* SelahFlow v1.3.29 — owner-private roster opened by selecting calendar sessions. */
+.app-shell[data-selah-theme] .sf-calendar-period-day{
+ display:flex;flex-direction:column;align-items:stretch;
+ overflow:hidden;text-align:left;
+}
+.app-shell[data-selah-theme] .sf-calendar-period-day .sf-calendar-day-open{
+ display:flex;flex-direction:column;align-items:flex-start;
+ gap:5px;width:100%;flex:0 0 auto;padding:5px 3px;
+ border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;text-align:left;
+}
+.app-shell[data-selah-theme] .sf-calendar-period-day .sf-calendar-day-open:hover,
+.app-shell[data-selah-theme] .sf-calendar-period-day .sf-calendar-day-open:focus-visible{
+ text-decoration:underline;text-underline-offset:3px;
+}
+.app-shell[data-selah-theme] .sf-calendar-period-day .sf-session-roster-trigger{
+ display:flex;align-items:flex-start;justify-content:flex-start;gap:5px;
+ width:100%;text-align:left;min-height:35px;padding:7px 8px;
+ border:1px solid var(--sf-border);border-left:3px solid var(--sf-service-accent);
+ border-radius:7px;cursor:pointer;font-size:11px;line-height:1.5;
+ background:var(--sf-card)!important;color:var(--sf-on-card)!important;
+ white-space:normal;overflow-wrap:anywhere;
+}
+.app-shell[data-selah-theme] .sf-session-roster-trigger:hover{
+ box-shadow:0 0 0 2px var(--sf-border);
+}
+.app-shell[data-selah-theme] .sf-session-roster-trigger:focus-visible{
+ outline:2px solid var(--sf-link-on-surface);outline-offset:2px;
+}
+.app-shell[data-selah-theme] .sf-roster-overlay{
+ position:fixed;inset:0;z-index:1100;padding:clamp(10px,3vw,30px);
+ display:flex;align-items:center;justify-content:center;overflow:auto;
+ background:rgba(0,0,0,.66);
+}
+.app-shell[data-selah-theme] .sf-roster-dialog{
+ box-sizing:border-box;display:flex;flex-direction:column;
+ width:min(740px,100%);max-width:100%;max-height:min(90dvh,920px);
+ min-height:200px;overflow:hidden;flex-shrink:0;
+ border-radius:16px;border:1px solid var(--sf-border);
+ background:var(--sf-surface)!important;color:var(--sf-on-surface)!important;
+ box-shadow:0 20px 70px #0005;
+}
+.app-shell[data-selah-theme] .sf-roster-header{
+ display:flex;align-items:flex-start;justify-content:space-between;gap:15px;
+ padding:20px 22px;border-bottom:1px solid var(--sf-border);
+}
+.app-shell[data-selah-theme] .sf-roster-eyebrow{
+ display:flex;gap:7px;align-items:center;font-size:10px;font-weight:800;
+ letter-spacing:.08em;color:var(--sf-on-surface)!important;
+}
+.app-shell[data-selah-theme] .sf-roster-header h2{
+ margin:8px 0 4px;font-size:clamp(19px,3vw,26px);line-height:1.25;
+ color:var(--sf-on-surface)!important;
+}
+.app-shell[data-selah-theme] .sf-roster-header p{
+ font-size:12px;margin:0;line-height:1.65;color:var(--sf-on-surface)!important;
+}
+.app-shell[data-selah-theme] .sf-roster-close{
+ border:1px solid var(--sf-border);border-radius:9px;
+ width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+ flex-shrink:0;background:var(--sf-card)!important;
+ color:var(--sf-on-card)!important;cursor:pointer;
+}
+.app-shell[data-selah-theme] .sf-roster-content{
+ min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:20px 22px;
+}
+.app-shell[data-selah-theme] .sf-roster-metrics{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:17px;
+}
+.app-shell[data-selah-theme] .sf-roster-metrics>div{
+ display:grid;gap:5px;align-content:center;padding:13px 15px;border-radius:10px;
+ background:var(--sf-selected)!important;color:var(--sf-on-selected)!important;
+}
+.app-shell[data-selah-theme] .sf-roster-metrics small{
+ font-size:11px;color:var(--sf-on-selected)!important;
+}
+.app-shell[data-selah-theme] .sf-roster-metrics b{
+ font-size:22px;color:var(--sf-on-selected)!important;
+}
+.app-shell[data-selah-theme] .sf-roster-list{
+ display:grid;gap:12px;
+}
+.app-shell[data-selah-theme] .sf-roster-client{
+ border:1px solid var(--sf-border);background:var(--sf-card)!important;
+ color:var(--sf-on-card)!important;border-radius:12px;padding:15px;
+ overflow-wrap:anywhere;
+}
+.app-shell[data-selah-theme] .sf-roster-client-top{
+ display:flex;align-items:flex-start;justify-content:space-between;gap:9px;
+ margin-bottom:13px;flex-wrap:wrap;
+}
+.app-shell[data-selah-theme] .sf-roster-client-top>div{
+ display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+}
+.app-shell[data-selah-theme] .sf-roster-client-top strong{
+ color:var(--sf-on-card)!important;font-size:15px;
+}
+.app-shell[data-selah-theme] .sf-roster-client-top small{
+ font-size:10px;color:var(--sf-on-card)!important;opacity:.75;
+}
+.app-shell[data-selah-theme] .sf-roster-status{
+ padding:3px 8px;background:var(--sf-selected)!important;
+ color:var(--sf-on-selected)!important;border-radius:7px;
+ font-size:10px;font-weight:750;
+}
+.app-shell[data-selah-theme] .sf-roster-client-details{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+ margin:0;overflow-wrap:anywhere;
+}
+.app-shell[data-selah-theme] .sf-roster-client-details>div{min-width:0}
+.app-shell[data-selah-theme] .sf-roster-client-details dt{
+ font-weight:800;font-size:10px;opacity:.78;margin-bottom:4px;
+}
+.app-shell[data-selah-theme] .sf-roster-client-details dd{
+ margin:0;font-size:12px;line-height:1.6;overflow-wrap:anywhere;
+}
+.app-shell[data-selah-theme] .sf-roster-client-details a{
+ color:var(--sf-link-on-surface)!important;text-decoration:underline;
+}
+.app-shell[data-selah-theme] .sf-roster-answers{
+ margin-top:13px;border-top:1px solid var(--sf-border);padding-top:12px;
+ font-size:12px;line-height:1.6;
+}
+.app-shell[data-selah-theme] .sf-roster-answers>b{
+ display:block;margin-bottom:6px;font-size:12px;
+}
+.app-shell[data-selah-theme] .sf-roster-answers p{
+ margin:6px 0;font-size:11px;overflow-wrap:anywhere;
+}
+.app-shell[data-selah-theme] .sf-roster-answers span{font-weight:800}
+.app-shell[data-selah-theme] .sf-roster-empty{
+ padding:25px 15px;text-align:center;font-size:13px;line-height:1.7;
+ border:1px dashed var(--sf-border);border-radius:11px;
+}
+.app-shell[data-selah-theme] .sf-roster-actions{
+ display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:18px;
+}
+.app-shell[data-selah-theme] .sf-roster-actions button{
+ display:inline-flex;align-items:center;justify-content:center;gap:8px;
+ min-height:44px;padding:11px 15px;cursor:pointer;
+ border-radius:9px;font-size:12px;
+}
+.app-shell[data-selah-theme] .sf-roster-actions .primary{
+ background:var(--sf-button)!important;color:var(--sf-on-button)!important;
+}
+.app-shell[data-selah-theme] .sf-roster-actions .outline{
+ background:var(--sf-secondary-button)!important;
+ color:var(--sf-on-secondary-button)!important;
+ border:1px solid var(--sf-border);
+}
+@media(max-width:550px){
+ .app-shell[data-selah-theme] .sf-roster-overlay{
+  padding:6px;align-items:center;
+ }
+ .app-shell[data-selah-theme] .sf-roster-dialog{
+  max-height:94dvh;border-radius:12px;
+ }
+ .app-shell[data-selah-theme] .sf-roster-header{padding:14px}
+ .app-shell[data-selah-theme] .sf-roster-content{padding:14px}
+ .app-shell[data-selah-theme] .sf-roster-client{padding:12px}
+ .app-shell[data-selah-theme] .sf-roster-client-details{
+  grid-template-columns:minmax(0,1fr);gap:9px;
+ }
+ .app-shell[data-selah-theme] .sf-roster-actions button{flex:1 1 100%}
+ .app-shell[data-selah-theme] .sf-roster-metrics b{font-size:19px}
+}
