@@ -1,3 +1,4 @@
+import {randomInt} from 'node:crypto';
 import {db} from './database';
 import {getPool} from '../server/database.mjs';
 import {bookableTeamLimit} from '../server/team-seat-policy.mjs';
@@ -7,7 +8,7 @@ import {validateBookingFields,sanitizeBookingAnswers} from '../server/booking-cu
 import {validateApprovalVisibleFields} from '../server/booking-approval-display.mjs';
 import {requireOwner} from './auth';
 import {tokenHash,validOrigin,trustedOrigin} from '../server/security.mjs';
-import {notifyBookingRequest,validEmail,validE164} from '../server/notification-delivery.mjs';
+import {notifyBookingRequest,sendNotificationChannel,deliveryProviderStatus,validEmail,validE164} from '../server/notification-delivery.mjs';
 import {pushBookingRequest} from '../server/push-delivery.mjs';
 
 import {defaultSettings,today} from './defaults';
@@ -18,7 +19,7 @@ import {approvalSettings,bookingRequestDetail} from '../server/booking-review.mj
 const reply=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 async function context(req:Request,isPublic=false){const slug=isPublic?new URL(req.url).searchParams.get('slug'):null;const account=isPublic?(slug?await db().prepare("SELECT owner_id AS id FROM businesses WHERE slug=? AND status='active'").bind(slug).first<{id:string}>():await db().prepare("SELECT owner_id AS id FROM businesses WHERE slug='crawford' AND status='active'").first<{id:string}>()):null;const owner=isPublic?account?.id:await requireOwner(req);if(!owner)throw Error('Studio is not configured yet.');if(!isPublic){const business=await db().prepare('SELECT status FROM businesses WHERE owner_id=?').bind(owner).first<{status:string}>();if(!business||business.status!=='active')throw Error('Business awaiting platform approval.');}const row=await db().prepare('SELECT data FROM settings WHERE owner=?').bind(owner).first<{data:string}>();return {owner,config:row?JSON.parse(row.data):structuredClone(defaultSettings)};}
 export async function ownerGet(req:Request){try{const {owner,config}=await context(req);const a=await db().prepare('SELECT * FROM appointments WHERE owner=? ORDER BY date,start').bind(owner).all();const e=await db().prepare('SELECT * FROM events WHERE owner=? ORDER BY created DESC LIMIT 500').bind(owner).all();return reply({config,appointments:a.results.map((r:any)=>({...r,...JSON.parse(r.data)})),events:e.results.map((r:any)=>({...r,...JSON.parse(r.data)}))});}catch(e){return reply({error:(e as Error).message==='AUTH_REQUIRED'?'Please sign in.':'Studio data is unavailable or this business is waiting for approval.'},(e as Error).message==='AUTH_REQUIRED'?401:503);}}
-export async function studioPost(req:Request,isPublic=false){try{if(!validOrigin(req))return reply({error:'Invalid origin'},403);const raw=await req.text();if(raw.length>(isPublic?20000:120000))return reply({error:'Request too large.'},413);let b;try{b=JSON.parse(raw);}catch{return reply({error:'Invalid request.'},400);}if(!b||typeof b!=='object')return reply({error:'Invalid request.'},400);if(isPublic&&!['availability','book','calendar','verify_registration'].includes(b.action))return reply({error:'Action not permitted.'},403);const {owner,config}=await context(req,isPublic);if(isPublic){if(b.website)return reply({error:'Unable to process request.'},400);const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();if(!await takeLimit('public:'+owner+':'+tokenHash(ip),120))return reply({error:'Too many requests. Please try again in 15 minutes.'},429);if(b.action==='book'){if(b.policyAccepted!==true)return reply({error:'Please accept the booking policy.'},400);if(!await takeLimit('book:'+owner+':'+tokenHash(ip),12))return reply({error:'Booking limit reached. Please contact the studio.'},429);if(typeof b.email==='string'&&!await takeLimit('email:'+owner+':'+tokenHash(b.email.trim().toLowerCase()),6))return reply({error:'Too many booking requests for this email. Please contact the studio.'},429);}}const audit=(kind:string,data:any)=>db().prepare('INSERT OR IGNORE INTO events(id,owner,created,kind,data) VALUES(?,?,?,?,?)').bind(typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID(),owner,new Date().toISOString(),kind,JSON.stringify(data));
+export async function studioPost(req:Request,isPublic=false){try{if(!validOrigin(req))return reply({error:'Invalid origin'},403);const raw=await req.text();if(raw.length>(isPublic?20000:120000))return reply({error:'Request too large.'},413);let b;try{b=JSON.parse(raw);}catch{return reply({error:'Invalid request.'},400);}if(!b||typeof b!=='object')return reply({error:'Invalid request.'},400);if(isPublic&&!['availability','book','calendar','verify_registration','registration_code_request','registration_email_lookup'].includes(b.action))return reply({error:'Action not permitted.'},403);const {owner,config}=await context(req,isPublic);if(isPublic){if(b.website)return reply({error:'Unable to process request.'},400);const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();if(!await takeLimit('public:'+owner+':'+tokenHash(ip),120))return reply({error:'Too many requests. Please try again in 15 minutes.'},429);if(b.action==='book'){if(b.policyAccepted!==true)return reply({error:'Please accept the booking policy.'},400);if(!await takeLimit('book:'+owner+':'+tokenHash(ip),12))return reply({error:'Booking limit reached. Please contact the studio.'},429);if(typeof b.email==='string'&&!await takeLimit('email:'+owner+':'+tokenHash(b.email.trim().toLowerCase()),6))return reply({error:'Too many booking requests for this email. Please contact the studio.'},429);}}const audit=(kind:string,data:any)=>db().prepare('INSERT OR IGNORE INTO events(id,owner,created,kind,data) VALUES(?,?,?,?,?)').bind(typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID(),owner,new Date().toISOString(),kind,JSON.stringify(data));
 if(b.action==='settings'){const c=b.config;
  validateBookingFields(c?.bookingCustomFields||[],c?.bookingPushFields||['customerName','services','date']);
  validateApprovalVisibleFields(c);
@@ -90,6 +91,47 @@ try{
  await client.query('COMMIT');
 } catch(error){await client.query('ROLLBACK');throw error;} finally {client.release();}
 return reply({ok:true});}
+if(b.action==='registration_code_request'){
+ const email=String(b.email||'').trim().toLowerCase();
+ if(!validEmail(email))return reply({error:'Enter a valid email address.'},400);
+ const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();
+ if(!await takeLimit('registration-code-ip:'+owner+':'+tokenHash(ip),8)||!await takeLimit('registration-code-email:'+owner+':'+tokenHash(email),3))return reply({error:'Too many requests. Try again later.'},429);
+ if(!deliveryProviderStatus().emailConfigured)return reply({error:'Email verification is currently unavailable. Please contact the business.'},503);
+ const code=String(randomInt(0,1000000)).padStart(6,'0'),hash=tokenHash(owner+':'+email+':'+code);
+ const sent=await sendNotificationChannel('email',email,{subject:'SelahFlow registration verification code',text:'Your SelahFlow registration verification code is '+code+'. It expires in 10 minutes. If you did not request this, ignore this message.'});
+ if(sent.status!=='submitted')return reply({error:'Unable to send verification email. Please try again later.'},503);
+ await db().prepare("INSERT INTO registration_email_codes(owner_id,email_hash,code_hash,expires_at,attempts) VALUES(?,?,?,NOW()+INTERVAL '10 minutes',0) ON CONFLICT(owner_id,email_hash) DO UPDATE SET code_hash=EXCLUDED.code_hash,expires_at=EXCLUDED.expires_at,attempts=0").bind(owner,tokenHash(email),hash).run();
+ return reply({ok:true,message:'If this email can receive messages, a verification code has been sent.'});
+}
+if(b.action==='registration_email_lookup'){
+ const email=String(b.email||'').trim().toLowerCase(),code=String(b.code||'').trim();
+ if(!validEmail(email)||!/^[0-9]{6}$/.test(code))return reply({error:'Enter your email and six-digit code.'},400);
+ const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();
+ if(!await takeLimit('registration-lookup:'+owner+':'+tokenHash(ip),20))return reply({error:'Too many attempts. Try again later.'},429);
+ const row=await db().prepare("SELECT code_hash,attempts FROM registration_email_codes WHERE owner_id=? AND email_hash=? AND expires_at>NOW()").bind(owner,tokenHash(email)).first<any>();
+ if(!row||row.attempts>=5||row.code_hash!==tokenHash(owner+':'+email+':'+code)){
+  await db().prepare("UPDATE registration_email_codes SET attempts=attempts+1 WHERE owner_id=? AND email_hash=?").bind(owner,tokenHash(email)).run();
+  return reply({error:'Invalid or expired verification code.'},403);
+ }
+ await db().prepare('DELETE FROM registration_email_codes WHERE owner_id=? AND email_hash=?').bind(owner,tokenHash(email)).run();
+ const requests=(await db().prepare('SELECT id,status,date,start_minute,details,appointment_id FROM booking_requests WHERE owner_id=? ORDER BY created_at DESC LIMIT 500').bind(owner).all()).results as any[];
+ const appointments=(await db().prepare('SELECT id,status,date,start,data FROM appointments WHERE owner=? ORDER BY date DESC LIMIT 500').bind(owner).all()).results as any[];
+ const matches:any[]=[],seen=new Set<string>();
+ for(const r of requests){
+  let d:any={};try{d=JSON.parse(r.details||'{}');}catch{}
+  if(String(d.customerEmail||d.email||'').trim().toLowerCase()!==email)continue;
+  const a=appointments.find(x=>x.id===r.appointment_id);
+  matches.push({reference:r.id,date:a?.date||r.date,start:a?.start??r.start_minute,status:a?.status||({pending:'Awaiting approval',approved:'Confirmed',declined:'Declined',cancelled:'Cancelled'} as any)[r.status]||r.status,service:Array.isArray(d.services)?d.services.join(', '):'Session'});
+  if(a)seen.add(a.id);
+ }
+ for(const a of appointments){
+  if(seen.has(a.id))continue;
+  let d:any={};try{d=JSON.parse(a.data||'{}');}catch{}
+  if(String(d.email||d.customerEmail||'').trim().toLowerCase()!==email)continue;
+  matches.push({reference:a.id,date:a.date,start:a.start,status:a.status,service:Array.isArray(d.services)?d.services.join(', '):'Session'});
+ }
+ return reply({ok:true,registrations:matches.slice(0,100)});
+}
 if(b.action==='verify_registration'){
  const reference=String(b.reference||'').trim(),email=String(b.email||'').trim().toLowerCase();
  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,36}$/i.test(reference)||!validEmail(email))return reply({error:'Enter a valid booking reference and email address.'},400);
