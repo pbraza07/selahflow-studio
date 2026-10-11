@@ -1,6 +1,7 @@
 import {db} from './database';
 import {getPool} from '../server/database.mjs';
 import {bookableTeamLimit} from '../server/team-seat-policy.mjs';
+import {checkSubscriptionLimits} from '../server/plan-entitlements.mjs';
 import {appointmentData,overlaps,easternClock,bookingDateRange,computeDayAvailability,selectedSession,sessionsForDate,validateBookableSessions,validateExistingSessionReservations} from '../server/session-scheduling.mjs';
 import {validateBookingFields,sanitizeBookingAnswers} from '../server/booking-custom-fields.mjs';
 import {validateApprovalVisibleFields} from '../server/booking-approval-display.mjs';
@@ -53,6 +54,9 @@ try{
   "SELECT s.plan_code,s.status,(SELECT COUNT(*)::int FROM business_team_seat_requests r WHERE r.business_id=b.id AND r.status='approved') AS approved_seats FROM businesses b LEFT JOIN business_subscriptions s ON s.business_id=b.id WHERE b.owner_id=$1",
   [owner])).rows[0];
  const effectiveCap=bookableTeamLimit(planRow?.plan_code,planRow?.status,planRow?.approved_seats||0);
+ // Enforce paid-tier benefits on the server, using the subscription DB row,
+ // never a client-submitted plan label. Existing items remain editable on downgrade.
+ checkSubscriptionLimits(planRow,oldConfig,c);
  const oldTeam=Array.isArray(oldConfig.staff)?oldConfig.staff:[];
  if(c.staff.length>effectiveCap&&c.staff.some((member:any)=>!oldTeam.some((previous:any)=>previous.id===member.id)))
   throw Error('Team member limit reached. Submit an ad hoc extra team member request in Settings → Team members and wait for platform administrator approval.');
