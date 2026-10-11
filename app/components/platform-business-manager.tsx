@@ -18,6 +18,7 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
  const [revealCredential,setRevealCredential]=useState(false),[resetting,setResetting]=useState<BusinessSummary|null>(null),[resetConfirmation,setResetConfirmation]=useState('');
  const [changingEmail,setChangingEmail]=useState<BusinessSummary|null>(null),[newLoginEmail,setNewLoginEmail]=useState(''),[emailConfirmation,setEmailConfirmation]=useState(''),[oldEmailConfirmation,setOldEmailConfirmation]=useState('');
  const [removing,setRemoving]=useState<BusinessSummary|null>(null),[confirmation,setConfirmation]=useState('');
+ const [purging,setPurging]=useState<BusinessSummary|null>(null),[purgeName,setPurgeName]=useState(''),[purgePhrase,setPurgePhrase]=useState('');
  const items=useMemo(()=>businesses.filter(b=>
   !search.trim()||[b.name,b.slug,b.owner_email,b.industry,b.city,b.status].join(' ').toLowerCase().includes(search.toLowerCase().trim())
  ).sort((a,b)=>a.name.localeCompare(b.name)),[businesses,search]);
@@ -94,6 +95,14 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
    await onChanged();
   }catch(e){setError((e as Error).message);}finally{setWorking(false);}
  }
+ async function purgeArchived(){
+  if(!purging||purgeName!==purging.name||purgePhrase!=='PERMANENTLY DELETE')return;
+  setWorking(true);setError('');setNotice('');
+  try{
+   const result=await post({action:'purge',id:purging.id,confirmName:purgeName,confirmPhrase:purgePhrase});
+   setNotice(result.message);setPurging(null);setPurgeName('');setPurgePhrase('');await onChanged();
+  }catch(e){setError((e as Error).message);}finally{setWorking(false);}
+ }
  async function restore(b:BusinessSummary){
   if(!window.confirm('Restore '+b.name+' to suspended status? This will NOT automatically publish or allow bookings.'))return;
   setWorking(true);setError('');setNotice('');
@@ -161,13 +170,23 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
     <button type="button" className="outline" disabled={working}
      onClick={()=>{setResetting(b);setResetConfirmation('');setCredentials(null);setRevealCredential(false);setError('');}}>
      <KeyRound size={15}/> Reset password</button>
-    {b.status==='archived'?<button type="button" className="outline" disabled={working} onClick={()=>void restore(b)}><RotateCcw size={15}/> Restore</button>:
+    {b.status==='archived'?<><button type="button" className="outline" disabled={working} onClick={()=>void restore(b)}><RotateCcw size={15}/> Restore</button>{primary&&<button type="button" className="outline sf-platform-remove-btn" disabled={working} onClick={()=>{setPurging(b);setPurgeName('');setPurgePhrase('');setError('')}}><Trash2 size={15}/> Permanently delete</button>}</>:
      <><button type="button" className="outline" onClick={()=>edit(b)} disabled={working}><Pencil size={15}/> Edit</button>
       <button type="button" className="outline sf-platform-remove-btn" disabled={working} onClick={()=>{setRemoving(b);setConfirmation('');setError('')}}><Trash2 size={15}/> Remove</button></>}
    </div>
   </article>)}</div>
   {!items.length&&<p>No businesses match the search.</p>}
-  {changingEmail&&<div className="sf-platform-confirm-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!working)setChangingEmail(null)}}>
+  {purging&&<div className="sf-platform-confirm-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!working)setPurging(null)}}>
+ <section role="dialog" aria-modal="true" aria-labelledby="sf-purge-title" className="sf-platform-confirm">
+ <h3 id="sf-purge-title"><ShieldAlert size={20}/> Permanently delete archived business</h3>
+ <p><strong>{purging.name}</strong> and its booking, client, staff, and business history will be erased from the active database. This cannot be undone. The owner login will be deleted only if not shared with another business or platform administrator. External provider records and backups may remain.</p>
+ <p>Active payment connections or subscription obligations block this operation.</p>
+ <label>Type the business name exactly<input autoComplete="off" value={purgeName} onChange={e=>setPurgeName(e.target.value)}/></label>
+ <label>Type PERMANENTLY DELETE<input autoComplete="off" value={purgePhrase} onChange={e=>setPurgePhrase(e.target.value)}/></label>
+ <div className="sf-platform-form-actions"><button type="button" className="outline" disabled={working} onClick={()=>setPurging(null)}>Cancel</button>
+ <button type="button" className="outline sf-platform-remove-btn" disabled={working||purgeName!==purging.name||purgePhrase!=='PERMANENTLY DELETE'} onClick={()=>void purgeArchived()}><Trash2 size={16}/> Permanently delete</button></div>
+ </section></div>}
+{changingEmail&&<div className="sf-platform-confirm-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!working)setChangingEmail(null)}}>
    <section role="dialog" aria-modal="true" aria-labelledby="sf-platform-email-title" className="sf-platform-confirm">
     <h3 id="sf-platform-email-title"><Mail size={20}/> Update owner's login email</h3>
     <p><b>Business:</b> {changingEmail.name}</p>
