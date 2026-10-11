@@ -45,3 +45,115 @@
 .site[data-selah-theme] .footer{background:var(--sf-footer);color:var(--sf-on-footer)}
 .site[data-selah-theme] h1,.site[data-selah-theme] h2,.site[data-selah-theme] h3,.site[data-selah-theme] h4{font-family:var(--sf-heading-font)!important}
 
+
+
+/* SelahFlow v1.3.29 — platform-wide plan cards; not business-brand overrides. */
+.plansSection{
+ max-width:1230px;margin:48px auto 80px;padding:0 clamp(18px,4vw,38px);
+ font-family:'DM Sans',sans-serif;color:#214c41;
+ scroll-margin-top:28px;
+}
+.plansHeading{max-width:760px;margin:0 auto 25px;text-align:center}
+.plansEyebrow{
+ display:block;font-size:11px;font-weight:850;letter-spacing:.12em;
+ color:#3e7162;margin-bottom:10px;
+}
+.plansHeading h2{
+ color:#124c40;font-family:'Manrope',sans-serif;
+ font-size:clamp(27px,4.1vw,43px);line-height:1.2;
+ letter-spacing:-.04em;margin:9px 0 13px;
+}
+.plansHeading>p{
+ font-size:15px;line-height:1.75;
+ color:#546e61;margin:0 auto;max-width:710px;
+}
+.planGrid{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:15px;align-items:start;
+}
+.planCard{
+ min-width:0;display:flex;flex-direction:column;
+ border:1px solid #cbdbcb;border-radius:17px;padding:clamp(17px,2.2vw,25px);
+ background:#fff;box-shadow:0 6px 27px rgba(24,78,73,.07);
+}
+.planCard[data-plan="professional"]{border:2px solid #24624e;box-shadow:0 10px 27px rgba(24,78,73,.1)}
+.planCardTop{min-height:190px}
+.planTier{
+ display:inline-flex;color:#24624e;font-size:10px;font-weight:800;
+ letter-spacing:.07em;background:#edf4eb;border-radius:90px;
+ padding:6px 9px;line-height:1.45;white-space:normal;
+}
+.planCard h3{
+ color:#133f37;font-family:'Manrope',sans-serif;
+ font-size:26px;letter-spacing:-.03em;line-height:1.2;margin:13px 0 8px;
+}
+.planSubtitle{color:#526d60;min-height:48px;line-height:1.65;font-size:12px;margin:0 0 12px}
+.planPrice{font-size:36px;font-weight:850;line-height:1.1;margin:4px 0;color:#124c40}
+.planPrice span{font-size:12px;color:#5b7165;font-weight:600;margin-left:4px}
+.planPriceNote{color:#587265;font-size:11px;min-height:34px;line-height:1.5;margin:8px 0}
+.planHighlights{
+ display:grid;gap:0;border-top:1px solid #e1eae1;
+ border-bottom:1px solid #e1eae1;padding:11px 0;margin:10px 0 16px;
+}
+.planHighlights p{color:#355b4d;margin:0;padding:9px 0;font-size:12px;line-height:1.5}
+.planHighlights p+p{border-top:1px solid #edf0eb}
+.planHighlights b{color:#174d3f;font-weight:900;font-size:14px}
+.planDetailsToggle{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:10px;width:100%;min-height:45px;cursor:pointer;
+ font-size:12px;line-height:1.5;font-weight:800;
+ border:1px solid #a6bbac;background:#f3f7f1;
+ border-radius:10px;color:#184e40;padding:11px 12px;text-align:left;
+ transition:background .16s;
+}
+.planDetailsToggle:hover{background:#e4f0e4}
+.planDetailsToggle:focus-visible,.planCta:focus-visible{
+ outline:3px solid #346d57;outline-offset:3px;
+}
+.planExpanded{
+ padding:13px 2px 12px;color:#325b4e;
+ animation:none;
+}
+.planExpanded h4{font-size:13px;margin:3px 0 10px;color:#184b3c}
+.planExpanded ul{margin:0;padding:0;list-style:none;display:grid;gap:11px}
+.planExpanded li{
+ display:flex;align-items:flex-start;gap:9px;
+ font-size:12px;line-height:1.65;color:#325c4d;
+}
+.planExpanded li svg{flex-shrink:0;color:#37765c;margin-top:2px}
+.planExpanded>p{
+ font-size:11px;line-height:1.6;color:#617668;
+ padding-top:12px;border-top:1px solid #dfebdf;margin-top:16px;
+}
+.planCta{
+ display:flex;justify-content:center;align-items:center;gap:8px;
+ text-decoration:none!important;text-align:center;min-height:47px;
+ margin-top:16px;padding:12px 10px;border-radius:10px;
+ font-size:12px;font-weight:800;line-height:1.55;
+ color:#fff!important;background:#184e49;
+}
+.planCta:hover{background:#23685a}
+.plansDisclosure{
+ max-width:1000px;margin:19px auto 0;
+ font-size:11px;line-height:1.8;color:#576f60;text-align:center;
+}
+@media(max-width:980px){
+ .planGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .planCardTop{min-height:0}
+ .planSubtitle{min-height:0}
+}
+@media(max-width:650px){
+ .plansSection{margin:26px auto 60px;padding:0 16px}
+ .planGrid{grid-template-columns:minmax(0,1fr);gap:12px}
+ .planCard{padding:19px;border-radius:15px}
+ .planCard h3{font-size:23px}
+ .planHighlights{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 8px}
+ .planHighlights p{border-top:0!important;font-size:11px}
+ .planPriceNote{min-height:0}
+ .plansHeading{margin-bottom:20px}
+ .plansHeading>p{font-size:13px}
+ .planDetailsToggle,.planCta{font-size:13px}
+}
+@media(prefers-reduced-motion:reduce){
+ .planDetailsToggle{transition:none}
+}
