@@ -11,7 +11,7 @@ export default function Pricing(){
   </section>
   <PlanBenefitCards placement="pricing"/>
   <section className={styles.card} aria-label="Optional AI receptionist information"><h2>Future AI Receptionist add-on</h2>
-   <p className={styles.price}>$${(AI_ADDON_MONTHLY_CENTS/100).toFixed(2)}<small> /month proposed, plus disclosed usage charges</small></p>
+   <p className={styles.price}>${(AI_ADDON_MONTHLY_CENTS/100).toFixed(2)}<small> /month proposed, plus disclosed usage charges</small></p>
    <p>Voice calls, AI-managed SMS, advanced phone automation and usage-billed integrations are <b>not enabled</b> as part of any tier today. Email and SMS notifications require the applicable configured providers; device push remains a separate permission per business/device.</p>
   </section>
   <footer className={styles.footer}>Actual processor fees, taxes, provider usage and paid-plan terms will be published before a paid checkout becomes available. Subscription benefits are controlled by the business’s stored entitlement, not by selecting a plan on this page.</footer>
