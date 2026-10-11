@@ -5,7 +5,6 @@ import PlatformAdminManager from '../../components/platform-admin-manager';
 import PlatformBusinessManager from '../../components/platform-business-manager';
 import PlatformTeamSeatRequests from '../../components/platform-team-seat-requests';
 import PlatformPlanEntitlements from '../../components/platform-plan-entitlements';
-import PlatformPlanEntitlements from '../../components/platform-plan-entitlements';
 import PlatformBusinessDirectory,{type BusinessSummary} from '../../components/platform-business-directory';
 type Overview={businesses:{count:number;listed:number};subscriptions:{plan_code:string;count:number}[];bookings:number;pendingListings:{id:string;slug:string;name:string;industry:string;city:string;region:string}[];pendingRegistrations:{id:string;slug:string;name:string;industry:string;city:string;region:string;created_at:string;email:string}[];canApproveRegistrations:boolean;pendingTeamSeatRequests:number;termEnrollmentMetrics:{business_name:string;slug:string;duration_unit:string;count:number;active_count:number}[];financialStatus:string;estimatedAiCostCents:string;directory:BusinessSummary[]};
 export default function PlatformAdmin(){
