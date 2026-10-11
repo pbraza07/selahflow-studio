@@ -1,3 +1,13 @@
+# SelahFlow — current production and project continuity
+
+**Current snapshot (2026-10-11): v1.3.30 LIVE** on Render (`selahflow-studio`), at https://salonflow-hf3w.onrender.com. Verify the latest live Render deployment and `package.json` on GitHub `main` before quoting the version. Earlier version-specific notes below are historic, not the latest release status.
+
+**For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
+
+**What recently shipped:** v1.3.28 made business workspace cards open the correct business homepage; v1.3.29 delivered Free/Professional/Business plan detail cards plus server-enforced subscription entitlements (no active paid platform subscription checkout); v1.3.30 delivered clickable owner calendar sessions with private enrolled-client rosters. See `AGENTS.md` for more history and current limitations.
+
+---
+
 # SelahFlow Studio v1.3.12 — Platform administrator access hotfix
 
 The primary platform administrator (`pbraza@gmail.com`) is automatically directed to `/admin/platform` after login, even when they also own Crawford. Non-administrator accounts requesting `/admin/platform` are directed to an informative `/admin/access-denied` page with an account-switch action instead of an unexplained Next.js 404. Logged-out users are sent to `/login?next=%2Fadmin%2Fplatform`.
