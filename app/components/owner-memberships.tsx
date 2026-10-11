@@ -3,7 +3,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {CalendarClock,CheckCircle2,CreditCard,ExternalLink,Plus,RefreshCw,ShieldCheck} from 'lucide-react';
 type Plan={id:string;name:string;description:string;interval:'week'|'month'|'year';priceCents:number;active:boolean};
 type Member={id:string;customer_name:string;customer_email:string;plan_name:string;interval_unit:string;status:string;paid_through:string|null};
-type Payload={businessName:string;plans:Plan[];members:Member[];payments:{connected:boolean;configured:boolean;ready:boolean}};
+type Payload={businessName:string;plans:Plan[];members:Member[];planBenefits:{name:string;limits:{membershipPlans:number}};payments:{connected:boolean;configured:boolean;ready:boolean}};
 const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
 export default function OwnerMemberships({slug}:{slug:string}){
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
@@ -69,8 +69,11 @@ export default function OwnerMemberships({slug}:{slug:string}){
     </div>
     <small>Each business uses its own connected account. Stripe's hosted Checkout processes payment details; customer membership status remains pending until a verified payment webhook confirms the charge.</small>
    </section>
-   <div className="sf-owner-membership-layout">
-    <section className="sf-owner-membership-plans"><div className="sf-owner-memberships-title"><h3>Available membership plans</h3><button type="button" className="outline" onClick={clear}><Plus size={16}/> New plan</button></div>
+   <p className="sf-membership-plan-allowance" role="status">
+   <strong>{data?.planBenefits.name||'Free'} subscription:</strong> {(data?.plans||[]).filter(x=>x.active).length}/{data?.planBenefits.limits.membershipPlans||2} active membership offers. Existing members and plans remain preserved if your subscription changes. <a href="/pricing">Compare SelahFlow plans ↗</a>
+  </p>
+  <div className="sf-owner-membership-layout">
+    <section className="sf-owner-membership-plans"><div className="sf-owner-memberships-title"><h3>Available membership plans</h3><button type="button" className="outline" disabled={!!data&&data.plans.filter(x=>x.active).length>=data.planBenefits.limits.membershipPlans} title="Plan entitlement limit applies to new active membership offers" onClick={clear}><Plus size={16}/> New plan</button></div>
      {data?.plans.length?<div className="sf-owner-plan-list">{data.plans.map(p=><article key={p.id}>
       <div><strong>{p.name}</strong><p>{p.description||'Recurring membership'}</p>
        <span className="sf-plan-status">{p.active?'Available to new customers':'Unavailable for new signups'}</span></div>

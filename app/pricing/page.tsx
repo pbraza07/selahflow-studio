@@ -1,5 +1,19 @@
 import styles from '../platform-pages.module.css';
-import {PLANS,AI_ADDON_MONTHLY_CENTS} from '../../lib/plans';
+import {AI_ADDON_MONTHLY_CENTS} from '../../lib/plans';
+import PlanBenefitCards from '../components/plan-benefit-cards';
 export default function Pricing(){
- return <main className={styles.shell}><header className={styles.top}><a className={styles.brand} href="/"><img className="selah-logo" src="/brand/logo.svg" alt="SelahFlow" width="380" height="68"/></a><nav className={styles.nav}><a href="/discover">Discover</a><a href="/signup">Join</a><a href="/login">Owner login</a></nav></header><section className={styles.hero}><h1>Simple pricing for growing service businesses.</h1><p>Free registration is available now. Paid plans below are proposed launch pricing, not active subscriptions or checkout.</p></section><section className={styles.cards}>{Object.entries(PLANS).map(([key,plan])=><article className={styles.card} key={key}><h2>{plan.name}</h2><div className={styles.price}>${(plan.monthlyCents/100).toFixed(2)}<small>/mo</small></div><p>Up to {plan.bookableStaff} bookable team member{plan.bookableStaff>1?'s':''}</p><p>{key==='free'?'Direct bookings and service catalog.':'Enhanced business features planned for paid tiers.'}</p><a className={styles.button} href="/signup">{key==='free'?'Get started free':'Join waitlist via Free account'}</a></article>)}</section><div className={styles.card}><h2>Planned AI Receptionist add-on</h2><p className={styles.price}>${(AI_ADDON_MONTHLY_CENTS/100).toFixed(2)}<small>/mo plus disclosed usage charges</small></p><p>Automated availability checks, assisted booking, SMS and phone integrations will be introduced after provider and compliance testing.</p></div><footer className={styles.footer}>Standard processor fees, tax, usage limits and terms will be disclosed before paid launch.</footer></main>;
+ return <main className={styles.shell}>
+  <header className={styles.top}><a className={styles.brand} href="/"><img className="selah-logo" src="/brand/logo.svg" alt="SelahFlow" width="380" height="68"/></a>
+   <nav className={styles.nav}><a href="/discover">Discover</a><a href="/signup">Join free</a><a href="/login">Owner login</a></nav></header>
+  <section className={styles.hero}><h1>Find the right SelahFlow plan.</h1>
+   <p>Compare precisely what each tier includes and which limits will apply to your business when that plan is assigned. A free account can be registered today.</p>
+   <p><b>Paid subscription checkout is not active yet.</b> Professional and Business prices are proposed, not charges. Platform administrators may assign entitlements manually after verification outside SelahFlow.</p>
+  </section>
+  <PlanBenefitCards placement="pricing"/>
+  <section className={styles.card} aria-label="Optional AI receptionist information"><h2>Future AI Receptionist add-on</h2>
+   <p className={styles.price}>${(AI_ADDON_MONTHLY_CENTS/100).toFixed(2)}<small> /month proposed, plus disclosed usage charges</small></p>
+   <p>Voice calls, AI-managed SMS, advanced phone automation and usage-billed integrations are <b>not enabled</b> as part of any tier today. Email and SMS notifications require the applicable configured providers; device push remains a separate permission per business/device.</p>
+  </section>
+  <footer className={styles.footer}>Actual processor fees, taxes, provider usage and paid-plan terms will be published before a paid checkout becomes available. Subscription benefits are controlled by the business’s stored entitlement, not by selecting a plan on this page.</footer>
+ </main>;
 }

@@ -1,9 +1,6 @@
 // Catalog only. Paid checkout and access grants must never use client-supplied plan labels.
-export const PLANS = {
- free:{name:'Free',monthlyCents:0,bookableStaff:1},
- professional:{name:'Professional',monthlyCents:2499,bookableStaff:3},
- business:{name:'Business',monthlyCents:6999,bookableStaff:10}
-} as const;
+import {PLAN_CATALOG} from '../server/plan-entitlements.mjs';
+export const PLANS=PLAN_CATALOG;
 export const AI_ADDON_MONTHLY_CENTS=4900;
 export const MARKETPLACE_REFERRAL_PERCENT=10;
 export const MARKETPLACE_MIN_CENTS=200;

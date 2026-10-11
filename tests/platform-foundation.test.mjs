@@ -35,7 +35,12 @@ test('reserved Crawford original business retains existing appointments and cann
 });
 test('v1.3 proposed plans and commission math reject invalid values',async()=>{
  const source=await readFile(new URL('../lib/plans.ts',import.meta.url),'utf8');
- const output=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+ const {PLAN_CATALOG}=await import('../server/plan-entitlements.mjs');
+ // The test dynamically imports a data: URL, which cannot resolve relative
+ // imports. Inline the canonical read-only plan catalog for this isolated unit.
+ const isolated=source.replace("import {PLAN_CATALOG} from '../server/plan-entitlements.mjs';",
+  'const PLAN_CATALOG='+JSON.stringify(PLAN_CATALOG)+';');
+ const output=ts.transpileModule(isolated,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
  const mod=await import('data:text/javascript;base64,'+Buffer.from(output).toString('base64'));
  assert.equal(mod.PLANS.free.monthlyCents,0);
  assert.equal(mod.PLANS.professional.monthlyCents,2499);
