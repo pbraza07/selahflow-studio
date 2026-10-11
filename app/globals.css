@@ -1632,3 +1632,57 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
   transition:none;
  }
 }
+
+
+/* v1.3.29 — small, branded subscription benefit summary in business settings. */
+.app-shell[data-selah-theme] .sf-settings-plan-summary{
+ margin:15px 0 0;padding:14px;border-radius:12px;
+ border:1px solid var(--sf-border)!important;
+ background:var(--sf-card)!important;color:var(--sf-on-card)!important;
+ font-family:var(--sf-body-font);
+}
+.app-shell[data-selah-theme] .sf-settings-plan-summary>div:first-child{
+ display:flex;align-items:center;justify-content:space-between;
+ flex-wrap:wrap;gap:6px;
+}
+.app-shell[data-selah-theme] .sf-settings-plan-summary b{
+ color:var(--sf-on-card)!important;font-size:13px;
+ font-weight:800;line-height:1.4;
+}
+.app-shell[data-selah-theme] .sf-settings-plan-summary span{
+ color:var(--sf-on-card)!important;font-size:11px;line-height:1.6;
+}
+.app-shell[data-selah-theme] .sf-settings-plan-summary a{
+ color:var(--sf-link-on-surface)!important;
+ font-size:11px;text-decoration:underline;
+ font-weight:700;
+}
+.app-shell[data-selah-theme] .sf-settings-plan-limits{
+ display:flex;flex-wrap:wrap;align-items:center;gap:7px;
+ border-top:1px solid var(--sf-border);padding-top:11px;margin-top:10px;
+}
+.app-shell[data-selah-theme] .sf-settings-plan-limits>span{
+ border:1px solid var(--sf-border);border-radius:40px;
+ padding:6px 9px;background:var(--sf-surface)!important;
+ color:var(--sf-on-surface)!important;font-size:10px;
+}
+.app-shell[data-selah-theme] .sf-settings-form button:disabled{
+ cursor:not-allowed;opacity:.65;
+}
+.app-shell[data-selah-theme] .sf-membership-plan-allowance{
+ margin:12px 0;padding:12px 13px;
+ border-radius:10px;border:1px solid var(--sf-border);
+ color:var(--sf-on-surface)!important;background:var(--sf-surface)!important;
+ font-size:12px;line-height:1.75;
+}
+.app-shell[data-selah-theme] .sf-membership-plan-allowance strong{
+ color:var(--sf-on-surface)!important;
+}
+.app-shell[data-selah-theme] .sf-membership-plan-allowance a{
+ color:var(--sf-link-on-surface)!important;text-decoration:underline;
+}
+@media(max-width:560px){
+ .app-shell[data-selah-theme] .sf-settings-plan-summary{padding:11px}
+ .app-shell[data-selah-theme] .sf-settings-plan-limits{gap:6px}
+ .app-shell[data-selah-theme] .sf-settings-plan-limits>span{font-size:10px}
+}
