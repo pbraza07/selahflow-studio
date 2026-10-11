@@ -1853,3 +1853,11 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
  .app-shell[data-selah-theme] .sf-roster-actions button{flex:1 1 100%}
  .app-shell[data-selah-theme] .sf-roster-metrics b{font-size:19px}
 }
+
+/* v1.3.33: mobile owner navigation must remain reachable and independently scrollable. */
+@media(max-width:650px){
+ .app-shell .sidebar{height:100dvh;max-height:100dvh;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px);touch-action:pan-y;}
+ .app-shell .sidebar nav{flex:0 0 auto;min-height:max-content;}
+ .app-shell .sidebar .nav-item{position:relative;flex-shrink:0;min-height:48px;touch-action:manipulation;cursor:pointer;}
+ .app-shell .sidebar-bottom{margin-top:24px;flex-shrink:0;}
+}
