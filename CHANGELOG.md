@@ -1,3 +1,8 @@
+## v1.3.33 — Mobile Settings navigation fix (October 11, 2026)
+- Make mobile owner sidebar independently scrollable with iOS safe-area spacing so Settings and all menu items remain tappable.
+- Improve touch targets and reset content scroll when switching owner sections.
+- Preserve all existing bookings, subscriptions, and session capacity functionality.
+
 ## v1.3.32 — Remaining seats displayed on custom-session booking times (October 11, 2026)
 - Show clear remaining-seat counts on available session time buttons, with total capacity and an almost-full warning at two or fewer seats.
 - Preserve existing server-calculated session capacity, booking validation, and business session roster.
