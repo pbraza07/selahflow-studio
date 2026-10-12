@@ -96,6 +96,45 @@ export async function POST(req:Request){
    }catch(e){await client.query('ROLLBACK');throw e;}
    finally{client.release();}
   }
+  if(input.action==='confirmManualPayment'){
+   const id=String(input.id||'');
+   if(!/^[a-f0-9-]{36}$/i.test(id))throw Error('Invalid member.');
+   const client=await pool.connect();
+   try{
+    await client.query('BEGIN');
+    const member=(await client.query("SELECT m.id,m.status,m.sessions_included,m.sessions_used,m.member_number,p.sessions_included AS plan_sessions,p.price_cents FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 AND m.id=$2 FOR UPDATE",[business.id,id])).rows[0];
+    if(!member)throw Error('Member not found.');
+    if(!member.member_number)throw Error('Assign a member number before confirming payment.');
+    const credits=Number(member.plan_sessions);
+    if(!Number.isInteger(credits)||credits<1)throw Error('Membership package must include at least one session.');
+    const paymentRef=String(input.paymentReference||'').trim();
+    if(paymentRef.length<4||paymentRef.length>120)throw Error('Enter a unique payment receipt/reference (at least 4 characters).');
+    const existing=(await client.query("SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='payment_confirmed'",[business.id,id,paymentRef])).rowCount;
+    if(existing)throw Error('This payment reference was already confirmed.');
+    await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[randomUUID(),business.id,id,paymentRef,credits,member.price_cents]);
+    await client.query("UPDATE customer_memberships SET sessions_included=sessions_included+$1,status='active',last_paid_at=now(),updated_at=now() WHERE business_id=$2 AND id=$3",[credits,business.id,id]);
+    await client.query('COMMIT');
+    return Response.json({ok:true,credited:credits},{headers});
+   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
+  }
+  if(input.action==='recordSession'){
+   const id=String(input.id||''),appointmentId=String(input.appointmentId||'').trim();
+   if(!/^[a-f0-9-]{36}$/i.test(id)||!appointmentId)throw Error('Choose a member and completed appointment reference.');
+   const client=await pool.connect();
+   try{
+    await client.query('BEGIN');
+    const member=(await client.query('SELECT id,member_number,sessions_included,sessions_used,status FROM customer_memberships WHERE business_id=$1 AND id=$2 FOR UPDATE',[business.id,id])).rows[0];
+    if(!member||member.status!=='active'||!member.member_number)throw Error('An active member is required.');
+    if(member.sessions_used>=member.sessions_included)throw Error('No sessions remaining.');
+    const visit=(await client.query("SELECT a.id,a.data FROM appointments a JOIN businesses b ON b.owner_id=a.owner WHERE b.id=$1 AND a.id=$2 AND a.status IN ('Completed','Attended')",[business.id,appointmentId])).rows[0];
+    if(!visit)throw Error('Appointment must be completed or attended.');
+    const info=typeof visit.data==='string'?JSON.parse(visit.data):visit.data||{};
+    if(info.memberNumber!==member.member_number)throw Error('Appointment member number does not match.');
+    await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta) VALUES($1,$2,$3,$4,'session_used',-1)",[randomUUID(),business.id,id,appointmentId]);
+    await client.query('UPDATE customer_memberships SET sessions_used=sessions_used+1,updated_at=now() WHERE id=$1 AND business_id=$2',[id,business.id]);
+    await client.query('COMMIT');return Response.json({ok:true},{headers});
+   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
+  }
   if(input.action==='assignMember'){
    const name=String(input.name||'').trim(),email=String(input.email||'').trim().toLowerCase(),planId=String(input.planId||'');
    if(name.length<2||name.length>100||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Enter a valid member name and email.');
@@ -103,7 +142,63 @@ export async function POST(req:Request){
    const plan=(await pool.query('SELECT id,price_cents,sessions_included FROM membership_plans WHERE business_id=$1 AND id=$2',[business.id,planId])).rows[0];
    if(!plan)throw Error('Choose a membership package for this business.');
    for(let attempt=0;attempt<12;attempt++){
-    const number=initials+String(randomInt(0,1000000)).padStart(6,'0');
+    const requested=String(input.memberNumber||'').trim().toUpperCase();
+    if(requested&&!new RegExp('^'+initials+'[0-9]{6}
+    const result=await pool.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,plan.sessions_included]);
+    if(result.rows[0])return Response.json({ok:true,memberNumber:number,paymentStatus:'pending_payment'},{headers});
+    if(requested)throw Error('This membership number is already in use.');
+   }
+   throw Error('Unable to allocate a unique membership number.');
+  }
+  if(input.action==='updateMember'){
+   const id=String(input.id||''),planId=String(input.planId||'');
+   const plan=(await pool.query('SELECT id,sessions_included FROM membership_plans WHERE business_id=$1 AND id=$2',[business.id,planId])).rows[0];
+   if(!plan)throw Error('Choose a valid membership package.');
+   const member=(await pool.query('SELECT id,sessions_used FROM customer_memberships WHERE business_id=$1 AND id=$2',[business.id,id])).rows[0];
+   if(!member)throw Error('Member not found.');
+   const used=Number(input.sessionsUsed),included=Number(input.sessionsIncluded);
+   if(!Number.isInteger(used)||!Number.isInteger(included)||used<0||included<0||included>100000||used>included)throw Error('Enter valid sessions used and included.');
+   await pool.query('UPDATE customer_memberships SET plan_id=$1,sessions_used=$2,sessions_included=$3,updated_at=now() WHERE business_id=$4 AND id=$5',[planId,used,included,business.id,id]);
+   return Response.json({ok:true},{headers});
+  }
+  if(input.action==='connect'){
+   if(!paymentConfigured())throw Error('Stripe payments require STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the SelahFlow Render environment before enrollment can accept money.');
+   const current=(await pool.query('SELECT external_account_id FROM merchant_accounts WHERE business_id=$1',[business.id])).rows[0];
+   let accountId=current?.external_account_id;
+   if(!accountId){
+    const created=await stripeApi('accounts',{params:{
+     type:'express',country:'US',email:input.email||undefined,
+     'business_profile[name]':business.name,
+     'capabilities[card_payments][requested]':'true',
+     'capabilities[transfers][requested]':'true',
+     'metadata[selahflow_business_id]':business.id
+    },idempotencyKey:'selahflow-connect-'+business.id});
+    accountId=created.id;
+    await pool.query("INSERT INTO merchant_accounts(business_id,provider,external_account_id) VALUES($1,'stripe',$2) ON CONFLICT(business_id) DO UPDATE SET external_account_id=excluded.external_account_id",
+     [business.id,accountId]);
+   }
+   const origin=trustedOrigin(req);
+   const link=await stripeApi('account_links',{params:{
+    account:accountId,refresh_url:origin+'/studio/'+business.slug+'?stripe=retry',
+    return_url:origin+'/studio/'+business.slug+'?stripe=connected',type:'account_onboarding'
+   }});
+   return Response.json({url:link.url},{headers});
+  }
+  if(input.action==='verify'){
+   if(!paymentConfigured())throw Error('Stripe payments are not yet configured.');
+   const account=(await pool.query('SELECT external_account_id FROM merchant_accounts WHERE business_id=$1',[business.id])).rows[0];
+   if(!account?.external_account_id)throw Error('Connect Stripe before verifying payments.');
+   const info=await stripeApi('accounts/'+account.external_account_id,{method:'GET'});
+   const ready=info.charges_enabled===true&&info.details_submitted===true;
+   await pool.query('UPDATE merchant_accounts SET charges_enabled=$1,onboarding_complete=$2,updated_at=now() WHERE business_id=$3',
+    [info.charges_enabled===true,info.details_submitted===true,business.id]);
+   return Response.json({ok:true,ready},{headers});
+  }
+  throw Error('Invalid membership action.');
+ }catch(e){return error(e);}
+}
+).test(requested))throw Error('Member number must contain the player initials and six digits.');
+    const number=requested||initials+String(randomInt(0,1000000)).padStart(6,'0');
     const result=await pool.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,plan.sessions_included]);
     if(result.rows[0])return Response.json({ok:true,memberNumber:number,paymentStatus:'pending_payment'},{headers});
    }
