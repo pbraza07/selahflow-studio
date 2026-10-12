@@ -8,6 +8,7 @@ const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency
 export default function OwnerMemberships({slug}:{slug:string}){
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
  const [manualMemberNumber,setManualMemberNumber]=useState('');
+ const [renewing,setRenewing]=useState<string|null>(null),[renewPlan,setRenewPlan]=useState(''),[renewNumber,setRenewNumber]=useState('');
  const [sessionsIncluded,setSessionsIncluded]=useState(0),[newMemberName,setNewMemberName]=useState(''),[newMemberEmail,setNewMemberEmail]=useState(''),[newMemberPlan,setNewMemberPlan]=useState('');
  const [edit,setEdit]=useState<string|null>(null),[name,setName]=useState(''),[description,setDescription]=useState(''),[interval,setIntervalValue]=useState<'week'|'month'|'year'>('month'),[amount,setAmount]=useState('49.00');
  const load=useCallback(async()=>{
@@ -41,23 +42,16 @@ export default function OwnerMemberships({slug}:{slug:string}){
  }
  async function confirmPayment(m:Member,renew=false){
   if(busy)return;
-  if(renew){
-   const memberNumber=window.prompt('Enter player membership number to renew '+m.customer_name+':');
-   if(memberNumber===null)return;
-   if(memberNumber.trim().toUpperCase()!==String(m.member_number||'').toUpperCase()){setError('Membership number does not match this player.');return;}
-  }
+  if(renew&&(!renewPlan||renewNumber.trim().toUpperCase()!==String(m.member_number||'').toUpperCase())){setError('Select a package and enter the correct player membership number.');return;}
   setBusy(true);setError('');setMessage('');
   try{
-   const d=await post(renew?'renewMembership':'confirmManualPayment',{id:m.id,requestId:crypto.randomUUID(),...(renew?{memberNumber:m.member_number}:{})});
-   setMessage(d.alreadyProcessed?'This action was already recorded.':(renew?'Membership renewed; ':'Payment confirmed; ')+d.credited+' sessions added.');
-   await load();
+   const d=await post(renew?'renewMembership':'confirmManualPayment',{id:m.id,requestId:crypto.randomUUID(),...(renew?{memberNumber:renewNumber.trim().toUpperCase(),planId:renewPlan}:{})});
+   setMessage((renew?'Membership renewed: ':'Payment confirmed: ')+d.credited+' credits added.');setRenewing(null);setRenewNumber('');setRenewPlan('');await load();
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function recordVisit(m:Member){
-  const id=window.prompt('Enter the completed appointment reference for '+m.customer_name+'. The appointment must have this player member number.');
-  if(!id)return;
-  setBusy(true);setError('');
-  try{await post('recordSession',{id:m.id,appointmentId:id});setMessage('Completed session recorded.');await load();}
+  setBusy(true);setError('');setMessage('');
+  try{await post('recordSession',{id:m.id});setMessage('Completed visit recorded; one session deducted.');await load();}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function editMember(m:Member){
@@ -136,8 +130,8 @@ export default function OwnerMemberships({slug}:{slug:string}){
    <section className="sf-owner-member-history"><h3>Assign a member to a membership package</h3><form onSubmit={assignMember} style={{display:'flex',gap:10,flexWrap:'wrap',marginBottom:20}}><label>Member full name<input required value={newMemberName} onChange={e=>setNewMemberName(e.target.value)}/></label><label>Member number (optional; initials + six digits)<input value={manualMemberNumber} maxLength={8} placeholder="AB123456" onChange={e=>setManualMemberNumber(e.target.value.toUpperCase())}/></label><label>Email<input type="email" required value={newMemberEmail} onChange={e=>setNewMemberEmail(e.target.value)}/></label><label>Membership package<select required value={newMemberPlan} onChange={e=>setNewMemberPlan(e.target.value)}><option value="">Choose package</option>{data?.plans.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button type="submit" className="primary" disabled={busy}>Assign member</button></form><div className="sf-owner-memberships-title"><h3>Member enrollments</h3><span>{data?.members?.length||0} recent members</span></div>
     {data?.members?.length?<div className="sf-owner-membership-scroll"><table><thead><tr><th>Customer / Member ID</th><th>Plan</th><th>Sessions used</th><th>Payment status / actions</th><th>Paid through</th></tr></thead>
      <tbody>{data.members.map(m=><tr key={m.id}><td><b>{m.customer_name}</b><small>{m.customer_email} · {m.member_number||'ID not yet assigned'}</small></td><td>{m.plan_name}</td><td>{m.sessions_used}/{m.sessions_included} <small>({m.recorded_sessions||0} completed bookings recorded)</small> <button type="button" className="outline" disabled={busy} onClick={()=>void editMember(m)}>Edit</button></td>
-      <td><span className={'sf-member-status '+(m.status==='active'?'active':'')}>{m.status.replaceAll('_',' ')}</span><div style={{display:'flex',gap:6,flexWrap:'wrap'}}>{m.status==='active'?<button type="button" className="outline" disabled={busy} onClick={()=>void confirmPayment(m,true)}>Renew · add package sessions</button>:<button type="button" className="outline" disabled={busy} onClick={()=>void confirmPayment(m,false)}>Confirm membership payment</button>}<button type="button" className="outline" disabled={busy} onClick={()=>void recordVisit(m)}>Record completed visit</button></div><small>Remaining: {Math.max(0,m.sessions_included-m.sessions_used)} · Activity: {m.history?.length||0} entries</small></td><td>{m.paid_through?new Date(m.paid_through).toLocaleDateString('en-US'):'Not yet paid'}</td>
-     </tr>)}</tbody></table></div>:<p className="sf-membership-empty">Customer memberships will appear here when payment enrollment begins.</p>}
+      <td><span className={'sf-member-status '+(m.status==='active'?'active':'')}>{m.status.replaceAll('_',' ')}</span><div style={{display:'flex',gap:6,flexWrap:'wrap'}}>{m.status==='active'?<button type="button" className="outline" disabled={busy} onClick={()=>{setRenewing(renewing===m.id?null:m.id);setRenewPlan(m.plan_id);setRenewNumber('');}}>Renew membership</button>:<button type="button" className="outline" disabled={busy} onClick={()=>void confirmPayment(m,false)}>Confirm membership payment</button>}<button type="button" className="outline" disabled={busy} onClick={()=>void recordVisit(m)}>Record completed visit</button></div><small>Remaining: {Math.max(0,m.sessions_included-m.sessions_used)} · Activity: {m.history?.length||0} entries</small>{renewing===m.id&&<div style={{display:'grid',gap:8,marginTop:8}}><label>Renewal package<select value={renewPlan} onChange={e=>setRenewPlan(e.target.value)}>{data?.plans.filter(p=>p.active).map(p=><option key={p.id} value={p.id}>{p.name} · {p.sessionsIncluded} sessions</option>)}</select></label><label>Confirm player number<input value={renewNumber} onChange={e=>setRenewNumber(e.target.value.toUpperCase())} placeholder={m.member_number||'Member number'}/></label><button type="button" className="primary" disabled={busy||!renewPlan||renewNumber.trim().toUpperCase()!==String(m.member_number||'').toUpperCase()} onClick={()=>void confirmPayment(m,true)}>Confirm renewal</button></div>}</td><td>{m.paid_through?new Date(m.paid_through).toLocaleDateString('en-US'):'Not yet paid'}</td>
+     </tr>)}</tbody></table><div style={{display:'grid',gap:12,marginTop:16}}>{data.members.map(m=><details key={m.id} style={{border:'1px solid #ddd',borderRadius:10,padding:12}}><summary><strong>{m.customer_name}</strong> · {m.member_number||'No number'} · Membership and attendance history</summary><div style={{marginTop:10}}>{(m.history||[]).length?(m.history||[]).map((h,i)=><p key={i} style={{margin:'6px 0'}}>{new Date(h.created_at).toLocaleString('en-US')} · {h.event_type==='payment_confirmed'?'Membership started / renewed · +'+h.session_delta+' credits':h.event_type==='session_used'?'Completed visit · 1 credit used':h.event_type+' · '+h.session_delta} · {h.appointment_id}</p>):<p>No membership activity yet.</p>}</div></details>)}</div></div>:<p className="sf-membership-empty">Customer memberships will appear here when payment enrollment begins.</p>}
     <p className="muted">Changing the price of a plan affects future signups only; existing Stripe subscriptions retain their original recurring price. This is separate from appointment bookings.</p>
    </section>
   </>}
