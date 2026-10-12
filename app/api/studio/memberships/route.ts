@@ -1,4 +1,5 @@
 import {randomUUID,randomInt} from 'node:crypto';
+import {sanitizeBookingAnswers} from '../../../../server/booking-custom-fields.mjs';
 import {getPool} from '../../../../server/database.mjs';
 import {requireOwner} from '../../../../lib/auth';
 import {validOrigin,trustedOrigin} from '../../../../server/security.mjs';
@@ -164,6 +165,10 @@ export async function POST(req:Request){
   if(input.action==='assignMember'){
    const name=String(input.name||'').trim(),email=String(input.email||'').trim().toLowerCase(),planId=String(input.planId||'');
    if(name.length<2||name.length>100||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Enter a valid member name and email.');
+   const phone=String(input.phone||'').trim().slice(0,40);
+   const settings=(await pool.query('SELECT data FROM settings WHERE owner=(SELECT owner_id FROM businesses WHERE id=$1)',[business.id])).rows[0]?.data;
+   const config=typeof settings==='string'?JSON.parse(settings):settings||{};
+   const customAnswers=sanitizeBookingAnswers(config.bookingCustomFields||[],input.customAnswers||{});
    const parts=name.split(/\s+/),initials=(parts[0][0]+(parts.length>1?parts[parts.length-1][0]:'X')).toUpperCase().replace(/[^A-Z]/g,'X');
    const plan=(await pool.query('SELECT id,price_cents,sessions_included FROM membership_plans WHERE business_id=$1 AND id=$2',[business.id,planId])).rows[0];
    if(!plan)throw Error('Choose a membership package for this business.');
@@ -172,7 +177,10 @@ export async function POST(req:Request){
     if(requested&&!new RegExp('^'+initials+'[0-9]{6}$').test(requested))throw Error('Member number must match initials plus six digits.');
     const number=requested||initials+String(randomInt(0,1000000)).padStart(6,'0');
     const result=await pool.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0]);
-    if(result.rows[0])return Response.json({ok:true,memberNumber:number,paymentStatus:'pending_payment'},{headers});
+    if(result.rows[0]){
+     await pool.query('INSERT INTO business_client_profiles(id,owner,source_key,name,email,phone,notes,archived,import_columns) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,$4,$5,$6,$7,false,$8) ON CONFLICT DO NOTHING',[randomUUID(),business.id,'membership:'+result.rows[0].id,name,email,phone,'Membership registration',JSON.stringify(customAnswers)]).catch(()=>{});
+     return Response.json({ok:true,memberNumber:number,paymentStatus:'pending_payment'},{headers});
+    }
     if(requested)throw Error('This membership number is already in use.');
    }
    throw Error('Unable to allocate a unique membership number.');
