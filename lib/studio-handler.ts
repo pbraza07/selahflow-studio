@@ -2,7 +2,7 @@ import {randomInt,randomBytes} from 'node:crypto';
 import {db} from './database';
 import {getPool} from '../server/database.mjs';
 import {bookableTeamLimit} from '../server/team-seat-policy.mjs';
-import {checkSubscriptionLimits} from '../server/plan-entitlements.mjs';
+import {checkSubscriptionLimits,planEntitlements} from '../server/plan-entitlements.mjs';
 import {appointmentData,overlaps,easternClock,bookingDateRange,computeDayAvailability,selectedSession,sessionsForDate,sessionRemaining,validateBookableSessions,validateExistingSessionReservations} from '../server/session-scheduling.mjs';
 import {validateBookingFields,sanitizeBookingAnswers} from '../server/booking-custom-fields.mjs';
 import {validateApprovalVisibleFields} from '../server/booking-approval-display.mjs';
