@@ -147,6 +147,20 @@ export async function POST(req:Request){
     await client.query('COMMIT');return Response.json({ok:true},{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
   }
+  if(input.action==='deleteMember'){
+   const id=String(input.id||'');
+   if(!/^[a-f0-9-]{36}$/i.test(id))throw Error('Invalid member.');
+   const client=await pool.connect();
+   try{
+    await client.query('BEGIN');
+    const member=(await client.query('SELECT id,customer_name,member_number FROM customer_memberships WHERE business_id=$1 AND id=$2 FOR UPDATE',[business.id,id])).rows[0];
+    if(!member)throw Error('Member not found.');
+    await client.query('DELETE FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2',[business.id,id]);
+    await client.query('DELETE FROM customer_memberships WHERE business_id=$1 AND id=$2',[business.id,id]);
+    await client.query('COMMIT');
+    return Response.json({ok:true,deleted:member.customer_name},{headers});
+   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
+  }
   if(input.action==='assignMember'){
    const name=String(input.name||'').trim(),email=String(input.email||'').trim().toLowerCase(),planId=String(input.planId||'');
    if(name.length<2||name.length>100||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Enter a valid member name and email.');
