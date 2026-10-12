@@ -136,3 +136,12 @@
  .planAdminLabel :is(input,select,textarea){font-size:16px}
  .planAdminForm .button{width:100%;justify-content:center}
 }
+
+
+/* Responsive marketplace: cards and actions must never overlap or clip. */
+.cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));align-items:stretch}
+.cards>.card{min-width:0;display:flex;flex-direction:column;gap:8px;overflow-wrap:anywhere}
+.cards>.card h2,.cards>.card p{margin:0;min-width:0;overflow-wrap:anywhere;line-height:1.45}
+.cardActions{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin-top:auto;padding-top:10px;min-width:0}
+.cardActions>.button,.cardActions>.secondary{display:inline-flex;align-items:center;justify-content:center;flex:1 1 125px;min-width:0;max-width:100%;text-align:center;line-height:1.3;white-space:normal;overflow-wrap:anywhere;padding:11px 12px;box-sizing:border-box}
+@media(max-width:600px){.cards{grid-template-columns:minmax(0,1fr)}.cardActions>.button,.cardActions>.secondary{flex-basis:100%}}
