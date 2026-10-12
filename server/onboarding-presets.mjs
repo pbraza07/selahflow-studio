@@ -27,6 +27,19 @@ const examples={
  medical:['Initial consultation','Follow-up visit','Assessment','Care guide','Resource kit','Education session'],
  'pet-sitting':['Pet sitting','Overnight care','Meet and greet','Pet care kit','Treat pack','Pet care session']
 };
+const copyByGroup={
+ beauty:{bookingEyebrow:'BOOK YOUR NEXT VISIT',bookingHeadline:'Find your next appointment.',bookingDescription:'Choose a treatment, specialist, and time that works for you.',bookingOwnerLoginLabel:'Business owner sign in',bookingMembershipTitle:'Interested in a care plan?'},
+ pets:{bookingEyebrow:'CARE FOR YOUR PET',bookingHeadline:'Book your pet’s next visit.',bookingDescription:'Choose your pet care service, caregiver, and appointment time.',bookingOwnerLoginLabel:'Pet care owner sign in',bookingMembershipTitle:'Explore ongoing pet care'},
+ fitness:{bookingEyebrow:'FIND YOUR NEXT SESSION',bookingHeadline:'Reserve your next class or session.',bookingDescription:'Choose a class or coaching session, instructor, and available time.',bookingOwnerLoginLabel:'Fitness business sign in',bookingMembershipTitle:'Explore training memberships'},
+ health:{bookingEyebrow:'SCHEDULE A VISIT',bookingHeadline:'Find an available appointment.',bookingDescription:'Select the appointment type, provider, and available time.',bookingOwnerLoginLabel:'Practice owner sign in',bookingMembershipTitle:'Explore care programs'},
+ education:{bookingEyebrow:'BOOK A LESSON',bookingHeadline:'Schedule your next lesson.',bookingDescription:'Choose a lesson, educator, and available time.',bookingOwnerLoginLabel:'Education business sign in',bookingMembershipTitle:'Explore learning plans'},
+ events:{bookingEyebrow:'PLAN YOUR NEXT EVENT',bookingHeadline:'Reserve a consultation or service.',bookingDescription:'Choose your event service, specialist, and available date.',bookingOwnerLoginLabel:'Event business sign in',bookingMembershipTitle:'Explore service packages'},
+ home:{bookingEyebrow:'SCHEDULE A SERVICE',bookingHeadline:'Book your next home service.',bookingDescription:'Choose a service, available professional, and appointment time.',bookingOwnerLoginLabel:'Service business sign in',bookingMembershipTitle:'Explore maintenance plans'},
+ automotive:{bookingEyebrow:'BOOK VEHICLE CARE',bookingHeadline:'Schedule your vehicle service.',bookingDescription:'Choose your vehicle service, technician, and available time.',bookingOwnerLoginLabel:'Automotive business sign in',bookingMembershipTitle:'Explore vehicle care plans'},
+ professional:{bookingEyebrow:'SCHEDULE A CONSULTATION',bookingHeadline:'Book a professional appointment.',bookingDescription:'Choose a consultation or service, advisor, and available time.',bookingOwnerLoginLabel:'Business owner sign in',bookingMembershipTitle:'Explore service plans'},
+ community:{bookingEyebrow:'JOIN AN UPCOMING SESSION',bookingHeadline:'Reserve your next session.',bookingDescription:'Choose an activity, facilitator, and available date.',bookingOwnerLoginLabel:'Organization sign in',bookingMembershipTitle:'Explore ongoing programs'},
+ other:{bookingEyebrow:'BOOK YOUR NEXT VISIT',bookingHeadline:'Find your next opening.',bookingDescription:'Choose a service, team member, and available time.',bookingOwnerLoginLabel:'Business owner sign in',bookingMembershipTitle:'Explore memberships'}
+};
 export function onboardingPreset(industry){
  const group=Object.entries(groups).find(([,ids])=>ids.includes(industry))?.[0]||'other';
  const labels=examples[industry]||({
@@ -45,7 +58,9 @@ export function onboardingPreset(industry){
  const serviceNames=labels.slice(0,3),productNames=labels.slice(3,5);
  const services=serviceNames.map((name,i)=>({id:'sample-service-'+(i+1),name,category:'Example — edit before publishing',description:'Sample service: update details, duration and price before accepting bookings.',duration:30,price:0,maxSlots:1,requiresApproval:false}));
  const products=productNames.map((name,i)=>({id:'sample-product-'+(i+1),name,price:0,cost:0,stock:0}));
- const staff=[{id:'sample-team-1',name:'Team member 1 — edit name',role:'Team member',initials:'TM',color:'blue',services:services.map(s=>s.id),notificationEmail:'',notificationPhone:''}];
- const p=PALETTES[palette[group]??0];
- return {services,products,staff,sessionTemplateSuggestions:[labels[5]],theme:{palette:p.id,bodyFont:'dm',headingFont:'manrope',colors:{...p.colors}},brandPrimary:p.colors.button,brandBackground:p.colors.page};
+ const staff=[{id:'sample-team-1',name:'Team member 1 (placeholder)',role:'Team member',initials:'TM',color:'blue',services:services.map(s=>s.id),notificationEmail:'',notificationPhone:''}];
+ const categoryList=groups[group]||[];
+ const categoryPosition=categoryList.indexOf(industry);
+ const p=PALETTES[(palette[group]+Math.max(0,categoryPosition)%4)%PALETTES.length];
+ return {...copyByGroup[group],services,products,staff,sessionTemplateSuggestions:[labels[5]+' (example — configure before publishing)'],theme:{palette:p.id,bodyFont:'dm',headingFont:'manrope',colors:{...p.colors}},brandPrimary:p.colors.button,brandBackground:p.colors.page};
 }
