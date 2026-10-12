@@ -7,7 +7,7 @@ export async function notifyCustomerBooking(owner,bookingId,status){
  let delivered=0;
  for(const sub of subs){
   const payload={title:'SelahFlow · Booking '+status,body:'Your booking status is '+status+'. Tap to view your booking details.',url:'/customer/booking?id='+encodeURIComponent(bookingId),tag:'selah-customer-'+bookingId};
-  // Access tokens are never sent as notification payloads. A customer device stores its own token.
+  // Access tokens never appear in push payloads or URLs; the receiving browser uses its locally stored token.
 
   const result=await sendWebPush({endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth}},payload);
   if(result.status==='submitted')delivered++;
