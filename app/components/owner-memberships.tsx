@@ -40,12 +40,18 @@ export default function OwnerMemberships({slug}:{slug:string}){
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function confirmPayment(m:Member,renew=false){
-  const ref=window.prompt((renew?'Renew membership':'Confirm initial membership payment')+' for '+m.customer_name+'. Enter the verified payment receipt/reference. This adds the sessions from the current package to the existing balance.');
-  if(!ref)return;
-  if(!window.confirm('Have you verified the payment was received? '+(renew?'Renew and add':'Activate and add')+' the sessions from this package?'))return;
-  setBusy(true);setError('');
-  try{const d=await post(renew?'renewMembership':'confirmManualPayment',{id:m.id,paymentReference:ref});setMessage('Payment recorded; '+d.credited+' sessions added.');await load();}
-  catch(e){setError((e as Error).message);}finally{setBusy(false);}
+  if(busy)return;
+  if(renew){
+   const memberNumber=window.prompt('Enter player membership number to renew '+m.customer_name+':');
+   if(memberNumber===null)return;
+   if(memberNumber.trim().toUpperCase()!==String(m.member_number||'').toUpperCase()){setError('Membership number does not match this player.');return;}
+  }
+  setBusy(true);setError('');setMessage('');
+  try{
+   const d=await post(renew?'renewMembership':'confirmManualPayment',{id:m.id,requestId:crypto.randomUUID(),...(renew?{memberNumber:m.member_number}:{})});
+   setMessage(d.alreadyProcessed?'This action was already recorded.':(renew?'Membership renewed; ':'Payment confirmed; ')+d.credited+' sessions added.');
+   await load();
+  }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function recordVisit(m:Member){
   const id=window.prompt('Enter the completed appointment reference for '+m.customer_name+'. The appointment must have this player member number.');
