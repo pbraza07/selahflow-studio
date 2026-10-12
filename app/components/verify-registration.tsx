@@ -1,23 +1,19 @@
 'use client';
 import {useState} from 'react';
 import {CalendarCheck} from 'lucide-react';
-import {timeLabel} from '../../lib/defaults';
 export default function VerifyRegistration({api,onVerified}:{api:string;onVerified:(date:string)=>void}){
- const [email,setEmail]=useState(''),[code,setCode]=useState(''),[sent,setSent]=useState(false),[registrations,setRegistrations]=useState<any[]|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
- async function requestCode(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');setRegistrations(null);
- try{const r=await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'registration_code_request',email:email.trim()})});const d=await r.json();if(!r.ok)throw Error(d.error||'Unable to send code.');setSent(true);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
- async function verify(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');
- try{const r=await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'registration_email_lookup',email:email.trim(),code})});const d=await r.json();if(!r.ok)throw Error(d.error||'Unable to verify email.');setRegistrations(d.registrations||[]);if(d.registrations?.[0]?.date)onVerified(d.registrations[0].date);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+ const [name,setName]=useState(''),[email,setEmail]=useState(''),[result,setResult]=useState<{date:string;status:string}|null>(null),[searched,setSearched]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ async function lookup(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');setSearched(false);setResult(null);
+ try{const r=await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'registration_latest_status',name:name.trim(),email:email.trim()})});const d=await r.json();if(!r.ok)throw Error(d.error||'Unable to check appointment.');setResult(d.latest);setSearched(true);if(d.latest?.date)onVerified(d.latest.date);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
  return <section className="card" style={{margin:'20px 0',padding:18,border:'1px solid #c5d4cb',borderRadius:14}}>
  <h3><CalendarCheck size={20}/> Check My Registration</h3>
- <p className="muted">Enter your booking email to check your registrations. We'll send a one-time verification code to protect your privacy. No booking reference needed.</p>
- <form onSubmit={sent?verify:requestCode} style={{display:'grid',gap:12}}>
- <label>Booking email<input required type="email" value={email} maxLength={200} autoComplete="email" onChange={e=>{setEmail(e.target.value);setSent(false);setCode('');setRegistrations(null);}}/></label>
- {sent&&<label>Six-digit email verification code<input required inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" value={code} onChange={e=>setCode(e.target.value.replace(/[^0-9]/g,''))}/></label>}
- <button type="submit" className="primary" disabled={busy}>{busy?'Please wait…':sent?'Verify and show registrations':'Email me a verification code'}</button>
+ <p className="muted">Enter the name and email used when booking. View only the most recent appointment date and confirmation status. No email code required.</p>
+ <form onSubmit={lookup} style={{display:'grid',gap:12}}>
+ <label>Customer full name<input required value={name} maxLength={100} autoComplete="name" onChange={e=>setName(e.target.value)}/></label>
+ <label>Booking email<input required type="email" value={email} maxLength={200} autoComplete="email" onChange={e=>setEmail(e.target.value)}/></label>
+ <button type="submit" className="primary" disabled={busy}>{busy?'Checking…':'Check appointment status'}</button>
  </form>
- {sent&&<p className="muted">Check your inbox for the six-digit code. It expires in 10 minutes.</p>}
  {error&&<p role="alert" style={{color:'#b42318'}}>{error}</p>}
- {registrations&&<div role="status" style={{marginTop:14}}><h4>My registrations</h4>{registrations.length===0?<p>No registrations found for this email at this business.</p>:registrations.map((r:any)=><button type="button" key={r.reference} className="outline" style={{display:'block',width:'100%',textAlign:'left',marginBottom:8,padding:12}} onClick={()=>onVerified(r.date)}><strong>{r.status}</strong><div>{r.date} · {typeof r.start==='number'?timeLabel(r.start):''}</div><small>{r.service}</small></button>)}</div>}
+ {searched&&<div role="status" style={{marginTop:14,padding:12,borderRadius:10,background:'#eaf3ee'}}>{result?<><strong>{result.status}</strong><p>Appointment date: {result.date}</p></>:<p>No matching appointment found. Check your name and email or contact the business.</p>}</div>}
  </section>;
 }
