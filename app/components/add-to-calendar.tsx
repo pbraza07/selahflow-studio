@@ -21,7 +21,7 @@ export default function AddToCalendar(p:Props){
  google.searchParams.set('location',p.address||'');
  function download(){
   const escape=(s:string)=>s.replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;');
-  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SelahFlow//Booking Calendar//EN','BEGIN:VEVENT','UID:'+escape(p.id)+'@selahflow.app','DTSTAMP:'+stamp(new Date()),'DTSTART:'+stamp(start),'DTEND:'+stamp(end),'SUMMARY:'+escape(title),'DESCRIPTION:'+escape(details),'LOCATION:'+escape(p.address||''),'STATUS:CONFIRMED','END:VEVENT','END:VCALENDAR'].join('\r\n')+'\r\n';
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SelahFlow//Booking Calendar//EN','BEGIN:VEVENT','UID:'+escape(p.id)+'@selahflow.app','DTSTAMP:'+stamp(new Date()),'DTSTART:'+stamp(start),'DTEND:'+stamp(end),'SUMMARY:'+escape(title),'DESCRIPTION:'+escape(details),'LOCATION:'+escape(p.address||'') ,'END:VEVENT','END:VCALENDAR'].join('\r\n')+'\r\n';
   const url=URL.createObjectURL(new Blob([ics],{type:'text/calendar;charset=utf-8'}));
   const a=document.createElement('a');a.href=url;a.download='selahflow-appointment.ics';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);
  }
