@@ -18,6 +18,7 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
  const [revealCredential,setRevealCredential]=useState(false),[resetting,setResetting]=useState<BusinessSummary|null>(null),[resetConfirmation,setResetConfirmation]=useState('');
  const [changingEmail,setChangingEmail]=useState<BusinessSummary|null>(null),[newLoginEmail,setNewLoginEmail]=useState(''),[emailConfirmation,setEmailConfirmation]=useState(''),[oldEmailConfirmation,setOldEmailConfirmation]=useState('');
  const [removing,setRemoving]=useState<BusinessSummary|null>(null),[confirmation,setConfirmation]=useState('');
+ const [separating,setSeparating]=useState<BusinessSummary|null>(null),[separateEmail,setSeparateEmail]=useState('chris@gmail.com'),[separateConfirm,setSeparateConfirm]=useState('');
  const [purging,setPurging]=useState<BusinessSummary|null>(null),[purgeName,setPurgeName]=useState(''),[purgePhrase,setPurgePhrase]=useState('');
  const items=useMemo(()=>businesses.filter(b=>
   !search.trim()||[b.name,b.slug,b.owner_email,b.industry,b.city,b.status].join(' ').toLowerCase().includes(search.toLowerCase().trim())
@@ -95,6 +96,15 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
    await onChanged();
   }catch(e){setError((e as Error).message);}finally{setWorking(false);}
  }
+ async function separateBusinessOwner(){
+  if(!separating||separateConfirm!==separating.name)return;
+  setWorking(true);setError('');setNotice('');
+  try{
+   const result=await post({action:'separateOwner',id:separating.id,newOwnerEmail:separateEmail,confirmName:separateConfirm});
+   setCredentials({email:result.ownerEmail,temporaryPassword:result.temporaryPassword,business:separating.name,status:separating.status,kind:'create'});
+   setSeparating(null);setSeparateConfirm('');setNotice(result.message);await onChanged();
+  }catch(e){setError((e as Error).message);}finally{setWorking(false);}
+ }
  async function purgeArchived(){
   if(!purging||purgeName!==purging.name||purgePhrase!=='PERMANENTLY DELETE')return;
   setWorking(true);setError('');setNotice('');
@@ -170,12 +180,24 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
     <button type="button" className="outline" disabled={working}
      onClick={()=>{setResetting(b);setResetConfirmation('');setCredentials(null);setRevealCredential(false);setError('');}}>
      <KeyRound size={15}/> Reset password</button>
+    {primary&&b.owner_email.toLowerCase()==='pbraza@gmail.com'&&<button type="button" className="outline" disabled={working} onClick={()=>{setSeparating(b);setSeparateEmail('chris@gmail.com');setSeparateConfirm('');setError('')}}>Separate owner account</button>}
     {b.status==='archived'?<><button type="button" className="outline" disabled={working} onClick={()=>void restore(b)}><RotateCcw size={15}/> Restore</button>{primary&&<button type="button" className="outline sf-platform-remove-btn" disabled={working} onClick={()=>{setPurging(b);setPurgeName('');setPurgePhrase('');setError('')}}><Trash2 size={15}/> Permanently delete</button>}</>:
      <><button type="button" className="outline" onClick={()=>edit(b)} disabled={working}><Pencil size={15}/> Edit</button>
       <button type="button" className="outline sf-platform-remove-btn" disabled={working} onClick={()=>{setRemoving(b);setConfirmation('');setError('')}}><Trash2 size={15}/> Remove</button></>}
    </div>
   </article>)}</div>
   {!items.length&&<p>No businesses match the search.</p>}
+  {separating&&<div className="sf-platform-confirm-backdrop">
+   <section role="dialog" aria-modal="true" aria-label="Separate business ownership" className="sf-platform-confirm">
+    <h3>Separate business owner account</h3>
+    <p>Move {separating.name} and its booking history to a new owner login, while retaining your platform administrator account. This does not delete the business.</p>
+    <label>New owner email<input type="email" value={separateEmail} onChange={e=>setSeparateEmail(e.target.value)}/></label>
+    <label>Confirm exact business name<input value={separateConfirm} onChange={e=>setSeparateConfirm(e.target.value)}/></label>
+    {error&&<p className="sf-platform-error" role="alert">{error}</p>}
+    <div className="sf-platform-form-actions"><button type="button" className="outline" disabled={working} onClick={()=>setSeparating(null)}>Cancel</button>
+    <button type="button" className="primary" disabled={working||separateConfirm!==separating.name||!separateEmail.includes('@')} onClick={()=>void separateBusinessOwner()}>{working?'Separating…':'Separate owner account'}</button></div>
+   </section>
+  </div>}
   {purging&&<div className="sf-platform-confirm-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!working)setPurging(null)}}>
  <section role="dialog" aria-modal="true" aria-labelledby="sf-purge-title" className="sf-platform-confirm">
  <h3 id="sf-purge-title"><ShieldAlert size={20}/> Permanently delete archived business</h3>
