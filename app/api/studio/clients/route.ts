@@ -22,7 +22,7 @@ async function businessFor(owner: string,db:{query:(sql:string,values:unknown[])
 async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>Promise<{rows:any[]}>},settings:Record<string,unknown>){
  const [appointments,profiles,requests]=await Promise.all([
   db.query('SELECT id,date,start,duration,staff,status,data FROM appointments WHERE owner=$1 ORDER BY date DESC,start DESC',[owner]),
-  db.query('SELECT id,source_key,anchor_appointment_id,name,email,phone,notes,archived FROM business_client_profiles WHERE owner=$1 ORDER BY created_at,id',[owner]),
+  db.query('SELECT id,source_key,anchor_appointment_id,name,email,phone,notes,archived,import_columns FROM business_client_profiles WHERE owner=$1 ORDER BY created_at,id',[owner]),
   db.query("SELECT id,date,staff_id,start_minute,duration,details,status,created_at FROM booking_requests WHERE owner_id=$1 AND status IN ('pending','declined') ORDER BY created_at DESC",[owner])
  ]);
  const derived=buildClientDirectory([...appointments.rows,...requests.rows.map(pendingBookingAsAppointment)],settings,owner);
