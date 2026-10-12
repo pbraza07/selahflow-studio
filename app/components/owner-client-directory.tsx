@@ -11,6 +11,7 @@ type Visit={
  originalSubmission?:{customerName:string;customerEmail:string;customerPhone:string;customAnswers?:Record<string,string|boolean>}|null;submittedAt?:string|null;policyAccepted?:boolean;policyAcceptedAt?:string|null;
 };
 type Client={
+ memberNumber?:string;membershipName?:string;membershipStatus?:string;
  id:string;name:string;email:string;phone:string;bookedSessions:number;attendedSessions:number;
  attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;importColumns?:Record<string,string>;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:{id:string;label:string;value:string|boolean}[];
 };
@@ -131,7 +132,7 @@ export default function OwnerClientDirectory({onBook}:{onBook:()=>void}){
    </div>
    <article className="sf-client-profile">
     <div className="sf-client-profile-heading"><span className="sf-client-avatar" aria-hidden="true">{selected.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span>
-     <div><h3>{selected.name}</h3><p>{selected.email||'No email recorded'}{selected.phone?' · '+selected.phone:''}</p>
+     <div><h3>{selected.name} {selected.membershipName&&<span style={{display:'inline-block',borderRadius:8,padding:'4px 10px',marginLeft:8,color:'white',background:/gold/i.test(selected.membershipName)?'#a67c00':/pro/i.test(selected.membershipName)?'#b91c1c':/academy/i.test(selected.membershipName)?'#2563eb':'#475569'}}>{selected.membershipName} · {selected.memberNumber||'Member'}</span>}</h3><p>{selected.email||'No email recorded'}{selected.phone?' · '+selected.phone:''}</p>
       <span className="sf-client-profile-note">Service history and attendance for this business only</span></div>
     </div>
     {selected.firstBooking&&<section className="sf-client-first-booking">
