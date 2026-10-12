@@ -20,16 +20,17 @@ function error(err:unknown){
 export async function GET(req:Request){
  try{
   const {pool,business}=await ctx(req);
-  const [plans,members,merchant]=await Promise.all([
+  const [plans,members,merchant,visits]=await Promise.all([
    pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",active FROM membership_plans WHERE business_id=$1 ORDER BY created_at DESC',[business.id]),
    pool.query("SELECT m.id,m.customer_name,m.customer_email,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
-   pool.query("SELECT external_account_id,charges_enabled,onboarding_complete FROM merchant_accounts WHERE business_id=$1",[business.id])
+   pool.query("SELECT external_account_id,charges_enabled,onboarding_complete FROM merchant_accounts WHERE business_id=$1",[business.id]),
+   pool.query("SELECT a.data,a.status FROM appointments a JOIN businesses b ON b.owner_id=a.owner WHERE b.id=$1 AND a.status IN ('Completed','Attended')",[business.id])
   ]);
   const account=merchant.rows[0]||{};
   const individual=(await pool.query('SELECT limits FROM business_entitlement_overrides WHERE business_id=$1',[business.id])).rows[0]?.limits||{};
   const benefits=planEntitlements(business.plan_code,business.subscription_status);
   if(Number.isInteger(individual.membershipPlans))benefits.limits.membershipPlans=individual.membershipPlans;
-  return Response.json({businessName:business.name,plans:plans.rows,members:members.rows,planBenefits:benefits,
+  return Response.json({businessName:business.name,plans:plans.rows,members:members.rows.map((m:any)=>{const actual=visits.rows.filter((v:any)=>{try{return JSON.parse(v.data||'{}').memberNumber===m.member_number;}catch{return false;}}).length;return {...m,recorded_sessions:actual};}),planBenefits:benefits,
    payments:{configured:paymentConfigured(),connected:!!account.external_account_id,
     ready:paymentConfigured()&&account.charges_enabled===true&&account.onboarding_complete===true}}, {headers});
  }catch(e){return error(e);}
