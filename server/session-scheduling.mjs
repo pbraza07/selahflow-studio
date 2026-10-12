@@ -12,9 +12,9 @@ export function easternClock(at=new Date()) {
  return {date:values.year+'-'+values.month+'-'+values.day,
    minutes:Number(values.hour)*60+Number(values.minute)};
 }
-export function nextQuarterHour(minutes) {
+export function nextQuarterHour(minutes,interval=15) {
  if(!Number.isFinite(minutes)||minutes<0||minutes>=1440)throw Error('Invalid local clock minutes.');
- return Math.ceil((minutes+1)/15)*15;
+ return Math.ceil((minutes+1)/interval)*interval;
 }
 export function appointmentData(appointment) {
   if (!appointment) return {};
@@ -181,9 +181,10 @@ export function computeDayAvailability({config, date, staff, services, appointme
   if (date < today) return {slots,sessionAvailability,sessions:fullSessions,earliestStart:null,firstAvailable:null};
   const duration = services.reduce((n,s) => n + s.duration,0);
   const buffer = config.buffer || 0;
-  const earliest = date === today ? nextQuarterHour(nowMinutes) : 0;
-  for (let start = Math.ceil(config.open * 60 / 15) * 15;
-       start + duration + buffer <= config.close * 60; start += 15) {
+  const interval = [5,10,15,20,30,60].includes(config.bookingInterval)?config.bookingInterval:15;
+  const earliest = date === today ? nextQuarterHour(nowMinutes,interval) : 0;
+  for (let start = Math.ceil(config.open * 60 / interval) * interval;
+       start + duration + buffer <= config.close * 60; start += interval) {
     if (start < earliest) continue;
     const session = matching.find(s => s.start === start);
     const staffCollision = active.some(a =>
