@@ -102,21 +102,22 @@ export async function POST(req:Request){
   if(input.action==='confirmManualPayment'||input.action==='renewMembership'){
    const id=String(input.id||'');
    if(!/^[a-f0-9-]{36}$/i.test(id))throw Error('Invalid member.');
+   const requestId=String(input.requestId||'');
+   if(!/^[a-f0-9-]{36}$/i.test(requestId))throw Error('Invalid payment request.');
    const client=await pool.connect();
    try{
     await client.query('BEGIN');
     const member=(await client.query("SELECT m.id,m.status,m.sessions_included,m.sessions_used,m.member_number,p.sessions_included AS plan_sessions,p.price_cents FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 AND m.id=$2 FOR UPDATE",[business.id,id])).rows[0];
     if(!member)throw Error('Member not found.');
+    if(input.action==='renewMembership'&&String(input.memberNumber||'').trim().toUpperCase()!==String(member.member_number||'').toUpperCase())throw Error('Enter the player membership number to renew.');
     if(input.action==='renewMembership'&&member.status!=='active')throw Error('Confirm the initial payment before renewing this membership.');
     if(input.action==='confirmManualPayment'&&member.status==='active')throw Error('This membership is already active. Use Renew to add another package of sessions.');
     if(!member.member_number)throw Error('Assign a member number before confirming payment.');
     const credits=Number(member.plan_sessions);
     if(!Number.isInteger(credits)||credits<1)throw Error('Membership package must include at least one session.');
-    const paymentRef=String(input.paymentReference||'').trim();
-    if(paymentRef.length<4||paymentRef.length>120)throw Error('Enter a unique payment receipt/reference (at least 4 characters).');
-    const existing=(await client.query("SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='payment_confirmed'",[business.id,id,paymentRef])).rowCount;
-    if(existing)throw Error('This payment reference was already confirmed.');
-    await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[randomUUID(),business.id,id,paymentRef,credits,member.price_cents]);
+    const existing=(await client.query("SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='payment_confirmed'",[business.id,id,requestId])).rowCount;
+    if(existing){await client.query('COMMIT');return Response.json({ok:true,credited:0,alreadyProcessed:true},{headers});}
+    await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[randomUUID(),business.id,id,requestId,credits,member.price_cents]);
     await client.query("UPDATE customer_memberships SET sessions_included=sessions_included+$1,status='active',last_paid_at=now(),updated_at=now() WHERE business_id=$2 AND id=$3",[credits,business.id,id]);
     await client.query('COMMIT');
     return Response.json({ok:true,credited:credits},{headers});
