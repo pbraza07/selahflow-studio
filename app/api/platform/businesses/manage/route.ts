@@ -71,7 +71,7 @@ export async function POST(req:Request){
    if(before.owner_id!==actor)throw Error('This business is not linked to your administrator account.');
    if(payload.confirmName!==before.name)throw Error('Confirm the exact business name.');
    const newEmail=String(payload.newOwnerEmail||'').trim().toLowerCase();
-   if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(newEmail)||newEmail.length>254)throw Error('Enter a valid new owner email.');
+   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)||newEmail.length>254)throw Error('Enter a valid new owner email.');
    const existing=await client.query('SELECT id FROM users WHERE lower(email)=lower($1)',[newEmail]);
    if(existing.rowCount)throw Error('New owner email already belongs to an account. Choose an unused email.');
    const other=await client.query('SELECT id FROM businesses WHERE owner_id=$1 AND id<>$2',[actor,before.id]);
