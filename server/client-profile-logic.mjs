@@ -16,7 +16,7 @@ export function sameClientContact(a,b){
  return Boolean((aEmail&&bEmail&&aEmail===bEmail)||(aPhone&&bPhone&&aPhone===bPhone));
 }
 function freshClient(profile){
- return {id:profile.id,name:profile.name,email:profile.email||'',phone:profile.phone||'',notes:profile.notes||'',
+ return {id:profile.id,name:profile.name,email:profile.email||'',phone:profile.phone||'',notes:profile.notes||'',importColumns:profile.import_columns||{},
   bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],
   latestDate:'',history:[],firstBooking:null,latestBookingAnswers:[],managed:true};
 }
