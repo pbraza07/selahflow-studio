@@ -4,6 +4,8 @@ import {requireOwner} from '../../../../lib/auth';
 import {validOrigin,trustedOrigin} from '../../../../server/security.mjs';
 import {paymentConfigured,validateMembershipPlan,stripeApi} from '../../../../server/membership-payments.mjs';
 import {planEntitlements,activeMembershipLimit} from '../../../../server/plan-entitlements.mjs';
+// Manual payment confirmation and session usage are maintained in an auditable ledger.
+// Stripe integration remains optional and can be revisited separately.
 export const runtime='nodejs';export const dynamic='force-dynamic';
 const headers={'Cache-Control':'private, no-store'};
 async function ctx(req:Request){
