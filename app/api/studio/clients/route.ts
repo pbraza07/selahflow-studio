@@ -120,7 +120,7 @@ export async function POST(req:Request){
     if(!Array.isArray(ids)||ids.length<1||ids.length>2000||ids.some((value:unknown)=>!validId(value))||new Set(ids).size!==ids.length)throw Error('Select valid removed clients.');
     if(body.confirmPhrase!=='DELETE REMOVED CLIENTS')throw Error('Enter DELETE REMOVED CLIENTS to confirm.');
     if(ids.some((value:string)=>!result.archived.some((item:{id:string})=>item.id===value)))throw Error('One or more selected clients are not in the removed list.');
-    await db.query("UPDATE business_client_profiles SET deleted_at=now(),name='Deleted client',email='',phone='',notes='',import_columns='{}'::jsonb,updated_at=now() WHERE owner=$1 AND id=ANY($2::uuid[]) AND archived=TRUE AND deleted_at IS NULL",[owner,ids]);
+    await db.query("UPDATE business_client_profiles SET deleted_at=now(),name='Deleted client',email='',phone='',notes='',import_columns='{}'::jsonb,updated_at=now() WHERE owner=$1 AND id=ANY($2::text[]) AND archived=TRUE AND deleted_at IS NULL",[owner,ids]);
     responseId='deleted';
    }else if(body.action==='restore'){
     if(!profile||!profile.archived||!archived)throw Error('Removed client not found.');
