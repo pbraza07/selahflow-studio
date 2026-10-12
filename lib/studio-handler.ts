@@ -60,10 +60,20 @@ try{
  const planRow=(await client.query(
   "SELECT s.plan_code,s.status,(SELECT COUNT(*)::int FROM business_team_seat_requests r WHERE r.business_id=b.id AND r.status='approved') AS approved_seats FROM businesses b LEFT JOIN business_subscriptions s ON s.business_id=b.id WHERE b.owner_id=$1",
   [owner])).rows[0];
- const effectiveCap=bookableTeamLimit(planRow?.plan_code,planRow?.status,planRow?.approved_seats||0);
+ const overrideResult=await client.query("SELECT limits FROM business_entitlement_overrides WHERE business_id=(SELECT id FROM businesses WHERE owner_id=$1)",[owner]);
+ const individualLimits=overrideResult.rows[0]?.limits||{};
+ const effectiveCap=Number.isInteger(individualLimits.bookableStaff)?individualLimits.bookableStaff:bookableTeamLimit(planRow?.plan_code,planRow?.status,planRow?.approved_seats||0);
  // Enforce paid-tier benefits on the server, using the subscription DB row,
  // never a client-submitted plan label. Existing items remain editable on downgrade.
- checkSubscriptionLimits(planRow,oldConfig,c);
+ if(Object.keys(individualLimits).length){
+  const base=planEntitlements(planRow?.plan_code,planRow?.status);
+  for(const [field,key] of [['services','services'],['bookingCustomFields','bookingFields'],['bookableSessions','sessionSeries']] as const){
+   const limit=Number.isInteger(individualLimits[key])?individualLimits[key]:base.limits[key];
+   const oldIds=new Set((oldConfig[field]||[]).map((x:any)=>x.id));
+   const newRows=c[field]||[];
+   if(newRows.length>limit&&newRows.some((x:any)=>!oldIds.has(x.id)))throw Error('Individual business allowance exceeded for '+key+'.');
+  }
+ }else checkSubscriptionLimits(planRow,oldConfig,c);
  const oldTeam=Array.isArray(oldConfig.staff)?oldConfig.staff:[];
  if(c.staff.length>effectiveCap&&c.staff.some((member:any)=>!oldTeam.some((previous:any)=>previous.id===member.id)))
   throw Error('Team member limit reached. Submit an ad hoc extra team member request in Settings → Team members and wait for platform administrator approval.');
