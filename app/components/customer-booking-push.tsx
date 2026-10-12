@@ -15,7 +15,7 @@ export default function CustomerBookingPush({token,id}:{token:string;id:string})
    const config=await fetch('/api/push/customer-key').then(r=>r.json());
    if(!config.publicKey)throw Error('Push notifications are not configured by SelahFlow yet.');
    let sub=await reg.pushManager.getSubscription();
-   if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(config.publicKey)});
+   if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(config.publicKey).buffer as ArrayBuffer});
    const res=await fetch('/api/customer-booking',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({action:'subscribe',subscription:sub.toJSON()})});
    const data=await res.json();if(!res.ok)throw Error(data.error||'Could not enable notifications.');
    setState('Notifications enabled for this booking.');
