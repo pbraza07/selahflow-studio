@@ -239,6 +239,27 @@ const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.ran
  catch(error){return reply({error:(error as Error).message},(error as {status?:number}).status||409);}
  await db().batch([audit('booking',{appointment:id})]);
  return reply({ok:true,id,pending:false,status:'confirmed'});}
+if(b.action==='deleteAppointments'){
+ if(isPublic)return reply({error:'Not permitted.'},403);
+ const ids=Array.isArray(b.ids)?b.ids:[];
+ if(!ids.length||ids.length>2000||!ids.every((id:any)=>typeof id==='string'&&id.length>0&&id.length<120)||new Set(ids).size!==ids.length)return reply({error:'Select valid appointments to delete.'},400);
+ const all=b.all===true;
+ if(all&&(b.confirmPhrase!=='DELETE ALL APPOINTMENTS'||b.confirmBusiness!==config.name))return reply({error:'For all appointments, enter the exact business name and DELETE ALL APPOINTMENTS.'},400);
+ const {getPool}=await import('../server/database.mjs');
+ const client=await getPool().connect();
+ try{
+  await client.query('BEGIN');
+  const existing=await client.query('SELECT id FROM appointments WHERE owner=$1 FOR UPDATE',[owner]);
+  const available=new Set(existing.rows.map((row:any)=>row.id));
+  if(all&&(ids.length!==available.size||ids.some((id:string)=>!available.has(id))))throw Error('Appointment list changed. Refresh and confirm again.');
+  if(ids.some((id:string)=>!available.has(id)))throw Error('One or more appointments no longer exist. Refresh the list.');
+  await client.query('DELETE FROM slots WHERE owner=$1 AND appointment=ANY($2::text[])',[owner,ids]);
+  await client.query('UPDATE booking_requests SET appointment_id=NULL WHERE owner_id=$1 AND appointment_id=ANY($2::text[])',[owner,ids]);
+  const removed=await client.query('DELETE FROM appointments WHERE owner=$1 AND id=ANY($2::text[]) RETURNING id',[owner,ids]);
+  await client.query('COMMIT');
+  return reply({ok:true,deleted:removed.rowCount});
+ }catch(error){await client.query('ROLLBACK');return reply({error:(error as Error).message},409);}finally{client.release();}
+}
 if(b.action==='status'){if(!['Checked in','Completed','Cancelled','No-show'].includes(b.status))throw Error('Invalid status');const old=await db().prepare('SELECT * FROM appointments WHERE owner=? AND id=?').bind(owner,b.id).first();if(!old) return reply({error:'Appointment not found'},404);if(['Completed','Cancelled','No-show'].includes(String(old.status)))throw Error('This appointment is already closed.');const stm=[db().prepare('UPDATE appointments SET status=? WHERE owner=? AND id=?').bind(b.status,owner,b.id),audit('status',{appointment:b.id,status:b.status})];if(b.status==='Cancelled'||b.status==='No-show')stm.push(db().prepare('DELETE FROM slots WHERE owner=? AND appointment=?').bind(owner,b.id));await db().batch(stm);return reply({ok:true});}
 if(b.action==='sale'){if(!Array.isArray(b.items)||!b.items.length)throw Error('Add items to checkout.');const lines=b.items.map((l:any)=>{const item=[...config.services.map((s:any)=>({...s,type:'service',cost:null})),...config.products.map((p:any)=>({...p,type:'product'}))].find((x:any)=>x.id===l.id);if(!item||!Number.isInteger(l.qty)||l.qty<1||l.qty>50)throw Error('Invalid checkout item.');return {...item,qty:l.qty};});const total=lines.reduce((n:number,l:any)=>n+l.qty*l.price,0);await db().batch([audit('cash_sale',{lines,total,tax:total*config.tax/100,payment:'Cash recorded manually'})]);return reply({ok:true});}
 if(b.action==='handoff'){if(!String(b.message||'').trim())throw Error('Enter a message');await db().batch([audit('handoff',{message:String(b.message).slice(0,2000),status:'Open'})]);return reply({ok:true});}return reply({error:'Unknown action'},400);
