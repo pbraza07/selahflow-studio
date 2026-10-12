@@ -1,3 +1,8 @@
+## v1.3.41 — Minimal appointment status lookup
+- Customers enter their full name and booking email, without OTP or reference.
+- Display only the latest matching appointment date and status; rate limited per IP and email.
+- Existing verified lookup endpoints remain unchanged for compatibility.
+
 ## v1.3.40 — Email-only registration lookup
 - Customers enter their booking email and verify ownership using a six-digit single-use code, rather than a booking reference.
 - Verified customers can review their registrations and navigate the booking calendar to each session.
