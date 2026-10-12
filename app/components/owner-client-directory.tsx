@@ -26,6 +26,7 @@ export default function OwnerClientDirectory({onBook}:{onBook:()=>void}){
  const [attendedOnly,setAttendedOnly]=useState(false);
  const [archived,setArchived]=useState<{id:string;name:string;email:string;phone:string}[]>([]);
  const [editing,setEditing]=useState<Client|'new'|null>(null),[saving,setSaving]=useState(false),[editError,setEditError]=useState('');
+ const [removedSelection,setRemovedSelection]=useState<string[]>([]);
  const [showRemoved,setShowRemoved]=useState(false),[actionBusy,setActionBusy]=useState(''),[actionError,setActionError]=useState('');
  const reload=useCallback(async()=>{
   setBusy(true);
@@ -75,6 +76,14 @@ export default function OwnerClientDirectory({onBook}:{onBook:()=>void}){
  async function restoreClient(id:string){
   setActionBusy(id);setActionError('');
   try{await postClient('restore',{clientId:id});await reload();}
+  catch(error){setActionError((error as Error).message);}finally{setActionBusy('');}
+ }
+ async function deleteRemoved(){
+  if(!removedSelection.length)return;
+  const phrase=window.prompt('Delete '+removedSelection.length+' removed client profiles? Historical appointments remain saved. Type DELETE REMOVED CLIENTS to confirm:');
+  if(phrase!=='DELETE REMOVED CLIENTS')return;
+  setActionBusy('delete-removed');setActionError('');
+  try{await postClient('deleteArchived',{clientIds:removedSelection,confirmPhrase:phrase});setRemovedSelection([]);await reload();}
   catch(error){setActionError((error as Error).message);}finally{setActionBusy('');}
  }
  async function importSpreadsheet(file:File){
@@ -198,7 +207,8 @@ export default function OwnerClientDirectory({onBook}:{onBook:()=>void}){
    </button>
    {showRemoved&&<div className="sf-client-removed-list">
     <p className="muted">Removed clients are hidden from the directory and Excel exports. Historical appointments are never erased.</p>
-    {archived.length?archived.map(c=><div key={c.id} className="sf-client-removed-row"><div><b>{c.name}</b><small>{c.email||c.phone||'No contact details'}</small></div>
+    {archived.length?<div className="sf-client-removed-toolbar"><label><input type="checkbox" checked={archived.every(c=>removedSelection.includes(c.id))} onChange={e=>setRemovedSelection(e.target.checked?archived.map(c=>c.id):[])}/> Select all</label><button type="button" className="outline sf-client-remove" disabled={!removedSelection.length||!!actionBusy} onClick={()=>void deleteRemoved()}><Trash2 size={16}/> Delete selected ({removedSelection.length})</button></div>:null}
+    {archived.length?archived.map(c=><div key={c.id} className="sf-client-removed-row"><label><input type="checkbox" aria-label={'Select '+c.name} checked={removedSelection.includes(c.id)} onChange={e=>setRemovedSelection(prev=>e.target.checked?[...prev,c.id]:prev.filter(id=>id!==c.id))}/></label><div><b>{c.name}</b><small>{c.email||c.phone||'No contact details'}</small></div>
      <button type="button" className="outline" disabled={!!actionBusy} onClick={()=>void restoreClient(c.id)}><RotateCcw size={15}/> Restore</button>
     </div>):<p className="muted">No removed clients.</p>}
    </div>}
