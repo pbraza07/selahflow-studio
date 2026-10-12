@@ -1,4 +1,4 @@
-import {randomInt} from 'node:crypto';
+import {randomInt,randomBytes} from 'node:crypto';
 import {db} from './database';
 import {getPool} from '../server/database.mjs';
 import {bookableTeamLimit} from '../server/team-seat-policy.mjs';
@@ -221,6 +221,7 @@ if(b.action==='calendar'){
   return {date,available:result.slots.length,sessions:result.sessions};
  })});
 }
+async function customerAccess(bookingId:string){const token=randomBytes(32).toString('hex');await getPool().query("INSERT INTO customer_booking_access(token_hash,owner_id,booking_id) VALUES($1,$2,$3)",[tokenHash(token),owner,bookingId]);return token;}
 if(b.action==='availability'||b.action==='book'){if(!Array.isArray(b.services)||b.services.length>10||!b.services.every((id:unknown)=>typeof id==='string'))throw Error('Choose valid services.');const services=config.services.filter((s:any)=>b.services.includes(s.id));if(!services.length||services.length!==b.services.length)throw Error('Choose valid services.');if(!services.every((s:any)=>isCalendarUnit(s.durationUnit||'minutes')&&Number.isInteger(s.duration)&&s.duration>=15&&s.duration<=480))throw Error('Term services are tracked as enrollments, not scheduled as same-day appointments. Contact the business to enroll.');const staff=config.staff.find((s:any)=>s.id===b.staff);if(!staff||!services.every((s:any)=>staff.services.includes(s.id)))throw Error('Choose a qualified team member.');if(!/^\d{4}-\d{2}-\d{2}$/.test(b.date)||new Date(b.date+'T12:00:00Z').toISOString().slice(0,10)!==b.date||b.date<today()||b.date>new Date(Date.now()+366*86400000).toISOString().slice(0,10))throw Error('Choose a date in the next year.');const duration=services.reduce((a:number,s:any)=>a+s.duration,0);
 const occupied=(await db().prepare('SELECT minute FROM slots WHERE owner=? AND date=? AND staff=?')
  .bind(owner,b.date,b.staff).all()).results.map((x:any)=>x.minute);
@@ -248,12 +249,12 @@ const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.ran
   let delivery:any={email:'not_requested',sms:'not_requested'};
   try{delivery=await notifyBookingRequest({requestId:id,origin:trustedOrigin(req)});}
   catch(error){console.error('Booking notification dispatch error for request',id);delivery={email:config.bookingNotifyEmail===true?'failed':'not_requested',sms:config.bookingNotifySms===true?'failed':'not_requested'};}
-  return reply({ok:true,id,pending:true,status:'pending',notificationDelivery:delivery,message:'Booking request received, awaiting approval. The appointment is not confirmed until accepted.'});
+  return reply({ok:true,id,customerToken:await customerAccess(id),pending:true,status:'pending',notificationDelivery:delivery,message:'Booking request received, awaiting approval. The appointment is not confirmed until accepted.'});
  }
  try{await confirmBooking({owner,services,staff:b.staff,date:b.date,start:b.start,duration,buffer:config.buffer,id,data});}
  catch(error){return reply({error:(error as Error).message},(error as {status?:number}).status||409);}
  await db().batch([audit('booking',{appointment:id})]);
- return reply({ok:true,id,pending:false,status:'confirmed'});}
+ return reply({ok:true,id,customerToken:await customerAccess(id),pending:false,status:'confirmed'});}
 if(b.action==='deleteAppointments'){
  if(isPublic)return reply({error:'Not permitted.'},403);
  const ids=Array.isArray(b.ids)?b.ids:[];
