@@ -136,7 +136,6 @@ export async function POST(req:Request){
     if(!member||member.status!=='active'||!member.member_number)throw Error('An active member is required.');
     if(member.sessions_used>=member.sessions_included)throw Error('No sessions remaining.');
     const visits=(await client.query("SELECT a.id,a.data FROM appointments a JOIN businesses b ON b.owner_id=a.owner WHERE b.id=$1 AND a.status IN ('Completed','Attended') AND ($2='' OR a.id=$2) ORDER BY a.date ASC",[business.id,appointmentId])).rows;
-    const visit=visits.find((v:any)=>{try{const d=typeof v.data==='string'?JSON.parse(v.data):v.data||{};return String(d.memberNumber||'').toUpperCase()===String(member.member_number).toUpperCase();}catch{return false;}}&& !false);
     const unrecorded=[] as typeof visits;
     for(const v of visits){try{const d=typeof v.data==='string'?JSON.parse(v.data):v.data||{};if(String(d.memberNumber||'').toUpperCase()===String(member.member_number).toUpperCase()){const found=await client.query("SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='session_used'",[business.id,id,v.id]);if(!found.rowCount)unrecorded.push(v);}}catch{}}
     const selected=unrecorded[0];
