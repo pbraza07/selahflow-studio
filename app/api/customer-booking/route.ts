@@ -14,7 +14,7 @@ async function access(req:Request){
 }
 async function details(c:any){
  const pending=(await c.pool.query("SELECT status,date,start_minute AS start,details FROM booking_requests WHERE owner_id=$1 AND id=$2",[c.owner_id,c.booking_id])).rows[0];
- if(pending){const d=JSON.parse(pending.details||'{}');return {status:pending.status==='approved'?'Confirmed':pending.status==='declined'?'Declined':pending.status==='cancelled'?'Cancelled':'Awaiting approval',date:pending.date,start:pending.start,services:d.services||[],business:c.business_name};}
+ if(pending){const d=JSON.parse(pending.details||'{}');return {status:(pending.status==='approved'||pending.status==='accepted')?'Confirmed':pending.status==='declined'?'Declined':pending.status==='cancelled'?'Cancelled':'Awaiting approval',date:pending.date,start:pending.start,services:d.services||[],business:c.business_name};}
  const appointment=(await c.pool.query("SELECT status,date,start,data FROM appointments WHERE owner=$1 AND id=$2",[c.owner_id,c.booking_id])).rows[0];
  if(!appointment)throw Error('Booking record not found.');
  const d=JSON.parse(appointment.data||'{}');return {status:appointment.status,date:appointment.date,start:appointment.start,services:d.services||[],business:c.business_name};
