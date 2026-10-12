@@ -2,6 +2,7 @@ import {randomBytes,randomUUID} from 'node:crypto';
 import {getPool} from '../../../../server/database.mjs';
 import {hashPassword,tokenHash,validOrigin,cookie} from '../../../../server/security.mjs';
 import {defaultSettings} from '../../../../lib/defaults';
+import {onboardingPreset} from '../../../../server/onboarding-presets.mjs';
 import {validNewPassword} from '../../../../server/platform-roles.mjs';
 import {BUSINESS_INDUSTRIES,canonicalState} from '../../../../lib/business-options';
 import {isReservedBusinessSlug,dashboardPath,businessPath,bookingPath} from '../../../../server/route-slugs.mjs';
@@ -31,12 +32,14 @@ export async function POST(req:Request){
   const limit=await pool.query("INSERT INTO public_limits(key,count,window_start) VALUES($1,1,now()) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN public_limits.window_start<now()-interval '1 hour' THEN 1 ELSE public_limits.count+1 END,window_start=CASE WHEN public_limits.window_start<now()-interval '1 hour' THEN now() ELSE public_limits.window_start END RETURNING count",['signup:'+tokenHash(ip)]);
   if(limit.rows[0].count>10)return Response.json({error:'Registration limit reached. Please try later.'},{status:429});
   const userId=randomUUID(),businessId=randomUUID(),session=randomBytes(32).toString('hex');
-  const config={...structuredClone(defaultSettings),name,tagline:industry,services:[],staff:[],products:[],phone:'',address:'',greeting:'Welcome! How can we help?',timezone:'America/New_York'};
+  const preset=onboardingPreset(industry);
+  const config={...structuredClone(defaultSettings),name,tagline:industry,...preset,phone:'',address:'',greeting:'Welcome! How can we help?',timezone:'America/New_York'};
   const client=await pool.connect();
   try{
    await client.query('BEGIN');
    await client.query('INSERT INTO users(id,email,password_hash) VALUES($1,$2,$3)',[userId,email,hashPassword(password)]);
    await client.query("INSERT INTO businesses(id,owner_id,slug,name,industry,city,region,status,is_listed,listing_requested) VALUES($1,$2,$3,$4,$5,$6,$7,'pending',FALSE,FALSE)",[businessId,userId,slug,name,industry,city,region]);
+   await client.query('UPDATE businesses SET brand_primary=$1,brand_background=$2 WHERE id=$3',[preset.brandPrimary,preset.brandBackground,businessId]);
    await client.query("INSERT INTO business_memberships(business_id,user_id,role) VALUES($1,$2,'owner')",[businessId,userId]);
    await client.query("INSERT INTO business_subscriptions(business_id,plan_code,status) VALUES($1,'free','active')",[businessId]);
    await client.query('INSERT INTO settings(owner,data) VALUES($1,$2)',[userId,JSON.stringify(config)]);
