@@ -26,7 +26,10 @@ export async function GET(req:Request){
    pool.query("SELECT external_account_id,charges_enabled,onboarding_complete FROM merchant_accounts WHERE business_id=$1",[business.id])
   ]);
   const account=merchant.rows[0]||{};
-  return Response.json({businessName:business.name,plans:plans.rows,members:members.rows,planBenefits:planEntitlements(business.plan_code,business.subscription_status),
+  const individual=(await pool.query('SELECT limits FROM business_entitlement_overrides WHERE business_id=$1',[business.id])).rows[0]?.limits||{};
+  const benefits=planEntitlements(business.plan_code,business.subscription_status);
+  if(Number.isInteger(individual.membershipPlans))benefits.limits.membershipPlans=individual.membershipPlans;
+  return Response.json({businessName:business.name,plans:plans.rows,members:members.rows,planBenefits:benefits,
    payments:{configured:paymentConfigured(),connected:!!account.external_account_id,
     ready:paymentConfigured()&&account.charges_enabled===true&&account.onboarding_complete===true}}, {headers});
  }catch(e){return error(e);}
@@ -47,7 +50,8 @@ export async function POST(req:Request){
     const record=(await client.query(
      'SELECT s.plan_code,s.status FROM business_subscriptions s WHERE s.business_id=$1',
      [business.id])).rows[0];
-    const limit=activeMembershipLimit(record?.plan_code,record?.status);
+    const individual=(await client.query('SELECT limits FROM business_entitlement_overrides WHERE business_id=$1',[business.id])).rows[0]?.limits||{};
+    const limit=Number.isInteger(individual.membershipPlans)?individual.membershipPlans:activeMembershipLimit(record?.plan_code,record?.status);
     const count=Number((await client.query(
      'SELECT COUNT(*)::int AS count FROM membership_plans WHERE business_id=$1 AND active=TRUE',
      [business.id])).rows[0]?.count||0);
