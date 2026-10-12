@@ -1,3 +1,8 @@
+## v1.3.47 — 82 distinct signup presets
+- Every signup business category has its own six sample catalog entries (3 services, 2 products, 1 session suggestion).
+- Category-specific booking heading and descriptions, team placeholder and rotating palette.
+- Applies to new signups without overwriting existing business configurations.
+
 ## v1.3.46 — Category-aware signup defaults
 - Industry-specific example service and product entries, generic team placeholder, suggested session template, and varied palette.
 - Booking copy adapts to selected industry; owners may edit content after signup.
