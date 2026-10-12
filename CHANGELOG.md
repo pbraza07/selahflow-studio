@@ -1,3 +1,8 @@
+## v1.3.46 — Category-aware signup defaults
+- Industry-specific example service and product entries, generic team placeholder, suggested session template, and varied palette.
+- Booking copy adapts to selected industry; owners may edit content after signup.
+- Neutral booking confirmation terminology across business categories.
+
 ## v1.3.41 — Minimal appointment status lookup
 - Customers enter their full name and booking email, without OTP or reference.
 - Display only the latest matching appointment date and status; rate limited per IP and email.
