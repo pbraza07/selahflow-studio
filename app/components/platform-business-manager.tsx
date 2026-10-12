@@ -183,8 +183,9 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
  <p>Active payment connections or subscription obligations block this operation.</p>
  <label>Type the business name exactly<input autoComplete="off" value={purgeName} onChange={e=>setPurgeName(e.target.value)}/></label>
  <label>Type PERMANENTLY DELETE<input autoComplete="off" value={purgePhrase} onChange={e=>setPurgePhrase(e.target.value)}/></label>
+ {error&&<p role="alert" className="sf-platform-error" style={{margin:"12px 0",padding:12,borderRadius:8}}>{error}</p>}
  <div className="sf-platform-form-actions"><button type="button" className="outline" disabled={working} onClick={()=>setPurging(null)}>Cancel</button>
- <button type="button" className="outline sf-platform-remove-btn" disabled={working||purgeName!==purging.name||purgePhrase!=='PERMANENTLY DELETE'} onClick={()=>void purgeArchived()}><Trash2 size={16}/> Permanently delete</button></div>
+ <button type="button" className="outline sf-platform-remove-btn" disabled={working||purgeName!==purging.name||purgePhrase!=='PERMANENTLY DELETE'} onClick={()=>void purgeArchived()}><Trash2 size={16}/> {working?"Deleting…":"Permanently delete"}</button></div>
  </section></div>}
 {changingEmail&&<div className="sf-platform-confirm-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!working)setChangingEmail(null)}}>
    <section role="dialog" aria-modal="true" aria-labelledby="sf-platform-email-title" className="sf-platform-confirm">
