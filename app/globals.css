@@ -358,6 +358,7 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
 .sf-settings-section-heading p{color:var(--sf-settings-muted);margin:0;font-size:13px;line-height:1.6}
 .sf-settings-form .sf-settings-panels{display:block!important;min-width:0;margin:0;padding:0}
 .sf-settings-form [data-sf-settings-group]{display:none!important}
+.sf-settings-form[data-settings-tab="booking-page"] [data-sf-settings-group="booking-page"],
 .sf-settings-form[data-settings-tab="business"] [data-sf-settings-group="business"],
 .sf-settings-form[data-settings-tab="availability"] [data-sf-settings-group="availability"],
 .sf-settings-form[data-settings-tab="sessions"] [data-sf-settings-group="sessions"],
