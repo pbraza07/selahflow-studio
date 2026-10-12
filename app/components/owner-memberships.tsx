@@ -1,12 +1,13 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
 import {CalendarClock,CheckCircle2,CreditCard,ExternalLink,Plus,RefreshCw,ShieldCheck} from 'lucide-react';
-type Plan={id:string;name:string;description:string;interval:'week'|'month'|'year';priceCents:number;active:boolean};
-type Member={id:string;customer_name:string;customer_email:string;plan_name:string;interval_unit:string;status:string;paid_through:string|null};
+type Plan={id:string;name:string;description:string;interval:'week'|'month'|'year';priceCents:number;sessionsIncluded:number;active:boolean};
+type Member={id:string;customer_name:string;customer_email:string;member_number:string|null;plan_id:string;sessions_included:number;sessions_used:number;plan_name:string;interval_unit:string;status:string;paid_through:string|null};
 type Payload={businessName:string;plans:Plan[];members:Member[];planBenefits:{name:string;limits:{membershipPlans:number}};payments:{connected:boolean;configured:boolean;ready:boolean}};
 const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
 export default function OwnerMemberships({slug}:{slug:string}){
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+ const [sessionsIncluded,setSessionsIncluded]=useState(0),[newMemberName,setNewMemberName]=useState(''),[newMemberEmail,setNewMemberEmail]=useState(''),[newMemberPlan,setNewMemberPlan]=useState('');
  const [edit,setEdit]=useState<string|null>(null),[name,setName]=useState(''),[description,setDescription]=useState(''),[interval,setIntervalValue]=useState<'week'|'month'|'year'>('month'),[amount,setAmount]=useState('49.00');
  const load=useCallback(async()=>{
   setLoading(true);try{
@@ -25,12 +26,27 @@ export default function OwnerMemberships({slug}:{slug:string}){
   try{
    if(!/^\d{1,7}(?:\.\d{1,2})?$/.test(amount))throw Error('Enter a valid membership price in USD.');
    const priceCents=Math.round(Number(amount)*100);
-   await post('save',{...(edit?{id:edit}:{}),name,description,interval,priceCents,active:true});
-   setEdit(null);setName('');setDescription('');setAmount('49.00');setMessage('Membership plan saved. Customers can now view it when payment setup is ready.');await load();
+   await post('save',{...(edit?{id:edit}:{}),name,description,interval,priceCents,sessionsIncluded,active:true});
+   setEdit(null);setName('');setDescription('');setAmount('49.00');setSessionsIncluded(0);setMessage('Membership plan saved. Customers can now view it when payment setup is ready.');await load();
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function toggle(plan:Plan){
   setBusy(true);setError('');try{await post('toggle',{id:plan.id,active:!plan.active});await load();setMessage('Membership availability updated. Existing paid subscriptions are unchanged.');}
+  catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
+ async function assignMember(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');
+  try{const r=await post('assignMember',{name:newMemberName,email:newMemberEmail,planId:newMemberPlan});setMessage('Member assigned. Number: '+r.memberNumber+'. Payment remains pending until verified.');setNewMemberName('');setNewMemberEmail('');await load();}
+  catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
+ async function editMember(m:Member){
+  const selected=window.prompt('Membership plan ID (choose from current package IDs):',m.plan_id);
+  if(!selected)return;
+  const included=window.prompt('Sessions included in membership:',String(m.sessions_included));
+  if(included===null)return;
+  const used=window.prompt('Sessions already taken:',String(m.sessions_used));
+  if(used===null)return;
+  setBusy(true);setError('');
+  try{await post('updateMember',{id:m.id,planId:selected,sessionsIncluded:Number(included),sessionsUsed:Number(used)});await load();setMessage('Membership updated.');}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function connect(){
@@ -46,8 +62,8 @@ export default function OwnerMemberships({slug}:{slug:string}){
   setBusy(true);setError('');try{const r=await post('verify');await load();setMessage(r.ready?'Stripe is connected and ready to collect membership payments.':'Stripe is connected but still needs additional account verification.');}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
- const planForEdit=(plan:Plan)=>{setEdit(plan.id);setName(plan.name);setDescription(plan.description);setIntervalValue(plan.interval);setAmount((plan.priceCents/100).toFixed(2));};
- const clear=()=>{setEdit(null);setName('');setDescription('');setIntervalValue('month');setAmount('49.00');};
+ const planForEdit=(plan:Plan)=>{setEdit(plan.id);setName(plan.name);setDescription(plan.description);setIntervalValue(plan.interval);setAmount((plan.priceCents/100).toFixed(2));setSessionsIncluded(plan.sessionsIncluded||0);};
+ const clear=()=>{setEdit(null);setName('');setDescription('');setIntervalValue('month');setAmount('49.00');setSessionsIncluded(0);};
  return <section className="sf-owner-memberships">
   <header className="sf-owner-memberships-head"><div><span className="sf-membership-kicker">SELAHFLOW · OWNER WORKSPACE</span><h2>Membership plans & payments</h2>
    <p>Sell weekly, monthly and yearly recurring memberships for your business. New memberships activate only after advance payment is verified.</p></div>
@@ -89,15 +105,15 @@ export default function OwnerMemberships({slug}:{slug:string}){
       <div className="sf-membership-field-row"><label>Billing frequency<select value={interval} onChange={e=>setIntervalValue(e.target.value as typeof interval)}>
        <option value="week">Weekly</option><option value="month">Monthly</option><option value="year">Yearly</option></select></label>
        <label>Price in USD<input type="number" min="1" step="0.01" required value={amount} onChange={e=>setAmount(e.target.value)}/></label></div>
-      <p>Members pay <b>{/^\d+(?:\.\d+)?$/.test(amount)?money(Math.round(Number(amount)*100)):'the set price'}</b> immediately, and then automatically every {interval}. No free trial or deferred first payment.</p>
+      <label>Sessions included per membership<input type="number" min={0} max={100000} value={sessionsIncluded} onChange={e=>setSessionsIncluded(Number(e.target.value))}/></label><p>Members pay <b>{/^\d+(?:\.\d+)?$/.test(amount)?money(Math.round(Number(amount)*100)):'the set price'}</b> immediately, and then automatically every {interval}. No free trial or deferred first payment.</p>
       <button type="submit" className="primary" disabled={busy||!name.trim()}>{busy?'Saving…':edit?'Save membership changes':'Create membership plan'}</button>
       {edit&&<button type="button" className="outline" onClick={clear}>Cancel editing</button>}
      </form>
     </section>
    </div>
-   <section className="sf-owner-member-history"><div className="sf-owner-memberships-title"><h3>Member enrollments</h3><span>{data?.members?.length||0} recent members</span></div>
-    {data?.members?.length?<div className="sf-owner-membership-scroll"><table><thead><tr><th>Customer</th><th>Plan</th><th>Payment status</th><th>Paid through</th></tr></thead>
-     <tbody>{data.members.map(m=><tr key={m.id}><td><b>{m.customer_name}</b><small>{m.customer_email}</small></td><td>{m.plan_name}</td>
+   <section className="sf-owner-member-history"><h3>Assign a member to a membership package</h3><form onSubmit={assignMember} style={{display:'flex',gap:10,flexWrap:'wrap',marginBottom:20}}><label>Member full name<input required value={newMemberName} onChange={e=>setNewMemberName(e.target.value)}/></label><label>Email<input type="email" required value={newMemberEmail} onChange={e=>setNewMemberEmail(e.target.value)}/></label><label>Membership package<select required value={newMemberPlan} onChange={e=>setNewMemberPlan(e.target.value)}><option value="">Choose package</option>{data?.plans.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button type="submit" className="primary" disabled={busy}>Assign member</button></form><div className="sf-owner-memberships-title"><h3>Member enrollments</h3><span>{data?.members?.length||0} recent members</span></div>
+    {data?.members?.length?<div className="sf-owner-membership-scroll"><table><thead><tr><th>Customer / Member ID</th><th>Plan</th><th>Sessions used</th><th>Payment status</th><th>Paid through</th></tr></thead>
+     <tbody>{data.members.map(m=><tr key={m.id}><td><b>{m.customer_name}</b><small>{m.customer_email} · {m.member_number||'ID not yet assigned'}</small></td><td>{m.plan_name}</td><td>{m.sessions_used}/{m.sessions_included} <button type="button" className="outline" disabled={busy} onClick={()=>void editMember(m)}>Edit</button></td>
       <td><span className={'sf-member-status '+(m.status==='active'?'active':'')}>{m.status.replaceAll('_',' ')}</span></td><td>{m.paid_through?new Date(m.paid_through).toLocaleDateString('en-US'):'Not yet paid'}</td>
      </tr>)}</tbody></table></div>:<p className="sf-membership-empty">Customer memberships will appear here when payment enrollment begins.</p>}
     <p className="muted">Changing the price of a plan affects future signups only; existing Stripe subscriptions retain their original recurring price. This is separate from appointment bookings.</p>
