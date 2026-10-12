@@ -10,6 +10,7 @@ type Business={id:string;name:string;slug:string;status:string;planCode:PlanCode
 type Log={business_id:string;business_name:string;previous_plan:string;new_plan:string;reason:string;created_at:string};
 export default function PlatformPlanEntitlements({onChanged}:{onChanged:()=>Promise<void>}){
  const [businesses,setBusinesses]=useState<Business[]>([]),[history,setHistory]=useState<Log[]>([]);
+ const [benefitOverrides,setBenefitOverrides]=useState<Record<string,Record<string,number>>>({}),[benefitDraft,setBenefitDraft]=useState<Record<string,string>>({});
  const [canChange,setCanChange]=useState(false),[selected,setSelected]=useState(''),[target,setTarget]=useState<PlanCode>('free');
  const [reason,setReason]=useState(''),[confirmName,setConfirmName]=useState(''),[ack,setAck]=useState(false);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
@@ -19,12 +20,22 @@ export default function PlatformPlanEntitlements({onChanged}:{onChanged:()=>Prom
    const r=await fetch('/api/platform/plans',{cache:'no-store'});
    const d=await r.json();
    if(!r.ok)throw Error(d.error||'Unable to load subscription information.');
-   setBusinesses(d.businesses||[]);setHistory(d.recentChanges||[]);setCanChange(d.canChange===true);
+   setBusinesses(d.businesses||[]);
+   const extra=await fetch('/api/platform/benefit-overrides',{cache:'no-store'}).then(r=>r.json()).catch(()=>({overrides:[]}));
+   setBenefitOverrides(Object.fromEntries((extra.overrides||[]).map((x:{business_id:string;limits:Record<string,number>})=>[x.business_id,x.limits])));
+   setHistory(d.recentChanges||[]);setCanChange(d.canChange===true);
   }catch(e){setError((e as Error).message);}
   finally{setLoading(false);}
  }
  useEffect(()=>{void load();},[]);
  const current=businesses.find(x=>x.id===selected);
+ async function saveBenefits(){
+  if(!current)return;setBusy(true);setError('');
+  try{const limits:Record<string,number>={};for(const key of ['bookableStaff','services','bookingFields','sessionSeries','membershipPlans']){const v=benefitDraft[key];if(v!==undefined&&v!=='')limits[key]=Number(v);}
+   const r=await fetch('/api/platform/benefit-overrides',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({businessId:current.id,limits})});const d=await r.json();if(!r.ok)throw Error(d.error||'Could not save benefits.');
+   setNotice('Individual benefit allowances saved.');await load();
+  }catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
  async function assign(){
   if(!current||busy)return;
   if(!window.confirm('Manually assign '+PLANS[target].name+' benefits to '+current.name+'? No payment will be collected and existing records will remain.'))return;
@@ -57,7 +68,7 @@ export default function PlatformPlanEntitlements({onChanged}:{onChanged:()=>Prom
      <select value={selected} onChange={e=>{
       const id=e.target.value;
       setSelected(id);setTarget((businesses.find(b=>b.id===id)?.planCode||'free'));
-      setReason('');setConfirmName('');setAck(false);
+      setReason('');setConfirmName('');setAck(false);setBenefitDraft(Object.fromEntries(Object.entries(benefitOverrides[id]||{}).map(([k,v])=>[k,String(v)])));
      }}>
       <option value="">Choose a business</option>
       {businesses.map(b=><option key={b.id} value={b.id}>{b.name} · {PLANS[b.planCode]?.name||'Free'} · {b.status}</option>)}
@@ -69,6 +80,7 @@ export default function PlatformPlanEntitlements({onChanged}:{onChanged:()=>Prom
      <p>Up to <b>{current.planBenefits.limits.services}</b> catalog services, <b>{current.planBenefits.limits.bookingFields}</b> booking questions, <b>{current.planBenefits.limits.sessionSeries}</b> session templates and <b>{current.planBenefits.limits.membershipPlans}</b> membership offers.</p>
      {current.hasConnectedSubscription&&<p>A Stripe subscription exists for this business; change its tier through billing management, not manual assignment.</p>}
     </div>}
+    {canChange&&current&&<div className={styles.planAdminForm}><h3>Individual benefit allowances</h3><p>Enter an exact number for each benefit. Leave blank to use the subscribed plan's default.</p>{(['bookableStaff','services','bookingFields','sessionSeries','membershipPlans'] as const).map(key=><label key={key} className={styles.planAdminLabel}>{({bookableStaff:'Bookable team members',services:'Services',bookingFields:'Booking form fields',sessionSeries:'Session series',membershipPlans:'Membership packages'})[key]}<input type="number" min="0" max="100000" value={benefitDraft[key]??''} placeholder={String(key==='bookableStaff'?PLANS[current.planCode].bookableStaff:current.planBenefits.limits[key as keyof typeof current.planBenefits.limits])} onChange={e=>setBenefitDraft(d=>({...d,[key]:e.target.value}))}/></label>)}<button type="button" className={styles.button} disabled={busy} onClick={()=>void saveBenefits()}>Save individual benefits</button></div>}
     {canChange&&current&&current.status==='active'&&!current.hasConnectedSubscription&&<div className={styles.planAdminForm}>
      <label className={styles.planAdminLabel}>Assign benefits for
       <select value={target} onChange={e=>setTarget(e.target.value as PlanCode)}>
