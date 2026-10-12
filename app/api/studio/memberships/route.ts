@@ -1,4 +1,4 @@
-import {randomUUID} from 'node:crypto';
+import {randomUUID,randomInt} from 'node:crypto';
 import {getPool} from '../../../../server/database.mjs';
 import {requireOwner} from '../../../../lib/auth';
 import {validOrigin,trustedOrigin} from '../../../../server/security.mjs';
@@ -21,8 +21,8 @@ export async function GET(req:Request){
  try{
   const {pool,business}=await ctx(req);
   const [plans,members,merchant]=await Promise.all([
-   pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",active FROM membership_plans WHERE business_id=$1 ORDER BY created_at DESC',[business.id]),
-   pool.query("SELECT m.id,m.customer_name,m.customer_email,m.status,m.last_paid_at,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
+   pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",active FROM membership_plans WHERE business_id=$1 ORDER BY created_at DESC',[business.id]),
+   pool.query("SELECT m.id,m.customer_name,m.customer_email,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
    pool.query("SELECT external_account_id,charges_enabled,onboarding_complete FROM merchant_accounts WHERE business_id=$1",[business.id])
   ]);
   const account=merchant.rows[0]||{};
@@ -54,6 +54,8 @@ export async function POST(req:Request){
     if(input.action==='save'){
      const plan=validateMembershipPlan(input);
      const active=input.active!==false;
+     const sessionsIncluded=Number(input.sessionsIncluded??0);
+     if(!Number.isInteger(sessionsIncluded)||sessionsIncluded<0||sessionsIncluded>100000)throw Error('Enter a valid session allowance.');
      if(input.id){
       if(!/^[a-f0-9-]{36}$/i.test(input.id))throw Error('Invalid membership offer.');
       const old=(await client.query(
@@ -63,14 +65,14 @@ export async function POST(req:Request){
       if(active&&!old.active&&count>=limit)
        throw Error('Your '+planEntitlements(record?.plan_code,record?.status).name+' plan allows up to '+limit+' active customer membership offers. Existing offers are preserved.');
       await client.query(
-       'UPDATE membership_plans SET name=$1,description=$2,interval_unit=$3,price_cents=$4,active=$5,updated_at=now() WHERE id=$6 AND business_id=$7',
-       [plan.name,plan.description,plan.interval,plan.price,active,input.id,business.id]);
+       'UPDATE membership_plans SET name=$1,description=$2,interval_unit=$3,price_cents=$4,active=$5,updated_at=now(),sessions_included=$8 WHERE id=$6 AND business_id=$7',
+       [plan.name,plan.description,plan.interval,plan.price,active,input.id,business.id,sessionsIncluded]);
      }else{
       if(active&&count>=limit)
        throw Error('Your '+planEntitlements(record?.plan_code,record?.status).name+' plan allows up to '+limit+' active customer membership offers. Existing offers are preserved.');
       await client.query(
-       'INSERT INTO membership_plans(id,business_id,name,description,interval_unit,price_cents,active) VALUES($1,$2,$3,$4,$5,$6,$7)',
-       [randomUUID(),business.id,plan.name,plan.description,plan.interval,plan.price,active]);
+       'INSERT INTO membership_plans(id,business_id,name,description,interval_unit,price_cents,active,sessions_included) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',
+       [randomUUID(),business.id,plan.name,plan.description,plan.interval,plan.price,active,sessionsIncluded]);
      }
     }else{
      if(!/^[a-f0-9-]{36}$/i.test(input.id||''))throw Error('Invalid membership offer.');
@@ -88,6 +90,30 @@ export async function POST(req:Request){
     return Response.json({ok:true,planLimit:limit},{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}
    finally{client.release();}
+  }
+  if(input.action==='assignMember'){
+   const name=String(input.name||'').trim(),email=String(input.email||'').trim().toLowerCase(),planId=String(input.planId||'');
+   if(name.length<2||name.length>100||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Enter a valid member name and email.');
+   const parts=name.split(/\s+/),initials=(parts[0][0]+(parts.length>1?parts[parts.length-1][0]:'X')).toUpperCase().replace(/[^A-Z]/g,'X');
+   const plan=(await pool.query('SELECT id,price_cents,sessions_included FROM membership_plans WHERE business_id=$1 AND id=$2',[business.id,planId])).rows[0];
+   if(!plan)throw Error('Choose a membership package for this business.');
+   for(let attempt=0;attempt<12;attempt++){
+    const number=initials+String(randomInt(0,1000000)).padStart(6,'0');
+    const result=await pool.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,plan.sessions_included]);
+    if(result.rows[0])return Response.json({ok:true,memberNumber:number,paymentStatus:'pending_payment'},{headers});
+   }
+   throw Error('Unable to allocate a unique membership number.');
+  }
+  if(input.action==='updateMember'){
+   const id=String(input.id||''),planId=String(input.planId||'');
+   const plan=(await pool.query('SELECT id,sessions_included FROM membership_plans WHERE business_id=$1 AND id=$2',[business.id,planId])).rows[0];
+   if(!plan)throw Error('Choose a valid membership package.');
+   const member=(await pool.query('SELECT id,sessions_used FROM customer_memberships WHERE business_id=$1 AND id=$2',[business.id,id])).rows[0];
+   if(!member)throw Error('Member not found.');
+   const used=Number(input.sessionsUsed),included=Number(input.sessionsIncluded);
+   if(!Number.isInteger(used)||!Number.isInteger(included)||used<0||included<0||included>100000||used>included)throw Error('Enter valid sessions used and included.');
+   await pool.query('UPDATE customer_memberships SET plan_id=$1,sessions_used=$2,sessions_included=$3,updated_at=now() WHERE business_id=$4 AND id=$5',[planId,used,included,business.id,id]);
+   return Response.json({ok:true},{headers});
   }
   if(input.action==='connect'){
    if(!paymentConfigured())throw Error('Stripe payments require STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the SelahFlow Render environment before enrollment can accept money.');
