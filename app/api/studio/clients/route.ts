@@ -27,7 +27,10 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
  ]);
  const derived=buildClientDirectory([...appointments.rows,...requests.rows.map(pendingBookingAsAppointment)],settings,owner);
  const combined=applyClientProfiles(derived,profiles.rows);
- return {derived,profiles:profiles.rows,clients:combined.clients,archived:combined.archived.filter((c:{id:string})=>!profiles.rows.some((p:any)=>p.id===c.id&&p.deleted_at))};
+ const members=(await db.query("SELECT m.id,m.customer_name,m.customer_email,m.member_number,m.status,p.name AS membership_name FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id WHERE b.owner_id=$1",[owner])).rows;
+ const clients=combined.clients.map((c:any)=>{const m=members.find((x:any)=>x.customer_email?.toLowerCase()===c.email?.toLowerCase());return m?{...c,memberNumber:m.member_number,membershipName:m.membership_name,membershipStatus:m.status}:c;});
+ for(const m of members){if(!clients.some((c:any)=>c.email?.toLowerCase()===m.customer_email?.toLowerCase()))clients.push({id:'membership-'+m.id,name:m.customer_name,email:m.customer_email,phone:'',bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],latestDate:'',history:[],memberNumber:m.member_number,membershipName:m.membership_name,membershipStatus:m.status});}
+ return {derived,profiles:profiles.rows,clients,archived:combined.archived.filter((c:{id:string})=>!profiles.rows.some((p:any)=>p.id===c.id&&p.deleted_at))};
 }
 function failure(error:unknown){
  const message=(error as Error).message||'Client operation could not be completed.';
