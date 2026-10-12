@@ -22,11 +22,12 @@ async function businessFor(owner: string,db:{query:(sql:string,values:unknown[])
 async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>Promise<{rows:any[]}>},settings:Record<string,unknown>){
  const [appointments,profiles,requests]=await Promise.all([
   db.query('SELECT id,date,start,duration,staff,status,data FROM appointments WHERE owner=$1 ORDER BY date DESC,start DESC',[owner]),
-  db.query('SELECT id,source_key,anchor_appointment_id,name,email,phone,notes,archived,import_columns FROM business_client_profiles WHERE owner=$1 ORDER BY created_at,id',[owner]),
+  db.query('SELECT id,source_key,anchor_appointment_id,name,email,phone,notes,archived,import_columns,deleted_at FROM business_client_profiles WHERE owner=$1 ORDER BY created_at,id',[owner]),
   db.query("SELECT id,date,staff_id,start_minute,duration,details,status,created_at FROM booking_requests WHERE owner_id=$1 AND status IN ('pending','declined') ORDER BY created_at DESC",[owner])
  ]);
  const derived=buildClientDirectory([...appointments.rows,...requests.rows.map(pendingBookingAsAppointment)],settings,owner);
- return {derived,profiles:profiles.rows,...applyClientProfiles(derived,profiles.rows)};
+ const combined=applyClientProfiles(derived,profiles.rows);
+ return {derived,profiles:profiles.rows,clients:combined.clients,archived:combined.archived.filter((c:{id:string})=>!profiles.rows.some((p:any)=>p.id===c.id&&p.deleted_at))};
 }
 function failure(error:unknown){
  const message=(error as Error).message||'Client operation could not be completed.';
@@ -66,7 +67,7 @@ export async function POST(req:Request){
   raw=await req.text();
   if(raw.length>5000)throw Error('Client request exceeds the allowed size.');
   const body=JSON.parse(raw);
-  if(!['create','update','archive','restore'].includes(body?.action))throw Error('Invalid client action.');
+  if(!['create','update','archive','restore','deleteArchived'].includes(body?.action))throw Error('Invalid client action.');
   const owner=await requireOwner(req),pool=getPool(),db=await pool.connect();
   try{
    await db.query('BEGIN');
@@ -114,6 +115,13 @@ export async function POST(req:Request){
       'INSERT INTO business_client_profiles(id,owner,source_key,anchor_appointment_id,name,email,phone,notes,archived) VALUES($1,$2,$3,$4,$5,$6,$7,$8,TRUE)',
       [responseId,owner,id,sourceAnchor,selected.name,selected.email,selected.phone,selected.notes||'']);
     }
+   }else if(body.action==='deleteArchived'){
+    const ids=body.clientIds;
+    if(!Array.isArray(ids)||ids.length<1||ids.length>2000||ids.some((value:unknown)=>!validId(value))||new Set(ids).size!==ids.length)throw Error('Select valid removed clients.');
+    if(body.confirmPhrase!=='DELETE REMOVED CLIENTS')throw Error('Enter DELETE REMOVED CLIENTS to confirm.');
+    if(ids.some((value:string)=>!result.archived.some((item:{id:string})=>item.id===value)))throw Error('One or more selected clients are not in the removed list.');
+    await db.query("UPDATE business_client_profiles SET deleted_at=now(),name='Deleted client',email='',phone='',notes='',import_columns='{}'::jsonb,updated_at=now() WHERE owner=$1 AND id=ANY($2::text[]) AND archived=TRUE AND deleted_at IS NULL",[owner,ids]);
+    responseId='deleted';
    }else if(body.action==='restore'){
     if(!profile||!profile.archived||!archived)throw Error('Removed client not found.');
     const duplicate=result.clients.find(c=>sameClientContact(c,profile));
