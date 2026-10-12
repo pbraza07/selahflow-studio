@@ -31,7 +31,7 @@ export async function POST(req:Request){
   if(!role)throw Error('FORBIDDEN');
   const raw=await req.text();if(raw.length>8000)throw Error('Invalid business request size.');
   const payload=JSON.parse(raw),action=payload.action;
-  if(!['create','edit','archive','restore','purge','resetPassword','changeOwnerEmail'].includes(action))throw Error('Invalid business operation.');
+  if(!['create','edit','archive','restore','purge','separateOwner','resetPassword','changeOwnerEmail'].includes(action))throw Error('Invalid business operation.');
   client=await pool.connect();
   await client.query('BEGIN');
   if(action==='create'){
@@ -66,6 +66,28 @@ export async function POST(req:Request){
   const loaded=await client.query('SELECT * FROM businesses WHERE id=$1 FOR UPDATE',[payload.id]);
   const before=loaded.rows[0];if(!before)throw Error('Business not found.');
   let after:any={...before},kind=action;
+  if(action==='separateOwner'){
+   if(role!=='primary')throw Error('Only the primary administrator can separate business ownership.');
+   if(before.owner_id!==actor)throw Error('This business is not linked to your administrator account.');
+   if(payload.confirmName!==before.name)throw Error('Confirm the exact business name.');
+   const newEmail=String(payload.newOwnerEmail||'').trim().toLowerCase();
+   if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(newEmail)||newEmail.length>254)throw Error('Enter a valid new owner email.');
+   const existing=await client.query('SELECT id FROM users WHERE lower(email)=lower($1)',[newEmail]);
+   if(existing.rowCount)throw Error('New owner email already belongs to an account. Choose an unused email.');
+   const other=await client.query('SELECT id FROM businesses WHERE owner_id=$1 AND id<>$2',[actor,before.id]);
+   if(other.rowCount)throw Error('Administrator owns another business; separation needs a dedicated data migration.');
+   const newId=randomUUID(),password=randomBytes(24).toString('base64url');
+   await client.query('INSERT INTO users(id,email,password_hash,must_change_password) VALUES($1,$2,$3,TRUE)',[newId,newEmail,hashPassword(password)]);
+   // Move only this tenant's records, keeping platform admin identity and sessions intact.
+   for(const [table,col] of [['settings','owner'],['appointments','owner'],['slots','owner'],['events','owner'],['business_client_profiles','owner'],['booking_requests','owner_id']] as const){
+    await client.query('UPDATE '+table+' SET '+col+'=$1 WHERE '+col+'=$2',[newId,actor]);
+   }
+   await client.query('UPDATE businesses SET owner_id=$1,updated_at=now() WHERE id=$2',[newId,before.id]);
+   await client.query("DELETE FROM business_memberships WHERE business_id=$1 AND user_id=$2",[before.id,actor]);
+   await client.query("INSERT INTO business_memberships(business_id,user_id,role) VALUES($1,$2,'owner')",[before.id,newId]);
+   await client.query('COMMIT');client.release();client=null;
+   return Response.json({ok:true,ownerEmail:newEmail,temporaryPassword:password,message:'Business ownership separated. Your platform administrator account is preserved. Store the new owner password securely.'},{headers:h});
+  }
   if(action==='purge'){
    if(role!=='primary')throw Error('Only the primary platform administrator can permanently delete a business.');
    if(before.status!=='archived')throw Error('Archive the business before permanently deleting it.');
