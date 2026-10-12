@@ -1,3 +1,8 @@
+## v1.3.48 — Calendar appointment list and guarded deletion
+- All-dates appointment list with individual and multi-select deletion.
+- Secure delete-all requires exact business name and explicit DELETE ALL APPOINTMENTS phrase.
+- Tenant-scoped transactional removal of appointments, reserved slots and linked approval requests.
+
 ## v1.3.47 — 82 distinct signup presets
 - Every signup business category has its own six sample catalog entries (3 services, 2 products, 1 session suggestion).
 - Category-specific booking heading and descriptions, team placeholder and rotating palette.
