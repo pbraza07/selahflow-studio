@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 export default function CustomerBookingStatus(){
  const [item,setItem]=useState<any>(null),[error,setError]=useState(''),[id,setId]=useState('');
- useEffect(()=>{try{const latest=localStorage.getItem('selahflow:latest-booking')||'';setId(latest);}catch{}},[]);
+ useEffect(()=>{try{const requested=new URLSearchParams(window.location.search).get('id')||'';const latest=localStorage.getItem('selahflow:latest-booking')||'';setId(requested||latest);}catch{}},[]);
  useEffect(()=>{if(!id)return;let token='';try{token=JSON.parse(localStorage.getItem('selahflow:customer-bookings')||'{}')[id]||'';}catch{}
  if(!token){setError('This device does not have access to that booking. Open the original confirmation page.');return;}
  fetch('/api/customer-booking',{headers:{Authorization:'Bearer '+token},cache:'no-store'}).then(async r=>{const data=await r.json();if(!r.ok)throw Error(data.error);setItem(data);}).catch(e=>setError(e.message));},[id]);
