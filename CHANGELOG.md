@@ -1,3 +1,8 @@
+## v1.3.50 — Client Excel import and booking share
+- Import .xlsx and .csv clients per business; preserve arbitrary source columns and display them on client details.
+- Match existing contacts, prevent duplicates within imported batch, and restrict import to active owner workspace.
+- Share booking page via native share sheet or copied URL.
+
 ## v1.3.48 — Calendar appointment list and guarded deletion
 - All-dates appointment list with individual and multi-select deletion.
 - Secure delete-all requires exact business name and explicit DELETE ALL APPOINTMENTS phrase.
