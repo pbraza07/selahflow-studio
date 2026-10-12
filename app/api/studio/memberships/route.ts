@@ -97,7 +97,7 @@ export async function POST(req:Request){
    }catch(e){await client.query('ROLLBACK');throw e;}
    finally{client.release();}
   }
-  if(input.action==='confirmManualPayment'){
+  if(input.action==='confirmManualPayment'||input.action==='renewMembership'){
    const id=String(input.id||'');
    if(!/^[a-f0-9-]{36}$/i.test(id))throw Error('Invalid member.');
    const client=await pool.connect();
@@ -105,6 +105,8 @@ export async function POST(req:Request){
     await client.query('BEGIN');
     const member=(await client.query("SELECT m.id,m.status,m.sessions_included,m.sessions_used,m.member_number,p.sessions_included AS plan_sessions,p.price_cents FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 AND m.id=$2 FOR UPDATE",[business.id,id])).rows[0];
     if(!member)throw Error('Member not found.');
+    if(input.action==='renewMembership'&&member.status!=='active')throw Error('Confirm the initial payment before renewing this membership.');
+    if(input.action==='confirmManualPayment'&&member.status==='active')throw Error('This membership is already active. Use Renew to add another package of sessions.');
     if(!member.member_number)throw Error('Assign a member number before confirming payment.');
     const credits=Number(member.plan_sessions);
     if(!Number.isInteger(credits)||credits<1)throw Error('Membership package must include at least one session.');
