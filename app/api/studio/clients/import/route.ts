@@ -5,8 +5,8 @@ import {validOrigin} from '../../../../../server/security.mjs';
 import {readClientSpreadsheet} from '../../../../../server/client-import.mjs';
 import {validateClientInput,sameClientContact} from '../../../../../server/client-profile-logic.mjs';
 export const runtime='nodejs';
-const key=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-function get(row,aliases){const entry=Object.entries(row).find(([header])=>aliases.includes(key(header)));return entry?String(entry[1]||'').trim():'';}
+const key=(s:unknown)=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+function get(row:Record<string,string>,aliases:string[]){const entry=Object.entries(row).find(([header])=>aliases.includes(key(header)));return entry?String(entry[1]||'').trim():'';}
 export async function POST(req:Request){
  if(!validOrigin(req))return Response.json({error:'Invalid origin.'},{status:403});
  let client;
@@ -33,7 +33,7 @@ export async function POST(req:Request){
   const existing=(await client.query('SELECT id,name,email,phone FROM business_client_profiles WHERE owner=$1',[owner])).rows;
   let created=0,updated=0;
   for(const row of mapped){
-   const match=existing.find(p=>sameClientContact(p,row));
+   const match=existing.find((p:{id:string;name:string;email:string;phone:string})=>sameClientContact(p,row));
    if(match){
     await client.query('UPDATE business_client_profiles SET import_columns=COALESCE(import_columns,\'{}\'::jsonb)||$1::jsonb,updated_at=now() WHERE owner=$2 AND id=$3',[JSON.stringify(row.columns),owner,match.id]);updated++;
    }else{
