@@ -296,7 +296,27 @@ if(b.action==='deleteAppointments'){
   return reply({ok:true,deleted:removed.rowCount});
  }catch(error){await client.query('ROLLBACK');return reply({error:(error as Error).message},409);}finally{client.release();}
 }
-if(b.action==='status'){if(!['Checked in','Completed','Cancelled','No-show'].includes(b.status))throw Error('Invalid status');const old=await db().prepare('SELECT * FROM appointments WHERE owner=? AND id=?').bind(owner,b.id).first();if(!old) return reply({error:'Appointment not found'},404);if(['Completed','Cancelled','No-show'].includes(String(old.status)))throw Error('This appointment is already closed.');const stm=[db().prepare('UPDATE appointments SET status=? WHERE owner=? AND id=?').bind(b.status,owner,b.id),audit('status',{appointment:b.id,status:b.status})];if(b.status==='Cancelled'||b.status==='No-show')stm.push(db().prepare('DELETE FROM slots WHERE owner=? AND appointment=?').bind(owner,b.id));await db().batch(stm);return reply({ok:true});}
+if(b.action==='status'){if(!['Checked in','Completed','Cancelled','No-show'].includes(b.status))throw Error('Invalid status');const old=await db().prepare('SELECT * FROM appointments WHERE owner=? AND id=?').bind(owner,b.id).first();if(!old) return reply({error:'Appointment not found'},404);if(['Completed','Cancelled','No-show'].includes(String(old.status)))throw Error('This appointment is already closed.');const stm=[db().prepare('UPDATE appointments SET status=? WHERE owner=? AND id=?').bind(b.status,owner,b.id),audit('status',{appointment:b.id,status:b.status})];if(b.status==='Cancelled'||b.status==='No-show')stm.push(db().prepare('DELETE FROM slots WHERE owner=? AND appointment=?').bind(owner,b.id));await db().batch(stm);
+ if(b.status==='Completed'){
+  const memberNumber=String((typeof old.data==='string'?JSON.parse(old.data||'{}'):old.data||{}).memberNumber||'').trim().toUpperCase();
+  if(memberNumber){
+   const pool=getPool(),client=await pool.connect();
+   try{
+    await client.query('BEGIN');
+    const member=(await client.query("SELECT m.id,m.sessions_included,m.sessions_used FROM customer_memberships m JOIN businesses biz ON biz.id=m.business_id WHERE biz.owner_id=$1 AND m.member_number=$2 AND m.status='active' FOR UPDATE OF m",[owner,memberNumber])).rows[0];
+    if(member){
+     const existing=await client.query("SELECT 1 FROM membership_session_ledger WHERE membership_id=$1 AND appointment_id=$2 AND event_type='session_used'",[member.id,b.id]);
+     if(!existing.rowCount&&Number(member.sessions_used)<Number(member.sessions_included)){
+      const business=(await client.query('SELECT id FROM businesses WHERE owner_id=$1',[owner])).rows[0];
+      await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta) VALUES($1,$2,$3,$4,'session_used',-1) ON CONFLICT DO NOTHING",[crypto.randomUUID(),business.id,member.id,b.id]);
+      await client.query('UPDATE customer_memberships SET sessions_used=sessions_used+1,updated_at=now() WHERE id=$1',[member.id]);
+     }
+    }
+    await client.query('COMMIT');
+   }catch(e){await client.query('ROLLBACK');console.error('Membership attendance reconciliation:',e);}finally{client.release();}
+  }
+ }
+ return reply({ok:true});}
 if(b.action==='sale'){if(!Array.isArray(b.items)||!b.items.length)throw Error('Add items to checkout.');const lines=b.items.map((l:any)=>{const item=[...config.services.map((s:any)=>({...s,type:'service',cost:null})),...config.products.map((p:any)=>({...p,type:'product'}))].find((x:any)=>x.id===l.id);if(!item||!Number.isInteger(l.qty)||l.qty<1||l.qty>50)throw Error('Invalid checkout item.');return {...item,qty:l.qty};});const total=lines.reduce((n:number,l:any)=>n+l.qty*l.price,0);await db().batch([audit('cash_sale',{lines,total,tax:total*config.tax/100,payment:'Cash recorded manually'})]);return reply({ok:true});}
 if(b.action==='handoff'){if(!String(b.message||'').trim())throw Error('Enter a message');await db().batch([audit('handoff',{message:String(b.message).slice(0,2000),status:'Open'})]);return reply({ok:true});}return reply({error:'Unknown action'},400);
 }catch(e){return reply({error:(e as Error).message==='AUTH_REQUIRED'?'Please sign in.':((e as {code?:string}).code?'Unable to save right now. Please try again.':(e as Error).message)||'Unable to save. Please try again.'},(e as Error).message==='AUTH_REQUIRED'?401:400);}}
