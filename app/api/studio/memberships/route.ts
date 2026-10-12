@@ -253,4 +253,6 @@ export async function POST(req:Request){
   }
   throw Error('Invalid membership action.');
  }catch(e){return error(e);}
-}
+}     if(requested&&!new RegExp('^'+initials+'[0-9]{6}$').test(requested))throw Error('Member number must contain player initials followed by six digits.');
+     const number=requested||initials+String(randomInt(0,1000000)).padStart(6,'0');
+
