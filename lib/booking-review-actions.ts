@@ -12,7 +12,7 @@ export async function reviewPendingRequest(owner:string,id:string,reviewer:strin
  if(!accepted){
   const q=await pool.query("UPDATE booking_requests SET status='declined',reviewed_by=$1,reviewed_at=now() WHERE id=$2 AND owner_id=$3 AND status='pending' AND ($1='owner' OR reviewer=$1)",[reviewer,id,owner]);
   if(!q.rowCount)throw Error('This request has already been reviewed.');
-  void notifyCustomerBooking(owner,id,'Declined').catch(()=>{});
+  try{await notifyCustomerBooking(owner,id,'Declined');}catch(error){console.error('Customer decline push delivery failed',error);}
   return {ok:true,status:'declined'};
  }
  if(row.date<today())throw Error('This request is in the past. Decline it or ask the customer to book a future date.');
@@ -31,6 +31,6 @@ export async function reviewPendingRequest(owner:string,id:string,reviewer:strin
   serviceIds:services.map((s:{id:string})=>s.id),price:data.quotedPrice,channel:'Approved online booking',created:new Date().toISOString(),reviewedBy:reviewer,bookingRequestId:id,sessionId:data.sessionId||null,customAnswers:data.customAnswers||{},customFieldLabels:data.customFieldLabels||{},originalSubmission:data.originalSubmission||null,bookingDetailsEditedAt:data.correctedAt||null,policyAccepted:data.policyAccepted===true,policyAcceptedAt:data.policyAcceptedAt||null};
  await confirmBooking({owner,services,staff:row.staff_id,date:row.date,start:row.start_minute,duration:row.duration,
   buffer:config.buffer,id:appointmentId,data:payload,pendingId:id,expectedReviewer:reviewer});
- void notifyCustomerBooking(owner,id,'Confirmed').catch(()=>{});
+ try{await notifyCustomerBooking(owner,id,'Confirmed');}catch(error){console.error('Customer confirmation push delivery failed',error);}
  return {ok:true,status:'accepted',appointmentId};
 }
