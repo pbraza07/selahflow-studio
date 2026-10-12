@@ -33,7 +33,7 @@ export async function GET(req:Request){
   const individual=(await pool.query('SELECT limits FROM business_entitlement_overrides WHERE business_id=$1',[business.id])).rows[0]?.limits||{};
   const benefits=planEntitlements(business.plan_code,business.subscription_status);
   if(Number.isInteger(individual.membershipPlans))benefits.limits.membershipPlans=individual.membershipPlans;
-  return Response.json({businessName:business.name,plans:plans.rows,members:members.rows.map((m:any)=>{const actual=visits.rows.filter((v:any)=>{try{return JSON.parse(v.data||'{}').memberNumber===m.member_number;}catch{return false;}}).length;return {...m,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
+  return Response.json({businessName:business.name,plans:plans.rows,members:members.rows.map((m:any)=>{const actual=visits.rows.filter((v:any)=>{try{const d=typeof v.data==='string'?JSON.parse(v.data):v.data||{};return !!m.member_number&&String(d.memberNumber||'').toUpperCase()===String(m.member_number).toUpperCase();}catch{return false;}}).length;return {...m,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
    payments:{configured:paymentConfigured(),connected:!!account.external_account_id,
     ready:paymentConfigured()&&account.charges_enabled===true&&account.onboarding_complete===true}}, {headers});
  }catch(e){return error(e);}
@@ -103,6 +103,7 @@ export async function POST(req:Request){
    const id=String(input.id||'');
    if(!/^[a-f0-9-]{36}$/i.test(id))throw Error('Invalid member.');
    const requestId=String(input.requestId||'');
+   const selectedPlanId=String(input.planId||'');
    if(!/^[a-f0-9-]{36}$/i.test(requestId))throw Error('Invalid payment request.');
    const client=await pool.connect();
    try{
@@ -113,30 +114,36 @@ export async function POST(req:Request){
     if(input.action==='renewMembership'&&member.status!=='active')throw Error('Confirm the initial payment before renewing this membership.');
     if(input.action==='confirmManualPayment'&&member.status==='active')throw Error('This membership is already active. Use Renew to add another package of sessions.');
     if(!member.member_number)throw Error('Assign a member number before confirming payment.');
-    const credits=Number(member.plan_sessions);
+    const selectedPlan=input.action==='renewMembership'?(await client.query('SELECT id,sessions_included,price_cents FROM membership_plans WHERE business_id=$1 AND id=$2 AND active=true',[business.id,selectedPlanId])).rows[0]:null;
+    if(input.action==='renewMembership'&&!selectedPlan)throw Error('Choose an available membership package to renew.');
+    const credits=Number(selectedPlan?selectedPlan.sessions_included:member.plan_sessions);
     if(!Number.isInteger(credits)||credits<1)throw Error('Membership package must include at least one session.');
     const existing=(await client.query("SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='payment_confirmed'",[business.id,id,requestId])).rowCount;
     if(existing){await client.query('COMMIT');return Response.json({ok:true,credited:0,alreadyProcessed:true},{headers});}
-    await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[randomUUID(),business.id,id,requestId,credits,member.price_cents]);
-    await client.query("UPDATE customer_memberships SET sessions_included=sessions_included+$1,status='active',last_paid_at=now(),updated_at=now() WHERE business_id=$2 AND id=$3",[credits,business.id,id]);
+    await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[randomUUID(),business.id,id,requestId,credits,selectedPlan?selectedPlan.price_cents:member.price_cents]);
+    await client.query("UPDATE customer_memberships SET sessions_included=sessions_included+$1,status='active',last_paid_at=now(),updated_at=now(),plan_id=COALESCE($4,plan_id),price_cents=COALESCE($5,price_cents) WHERE business_id=$2 AND id=$3",[credits,business.id,id,selectedPlan?.id||null,selectedPlan?.price_cents??null]);
     await client.query('COMMIT');
     return Response.json({ok:true,credited:credits},{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
   }
   if(input.action==='recordSession'){
    const id=String(input.id||''),appointmentId=String(input.appointmentId||'').trim();
-   if(!/^[a-f0-9-]{36}$/i.test(id)||!appointmentId)throw Error('Choose a member and completed appointment reference.');
+   if(!/^[a-f0-9-]{36}$/i.test(id))throw Error('Choose a member.');
    const client=await pool.connect();
    try{
     await client.query('BEGIN');
     const member=(await client.query('SELECT id,member_number,sessions_included,sessions_used,status FROM customer_memberships WHERE business_id=$1 AND id=$2 FOR UPDATE',[business.id,id])).rows[0];
     if(!member||member.status!=='active'||!member.member_number)throw Error('An active member is required.');
     if(member.sessions_used>=member.sessions_included)throw Error('No sessions remaining.');
-    const visit=(await client.query("SELECT a.id,a.data FROM appointments a JOIN businesses b ON b.owner_id=a.owner WHERE b.id=$1 AND a.id=$2 AND a.status IN ('Completed','Attended')",[business.id,appointmentId])).rows[0];
-    if(!visit)throw Error('Appointment must be completed or attended.');
-    const info=typeof visit.data==='string'?JSON.parse(visit.data):visit.data||{};
+    const visits=(await client.query("SELECT a.id,a.data FROM appointments a JOIN businesses b ON b.owner_id=a.owner WHERE b.id=$1 AND a.status IN ('Completed','Attended') AND ($2='' OR a.id=$2) ORDER BY a.date ASC",[business.id,appointmentId])).rows;
+    const visit=visits.find((v:any)=>{try{const d=typeof v.data==='string'?JSON.parse(v.data):v.data||{};return String(d.memberNumber||'').toUpperCase()===String(member.member_number).toUpperCase();}catch{return false;}}&& !false);
+    const unrecorded=[] as typeof visits;
+    for(const v of visits){try{const d=typeof v.data==='string'?JSON.parse(v.data):v.data||{};if(String(d.memberNumber||'').toUpperCase()===String(member.member_number).toUpperCase()){const found=await client.query("SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='session_used'",[business.id,id,v.id]);if(!found.rowCount)unrecorded.push(v);}}catch{}}
+    const selected=unrecorded[0];
+    if(!selected)throw Error('No unrecorded completed visits found for this member.');
+    const info=typeof selected.data==='string'?JSON.parse(selected.data):selected.data||{};
     if(info.memberNumber!==member.member_number)throw Error('Appointment member number does not match.');
-    await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta) VALUES($1,$2,$3,$4,'session_used',-1)",[randomUUID(),business.id,id,appointmentId]);
+    await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta) VALUES($1,$2,$3,$4,'session_used',-1)",[randomUUID(),business.id,id,selected.id]);
     await client.query('UPDATE customer_memberships SET sessions_used=sessions_used+1,updated_at=now() WHERE id=$1 AND business_id=$2',[id,business.id]);
     await client.query('COMMIT');return Response.json({ok:true},{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
