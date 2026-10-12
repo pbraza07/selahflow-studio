@@ -1862,3 +1862,24 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
  .app-shell .sidebar .nav-item{position:relative;flex-shrink:0;min-height:48px;touch-action:manipulation;cursor:pointer;}
  .app-shell .sidebar-bottom{margin-top:24px;flex-shrink:0;}
 }
+
+
+/* v1.3.59 — responsive layout and readable content across business workspaces */
+.sf-owner-memberships,.sf-owner-memberships *,.sf-owner-member-history,.sf-owner-member-history *{box-sizing:border-box}
+.sf-owner-member-history{min-width:0;overflow:hidden}
+.sf-owner-member-history form{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));align-items:end;gap:12px!important}
+.sf-owner-member-history form label{display:flex;flex-direction:column;min-width:0;gap:6px;overflow-wrap:anywhere}
+.sf-owner-member-history form input,.sf-owner-member-history form select{width:100%;max-width:100%;min-width:0}
+.sf-owner-member-history form button{min-width:0;white-space:normal;line-height:1.35}
+.sf-owner-membership-scroll{overflow-x:auto;max-width:100%;overscroll-behavior-x:contain}
+.sf-owner-membership-scroll table{min-width:780px;table-layout:auto}
+.sf-owner-membership-scroll th,.sf-owner-membership-scroll td{vertical-align:top;line-height:1.5;overflow-wrap:anywhere;word-break:normal}
+.sf-owner-membership-scroll td:nth-child(4){min-width:230px}
+.sf-owner-membership-scroll td:nth-child(4)>div{margin-top:9px}
+.sf-owner-membership-scroll td button{min-height:34px;white-space:normal;max-width:100%;line-height:1.35}
+.sf-owner-membership-scroll td small{overflow-wrap:anywhere}
+.sf-member-status{max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+.sf-owner-memberships .sf-owner-membership-layout>*{min-width:0}
+.sf-owner-memberships-title>*{min-width:0;overflow-wrap:anywhere}
+@media(max-width:900px){.sf-owner-membership-layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.sf-owner-member-history{padding:14px}.sf-owner-membership-scroll table{min-width:760px}.sf-owner-membership-scroll td,.sf-owner-membership-scroll th{padding:10px}}
