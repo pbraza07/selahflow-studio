@@ -100,7 +100,7 @@ if(b.action==='registration_code_request'){
  const code=String(randomInt(0,1000000)).padStart(6,'0'),hash=tokenHash(owner+':'+email+':'+code);
  const sent=await sendNotificationChannel('email',email,{subject:'SelahFlow registration verification code',text:'Your SelahFlow registration verification code is '+code+'. It expires in 10 minutes. If you did not request this, ignore this message.'});
  if(sent.status!=='submitted')return reply({error:'Unable to send verification email. Please try again later.'},503);
- await db().prepare("INSERT INTO registration_email_codes(owner_id,email_hash,code_hash,expires_at,attempts) VALUES(?,?,?,NOW()+INTERVAL '10 minutes',0) ON CONFLICT(owner_id,email_hash) DO UPDATE SET code_hash=EXCLUDED.code_hash,expires_at=EXCLUDED.expires_at,attempts=0").bind(owner,tokenHash(email),hash).execute();
+ await db().prepare("INSERT INTO registration_email_codes(owner_id,email_hash,code_hash,expires_at,attempts) VALUES(?,?,?,NOW()+INTERVAL '10 minutes',0) ON CONFLICT(owner_id,email_hash) DO UPDATE SET code_hash=EXCLUDED.code_hash,expires_at=EXCLUDED.expires_at,attempts=0").bind(owner,tokenHash(email),hash).first();
  return reply({ok:true,message:'If this email can receive messages, a verification code has been sent.'});
 }
 if(b.action==='registration_email_lookup'){
@@ -110,10 +110,10 @@ if(b.action==='registration_email_lookup'){
  if(!await takeLimit('registration-lookup:'+owner+':'+tokenHash(ip),20))return reply({error:'Too many attempts. Try again later.'},429);
  const row=await db().prepare("SELECT code_hash,attempts FROM registration_email_codes WHERE owner_id=? AND email_hash=? AND expires_at>NOW()").bind(owner,tokenHash(email)).first<any>();
  if(!row||row.attempts>=5||row.code_hash!==tokenHash(owner+':'+email+':'+code)){
-  await db().prepare("UPDATE registration_email_codes SET attempts=attempts+1 WHERE owner_id=? AND email_hash=?").bind(owner,tokenHash(email)).execute();
+  await db().prepare("UPDATE registration_email_codes SET attempts=attempts+1 WHERE owner_id=? AND email_hash=?").bind(owner,tokenHash(email)).first();
   return reply({error:'Invalid or expired verification code.'},403);
  }
- await db().prepare('DELETE FROM registration_email_codes WHERE owner_id=? AND email_hash=?').bind(owner,tokenHash(email)).execute();
+ await db().prepare('DELETE FROM registration_email_codes WHERE owner_id=? AND email_hash=?').bind(owner,tokenHash(email)).first();
  const requests=(await db().prepare('SELECT id,status,date,start_minute,details,appointment_id FROM booking_requests WHERE owner_id=? ORDER BY created_at DESC LIMIT 500').bind(owner).all()).results as any[];
  const appointments=(await db().prepare('SELECT id,status,date,start,data FROM appointments WHERE owner=? ORDER BY date DESC LIMIT 500').bind(owner).all()).results as any[];
  const matches:any[]=[],seen=new Set<string>();
