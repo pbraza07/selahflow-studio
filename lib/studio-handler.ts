@@ -254,7 +254,7 @@ if(b.action==='deleteAppointments'){
   if(all&&(ids.length!==available.size||ids.some((id:string)=>!available.has(id))))throw Error('Appointment list changed. Refresh and confirm again.');
   if(ids.some((id:string)=>!available.has(id)))throw Error('One or more appointments no longer exist. Refresh the list.');
   await client.query('DELETE FROM slots WHERE owner=$1 AND appointment=ANY($2::text[])',[owner,ids]);
-  await client.query('UPDATE booking_requests SET appointment_id=NULL WHERE owner_id=$1 AND appointment_id=ANY($2::text[])',[owner,ids]);
+  await client.query('DELETE FROM booking_requests WHERE owner_id=$1 AND appointment_id=ANY($2::text[])',[owner,ids]);
   const removed=await client.query('DELETE FROM appointments WHERE owner=$1 AND id=ANY($2::text[]) RETURNING id',[owner,ids]);
   await client.query('COMMIT');
   return reply({ok:true,deleted:removed.rowCount});
