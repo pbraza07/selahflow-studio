@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
-import {getPool} from '../../../../server/database.mjs';
-import {tokenHash,validOrigin} from '../../../../server/security.mjs';
-import {configured,validPushSubscription} from '../../../../server/push-crypto.mjs';
+import {getPool} from '../../../server/database.mjs';
+import {tokenHash,validOrigin} from '../../../server/security.mjs';
+import {configured,validPushSubscription} from '../../../server/push-crypto.mjs';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 const headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Robots-Tag':'noindex,nofollow'};
 async function access(req:Request){
