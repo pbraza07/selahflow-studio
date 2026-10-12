@@ -8,7 +8,7 @@ self.addEventListener('push',event=>{
  const body=String(data.body||'Open SelahFlow to review this appointment.').slice(0,240);
  const raw=String(data.url||'');
  const target=new URL(raw,self.location.origin);
- const safe=target.origin===self.location.origin&&(/^(\/studio\/[^/]+|\/booking\/respond\/[0-9a-f]{64})/.test(target.pathname));
+ const safe=target.origin===self.location.origin&&(/^(\/studio\/[^/]+|\/booking\/respond\/[0-9a-f]{64}|\/customer\/booking)/.test(target.pathname));
  const url=safe?target.pathname+target.search+target.hash:'/';
  event.waitUntil(self.registration.showNotification(title,{
   body,icon:'/brand/app-icon.svg',badge:'/brand/app-icon.svg',
