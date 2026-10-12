@@ -1,6 +1,6 @@
 'use client';
-import {useCallback,useEffect,useMemo,useState} from 'react';
-import {ArrowLeft,CalendarDays,CheckCircle2,ChevronRight,Download,RefreshCw,Search,Users,UserPlus,Pencil,Trash2,RotateCcw,ArchiveRestore} from 'lucide-react';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {ArrowLeft,CalendarDays,CheckCircle2,ChevronRight,Download,Upload,RefreshCw,Search,Users,UserPlus,Pencil,Trash2,RotateCcw,ArchiveRestore} from 'lucide-react';
 import ClientEditor,{type ClientDetails} from './client-editor';
 import {timeLabel} from '../../lib/defaults';
 
@@ -12,13 +12,15 @@ type Visit={
 };
 type Client={
  id:string;name:string;email:string;phone:string;bookedSessions:number;attendedSessions:number;
- attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:{id:string;label:string;value:string|boolean}[];
+ attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;importColumns?:Record<string,string>;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:{id:string;label:string;value:string|boolean}[];
 };
 const humanDate=(date:string)=>date?new Date(date+'T12:00:00Z').toLocaleDateString('en-US',
  {month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}):'—';
 const money=(amount:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(amount||0);
 
 export default function OwnerClientDirectory({onBook}:{onBook:()=>void}){
+ const importInput=useRef<HTMLInputElement>(null);
+ const [importing,setImporting]=useState(false),[importMessage,setImportMessage]=useState('');
  const [clients,setClients]=useState<Client[]>([]),[selectedId,setSelectedId]=useState<string|null>(null);
  const [search,setSearch]=useState(''),[busy,setBusy]=useState(true),[error,setError]=useState('');
  const [attendedOnly,setAttendedOnly]=useState(false);
@@ -75,6 +77,17 @@ export default function OwnerClientDirectory({onBook}:{onBook:()=>void}){
   try{await postClient('restore',{clientId:id});await reload();}
   catch(error){setActionError((error as Error).message);}finally{setActionBusy('');}
  }
+ async function importSpreadsheet(file:File){
+  setImporting(true);setImportMessage('');setActionError('');
+  try{
+   const form=new FormData();form.append('file',file);
+   const response=await fetch('/api/studio/clients/import',{method:'POST',body:form});
+   const result=await response.json();
+   if(!response.ok)throw Error(result.error||'Import failed.');
+   setImportMessage('Imported '+result.created+' new clients; matched '+result.updated+' existing profiles. All '+result.columns.length+' spreadsheet columns were preserved.');
+   await reload();
+  }catch(e){setActionError((e as Error).message);}finally{setImporting(false);if(importInput.current)importInput.current.value='';}
+ }
  const beginEdit=(client:Client|'new')=>{setEditing(client);setEditError('');};
 
  return <section className="sf-clients-page">
@@ -82,6 +95,8 @@ export default function OwnerClientDirectory({onBook}:{onBook:()=>void}){
    <div><div className="sf-clients-eyebrow">CUSTOMER RELATIONSHIPS</div><h2>Client directory & attendance</h2>
     <p>Explore session and service history for customers who have booked with this business. Attendance is counted only after check-in or completion.</p></div>
    <div className="sf-clients-actions">
+    <input ref={importInput} type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style={{display:'none'}} aria-label="Choose Excel or CSV client spreadsheet" onChange={e=>{const file=e.target.files?.[0];if(file)void importSpreadsheet(file);}}/>
+    <button type="button" className="outline" disabled={importing} onClick={()=>importInput.current?.click()}><Upload size={17}/> {importing?'Importing…':'Import clients from Excel'}</button>
     <button type="button" className="primary" onClick={()=>beginEdit('new')}><UserPlus size={17}/> Add client</button>
     <button type="button" className="outline" onClick={()=>void reload()} disabled={busy}><RefreshCw size={16}/> Refresh</button>
     <a className="primary sf-clients-export" href={exported()}><Download size={16}/> Export all to Excel</a>
@@ -94,6 +109,7 @@ export default function OwnerClientDirectory({onBook}:{onBook:()=>void}){
   </div>
   {error&&<p role="alert" className="alert">{error}</p>}
   {actionError&&<p role="alert" className="alert">{actionError}</p>}
+  {importMessage&&<p role="status" className="notice">{importMessage}</p>}
   {busy&&<p role="status" className="muted">Loading client attendance and services…</p>}
   {selected?<>
    <div className="sf-client-detail-nav">
@@ -140,6 +156,7 @@ export default function OwnerClientDirectory({onBook}:{onBook:()=>void}){
     {!!selected.latestBookingAnswers?.length&&<section className="sf-client-first-booking sf-client-last-answers"><h4>Latest booking answers</h4>
      <div className="sf-client-original-answers">{selected.latestBookingAnswers.map(answer=><div key={answer.id}><small>{answer.label}</small><b>{String(answer.value)}</b></div>)}</div>
     </section>}
+    {selected.importColumns&&Object.keys(selected.importColumns).length>0&&<section className="sf-client-first-booking"><h4>Imported spreadsheet fields</h4><div className="sf-client-first-details">{Object.entries(selected.importColumns).map(([heading,value])=><div key={heading}><small>{heading}</small><b>{String(value)||'—'}</b></div>)}</div></section>}
     {selected.notes&&<div className="sf-client-private-notes"><h4>Private business notes</h4><p>{selected.notes}</p></div>}
     <div className="sf-client-attendance"><h4>Days attended <span>({selected.attendanceDays.length})</span></h4>
      {selected.attendanceDays.length?<div className="sf-client-day-tags">{selected.attendanceDays.map(day=><time dateTime={day} key={day}>{humanDate(day)}</time>)}</div>:<p>Attendance is recorded when an appointment is marked <strong>Checked in</strong> or <strong>Completed</strong>.</p>}
