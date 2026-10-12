@@ -146,7 +146,8 @@ export async function POST(req:Request){
    if(!plan)throw Error('Choose a membership package for this business.');
    for(let attempt=0;attempt<12;attempt++){
     const requested=String(input.memberNumber||'').trim().toUpperCase();
-    if(requested&&!new RegExp('^'+initials+'[0-9]{6}
+    if(requested&&!new RegExp('^'+initials+'[0-9]{6}$').test(requested))throw Error('Member number must match initials plus six digits.');
+    const number=requested||initials+String(randomInt(0,1000000)).padStart(6,'0');
     const result=await pool.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0]);
     if(result.rows[0])return Response.json({ok:true,memberNumber:number,paymentStatus:'pending_payment'},{headers});
     if(requested)throw Error('This membership number is already in use.');
