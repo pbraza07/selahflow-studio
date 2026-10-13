@@ -30,7 +30,7 @@ export function clientFieldValues(client,key){
   const id=key.slice(9);
   return unique([
    ...(Array.isArray(c.membershipAnswers)?c.membershipAnswers:[]).filter(a=>a.id===id).map(a=>displayAnswer(a.value)),
-   ...history.flatMap(h=>(h.answers||[]).filter(a=>a.id===id).map(a=>displayAnswer(a.value)))
+   ...history.flatMap(h=>[...(h.answers||[]),...(h.originalAnswers||[])].filter(a=>a.id===id).map(a=>displayAnswer(a.value)))
   ]);
  }
  if(key.startsWith('import:'))return one(displayAnswer(c.importColumns?.[key.slice(7)]));
@@ -59,7 +59,7 @@ export function registrationFieldCatalog(clients,formFields=[]){
   fields.set('question:'+f.id,{key:'question:'+f.id,label:f.label,type:f.type||'text',options:Array.isArray(f.options)?f.options:[]});
  }
  for(const c of clients||[]){
-  for(const answer of [...(c.membershipAnswers||[]),...(c.history||[]).flatMap(v=>v.answers||[])]){
+  for(const answer of [...(c.membershipAnswers||[]),...(c.history||[]).flatMap(v=>[...(v.answers||[]),...(v.originalAnswers||[])])]){
    if(!answer||!answer.id)continue;
    const key='question:'+answer.id;
    if(!fields.has(key))fields.set(key,{key,label:answer.label||answer.id,type:answer.type||(typeof answer.value==='boolean'?'checkbox':'text'),options:[]});
@@ -80,7 +80,7 @@ export function filterRegistrationClients(clients,{search='',membershipLevel='',
   if(level&&level!=='__no_active__'&&c.membershipName!==level)return false;
   if(q){
    const basic=[c.name,c.email,c.phone,c.dateOfBirth,c.memberNumber,c.membershipName,c.membershipStatus,...(c.serviceNames||[]),...(c.serviceTypes||[])];
-   const answers=[...(c.membershipAnswers||[]),...(c.history||[]).flatMap(h=>h.answers||[])].flatMap(a=>[a.label,displayAnswer(a.value)]);
+   const answers=[...(c.membershipAnswers||[]),...(c.history||[]).flatMap(h=>[...(h.answers||[]),...(h.originalAnswers||[])])].flatMap(a=>[a.label,displayAnswer(a.value)]);
    const imported=Object.entries(c.importColumns||{}).flatMap(([k,v])=>[k,displayAnswer(v)]);
    if(![...basic,...answers,...imported].some(value=>text(value).toLowerCase().includes(q)))return false;
   }
