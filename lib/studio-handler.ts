@@ -255,13 +255,43 @@ if(b.key){const prior=await db().prepare('SELECT id FROM appointments WHERE owne
  }
  if(b.notMember!==true&&b.notMember!==false)throw Error('Select N/A if you are not a member.');
 }
+let issuedMemberNumber=String(b.memberNumber||'').trim().toUpperCase();
+if(isPublic){
+ const dob=String(b.dateOfBirth||''),firstName=String(b.firstName||'').trim(),lastName=String(b.lastName||'').trim();
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(dob)||Number.isNaN(Date.parse(dob))||new Date(dob).toISOString().slice(0,10)!==dob||!firstName||!lastName)throw Error('First name, last name, and valid date of birth are required.');
+ const pool=getPool(),client=await pool.connect();
+ try{
+  await client.query('BEGIN');
+  const business=(await client.query("SELECT id FROM businesses WHERE owner_id=$1 AND status='active'",[owner])).rows[0];
+  if(!business)throw Error('Business not found.');
+  await client.query('SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))',[business.id,(firstName+'|'+lastName+'|'+dob).toLowerCase()]);
+  const existing=(await client.query("SELECT member_number FROM customer_booking_ids WHERE business_id=$1 AND lower(first_name)=lower($2) AND lower(last_name)=lower($3) AND date_of_birth=$4::date LIMIT 1",[business.id,firstName,lastName,dob])).rows[0];
+  if(existing)issuedMemberNumber=existing.member_number;
+  else{
+   const member=(await client.query("SELECT member_number FROM customer_memberships WHERE business_id=$1 AND lower(customer_name)=lower($2) AND date_of_birth=$3::date LIMIT 1",[business.id,firstName+' '+lastName,dob])).rows[0];
+   if(member)issuedMemberNumber=member.member_number;
+   else{
+    const initials=(firstName[0]+lastName[0]).toUpperCase().replace(/[^A-Z]/g,'X');
+    const base=initials+dob.slice(5,7)+dob.slice(8,10);
+    for(let n=0;n<100;n++){
+     const candidate=base+String(n).padStart(2,'0');
+     const used=(await client.query("SELECT 1 FROM customer_memberships WHERE business_id=$1 AND member_number=$2 UNION ALL SELECT 1 FROM customer_booking_ids WHERE business_id=$1 AND member_number=$2 LIMIT 1",[business.id,candidate])).rowCount;
+     if(!used){issuedMemberNumber=candidate;break;}
+    }
+    if(!issuedMemberNumber)throw Error('Unable to allocate a unique customer ID.');
+   }
+   await client.query("INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,date_of_birth,phone,member_number) VALUES($1,$2,$3,$4,$5::date,$6,$7)",[business.id,firstName,lastName,String(b.email).toLowerCase(),dob,String(b.phone||''),issuedMemberNumber]);
+  }
+  await client.query('COMMIT');
+ }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
+}
 const customAnswers=sanitizeBookingAnswers(config.bookingCustomFields||[],b.customAnswers);
-const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID();const data:any={name:b.name.trim(),email:b.email,phone:String(b.phone||'').slice(0,40),services:services.map((s:any)=>s.name),price:services.reduce((a:number,s:any)=>a+s.price,0),channel:isPublic?'Online booking':b.channel==='Booking portal'?'Booking portal':'Front desk',created:new Date().toISOString()};data.serviceIds=services.map((s:any)=>s.id);data.customAnswers=customAnswers;data.memberNumber=isPublic&&b.notMember!==true?String(b.memberNumber||'').trim().toUpperCase():null;data.policyAccepted=isPublic?b.policyAccepted===true:null;data.policyAcceptedAt=isPublic?new Date().toISOString():null;data.customFieldLabels=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.label]));const bookedSession=selectedSession(config,b.date,b.staff,services,b.start);if(bookedSession)data.sessionId=bookedSession.id;
+const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID();const data:any={name:b.name.trim(),email:b.email,phone:String(b.phone||'').slice(0,40),services:services.map((s:any)=>s.name),price:services.reduce((a:number,s:any)=>a+s.price,0),channel:isPublic?'Online booking':b.channel==='Booking portal'?'Booking portal':'Front desk',created:new Date().toISOString()};data.serviceIds=services.map((s:any)=>s.id);data.customAnswers=customAnswers;data.memberNumber=isPublic?issuedMemberNumber:null;data.policyAccepted=isPublic?b.policyAccepted===true:null;data.policyAcceptedAt=isPublic?new Date().toISOString():null;data.customFieldLabels=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.label]));const bookedSession=selectedSession(config,b.date,b.staff,services,b.start);if(bookedSession)data.sessionId=bookedSession.id;
  if(isPublic&&(approvalSettings(config).enabled||services.some((service:any)=>service.requiresApproval===true))){
   const approval=services.some((service:any)=>service.requiresApproval===true)&&!approvalSettings(config).enabled?{reviewer:'owner'}:approvalSettings(config);
   const business=await db().prepare("SELECT id FROM businesses WHERE owner_id=? AND status='active'").bind(owner).first<{id:string}>();
   if(!business)return reply({error:'Business is not active.'},403);
-  const details={...bookingRequestDetail({services,staff:b.staff,date:b.date,start:b.start,duration,buffer:config.buffer,name:b.name,email:b.email,phone:String(b.phone||''),price:data.price,reviewer:approval.reviewer}),customAnswers,customFieldLabels:data.customFieldLabels,policyAccepted:true,policyAcceptedAt:data.policyAcceptedAt,sessionId:bookedSession?.id||null};
+  const details={memberNumber:issuedMemberNumber,...bookingRequestDetail({services,staff:b.staff,date:b.date,start:b.start,duration,buffer:config.buffer,name:b.name,email:b.email,phone:String(b.phone||''),price:data.price,reviewer:approval.reviewer}),customAnswers,customFieldLabels:data.customFieldLabels,policyAccepted:true,policyAcceptedAt:data.policyAcceptedAt,sessionId:bookedSession?.id||null};
   try{
    await db().prepare("INSERT INTO booking_requests(id,business_id,owner_id,date,staff_id,start_minute,duration,details,reviewer) VALUES(?,?,?,?,?,?,?,?,?)").bind(id,business.id,owner,b.date,b.staff,b.start,duration,JSON.stringify(details),approval.reviewer).first();
   }catch(error){if((error as {code?:string}).code!=='23505')throw error;return reply({ok:true,id,pending:true});}
@@ -269,12 +299,12 @@ const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.ran
   let delivery:any={email:'not_requested',sms:'not_requested'};
   try{delivery=await notifyBookingRequest({requestId:id,origin:trustedOrigin(req)});}
   catch(error){console.error('Booking notification dispatch error for request',id);delivery={email:config.bookingNotifyEmail===true?'failed':'not_requested',sms:config.bookingNotifySms===true?'failed':'not_requested'};}
-  return reply({ok:true,id,customerToken:await customerAccess(id),pending:true,status:'pending',notificationDelivery:delivery,message:'Booking request received, awaiting approval. The appointment is not confirmed until accepted.'});
+  return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:true,status:'pending',notificationDelivery:delivery,message:'Booking request received, awaiting approval. The appointment is not confirmed until accepted.'});
  }
  try{await confirmBooking({owner,services,staff:b.staff,date:b.date,start:b.start,duration,buffer:config.buffer,id,data});}
  catch(error){return reply({error:(error as Error).message},(error as {status?:number}).status||409);}
  await db().batch([audit('booking',{appointment:id})]);
- return reply({ok:true,id,customerToken:await customerAccess(id),pending:false,status:'confirmed'});}
+ return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:false,status:'confirmed'});}
 if(b.action==='deleteAppointments'){
  if(isPublic)return reply({error:'Not permitted.'},403);
  const ids=Array.isArray(b.ids)?b.ids:[];
