@@ -40,3 +40,36 @@ export async function debitAppointmentMembershipSession(client,{owner,memberNumb
  return {deducted:true,alreadyDeducted:false,memberFound:true,active:true,
   remaining:Math.max(0,Number(updated.rows[0].sessions_included)-Number(updated.rows[0].sessions_used))};
 }
+
+/** Call within an open SQL transaction: status, audit, and membership debit commit together. */
+export async function changeAppointmentStatus(client,{owner,appointmentId,status,eventId,ledgerId,createdAt}){
+ if(!['Checked in','Completed','Cancelled','No-show'].includes(status))throw Error('Invalid appointment status.');
+ const appointment=(await client.query(
+  'SELECT id,status,data FROM appointments WHERE owner=$1 AND id=$2 FOR UPDATE',
+  [owner,appointmentId]
+ )).rows[0];
+ if(!appointment)return {notFound:true};
+ if(appointment.status===status)return {ok:true,alreadyProcessed:true,membershipDeducted:false};
+ if(['Completed','Cancelled','No-show'].includes(appointment.status))throw Error('This appointment is already closed.');
+ let memberNumber='';
+ try{
+  const data=typeof appointment.data==='string'?JSON.parse(appointment.data||'{}'):appointment.data||{};
+  memberNumber=String(data.memberNumber||'').trim().toUpperCase();
+ }catch{}
+ const usage=await debitAppointmentMembershipSession(client,{
+  owner,memberNumber,appointmentId,status,ledgerId
+ });
+ await client.query('UPDATE appointments SET status=$1 WHERE owner=$2 AND id=$3',[status,owner,appointmentId]);
+ if(status==='Cancelled'||status==='No-show')
+  await client.query('DELETE FROM slots WHERE owner=$1 AND appointment=$2',[owner,appointmentId]);
+ await client.query(
+  "INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'status',$4) ON CONFLICT DO NOTHING",
+  [eventId,owner,createdAt,JSON.stringify({
+   appointment:appointmentId,status,memberNumber:memberNumber||null,
+   membershipDeducted:usage.deducted,alreadyDeducted:usage.alreadyDeducted,
+   membershipSessionsRemaining:usage.remaining
+  })]
+ );
+ return {ok:true,membershipDeducted:usage.deducted,alreadyDeducted:usage.alreadyDeducted,
+  memberFound:usage.memberFound,membershipSessionsRemaining:usage.remaining};
+}
