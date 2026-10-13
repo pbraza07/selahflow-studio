@@ -152,7 +152,7 @@ if(b.action==='registration_latest_status'){
  const memberNumber=String(b.memberNumber||'').trim().toUpperCase();
  if(!/^[A-Z]{2}[0-9]{4}$/.test(memberNumber))return reply({error:'Enter your six-character membership ID.'},400);
  const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();
- if(!await takeLimit('latest-status-ip:'+owner+':'+tokenHash(ip),8)||!await takeLimit('latest-status-email:'+owner+':'+tokenHash(email),8))return reply({error:'Too many searches. Try again later.'},429);
+ if(!await takeLimit('latest-status-ip:'+owner+':'+tokenHash(ip),8)||!await takeLimit('latest-status-member:'+owner+':'+tokenHash(memberNumber),8))return reply({error:'Too many searches. Try again later.'},429);
  const requests=(await db().prepare('SELECT status,date,details,appointment_id FROM booking_requests WHERE owner_id=? ORDER BY created_at DESC LIMIT 500').bind(owner).all()).results as any[];
  const appointments=(await db().prepare('SELECT id,status,date,data FROM appointments WHERE owner=? ORDER BY date DESC LIMIT 500').bind(owner).all()).results as any[];
  const match=(d:any)=>String(d.memberNumber||'').trim().toUpperCase()===memberNumber;
