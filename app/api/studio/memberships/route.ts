@@ -190,7 +190,9 @@ export async function POST(req:Request){
     }
    for(let attempt=0;attempt<12;attempt++){
     const requested=String(input.memberNumber||'').trim().toUpperCase();
-    if(requested&&!new RegExp('^'+initials+dob.slice(5,7)+dob.slice(8,10)+'[0-9]{2}
+    const initials=(name.trim().split(/\\s+/)[0]?.[0]||'X').toUpperCase()+(name.trim().split(/\\s+/).slice(-1)[0]?.[0]||'X').toUpperCase();
+    if(requested&&!new RegExp('^'+initials+dob.slice(5,7)+dob.slice(8,10)+'[0-9]{2}$').test(requested))throw Error('Membership ID must match initials and birth month/day.');
+    const number=requested||initials+dob.slice(5,7)+dob.slice(8,10)+String(attempt).padStart(2,'0');
     const result=await identityLock.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used,date_of_birth) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0,$9) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0,dob]);
     if(result.rows[0]){
      await identityLock.query('INSERT INTO business_client_profiles(id,owner,source_key,name,email,phone,notes,archived,import_columns) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,$4,$5,$6,$7,false,$8) ON CONFLICT DO NOTHING',[randomUUID(),business.id,'membership:'+result.rows[0].id,name,email,phone,'Membership registration',JSON.stringify(customAnswers)]).catch(()=>{});
