@@ -105,19 +105,25 @@ test('check-in followed by no-show is a single session deduction',async()=>{
  }finally{await db.close();}
 });
 
-test('member with no remaining credits cannot check in or no-show; transaction rolls back status',async()=>{
+test('exhausted members become regular attendees and do not use additional prepaid credits',async()=>{
  const db=await fixture();
  try{
   await apply(db,'a1','Checked in');
   await apply(db,'a2','No-show');
   assert.equal(await used(db),2);
   assert.equal(await ledger(db),2);
-  await assert.rejects(apply(db,'a3','Checked in'),/No membership sessions remaining/);
-  assert.equal((await db.query("SELECT status FROM appointments WHERE id='a3'")).rows[0].status,'Confirmed');
+  const result=await apply(db,'a3','Checked in');
+  assert.equal(result.membershipExhausted,true);
+  assert.equal(result.membershipDeducted,false);
+  assert.equal(result.membershipSessionsRemaining,0);
+  assert.equal((await db.query("SELECT status FROM appointments WHERE id='a3'")).rows[0].status,'Checked in');
   assert.equal(await used(db),2);
   assert.equal(await ledger(db),2);
-  await assert.rejects(apply(db,'a3','No-show'),/No membership sessions remaining/);
-  assert.equal((await db.query("SELECT status FROM appointments WHERE id='a3'")).rows[0].status,'Confirmed');
+  const noShow=await apply(db,'a3','No-show');
+  assert.equal(noShow.membershipExhausted,true);
+  assert.equal(noShow.membershipDeducted,false);
+  assert.equal(await used(db),2);
+  assert.equal(await ledger(db),2);
  }finally{await db.close();}
 });
 
