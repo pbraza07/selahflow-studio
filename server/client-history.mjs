@@ -40,7 +40,7 @@ export function pendingBookingAsAppointment(row){
    services:Array.isArray(info.services)?info.services:[],
    serviceIds:Array.isArray(info.serviceIds)?info.serviceIds:[],
    price:Number(info.quotedPrice)||0,sessionId:info.sessionId||null,
-   customAnswers:info.customAnswers||{},customFieldLabels:info.customFieldLabels||{},
+   customAnswers:info.customAnswers||{},customFieldLabels:info.customFieldLabels||{},customFieldTypes:info.customFieldTypes||{},
    originalSubmission:info.originalSubmission||null,
    source:'Customer booking request',policyAccepted:info.policyAccepted===true,policyAcceptedAt:info.policyAcceptedAt||null,
    created:info.created||row.created_at||null
@@ -113,9 +113,10 @@ export function buildClientDirectory(appointments,settings={},owner=''){
   const staff=employees.find(x=>x.id===row.staff)?.name || clean(row.staff,100);
   const customAnswers=data.customAnswers&&typeof data.customAnswers==='object'?data.customAnswers:{};
   const labels=data.customFieldLabels&&typeof data.customFieldLabels==='object'?data.customFieldLabels:{};
+  const savedTypes=data.customFieldTypes&&typeof data.customFieldTypes==='object'?data.customFieldTypes:{};
   const answers=Object.entries(customAnswers).map(([key,value])=>{
    const current=(settings.bookingCustomFields||[]).find(f=>f.id===key);
-   return {id:key,label:clean(labels[key]||current?.label||key,80),value:typeof value==='boolean'?value:clean(value,500)};
+   return {id:key,label:clean(labels[key]||current?.label||key,80),value:typeof value==='boolean'?value:clean(value,500),type:savedTypes[key]||current?.type||(typeof value==='boolean'?'checkbox':'text')};
   });
   const visit={
    id:String(row.id),date,time:Number(row.start)||0,duration:Number(row.duration)||0,
