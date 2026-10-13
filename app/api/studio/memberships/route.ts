@@ -25,7 +25,7 @@ export async function GET(req:Request){
   const {pool,business}=await ctx(req);
   const [plans,members,merchant,visits,ledger]=await Promise.all([
    pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",active FROM membership_plans WHERE business_id=$1 ORDER BY created_at DESC',[business.id]),
-   pool.query("SELECT m.id,m.customer_name,m.customer_email,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
+   pool.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
    pool.query("SELECT external_account_id,charges_enabled,onboarding_complete FROM merchant_accounts WHERE business_id=$1",[business.id]),
    pool.query("SELECT a.id,a.date,a.data,a.status FROM appointments a JOIN businesses b ON b.owner_id=a.owner WHERE b.id=$1 AND a.status IN ('Completed','Attended')",[business.id]),
    pool.query('SELECT membership_id,appointment_id,event_type,session_delta,amount_cents,created_at FROM membership_session_ledger WHERE business_id=$1 ORDER BY created_at DESC LIMIT 500',[business.id])
@@ -171,6 +171,7 @@ export async function POST(req:Request){
    const settings=(await pool.query('SELECT data FROM settings WHERE owner=(SELECT owner_id FROM businesses WHERE id=$1)',[business.id])).rows[0]?.data;
    const config=typeof settings==='string'?JSON.parse(settings):settings||{};
    const customAnswers=sanitizeBookingAnswers(config.bookingCustomFields||[],input.customAnswers||{});
+   const fieldLabels=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.label]));
    const parts=name.split(/\s+/),initials=(parts[0][0]+(parts.length>1?parts[parts.length-1][0]:'X')).toUpperCase().replace(/[^A-Z]/g,'X');
    const plan=(await pool.query('SELECT id,price_cents,sessions_included FROM membership_plans WHERE business_id=$1 AND id=$2',[business.id,planId])).rows[0];
    if(!plan)throw Error('Choose a membership package for this business.');
@@ -185,6 +186,7 @@ export async function POST(req:Request){
     const prior=await identityLock.query("SELECT id,member_number,status,customer_name,customer_email,date_of_birth FROM customer_memberships WHERE business_id=$1 AND ((lower(trim(regexp_replace(customer_name,'\\s+',' ','g')))=$2 AND date_of_birth=$3::date) OR (lower(trim(regexp_replace(customer_name,'\\s+',' ','g')))=$2 AND lower(trim(customer_email))=$4)) ORDER BY created_at ASC NULLS LAST,id ASC LIMIT 1",[business.id,normalizedName,dob,email]);
     if(prior.rows[0]){
      if(prior.rows[0].date_of_birth&&new Date(prior.rows[0].date_of_birth).toISOString().slice(0,10)!==dob)throw Error('A member with this name and email already exists with a different birth date. Review the existing profile.');
+     await identityLock.query("UPDATE customer_memberships SET customer_phone=CASE WHEN $1<>'' THEN $1 ELSE customer_phone END,registration_answers=$2::jsonb,registration_field_labels=$3::jsonb,updated_at=now() WHERE id=$4 AND business_id=$5",[phone,JSON.stringify(customAnswers),JSON.stringify(fieldLabels),prior.rows[0].id,business.id]);
      await identityLock.query('COMMIT');
      return Response.json({ok:true,existingMember:true,memberNumber:prior.rows[0].member_number,paymentStatus:prior.rows[0].status,message:'This player is already registered. Use their existing membership ID for activation or renewal.'},{headers});
     }
@@ -197,7 +199,7 @@ export async function POST(req:Request){
     if(bookingId&&(String(bookingId.first_name+' '+bookingId.last_name).trim().toLowerCase()!==normalizedName||new Date(bookingId.date_of_birth).toISOString().slice(0,10)!==dob))throw Error('This six-character ID belongs to another customer. The initials and birth month/day combination is not unique; registration requires a different ID policy.');
     const existingId=(await identityLock.query("SELECT 1 FROM customer_memberships WHERE business_id=$1 AND member_number=$2 LIMIT 1",[business.id,number])).rowCount;
     if(existingId)throw Error('This six-character ID already belongs to another member. The ID format cannot distinguish customers sharing initials and birthday.');
-    const result=await identityLock.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used,date_of_birth) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0,$9) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0,dob]);
+    const result=await identityLock.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used,date_of_birth,customer_phone,registration_answers,registration_field_labels) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0,$9,$10,$11::jsonb,$12::jsonb) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0,dob,phone,JSON.stringify(customAnswers),JSON.stringify(fieldLabels)]);
     if(result.rows[0]){
      const matchingProfile=(await identityLock.query(
       "SELECT id FROM business_client_profiles WHERE owner=(SELECT owner_id FROM businesses WHERE id=$1) AND deleted_at IS NULL AND (member_number=$2 OR (member_number IS NULL AND lower(trim(name))=$3 AND lower(trim(email))=$4)) ORDER BY CASE WHEN member_number=$2 THEN 0 ELSE 1 END,created_at ASC LIMIT 1 FOR UPDATE",
@@ -206,7 +208,7 @@ export async function POST(req:Request){
      if(matchingProfile){
       await identityLock.query("UPDATE business_client_profiles SET member_number=$1,date_of_birth=COALESCE(date_of_birth,$2::date),phone=CASE WHEN trim(phone)='' THEN $3 ELSE phone END,updated_at=now() WHERE id=$4",[number,dob,phone,matchingProfile.id]);
      }else{
-      await identityLock.query("INSERT INTO business_client_profiles(id,owner,name,email,phone,notes,import_columns,member_number,date_of_birth) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,$4,$5,$6,$7::jsonb,$8,$9::date)",[randomUUID(),business.id,name,email,phone,'Membership registration',JSON.stringify(customAnswers),number,dob]);
+      await identityLock.query("INSERT INTO business_client_profiles(id,owner,name,email,phone,notes,import_columns,member_number,date_of_birth) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,$4,$5,$6,$7::jsonb,$8,$9::date)",[randomUUID(),business.id,name,email,phone,'Membership registration',JSON.stringify({}),number,dob]);
      }
      await identityLock.query('COMMIT');
      return Response.json({ok:true,memberNumber:number,paymentStatus:'pending_payment'},{headers});
