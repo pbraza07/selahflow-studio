@@ -21,7 +21,7 @@ test('filter by package, current and historical form answers, birthday, consent,
  const academy={
   name:'Taylor Allen',email:'taylor@example.com',phone:'8135550123',dateOfBirth:'2015-07-04',
   memberNumber:'TA0704',membershipName:'Academy',membershipStatus:'active',
-  membershipDetails:{interval:'month'},membershipAnswers:[{id:'group',label:'Age Group',value:'U12',type:'select'},{id:'consent',label:'Parent approval',value:true,type:'checkbox'}],
+  membershipDetails:{interval:'month',sessionsIncluded:12,sessionsUsed:1},membershipAnswers:[{id:'group',label:'Age Group',value:'U12',type:'select'},{id:'consent',label:'Parent approval',value:true,type:'checkbox'}],
   importColumns:{'School':'West Middle'},serviceNames:['Training'],serviceTypes:['Soccer'],
   history:[{date:'2026-10-18',staff:'Coach Emma',status:'Confirmed',policyAccepted:true,answers:[{id:'team',label:'Preferred team',value:'Gold',type:'select'}]}]
  };
