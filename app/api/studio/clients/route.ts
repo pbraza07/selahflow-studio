@@ -36,6 +36,7 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
   return {
    memberNumber:m.member_number||client.memberNumber,
    membershipName:m.membership_name,membershipStatus:m.status,
+   membershipRegistration:{name:m.customer_name,firstName:String(m.customer_name||'').trim().split(/\s+/)[0]||'',lastName:String(m.customer_name||'').trim().split(/\s+/).slice(1).join(' '),email:m.customer_email,phone:m.customer_phone||'',dateOfBirth:dateOnly(m.date_of_birth),memberNumber:m.member_number||''},
    membershipAnswers:registrationAnswerRows(submitted,m.registration_field_labels,fields),
    membershipDetails:{registeredAt:m.created_at,paidThrough:dateOnly(m.paid_through),lastPaidAt:m.last_paid_at,
     interval:m.interval_unit,priceCents:Number(m.price_cents)||0,
