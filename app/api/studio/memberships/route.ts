@@ -1,3 +1,4 @@
+import {customRegistrationFields,validateStandardRegistration} from '../../../../server/registration-questions.mjs';
 import {randomUUID,randomInt} from 'node:crypto';
 import {sanitizeBookingAnswers} from '../../../../server/booking-custom-fields.mjs';
 import {getPool} from '../../../../server/database.mjs';
@@ -24,11 +25,11 @@ export async function GET(req:Request){
  try{
   const {pool,business}=await ctx(req);
   const [plans,members,merchant,usageCounts,ledger]=await Promise.all([
-   pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",active FROM membership_plans WHERE business_id=$1 ORDER BY created_at DESC',[business.id]),
+   pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",active FROM membership_plans WHERE business_id=$1 ORDER BY display_order,created_at DESC',[business.id]),
    pool.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
    pool.query("SELECT external_account_id,charges_enabled,onboarding_complete FROM merchant_accounts WHERE business_id=$1",[business.id]),
    pool.query("SELECT membership_id,COUNT(*)::int AS recorded_sessions FROM membership_session_ledger WHERE business_id=$1 AND event_type='session_used' GROUP BY membership_id",[business.id]),
-   pool.query('SELECT l.membership_id,l.appointment_id,l.event_type,l.session_delta,l.amount_cents,l.created_at,a.status AS appointment_status FROM membership_session_ledger l LEFT JOIN appointments a ON a.id=l.appointment_id AND a.owner=(SELECT owner_id FROM businesses WHERE id=l.business_id) WHERE l.business_id=$1 ORDER BY l.created_at DESC LIMIT 500',[business.id])
+   pool.query('SELECT l.membership_id,l.appointment_id,l.event_type,l.session_delta,l.amount_cents,l.created_at,a.status AS appointment_status FROM membership_session_ledger l LEFT JOIN appointments a ON a.id=l.appointment_id AND a.owner=(SELECT owner_id FROM businesses WHERE id=l.business_id) WHERE l.business_id=$1 ORDER BY l.created_at DESC',[business.id])
   ]);
   const account=merchant.rows[0]||{};
   const individual=(await pool.query('SELECT limits FROM business_entitlement_overrides WHERE business_id=$1',[business.id])).rows[0]?.limits||{};
@@ -45,6 +46,15 @@ export async function POST(req:Request){
   const {pool,business}=await ctx(req);
   const raw=await req.text();if(raw.length>8000)throw Error('Request too large.');
   const input=JSON.parse(raw);
+  if(input.action==='reorderPlans'){
+   if(!Array.isArray(input.ids)||input.ids.some((id:any)=>typeof id!=='string')||new Set(input.ids).size!==input.ids.length)throw Error('Invalid package order.');
+   const client=await pool.connect();try{await client.query('BEGIN');await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[business.id+':plans']);
+    const plans=(await client.query('SELECT id FROM membership_plans WHERE business_id=$1 FOR UPDATE',[business.id])).rows;
+    if(plans.length!==input.ids.length||plans.some((p:any)=>!input.ids.includes(p.id)))throw Error('Package list changed. Refresh and try again.');
+    for(let i=0;i<input.ids.length;i++)await client.query('UPDATE membership_plans SET display_order=$1 WHERE business_id=$2 AND id=$3',[i,business.id,input.ids[i]]);
+    await client.query('COMMIT');return Response.json({ok:true},{headers});
+   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
+  }
   if(input.action==='save'||input.action==='toggle'){
    // Serialize membership offer modifications for this business. Quotas are
    // enforced by the server against the persisted plan and existing offers.
@@ -170,8 +180,10 @@ export async function POST(req:Request){
    if(!/^\d{4}-\d{2}-\d{2}$/.test(dob)||!Number.isFinite(Date.parse(dob))||new Date(dob).toISOString().slice(0,10)!==dob||dob>new Date().toISOString().slice(0,10))throw Error('Enter a valid date of birth.');
    const settings=(await pool.query('SELECT data FROM settings WHERE owner=(SELECT owner_id FROM businesses WHERE id=$1)',[business.id])).rows[0]?.data;
    const config=typeof settings==='string'?JSON.parse(settings):settings||{};
-   const customAnswers=sanitizeBookingAnswers(config.bookingCustomFields||[],input.customAnswers||{});
-   const fieldLabels=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.label]));
+   validateStandardRegistration(config,'membership',input);
+   const membershipFields=customRegistrationFields(config,'membership');
+   const customAnswers=sanitizeBookingAnswers(membershipFields,input.customAnswers||{});
+   const fieldLabels=Object.fromEntries(membershipFields.map((field:any)=>[field.id,field.label]));
    const parts=name.split(/\s+/),initials=(parts[0][0]+(parts.length>1?parts[parts.length-1][0]:'X')).toUpperCase().replace(/[^A-Z]/g,'X');
    const plan=(await pool.query('SELECT id,price_cents,sessions_included FROM membership_plans WHERE business_id=$1 AND id=$2',[business.id,planId])).rows[0];
    if(!plan)throw Error('Choose a membership package for this business.');

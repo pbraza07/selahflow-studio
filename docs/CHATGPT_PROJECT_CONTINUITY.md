@@ -70,3 +70,9 @@ The ChatGPT assistant cannot directly edit the Project's settings from a convers
 ## 2026-10-13 — v1.3.60 release handoff
 
 Verified prior LIVE baseline: v1.3.59, commit `85601176bb5a0acdb430c18753965110f5f4f150`, Render `dep-db724u2bt3mc73dvl0m0`. The requested Overview IDs, once-only attendance deductions, neutral exhausted badges, and additive renewal with preserved history are present in that baseline. v1.3.60 carries these forward and makes health and visible version labels follow package.json. No data migrations or rewrites. Verify the v1.3.60 deployment independently; this source note is not a LIVE claim.
+
+## 2026-10-13 — v1.3.61 release handoff
+
+Verified prior LIVE baseline: v1.3.60, commit `c6f8d0f8212561c5979e6fade4a5d0f9711d7f4c`, Render `dep-db73bt67bikc73fqrb0g`. Release 1.3.61 includes sortable owner tables, all-appointments Overview, calendar attendance actions and reversible Check in/No-show with once-only credits, bordered inputs, scheduled-session selection, editable public page wording, editable/ordered booking and membership fields, per-session questions, blockout dates/times, member-scoped history, ordered packages and public membership approval requests. See CHANGELOG for detail. Migration 029 adds request storage and package ordering. Approval creates/links the same member and client; payment confirmation still activates/renews credits separately. Request push/email/SMS depends on configured providers; in-app alerts are independent. The release source is not proof of deployment: verify exact Render LIVE commit and health version.
+
+Validation: all 178 automated tests and TypeScript pass. Production build passes. Local browser installation failed, so visual browser QA remains unverified; no production customer bookings, attendance, requests, or payment records were changed for testing.

@@ -88,7 +88,10 @@ test('no-show directly deducts one session, releases slot, and repeat no-show is
   assert.equal(second.alreadyProcessed,true);
   assert.equal(await used(db),1);
   assert.equal(await ledger(db),1);
-  await assert.rejects(apply(db,'a2','Checked in'),/already closed/i);
+  const corrected=await apply(db,'a2','Checked in');
+  assert.equal(corrected.alreadyDeducted,true);
+  assert.equal(await used(db),1);
+  assert.equal(await ledger(db),1);
  }finally{await db.close();}
 });
 
@@ -167,10 +170,26 @@ test('overview exposes Check in, Complete and No-show; status handler uses the a
   readFile(new URL('../app/studio/owner-dashboard.tsx',import.meta.url),'utf8'),
   readFile(new URL('../lib/studio-handler.ts',import.meta.url),'utf8')
  ]);
- assert.match(ui,/status\(a,'No-show'\)/);
- assert.match(ui,/Mark .* as a no-show/);
+ assert.match(ui,/<AttendanceActions/);
+ assert.match(ui,/as a no-show/);
  assert.match(ui,/1 membership session deducted/);
  assert.match(api,/await changeAppointmentStatus\(client/);
  assert.match(api,/await client\.query\('COMMIT'\)/);
  assert.match(api,/await client\.query\('ROLLBACK'\)/);
+});
+
+test('correcting a no-show restores ordinary capacity and rejects a rebooked time atomically',async()=>{
+ const db=await fixture();try{
+  await db.exec("ALTER TABLE appointments ADD COLUMN staff TEXT; ALTER TABLE appointments ADD COLUMN start INTEGER; ALTER TABLE appointments ADD COLUMN duration INTEGER; CREATE TABLE settings(owner TEXT PRIMARY KEY,data TEXT);");
+  await db.query('INSERT INTO settings VALUES($1,$2)',['owner1',JSON.stringify({buffer:0,services:[],bookableSessions:[]})]);
+  await db.query("UPDATE appointments SET staff='coach',start=600,duration=30 WHERE id='a2'");
+  await apply(db,'a2','No-show');await apply(db,'a2','Checked in');
+  assert.deepEqual((await db.query("SELECT minute FROM slots WHERE appointment='a2' ORDER BY minute")).rows.map(r=>r.minute),[600,615]);
+  assert.equal(await used(db),1);
+  await apply(db,'a2','No-show');
+  await db.query("UPDATE appointments SET staff='coach',start=600,duration=30 WHERE id='a3'");
+  await assert.rejects(apply(db,'a2','Checked in'),/rebooked/);
+  assert.equal((await db.query("SELECT status FROM appointments WHERE id='a2'")).rows[0].status,'No-show');
+  assert.equal(await ledger(db),1);
+ }finally{await db.close();}
 });

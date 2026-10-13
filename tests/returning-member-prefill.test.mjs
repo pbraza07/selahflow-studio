@@ -1,3 +1,4 @@
+import {registrationQuestions} from '../server/registration-questions.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -41,12 +42,13 @@ test('prefill preserves the verified membership identity even if an editable cli
  assert.equal(result.lastName,'Alves');
  assert.equal(result.email,'current@example.test');
 });
-test('booking form shows membership ID before first name and uses one required DOB field',async()=>{
+test('booking defaults place member ID first while the shared form supports configured ordering',async()=>{
  const page=await readFile(new URL('../app/book/page.tsx',import.meta.url),'utf8');
  const form=page.slice(page.indexOf('{step===3&&<form'));
- assert.ok(form.indexOf('className="sf-member-number-booking"')<form.indexOf('className="sf-booking-name-fields"'));
- assert.equal((form.match(/name="dateOfBirth"/g)||[]).length,1);
- assert.match(form,/Unique Membership ID \(returning players\)/);
+ const fields=registrationQuestions({},'booking');
+ assert.ok(fields.findIndex(f=>f.id==='memberNumber')<fields.findIndex(f=>f.id==='firstName'));
+ assert.equal(fields.filter(f=>f.id==='dateOfBirth'&&f.required).length,1);
+ assert.match(form,/<RegistrationFields config=\{config\} form="booking"/);
  assert.match(form,/automatically fill your name, email, phone and previous registration answers/);
  assert.match(form,/Leave the ID blank; SelahFlow will create one when you book/);
  assert.doesNotMatch(form,/Not you\? Clear name.*?Load my saved details/s);

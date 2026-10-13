@@ -80,8 +80,9 @@ test('name auto-population stays local to a business and never includes contact 
  assert.match(booking,/localStorage\.getItem/);
  assert.match(booking,/localStorage\.setItem/);
  assert.match(booking,/Not you\? Clear name/);
- assert.match(booking,/name="email" type="email" maxLength=\{200\} autoComplete="off"/);
- assert.match(booking,/name="phone" type="tel" maxLength=\{40\} autoComplete="off"/);
+ const fields=await readFile(new URL('../app/components/registration-fields.tsx',import.meta.url),'utf8');
+ assert.match(booking,/<RegistrationFields/);
+ assert.match(fields,/autoComplete=\{f.id==='firstName'\?'given-name':f.id==='lastName'\?'family-name':'off'\}/);
  assert.doesNotMatch(booking,/localStorage\.setItem\([^)]*email/);
  assert.doesNotMatch(booking,/localStorage\.setItem\([^)]*customAnswers/);
 });

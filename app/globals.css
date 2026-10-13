@@ -1883,3 +1883,23 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
 .sf-owner-memberships-title>*{min-width:0;overflow-wrap:anywhere}
 @media(max-width:900px){.sf-owner-membership-layout{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:600px){.sf-owner-member-history{padding:14px}.sf-owner-membership-scroll table{min-width:760px}.sf-owner-membership-scroll td,.sf-owner-membership-scroll th{padding:10px}}
+
+/* v1.3.61 — consistent registration questions and readable autofill. */
+.sf-registration-fields{display:grid;gap:14px;width:100%;min-width:0}
+.sf-registration-field{min-width:0}
+.sf-registration-field label{display:grid;gap:6px}
+.sf-registration-field input:not([type=checkbox]),.sf-registration-field select{width:100%;min-width:0}
+.sf-field-optional{font-size:.85em;opacity:.8}
+.sf-registration-field small{display:block;margin-top:5px}
+[data-selah-theme] .sf-member-number-booking,[data-selah-theme] .sf-returning-name{background:var(--sf-card,#f7f9f8)!important;color:var(--sf-on-card,#17251d)!important;border:1px solid var(--sf-border,#d7dfda);border-radius:14px;padding:16px}
+[data-selah-theme] .sf-member-number-booking :is(label,p,strong,small,span,[role=status]),[data-selah-theme] .sf-returning-name :is(p,strong){color:var(--sf-on-card,#17251d)!important}
+[data-selah-theme] .sf-registration-fields :is(input,select,textarea){background:var(--sf-card,#fff)!important;color:var(--sf-on-card,#17251d)!important;caret-color:var(--sf-on-card,#17251d)}
+[data-selah-theme] .sf-registration-fields input:-webkit-autofill{-webkit-text-fill-color:var(--sf-on-card,#17251d)!important;-webkit-box-shadow:0 0 0 1000px var(--sf-card,#fff) inset!important;caret-color:var(--sf-on-card,#17251d)}
+[data-selah-theme] .sf-registration-fields input:autofill{background:var(--sf-card,#fff)!important;color:var(--sf-on-card,#17251d)!important}
+
+/* Registration and dashboard accessibility: visible response controls. */
+input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=range]):not([type=color]),textarea,select{border:1.5px solid #84958e!important;border-radius:8px!important;padding:10px 12px;min-height:42px;box-sizing:border-box}
+[data-selah-theme] :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=range]):not([type=color]),textarea,select){border-color:color-mix(in srgb,var(--sf-on-card,#17251d) 50%,var(--sf-card,#fff))!important}
+input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #439f88;outline-offset:2px}
+.sf-sort-heading{font:inherit;font-weight:700;color:inherit;background:transparent;border:0;cursor:pointer;text-align:left;padding:5px 0;display:inline-flex;gap:5px;align-items:center}
+.sf-attendance-actions{display:inline-flex;gap:6px;flex-wrap:wrap;margin:6px 0}

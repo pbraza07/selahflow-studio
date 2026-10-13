@@ -1,3 +1,4 @@
+import {isBlocked} from './booking-blockouts.mjs';
 
 import {getPool} from './database.mjs';
 import {appointmentData,bookedSessionCount,selectedSession,sessionsForDate} from './session-scheduling.mjs';
@@ -42,6 +43,7 @@ export async function confirmBooking(options){
   if(prior.rowCount){await client.query('COMMIT');return {id,duplicate:true};}
   const settingRow=await client.query('SELECT data FROM settings WHERE owner=$1',[owner]);
   const config=settingRow.rows[0] ? JSON.parse(settingRow.rows[0].data) : {};
+  if(isBlocked(config,date,staff,start,duration+(Number(buffer)||0)))throw conflict('This date and time is blocked by the business. Choose another time.');
   const session=selectedSession(config,date,staff,services,start);
   const sessionId=data?.sessionId || null;
   if(sessionId && (!session || session.id!==sessionId))

@@ -1,3 +1,4 @@
+import {selectedSession,bookedSessionCount,overlaps,appointmentData as storedAppointmentData} from './session-scheduling.mjs';
 import {loadOwnerMemberRoster,ownerAppointmentMember} from './owner-appointment-members.mjs';
 
 /**
@@ -45,14 +46,16 @@ export async function debitAppointmentMembershipSession(client,{owner,memberNumb
 
 /** Call within an open SQL transaction: status, audit, and membership debit commit together. */
 export async function changeAppointmentStatus(client,{owner,appointmentId,status,eventId,ledgerId,createdAt}){
+ await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
  if(!['Checked in','Completed','Cancelled','No-show'].includes(status))throw Error('Invalid appointment status.');
  const appointment=(await client.query(
-  'SELECT id,status,data FROM appointments WHERE owner=$1 AND id=$2 FOR UPDATE',
+  'SELECT * FROM appointments WHERE owner=$1 AND id=$2 FOR UPDATE',
   [owner,appointmentId]
  )).rows[0];
  if(!appointment)return {notFound:true};
  if(appointment.status===status)return {ok:true,alreadyProcessed:true,membershipDeducted:false};
- if(['Completed','Cancelled','No-show'].includes(appointment.status))throw Error('This appointment is already closed.');
+ const attendanceCorrection=appointment.status==='No-show'&&status==='Checked in';
+ if(['Completed','Cancelled','No-show'].includes(appointment.status)&&!attendanceCorrection)throw Error('This appointment is already closed.');
  let memberNumber='';
  let appointmentData={};
  try{
@@ -69,6 +72,18 @@ export async function changeAppointmentStatus(client,{owner,appointmentId,status
     [JSON.stringify({...appointmentData,memberNumber}),owner,appointmentId]);
   }
  }
+ // Reinstating a no-show must restore capacity safely before changing attendance.
+ if(attendanceCorrection&&appointment.staff&&appointment.date){
+  const settings=(await client.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0]?.data;
+  const config=typeof settings==='string'?JSON.parse(settings):settings||{};
+  const services=(config.services||[]).filter(s=>(appointmentData.serviceIds||[]).includes(s.id));
+  const session=selectedSession(config,appointment.date,appointment.staff,services,appointment.start);
+  const others=(await client.query("SELECT * FROM appointments WHERE owner=$1 AND date=$2 AND id<>$3 AND status NOT IN ('Cancelled','No-show')",[owner,appointment.date,appointmentId])).rows;
+  const buffer=Number(config.buffer)||0;
+  if(others.some(a=>a.staff===appointment.staff&&overlaps(appointment.start,appointment.duration+buffer,a.start,a.duration+buffer)&&(!session||storedAppointmentData(a).sessionId!==session.id)))throw Error('This time has been rebooked. Resolve the conflicting appointment before correcting attendance.');
+  if(session&&bookedSessionCount(others,session.id)>=session.capacity)throw Error('This session is now full. Resolve capacity before correcting attendance.');
+  if(!session)for(let minute=appointment.start;minute<appointment.start+appointment.duration+buffer;minute+=15)await client.query('INSERT INTO slots(owner,date,staff,minute,appointment) VALUES($1,$2,$3,$4,$5)',[owner,appointment.date,appointment.staff,minute,appointmentId]);
+ }
  const usage=await debitAppointmentMembershipSession(client,{
   owner,memberNumber,appointmentId,status,ledgerId
  });
@@ -78,7 +93,7 @@ export async function changeAppointmentStatus(client,{owner,appointmentId,status
  await client.query(
   "INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'status',$4) ON CONFLICT DO NOTHING",
   [eventId,owner,createdAt,JSON.stringify({
-   appointment:appointmentId,status,memberNumber:memberNumber||null,
+   appointment:appointmentId,previousStatus:appointment.status,attendanceCorrection:attendanceCorrection||(appointment.status==='Checked in'&&status==='No-show'),status,memberNumber:memberNumber||null,
    membershipDeducted:usage.deducted,alreadyDeducted:usage.alreadyDeducted,
    membershipSessionsRemaining:usage.remaining,membershipExhausted:usage.exhausted===true
   })]

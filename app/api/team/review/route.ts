@@ -1,3 +1,4 @@
+import {customRegistrationFields} from '../../../../server/registration-questions.mjs';
 import {getPool} from '../../../../server/database.mjs';
 import {tokenHash,validOrigin} from '../../../../server/security.mjs';
 import {reviewPendingRequest} from '../../../../lib/booking-review-actions';
@@ -20,7 +21,7 @@ export async function GET(req:Request){try{const {pool,link,cfg}=await context(r
  const confirmed=pending.length?(await pool.query("SELECT date,staff,start,duration,status,data FROM appointments WHERE owner=$1 AND date BETWEEN $2 AND $3 AND status NOT IN ('Cancelled','No-show') AND data LIKE '%sessionId%'",[link.owner_id,pending.reduce((d:string,r:{date:string})=>r.date<d?r.date:d,pending[0].date),pending.reduce((d:string,r:{date:string})=>r.date>d?r.date:d,pending[0].date)])).rows:[];
  return Response.json({businessName:link.business_name,teamMember:cfg.staff.find((s:{id:string})=>s.id===link.staff_id)?.name,
  pending:pending.map((r:any)=>({...r,sessionInfo:sessionReviewSummary(cfg,r,confirmed,pending)})),
- approvalFields:approvalFieldsForBusiness(cfg),customFields:(cfg.bookingCustomFields||[]).map((f:{id:string;label:string;type:string;options?:string[];required:boolean})=>({id:f.id,label:f.label,type:f.type,options:f.options||[],required:f.required})),
+ approvalFields:approvalFieldsForBusiness(cfg),customFields:customRegistrationFields(cfg,'booking').map((f:{id:string;label:string;type:string;options?:string[];required:boolean})=>({id:f.id,label:f.label,type:f.type,options:f.options||[],required:f.required})),
  team:cfg.staff.map((s:{id:string;name:string})=>({id:s.id,name:s.name}))},{headers});
  }catch{return Response.json({error:'This review link is invalid, expired, revoked, or no longer assigned.'},{status:403,headers});}}
 export async function POST(req:Request){if(!validOrigin(req))return Response.json({error:'Invalid request origin.'},{status:403,headers});

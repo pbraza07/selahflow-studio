@@ -1,3 +1,4 @@
+import {isBlocked} from './booking-blockouts.mjs';
 import {sessionInstances,expandAllSessions,validateRecurrence,originalSessionOccurrence} from './session-recurrence.mjs';
 /** Pure, business-scoped session and appointment availability helpers.
  * Pending booking requests do not consume capacity until accepted.
@@ -176,7 +177,7 @@ export function computeDayAvailability({config, date, staff, services, appointme
   const sessionAvailability = {};
   const fullSessions = matching.map(s => ({
     id:s.id, date:s.date, staff:s.staff, service:s.service, start:s.start,
-    capacity:s.capacity, remaining:sessionRemaining(s,active)
+    capacity:s.capacity, remaining:isBlocked(config,date,staff,s.start,s.duration+(config.buffer||0))?0:sessionRemaining(s,active)
   }));
   if (date < today) return {slots,sessionAvailability,sessions:fullSessions,earliestStart:null,firstAvailable:null};
   const duration = services.reduce((n,s) => n + s.duration,0);
@@ -185,7 +186,7 @@ export function computeDayAvailability({config, date, staff, services, appointme
   const earliest = date === today ? nextQuarterHour(nowMinutes,interval) : 0;
   for (let start = Math.ceil(config.open * 60 / interval) * interval;
        start + duration + buffer <= config.close * 60; start += interval) {
-    if (start < earliest) continue;
+    if (start < earliest || isBlocked(config,date,staff,start,duration+buffer)) continue;
     const session = matching.find(s => s.start === start);
     const staffCollision = active.some(a =>
       a.staff === staff &&

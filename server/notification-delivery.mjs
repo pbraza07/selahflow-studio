@@ -75,3 +75,18 @@ export async function notifyBookingRequest({requestId,origin}){
  }
  return result;
 }
+
+/** Membership requests use the owner's enabled channels, never another business. */
+export async function notifyMembershipRequest({requestId,origin}){
+ const pool=getPool();
+ const r=(await pool.query("SELECT r.id,r.status,b.slug,b.name,b.owner_id,u.email,s.data AS settings_data FROM membership_requests r JOIN businesses b ON b.id=r.business_id JOIN users u ON u.id=b.owner_id LEFT JOIN settings s ON s.owner=b.owner_id WHERE r.id=$1",[requestId])).rows[0];
+ if(!r||r.status!=='pending')return;
+ const settings=JSON.parse(r.settings_data||'{}');
+ const link=new URL('/studio/'+encodeURIComponent(r.slug),origin).toString();
+ const message={subject:'MEMBERSHIP REQUEST · '+r.name,text:'MEMBERSHIP REQUEST\nA customer has requested a membership at '+r.name+'. Sign in to review and approve: '+link,sms:'MEMBERSHIP REQUEST · '+r.name+'. Sign in to review: '+link};
+ const result={};
+ if(settings.bookingNotifyEmail===true)result.email=await sendNotificationChannel('email',settings.bookingNotifyOwnerEmail||r.email,message);
+ if(settings.bookingNotifySms===true)result.sms=await sendNotificationChannel('sms',settings.bookingNotifyOwnerPhone||'',message);
+ await pool.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'membership_request_notification',$4)",[randomUUID(),r.owner_id,new Date().toISOString(),JSON.stringify({requestId,result})]);
+ return result;
+}

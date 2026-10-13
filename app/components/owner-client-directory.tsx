@@ -1,4 +1,5 @@
 'use client';
+import SortableTable from './sortable-table';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowLeft,CalendarDays,CheckCircle2,ChevronRight,Download,Upload,RefreshCw,Search,Users,UserPlus,Pencil,Trash2,RotateCcw,ArchiveRestore} from 'lucide-react';
 import ClientEditor,{type ClientDetails} from './client-editor';
@@ -244,7 +245,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
     <div className="sf-client-history-heading"><div><h3>Service & session history</h3><p>Each booking, its services and attendance status.</p></div>
      <label className="sf-client-history-filter"><input type="checkbox" checked={attendedOnly} onChange={e=>setAttendedOnly(e.target.checked)}/> Attended only</label>
     </div>
-    {visited.length?<div className="sf-client-history-scroll"><table className="sf-client-history-table">
+    {visited.length?<div className="sf-client-history-scroll"><SortableTable className="sf-client-history-table">
      <thead><tr><th>Activity date / time</th><th>Service used</th><th>Service type</th><th>Session</th><th>Team</th><th>Status</th><th>Quote</th></tr></thead>
      <tbody>{visited.map(v=><tr key={v.id}>
       <td><b>{humanDate(v.date)}</b><small>{timeLabel(v.time)} Eastern</small></td>
@@ -256,7 +257,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
       <td>{v.sessionType}</td><td>{v.staff||'—'}</td>
       <td><span className={'sf-client-visit-status '+(v.attended?'attended':v.status==='No-show'||v.status==='Cancelled'?'missed':'scheduled')}>{v.status}{v.attended?' · Attended':''}</span></td>
       <td>{money(v.quotedPrice)}</td>
-     </tr>)}</tbody></table></div>:<p className="sf-client-empty">No {attendedOnly?'attended':'recorded'} sessions to show.</p>}
+     </tr>)}</tbody></SortableTable></div>:<p className="sf-client-empty">No {attendedOnly?'attended':'recorded'} sessions to show.</p>}
    </section>
   </>:<>
    <div className="sf-clients-search"><label><Search size={18}/><input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, contact, service or service type…" aria-label="Search clients"/></label><small>{filtered.length} of {clients.length} clients</small></div>

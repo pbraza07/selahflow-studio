@@ -35,7 +35,7 @@ test('owner roster reads an occurrence after team transfer, preserving client de
  assert.equal(roster.remaining,9);
  assert.equal(roster.staff,'coach-b');
  assert.equal(roster.date,'2026-10-20');
- assert.deepEqual(roster.clients.map(c=>c.name),['Alex Rivera']);
+ assert.deepEqual(roster.clients.map(c=>c.name),['Alex Rivera','No-Show Person']);
  assert.equal(roster.clients[0].email,'alex@example.com');
  assert.equal(roster.clients[0].phone,'+18135550001');
  assert.equal(roster.clients[0].customAnswers.playerLevel,'3');
@@ -55,7 +55,7 @@ test('the same recurring series on another day has separate enrollment, status, 
  assert.equal(roster.remaining,7);
  assert.deepEqual(roster.clients.map(c=>c.status).sort(),['Checked in','Completed','Confirmed']);
 });
-test('roster never shows canceled, no-show, demo or unrelated booking and handles empty sessions',()=>{
+test('roster retains no-shows for correction without consuming seats and excludes canceled/demo/unrelated bookings',()=>{
  const session={id:'solo-group',date:'2026-10-30',staff:'coach-a',capacity:5};
  const other=[
   {...enrolled,id:'c',sessionId:'solo-group',date:'2026-10-30',status:'Cancelled'},
@@ -64,7 +64,7 @@ test('roster never shows canceled, no-show, demo or unrelated booking and handle
   {...enrolled,id:'o',sessionId:'other-id',date:'2026-10-30'}
  ];
  const roster=sessionRosterForOwner(session,other);
- assert.deepEqual(roster.clients,[]);
+ assert.deepEqual(roster.clients.map(c=>c.status),['No-show']);
  assert.equal(roster.remaining,5);
  assert.throws(()=>sessionRosterForOwner(null,[]),/valid session/);
 });

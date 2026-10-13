@@ -1,3 +1,15 @@
+## v1.3.61 — Owner controls, attendance corrections and membership requests
+- Sort owner dashboard data columns ascending or descending; show all appointment dates on Overview and change attendance from calendar details and session rosters.
+- Correct Check in ↔ No-show without a second membership debit. Reinstating attendance safely checks capacity and restores reserved time.
+- Add visible response-field borders and repair themed autofill contrast.
+- Automatically select the date/time when choosing a scheduled session.
+- Edit public booking/membership wording, standard labels/help/placeholders, and independent question ordering in Settings.
+- Scope custom questions to booking, membership, both, or specific bookable sessions (including recurring dates). One shared catalog enforces the business plan question allowance, including owner front-desk bookings.
+- Add staff-specific or whole-business date/time blockouts, enforced on availability and final confirmation.
+- Keep membership/attendance history within the member row and reorder public membership packages.
+- Public membership requests use the same registration fields as owner assignment. Explicit MEMBERSHIP REQUEST alerts and an owner-only approval queue add approved players to Clients and Memberships. Payment confirmation remains separate; existing IDs, credits and history are preserved.
+- Migration 029 adds membership request storage and package ordering. Existing customer records are not rewritten.
+
 ## v1.3.60 — Verified member ID, attendance credits and badge lifecycle
 - Carries forward the live Overview member ID and package badge implementation.
 - Check in and No-show consume one available session per appointment; repeat transitions cannot charge twice.

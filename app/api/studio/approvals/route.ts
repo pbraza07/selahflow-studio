@@ -1,3 +1,4 @@
+import {customRegistrationFields} from '../../../../server/registration-questions.mjs';
 import {randomBytes} from 'node:crypto';
 import {getPool} from '../../../../server/database.mjs';
 import {requireOwner} from '../../../../lib/auth';
@@ -27,7 +28,7 @@ export async function GET(req:Request){try{const {pool,owner,settings,business}=
  return Response.json({enabled:settings.bookingApprovalEnabled===true,reviewer:settings.bookingApprovalReviewer||'owner',
  pending:rows.map((r:any)=>({...r,sessionInfo:sessionReviewSummary(settings,r,confirmed,rows)})),
  approvalFields:approvalFieldsForBusiness(settings),
- customFields:(settings.bookingCustomFields||[]).map((f:{id:string;label:string;type:string;options?:string[];required:boolean})=>({id:f.id,label:f.label,type:f.type,options:f.options||[],required:f.required})),pendingCount:rows.length,businessId:business.id,providerStatus:deliveryProviderStatus(),accountEmail:account.rows[0]?.email||'',deliveryStatus:delivery},{headers});
+ customFields:customRegistrationFields(settings,'booking').map((f:{id:string;label:string;type:string;options?:string[];required:boolean})=>({id:f.id,label:f.label,type:f.type,options:f.options||[],required:f.required})),pendingCount:rows.length,businessId:business.id,providerStatus:deliveryProviderStatus(),accountEmail:account.rows[0]?.email||'',deliveryStatus:delivery},{headers});
  }catch(e){return err(e);}}
 export async function POST(req:Request){if(!validOrigin(req))return Response.json({error:'Invalid origin'},{status:403,headers});
  try{

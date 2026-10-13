@@ -1,3 +1,4 @@
+import {customRegistrationFields} from './registration-questions.mjs';
 import {randomUUID} from 'node:crypto';
 import {getPool} from './database.mjs';
 import {sanitizeBookingAnswers} from './booking-custom-fields.mjs';
@@ -32,7 +33,7 @@ export async function editPendingRequest(owner,id,reviewer,input){
   if(reviewer!=='owner'&&row.reviewer!==reviewer)throw Error('This request belongs to another reviewer.');
   const settings=JSON.parse(row.settings_data||'{}');
   const original=JSON.parse(row.details||'{}');
-  const update=editableBookingDetails(original,input,settings.bookingCustomFields||[]);
+  const update=editableBookingDetails(original,input,customRegistrationFields(settings,'booking',original.sessionId||null));
   update.correctedBy=reviewer;
   const oldDetails=JSON.stringify(original),newDetails=JSON.stringify(update);
   await client.query('UPDATE booking_requests SET details=$1 WHERE id=$2 AND business_id=$3 AND status=$4',

@@ -4,7 +4,7 @@
  * A recurring instance is identified by stable occurrence id and date so
  * rescheduling to a new coach never drops its original attendees.
  */
-const activeStatuses=new Set(['Confirmed','Checked in','Completed','Pending']);
+const activeStatuses=new Set(['Confirmed','Checked in','Completed','Pending','No-show']);
 export function sessionRosterForOwner(session,appointments){
  if(!session||typeof session.id!=='string'||typeof session.date!=='string')
   throw Error('Choose a valid session.');
@@ -26,6 +26,6 @@ export function sessionRosterForOwner(session,appointments){
   }))
   .sort((a,b)=>a.name.localeCompare(b.name)||a.bookingId.localeCompare(b.bookingId));
  return {id:session.id,date:session.date,staff:session.staff,
-  capacity:session.capacity,booked:clients.length,
-  remaining:Math.max(0,Number(session.capacity||0)-clients.length),clients};
+  capacity:session.capacity,booked:clients.filter(c=>c.status!=='No-show').length,
+  remaining:Math.max(0,Number(session.capacity||0)-clients.filter(c=>c.status!=='No-show').length),clients};
 }

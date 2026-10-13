@@ -34,3 +34,15 @@ export async function pushBookingRequest(requestId){
  }
  return {status:delivered?'submitted':result.rows.length?'failed':'no_subscribed_devices',delivered,failed};
 }
+
+/** Explicit membership alerts, scoped to this business's owner devices. */
+export async function pushMembershipRequest(requestId){
+ if(!configured())return {status:'not_configured',delivered:0};
+ const pool=getPool();
+ const r=(await pool.query("SELECT r.business_id,r.status,b.slug,b.name FROM membership_requests r JOIN businesses b ON b.id=r.business_id WHERE r.id=$1 AND b.status='active'",[requestId])).rows[0];
+ if(!r||r.status!=='pending')return {status:'no_pending_request',delivered:0};
+ const subs=(await pool.query("SELECT id,endpoint,p256dh,auth FROM business_push_subscriptions WHERE business_id=$1 AND reviewer='owner' LIMIT 40",[r.business_id])).rows;
+ let delivered=0;
+ for(const sub of subs){const result=await sendWebPush({endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth}},{title:'MEMBERSHIP REQUEST · '+businessDeviceName(r.name),body:'A membership registration is waiting for your approval.',url:'/studio/'+encodeURIComponent(r.slug),tag:'membership-request-'+requestId,businessId:r.business_id});if(result.status==='submitted')delivered++;else if(['gone','invalid_subscription'].includes(result.status))await pool.query('DELETE FROM business_push_subscriptions WHERE id=$1',[sub.id]);}
+ return {status:delivered?'submitted':'no_delivery',delivered};
+}

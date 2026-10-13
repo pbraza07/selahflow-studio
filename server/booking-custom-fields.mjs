@@ -36,7 +36,7 @@ export function sanitizeBookingAnswers(fields, answers) {
    const value = (raw || '').trim();
    if (value.length > 500) throw Error('Booking field answer is too long.');
    if (f.type === 'number' && value && !Number.isFinite(Number(value))) throw Error('Enter a valid number.');
-   if (f.type === 'date' && value && !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) throw Error('Enter a valid date.');
+   if (f.type === 'date' && value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw Error('Enter a valid date.');
    if (f.type === 'select' && value && !f.options.includes(value)) throw Error('Choose a valid dropdown option.');
    result[f.id] = value;
   }
