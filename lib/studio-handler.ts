@@ -2,6 +2,7 @@ import {randomInt,randomBytes} from 'node:crypto';
 import {db} from './database';
 import {getPool} from '../server/database.mjs';
 import {changeAppointmentStatus} from '../server/appointment-membership-usage.mjs';
+import {loadOwnerMemberRoster,decorateOwnerAppointments} from '../server/owner-appointment-members.mjs';
 import {bookableTeamLimit} from '../server/team-seat-policy.mjs';
 import {checkSubscriptionLimits,planEntitlements} from '../server/plan-entitlements.mjs';
 import {appointmentData,overlaps,easternClock,bookingDateRange,computeDayAvailability,selectedSession,sessionsForDate,sessionRemaining,validateBookableSessions,validateExistingSessionReservations} from '../server/session-scheduling.mjs';
@@ -19,7 +20,23 @@ import {approvalSettings,bookingRequestDetail} from '../server/booking-review.mj
 
 const reply=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 async function context(req:Request,isPublic=false){const slug=isPublic?new URL(req.url).searchParams.get('slug'):null;const account=isPublic?(slug?await db().prepare("SELECT owner_id AS id FROM businesses WHERE slug=? AND status='active'").bind(slug).first<{id:string}>():await db().prepare("SELECT owner_id AS id FROM businesses WHERE slug='crawford' AND status='active'").first<{id:string}>()):null;const owner=isPublic?account?.id:await requireOwner(req);if(!owner)throw Error('Studio is not configured yet.');if(!isPublic){const business=await db().prepare('SELECT status FROM businesses WHERE owner_id=?').bind(owner).first<{status:string}>();if(!business||business.status!=='active')throw Error('Business awaiting platform approval.');}const row=await db().prepare('SELECT data FROM settings WHERE owner=?').bind(owner).first<{data:string}>();return {owner,config:row?JSON.parse(row.data):structuredClone(defaultSettings)};}
-export async function ownerGet(req:Request){try{const {owner,config}=await context(req);const a=await db().prepare('SELECT * FROM appointments WHERE owner=? ORDER BY date,start').bind(owner).all();const e=await db().prepare('SELECT * FROM events WHERE owner=? ORDER BY created DESC LIMIT 500').bind(owner).all();return reply({config,appointments:a.results.map((r:any)=>({...r,...JSON.parse(r.data)})),events:e.results.map((r:any)=>({...r,...JSON.parse(r.data)}))});}catch(e){return reply({error:(e as Error).message==='AUTH_REQUIRED'?'Please sign in.':'Studio data is unavailable or this business is waiting for approval.'},(e as Error).message==='AUTH_REQUIRED'?401:503);}}
+export async function ownerGet(req:Request){
+ try{
+  const {owner,config}=await context(req);
+  const [a,e,roster]=await Promise.all([
+   db().prepare('SELECT * FROM appointments WHERE owner=? ORDER BY date,start').bind(owner).all(),
+   db().prepare('SELECT * FROM events WHERE owner=? ORDER BY created DESC LIMIT 500').bind(owner).all(),
+   loadOwnerMemberRoster(getPool(),owner)
+  ]);
+  const visits=a.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
+  return reply({
+   config,appointments:decorateOwnerAppointments(visits,roster),
+   events:e.results.map((r:any)=>({...r,...JSON.parse(r.data)}))
+  });
+ }catch(e){
+  return reply({error:(e as Error).message==='AUTH_REQUIRED'?'Please sign in.':'Studio data is unavailable or this business is waiting for approval.'},(e as Error).message==='AUTH_REQUIRED'?401:503);
+ }
+}
 export async function studioPost(req:Request,isPublic=false){try{if(!validOrigin(req))return reply({error:'Invalid origin'},403);const raw=await req.text();if(raw.length>(isPublic?20000:120000))return reply({error:'Request too large.'},413);let b;try{b=JSON.parse(raw);}catch{return reply({error:'Invalid request.'},400);}if(!b||typeof b!=='object')return reply({error:'Invalid request.'},400);if(isPublic&&!['availability','book','calendar','session_calendar','verify_registration','registration_code_request','registration_email_lookup','registration_latest_status'].includes(b.action))return reply({error:'Action not permitted.'},403);const {owner,config}=await context(req,isPublic);if(isPublic){if(b.website)return reply({error:'Unable to process request.'},400);const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();if(!await takeLimit('public:'+owner+':'+tokenHash(ip),120))return reply({error:'Too many requests. Please try again in 15 minutes.'},429);if(b.action==='book'){if(b.policyAccepted!==true)return reply({error:'Please accept the booking policy.'},400);if(!await takeLimit('book:'+owner+':'+tokenHash(ip),12))return reply({error:'Booking limit reached. Please contact the studio.'},429);if(typeof b.email==='string'&&!await takeLimit('email:'+owner+':'+tokenHash(b.email.trim().toLowerCase()),6))return reply({error:'Too many booking requests for this email. Please contact the studio.'},429);}}const audit=(kind:string,data:any)=>db().prepare('INSERT OR IGNORE INTO events(id,owner,created,kind,data) VALUES(?,?,?,?,?)').bind(typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID(),owner,new Date().toISOString(),kind,JSON.stringify(data));
 if(b.action==='settings'){const c=b.config;
  validateBookingFields(c?.bookingCustomFields||[],c?.bookingPushFields||['customerName','services','date']);
