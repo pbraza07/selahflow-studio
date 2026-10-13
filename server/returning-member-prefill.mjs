@@ -1,0 +1,35 @@
+/** Reuse saved answers only if still accepted by the business's current booking form. */
+export function restoreBookingCustomAnswers(fields, ...sources){
+ const result={};
+ for(const field of Array.isArray(fields)?fields:[]){
+  if(!field?.id)continue;
+  for(const source of sources){
+   if(!source||typeof source!=='object'||Array.isArray(source))continue;
+   const raw=source[field.id];
+   if(raw===undefined||raw===null)continue;
+   if(field.type==='checkbox'){
+    if(typeof raw==='boolean'){result[field.id]=raw;break;}
+    continue;
+   }
+   if(typeof raw!=='string'||!raw.trim()||raw.length>500)continue;
+   const value=raw.trim();
+   if(field.type==='select'&&(!Array.isArray(field.options)||!field.options.includes(value)))continue;
+   if(field.type==='number'&&!Number.isFinite(Number(value)))continue;
+   if(field.type==='date'&&!/^\d{4}-\d{2}-\d{2}$/.test(value))continue;
+   result[field.id]=value;break;
+  }
+ }
+ return result;
+}
+
+/** Prefer the latest submitted registration, keeping existing client edits as backup. */
+export function restoredContact(identity={},profile={},latest={}){
+ const parts=String(profile.name||latest.name||latest.customerName||identity.customer_name||'').trim().split(/\s+/);
+ const firstName=String(latest.firstName||parts[0]||'').trim();
+ const lastName=String(latest.lastName||parts.slice(1).join(' ')||'').trim();
+ return {
+  firstName,lastName,
+  email:String(profile.email||latest.email||latest.customerEmail||identity.customer_email||'').trim(),
+  phone:String(profile.phone||latest.phone||latest.customerPhone||identity.customer_phone||'').trim()
+ };
+}
