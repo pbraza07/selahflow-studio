@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowLeft,CalendarDays,CheckCircle2,ChevronRight,Download,Upload,RefreshCw,Search,Users,UserPlus,Pencil,Trash2,RotateCcw,ArchiveRestore} from 'lucide-react';
 import ClientEditor,{type ClientDetails} from './client-editor';
+import MembershipBadge from './membership-badge';
 import {timeLabel} from '../../lib/defaults';
 
 type Visit={
@@ -132,7 +133,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    </div>
    <article className="sf-client-profile">
     <div className="sf-client-profile-heading"><span className="sf-client-avatar" aria-hidden="true">{selected.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span>
-     <div><h3>{selected.name} {selected.membershipName&&<span style={{display:'inline-block',borderRadius:8,padding:'4px 10px',marginLeft:8,color:'white',background:/gold/i.test(selected.membershipName)?'#a67c00':/pro/i.test(selected.membershipName)?'#b91c1c':/academy/i.test(selected.membershipName)?'#2563eb':'#475569'}}>{selected.membershipName} · {selected.memberNumber||'Member'}</span>}{!selected.membershipName&&selected.memberNumber&&<span style={{display:'inline-block',borderRadius:8,padding:'4px 10px',marginLeft:8,background:'#fff2a8',color:'#392b00',fontWeight:700}}>Membership ID: {selected.memberNumber}</span>}</h3><p>{selected.email||'No email recorded'}{selected.phone?' · '+selected.phone:''}</p>
+     <div><h3 style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>{selected.name}<MembershipBadge memberNumber={selected.memberNumber} membershipName={selected.membershipName} membershipStatus={selected.membershipStatus}/></h3><p>{selected.email||'No email recorded'}{selected.phone?' · '+selected.phone:''}</p>
       <span className="sf-client-profile-note">Service history and attendance for this business only</span></div>
     </div>
     {selected.firstBooking&&<section className="sf-client-first-booking">
@@ -191,7 +192,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
   </>:<>
    <div className="sf-clients-search"><label><Search size={18}/><input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, contact, service or service type…" aria-label="Search clients"/></label><small>{filtered.length} of {clients.length} clients</small></div>
    {filtered.length?<div className="sf-client-directory-grid">{filtered.map(c=><article className="sf-client-summary" key={c.id}>
-    <div className="sf-client-summary-top"><span className="sf-client-avatar" aria-hidden="true">{c.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span><div><h3>{c.name}</h3><p>{c.email||c.phone||'Contact not provided'}</p></div></div>
+    <div className="sf-client-summary-top"><span className="sf-client-avatar" aria-hidden="true">{c.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span><div><h3 style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>{c.name}<MembershipBadge memberNumber={c.memberNumber} membershipName={c.membershipName} membershipStatus={c.membershipStatus}/></h3><p>{c.email||c.phone||'Contact not provided'}</p></div></div>
     <div className="sf-client-summary-metrics"><span><b>{c.bookedSessions}</b> sessions booked</span><span><b>{c.attendedSessions}</b> attended</span><span><b>{c.attendanceDays.length}</b> attendance days</span></div>
     {!!c.latestBookingAnswers?.length&&<p className="sf-client-booking-answer-preview">{c.latestBookingAnswers.length} booking question{c.latestBookingAnswers.length===1?'':'s'} answered · See full details</p>}
     <div className="sf-client-summary-types"><small>Service types</small><strong>{c.serviceTypes.join(' · ')||'Not categorized'}</strong></div>
