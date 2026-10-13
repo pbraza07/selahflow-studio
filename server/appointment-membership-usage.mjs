@@ -1,3 +1,5 @@
+import {loadOwnerMemberRoster,ownerAppointmentMember} from './owner-appointment-members.mjs';
+
 /**
  * Charge one prepaid membership session per appointment, regardless of whether
  * it was checked in, marked no-show, or completed later.
@@ -26,7 +28,7 @@ export async function debitAppointmentMembershipSession(client,{owner,memberNumb
   [member.business_id,member.id,appointmentId]
  );
  if(prior.rowCount)return {deducted:false,alreadyDeducted:true,memberFound:true,active:true,remaining:Math.max(0,remaining)};
- if(remaining<=0)throw Error('No membership sessions remaining. Renew or adjust this player\'s membership before checking in or marking no-show.');
+ if(remaining<=0)return {deducted:false,alreadyDeducted:false,memberFound:true,active:false,exhausted:true,remaining:0};
  const inserted=await client.query(
   "INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta) VALUES($1,$2,$3,$4,'session_used',-1) ON CONFLICT DO NOTHING RETURNING id",
   [ledgerId,member.business_id,member.id,appointmentId]
@@ -52,10 +54,21 @@ export async function changeAppointmentStatus(client,{owner,appointmentId,status
  if(appointment.status===status)return {ok:true,alreadyProcessed:true,membershipDeducted:false};
  if(['Completed','Cancelled','No-show'].includes(appointment.status))throw Error('This appointment is already closed.');
  let memberNumber='';
+ let appointmentData={};
  try{
-  const data=typeof appointment.data==='string'?JSON.parse(appointment.data||'{}'):appointment.data||{};
-  memberNumber=String(data.memberNumber||'').trim().toUpperCase();
+  appointmentData=typeof appointment.data==='string'?JSON.parse(appointment.data||'{}'):appointment.data||{};
+  memberNumber=String(appointmentData.memberNumber||'').trim().toUpperCase();
  }catch{}
+ // Older bookings did not always store an ID, although the client already had
+ // one. Link only when full name and email identify exactly one player.
+ if(!memberNumber){
+  const roster=await loadOwnerMemberRoster(client,owner);
+  memberNumber=ownerAppointmentMember(appointmentData,roster).memberNumber;
+  if(memberNumber){
+   await client.query('UPDATE appointments SET data=$1 WHERE owner=$2 AND id=$3',
+    [JSON.stringify({...appointmentData,memberNumber}),owner,appointmentId]);
+  }
+ }
  const usage=await debitAppointmentMembershipSession(client,{
   owner,memberNumber,appointmentId,status,ledgerId
  });
@@ -67,9 +80,10 @@ export async function changeAppointmentStatus(client,{owner,appointmentId,status
   [eventId,owner,createdAt,JSON.stringify({
    appointment:appointmentId,status,memberNumber:memberNumber||null,
    membershipDeducted:usage.deducted,alreadyDeducted:usage.alreadyDeducted,
-   membershipSessionsRemaining:usage.remaining
+   membershipSessionsRemaining:usage.remaining,membershipExhausted:usage.exhausted===true
   })]
  );
  return {ok:true,membershipDeducted:usage.deducted,alreadyDeducted:usage.alreadyDeducted,
-  memberFound:usage.memberFound,membershipSessionsRemaining:usage.remaining};
+  memberFound:usage.memberFound,membershipSessionsRemaining:usage.remaining,
+  membershipExhausted:usage.exhausted===true,memberNumber:memberNumber||null};
 }
