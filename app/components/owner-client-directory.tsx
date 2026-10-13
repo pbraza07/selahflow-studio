@@ -4,17 +4,22 @@ import {ArrowLeft,CalendarDays,CheckCircle2,ChevronRight,Download,Upload,Refresh
 import ClientEditor,{type ClientDetails} from './client-editor';
 import MembershipBadge from './membership-badge';
 import {timeLabel} from '../../lib/defaults';
+import {registrationFieldCatalog,filterRegistrationClients} from '../../server/client-registration-filters.mjs';
+import {displayAnswer,dateOnly} from '../../server/client-registration-fields.mjs';
 
+type Answer={id:string;label:string;value:string|boolean;type?:string};
+type MembershipDetails={registeredAt?:string|null;paidThrough?:string|null;lastPaidAt?:string|null;interval?:string;priceCents?:number;sessionsIncluded?:number;sessionsUsed?:number};
+type FormField={id:string;label:string;type:string;options?:string[]};
 type Visit={
  id:string;date:string;time:number;duration:number;serviceNames:string[];serviceTypes:string[];
  staff:string;status:string;attended:boolean;sessionType:string;quotedPrice:number;
- answers?:{id:string;label:string;value:string|boolean}[];customerName?:string;customerEmail?:string;customerPhone?:string;
+ answers?:Answer[];customerName?:string;customerEmail?:string;customerPhone?:string;customerMemberNumber?:string;dateOfBirth?:string;firstName?:string;lastName?:string;
  originalSubmission?:{customerName:string;customerEmail:string;customerPhone:string;customAnswers?:Record<string,string|boolean>}|null;submittedAt?:string|null;policyAccepted?:boolean;policyAcceptedAt?:string|null;
 };
 type Client={
- memberNumber?:string;membershipName?:string;membershipStatus?:string;
+ memberNumber?:string;membershipName?:string;membershipStatus?:string;membershipAnswers?:Answer[];membershipDetails?:MembershipDetails;dateOfBirth?:string;
  id:string;name:string;email:string;phone:string;bookedSessions:number;attendedSessions:number;
- attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;importColumns?:Record<string,string>;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:{id:string;label:string;value:string|boolean}[];
+ attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;importColumns?:Record<string,string|boolean>;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:Answer[];
 };
 const humanDate=(date:string)=>date?new Date(date+'T12:00:00Z').toLocaleDateString('en-US',
  {month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}):'—';
@@ -25,6 +30,8 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
  const [importing,setImporting]=useState(false),[importMessage,setImportMessage]=useState('');
  const [clients,setClients]=useState<Client[]>([]),[selectedId,setSelectedId]=useState<string|null>(null);
  const [search,setSearch]=useState(''),[busy,setBusy]=useState(true),[error,setError]=useState('');
+ const [formFields,setFormFields]=useState<FormField[]>([]);
+ const [membershipLevel,setMembershipLevel]=useState(''),[filterField,setFilterField]=useState(''),[filterValue,setFilterValue]=useState('');
  const [attendedOnly,setAttendedOnly]=useState(false);
  const [archived,setArchived]=useState<{id:string;name:string;email:string;phone:string}[]>([]);
  const [editing,setEditing]=useState<Client|'new'|null>(null),[saving,setSaving]=useState(false),[editError,setEditError]=useState('');
@@ -36,14 +43,16 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    const r=await fetch('/api/studio/clients',{cache:'no-store'});
    const result=await r.json();
    if(!r.ok)throw Error(result.error||'Client records are unavailable.');
-   setClients(result.clients||[]);setArchived(result.archived||[]);setError('');
+   setClients(result.clients||[]);setArchived(result.archived||[]);setFormFields(result.formFields||[]);setError('');
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  },[]);
  useEffect(()=>{void reload();const changed=()=>void reload();window.addEventListener('selahflow:booking-reviewed',changed);
   return ()=>window.removeEventListener('selahflow:booking-reviewed',changed);},[reload]);
- const filtered=useMemo(()=>clients.filter(c=>
-  [c.name,c.email,c.phone,c.memberNumber||'',c.serviceTypes.join(' '),c.serviceNames.join(' ')].join(' ').toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())
- ),[clients,search]);
+ const registrationFields=useMemo(()=>registrationFieldCatalog(clients,formFields) as {key:string;label:string;type:string;options:string[]}[],[clients,formFields]);
+ const membershipLevels=useMemo(()=>[...new Set(clients.map(c=>c.membershipName).filter((name):name is string=>!!name))].sort((a,b)=>a.localeCompare(b)),[clients]);
+ const chosenField=registrationFields.find(field=>field.key===filterField);
+ const filtered=useMemo(()=>filterRegistrationClients(clients,{search,membershipLevel,fieldKey:filterField,fieldValue:filterValue}) as Client[],[clients,search,membershipLevel,filterField,filterValue]);
+ const resetFilters=()=>{setSearch('');setMembershipLevel('');setFilterField('');setFilterValue('');};
  const selected=clients.find(c=>c.id===selectedId);
  const visited=selected?selected.history.filter(v=>!attendedOnly||v.attended):[];
  const totalAttended=clients.reduce((n,c)=>n+c.attendedSessions,0);
@@ -191,6 +200,32 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    </section>
   </>:<>
    <div className="sf-clients-search"><label><Search size={18}/><input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, contact, service or service type…" aria-label="Search clients"/></label><small>{filtered.length} of {clients.length} clients</small></div>
+   <div className="sf-clients-registration-filters" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(185px,1fr))',gap:12,alignItems:'end',margin:'16px 0',padding:16,border:'1px solid #d9e2dc',borderRadius:14}}>
+    <label>Membership level
+     <select aria-label="Filter by membership level" value={membershipLevel} onChange={e=>setMembershipLevel(e.target.value)}>
+      <option value="">All membership levels</option>
+      {membershipLevels.map(level=><option key={level} value={level}>{level}</option>)}
+      <option value="__no_active__">No active membership / ID only</option>
+     </select>
+    </label>
+    <label>Registration field
+     <select aria-label="Select registration field to filter" value={filterField} onChange={e=>{setFilterField(e.target.value);setFilterValue('');}}>
+      <option value="">All registration fields</option>
+      {registrationFields.map(field=><option key={field.key} value={field.key}>{field.label}</option>)}
+     </select>
+    </label>
+    {chosenField&&<label>{chosenField.label}
+     {chosenField.type==='select'||chosenField.type==='checkbox'?
+      <select aria-label={'Filter by '+chosenField.label} value={filterValue} onChange={e=>setFilterValue(e.target.value)}>
+       <option value="">Any answer</option>
+       {(chosenField.type==='checkbox'?['Yes','No']:chosenField.options).map(value=><option key={value} value={value}>{value}</option>)}
+      </select>:
+      <input aria-label={'Filter by '+chosenField.label} type={chosenField.type==='date'?'date':'search'} value={filterValue} placeholder={'Find '+chosenField.label.toLowerCase()} onChange={e=>setFilterValue(e.target.value)}/>
+     }
+    </label>}
+    {(search||membershipLevel||filterField||filterValue)&&<button type="button" className="outline" onClick={resetFilters}>Clear all filters</button>}
+   </div>
+   <p className="muted" role="status">{filtered.length} matching {filtered.length===1?'client':'clients'} · Filters apply together</p>
    {filtered.length?<div className="sf-client-directory-grid">{filtered.map(c=><article className="sf-client-summary" key={c.id}>
     <div className="sf-client-summary-top"><span className="sf-client-avatar" aria-hidden="true">{c.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span><div><h3 style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>{c.name}<MembershipBadge memberNumber={c.memberNumber} membershipName={c.membershipName} membershipStatus={c.membershipStatus}/></h3><p>{c.email||c.phone||'Contact not provided'}</p></div></div>
     <div className="sf-client-summary-metrics"><span><b>{c.bookedSessions}</b> sessions booked</span><span><b>{c.attendedSessions}</b> attended</span><span><b>{c.attendanceDays.length}</b> attendance days</span></div>
