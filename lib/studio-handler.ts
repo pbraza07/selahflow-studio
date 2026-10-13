@@ -248,10 +248,14 @@ if(b.action==='availability')return reply({slots:available,sessionAvailability:a
 if(b.key){const prior=await db().prepare('SELECT id FROM appointments WHERE owner=? AND id=?').bind(owner,b.key).first();if(prior)return reply({ok:true,id:prior.id});const pending=await db().prepare('SELECT id,status,appointment_id FROM booking_requests WHERE owner_id=? AND id=?').bind(owner,b.key).first<{id:string;status:string;appointment_id:string|null}>();if(pending)return reply({ok:true,id:pending.id,pending:pending.status==='pending',status:pending.status,appointmentId:pending.appointment_id});}if(b.expectedPrice!==services.reduce((a:number,s:any)=>a+s.price,0)||b.expectedDuration!==duration)return reply({error:'Service prices or durations changed. Refresh the studio and review your booking again.'},409);if(!available.includes(b.start))return reply({error:'That time is no longer available. Please choose another.'},409);if(typeof b.name!=='string'||typeof b.email!=='string'||!b.name.trim()||b.name.length>100||!/^\S+@\S+\.\S+$/.test(b.email)||b.email.length>200)throw Error('Enter a name and valid email.');if(isPublic){
  if(b.notMember!==true){
   const number=String(b.memberNumber||'').trim().toUpperCase();
-  if(!/^[A-Z]{2}[0-9]{4}$/.test(number))throw Error('Enter your member number or choose N/A.');
-  const membership=await db().prepare("SELECT m.id,m.customer_name,m.status FROM customer_memberships m JOIN businesses business ON business.id=m.business_id WHERE business.owner_id=? AND m.member_number=?").bind(owner,number).first() as any;
-  if(!membership)throw Error('Member number was not found for this business.');
-  if(String(membership.customer_name||'').trim().toLowerCase()!==String(b.name||'').trim().toLowerCase())throw Error('Member number does not match the booking name.');
+  if(!/^[A-Z]{2}[0-9]{4}$/.test(number))throw Error('Enter your six-character membership ID or choose N/A.');
+  const member=await db().prepare("SELECT m.customer_name,m.date_of_birth FROM customer_memberships m JOIN businesses biz ON biz.id=m.business_id WHERE biz.owner_id=? AND m.member_number=?").bind(owner,number).first() as any;
+  const customer=await db().prepare("SELECT c.first_name,c.last_name,c.date_of_birth FROM customer_booking_ids c JOIN businesses biz ON biz.id=c.business_id WHERE biz.owner_id=? AND c.member_number=?").bind(owner,number).first() as any;
+  if(!member&&!customer)throw Error('Membership ID was not found for this business.');
+  const expectedName=String(member?.customer_name||[customer?.first_name,customer?.last_name].join(' ')).trim().replace(/\s+/g,' ').toLowerCase();
+  if(expectedName!==String(b.name||'').trim().replace(/\s+/g,' ').toLowerCase())throw Error('Membership ID does not match the booking name.');
+  const storedDob=member?.date_of_birth||customer?.date_of_birth;
+  if(storedDob&&new Date(storedDob).toISOString().slice(0,10)!==String(b.dateOfBirth||''))throw Error('Membership ID and birth date do not match.');
  }
  if(b.notMember!==true&&b.notMember!==false)throw Error('Select N/A if you are not a member.');
 }
@@ -285,7 +289,7 @@ if(isPublic){
   }
   // The client directory is not only appointment-derived: persist the first booking
   // as a managed profile, and reuse that profile on all subsequent bookings.
-  const normalizedName=(firstName+' '+lastName).trim().replace(/\\s+/g,' ').toLowerCase();
+  const normalizedName=(firstName+' '+lastName).trim().replace(/\s+/g,' ').toLowerCase();
   const contactEmail=String(b.email).trim().toLowerCase();
   const contactPhone=String(b.phone||'').trim().slice(0,40);
   const priorProfile=(await client.query(
