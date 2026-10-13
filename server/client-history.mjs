@@ -36,7 +36,7 @@ export function pendingBookingAsAppointment(row){
   id:row.id,date:row.date,start:row.start_minute,duration:row.duration,staff:row.staff_id,
   status:row.status==='pending'?'Pending approval':'Declined',
   data:JSON.stringify({
-   name:info.customerName||'',email:info.customerEmail||'',phone:info.customerPhone||'',
+   name:info.customerName||'',email:info.customerEmail||'',phone:info.customerPhone||'',memberNumber:info.memberNumber||null,
    services:Array.isArray(info.services)?info.services:[],
    serviceIds:Array.isArray(info.serviceIds)?info.serviceIds:[],
    price:Number(info.quotedPrice)||0,sessionId:info.sessionId||null,
@@ -96,6 +96,7 @@ export function buildClientDirectory(appointments,settings={},owner=''){
   if(name)client.name=name;
   if(email)client.email=email;
   if(phone)client.phone=phone;
+  if(data.memberNumber&&!client.memberNumber)client.memberNumber=String(data.memberNumber).trim().toUpperCase();
   const serviceNames=Array.isArray(data.services)?data.services.filter(x=>typeof x==='string').map(x=>clean(x,100)):[];
   const ids=Array.isArray(data.serviceIds)?data.serviceIds.filter(x=>typeof x==='string'):[];
   const items=ids.map(sid=>catalog.find(s=>s.id===sid)).filter(Boolean);
