@@ -255,6 +255,7 @@ if(b.key){const prior=await db().prepare('SELECT id FROM appointments WHERE owne
  }
  if(b.notMember!==true&&b.notMember!==false)throw Error('Select N/A if you are not a member.');
 }
+const customAnswers=sanitizeBookingAnswers(config.bookingCustomFields||[],b.customAnswers);
 let issuedMemberNumber=String(b.memberNumber||'').trim().toUpperCase();
 if(isPublic){
  const dob=String(b.dateOfBirth||''),firstName=String(b.firstName||'').trim(),lastName=String(b.lastName||'').trim();
@@ -282,10 +283,25 @@ if(isPublic){
    }
    await client.query("INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,date_of_birth,phone,member_number) VALUES($1,$2,$3,$4,$5::date,$6,$7)",[business.id,firstName,lastName,String(b.email).toLowerCase(),dob,String(b.phone||''),issuedMemberNumber]);
   }
+  // The client directory is not only appointment-derived: persist the first booking
+  // as a managed profile, and reuse that profile on all subsequent bookings.
+  const normalizedName=(firstName+' '+lastName).trim().replace(/\\s+/g,' ').toLowerCase();
+  const contactEmail=String(b.email).trim().toLowerCase();
+  const contactPhone=String(b.phone||'').trim().slice(0,40);
+  const priorProfile=(await client.query(
+   "SELECT id FROM business_client_profiles WHERE owner=$1 AND deleted_at IS NULL AND (member_number=$2 OR (member_number IS NULL AND lower(trim(name))=$3 AND (lower(trim(email))=$4 OR (phone<>'' AND phone=$5)) AND (date_of_birth IS NULL OR date_of_birth=$6::date))) ORDER BY CASE WHEN member_number=$2 THEN 0 ELSE 1 END,created_at ASC LIMIT 1 FOR UPDATE",
+   [owner,issuedMemberNumber,normalizedName,contactEmail,contactPhone,dob]
+  )).rows[0];
+  if(priorProfile){
+   await client.query("UPDATE business_client_profiles SET member_number=$1,date_of_birth=COALESCE(date_of_birth,$2::date),phone=CASE WHEN trim(phone)='' THEN $3 ELSE phone END,archived=FALSE,updated_at=now() WHERE id=$4",
+    [issuedMemberNumber,dob,contactPhone,priorProfile.id]);
+  }else{
+   await client.query("INSERT INTO business_client_profiles(id,owner,name,email,phone,notes,import_columns,member_number,date_of_birth) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9::date)",
+    [crypto.randomUUID(),owner,firstName+' '+lastName,contactEmail,contactPhone,'First online booking',JSON.stringify(customAnswers),issuedMemberNumber,dob]);
+  }
   await client.query('COMMIT');
  }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
 }
-const customAnswers=sanitizeBookingAnswers(config.bookingCustomFields||[],b.customAnswers);
 const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID();const data:any={name:b.name.trim(),email:b.email,phone:String(b.phone||'').slice(0,40),services:services.map((s:any)=>s.name),price:services.reduce((a:number,s:any)=>a+s.price,0),channel:isPublic?'Online booking':b.channel==='Booking portal'?'Booking portal':'Front desk',created:new Date().toISOString()};data.serviceIds=services.map((s:any)=>s.id);data.customAnswers=customAnswers;data.memberNumber=isPublic?issuedMemberNumber:null;data.policyAccepted=isPublic?b.policyAccepted===true:null;data.policyAcceptedAt=isPublic?new Date().toISOString():null;data.customFieldLabels=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.label]));const bookedSession=selectedSession(config,b.date,b.staff,services,b.start);if(bookedSession)data.sessionId=bookedSession.id;
  if(isPublic&&(approvalSettings(config).enabled||services.some((service:any)=>service.requiresApproval===true))){
   const approval=services.some((service:any)=>service.requiresApproval===true)&&!approvalSettings(config).enabled?{reviewer:'owner'}:approvalSettings(config);
