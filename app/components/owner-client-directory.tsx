@@ -13,7 +13,7 @@ type FormField={id:string;label:string;type:string;options?:string[]};
 type Visit={
  id:string;date:string;time:number;duration:number;serviceNames:string[];serviceTypes:string[];
  staff:string;status:string;attended:boolean;sessionType:string;quotedPrice:number;
- answers?:Answer[];customerName?:string;customerEmail?:string;customerPhone?:string;customerMemberNumber?:string;dateOfBirth?:string;firstName?:string;lastName?:string;
+ answers?:Answer[];originalAnswers?:Answer[];customerName?:string;customerEmail?:string;customerPhone?:string;customerMemberNumber?:string;dateOfBirth?:string;firstName?:string;lastName?:string;
  originalSubmission?:{customerName:string;customerEmail:string;customerPhone:string;customAnswers?:Record<string,string|boolean>}|null;submittedAt?:string|null;policyAccepted?:boolean;policyAcceptedAt?:string|null;
 };
 type Client={
@@ -203,8 +203,8 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
       <div><small>Request received</small><b>{selected.firstBooking.submittedAt?new Date(selected.firstBooking.submittedAt).toLocaleString('en-US',{timeZone:'America/New_York'}):'Not available'}</b></div>
       <div><small>Booking policy consent</small><b>{selected.firstBooking.policyAccepted?'Accepted':'Not recorded'}</b></div>
      </div>
-     {!!selected.firstBooking.answers?.length&&<div className="sf-client-original-answers"><h4>Initial booking questions and answers</h4>
-      {selected.firstBooking.answers.map(answer=><div key={answer.id}><small>{answer.label}</small><b>{displayAnswer(selected.firstBooking?.originalSubmission?.customAnswers?.[answer.id]??answer.value)}</b></div>)}
+     {!!(selected.firstBooking.originalAnswers?.length||selected.firstBooking.answers?.length)&&<div className="sf-client-original-answers"><h4>Initial booking questions and answers</h4>
+      {(selected.firstBooking.originalAnswers?.length?selected.firstBooking.originalAnswers:selected.firstBooking.answers||[]).map(answer=><div key={answer.id}><small>{answer.label}</small><b>{displayAnswer(answer.value)}</b></div>)}
      </div>}
     </section>}
     <div className="sf-client-metrics">
