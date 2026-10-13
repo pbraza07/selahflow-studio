@@ -9,7 +9,7 @@ export default function VerifyRegistration({api,onVerified}:{api:string;onVerifi
  <h3><CalendarCheck size={20}/> Check My Registration</h3>
  <p className="muted">Enter your unique membership ID to view your most recent appointment and confirmation status.</p>
  <form onSubmit={lookup} style={{display:'grid',gap:12}}>
- <label>Membership ID<input required value={memberNumber} maxLength={8} pattern="[A-Za-z]{2}[0-9]{6}" placeholder="AB031500" autoComplete="off" onChange={e=>setMemberNumber(e.target.value.toUpperCase())}/></label>
+ <label>Membership ID<input required value={memberNumber} maxLength={6} pattern="[A-Za-z]{2}[0-9]{4}" placeholder="AB0315" autoComplete="off" onChange={e=>setMemberNumber(e.target.value.toUpperCase())}/></label>
  <button type="submit" className="primary" disabled={busy}>{busy?'Checking…':'Check appointment status'}</button>
  </form>
  {error&&<p role="alert" style={{color:'#b42318'}}>{error}</p>}
