@@ -176,7 +176,7 @@ export async function POST(req:Request){
    if(!plan)throw Error('Choose a membership package for this business.');
    // A player has one permanent ID per business, independent of their membership package.
    // Serialize enrollment checks by business and normalized identity to avoid concurrent duplicate IDs.
-   const normalizedName=name.normalize('NFKC').trim().replace(/\\s+/g,' ').toLowerCase();
+   const normalizedName=name.normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
    const identityKey=business.id+'|'+normalizedName+'|'+dob;
    const identityLock=await pool.connect();
    try{
@@ -184,22 +184,30 @@ export async function POST(req:Request){
     await identityLock.query('SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))',[business.id,identityKey]);
     const prior=await identityLock.query("SELECT id,member_number,status,customer_name,customer_email,date_of_birth FROM customer_memberships WHERE business_id=$1 AND ((lower(trim(regexp_replace(customer_name,'\\s+',' ','g')))=$2 AND date_of_birth=$3::date) OR (lower(trim(regexp_replace(customer_name,'\\s+',' ','g')))=$2 AND lower(trim(customer_email))=$4)) ORDER BY created_at ASC NULLS LAST,id ASC LIMIT 1",[business.id,normalizedName,dob,email]);
     if(prior.rows[0]){
-     if(prior.rows[0].date_of_birth&&String(prior.rows[0].date_of_birth).slice(0,10)!==dob)throw Error('A member with this name and email already exists with a different birth date. Review the existing profile.');
+     if(prior.rows[0].date_of_birth&&new Date(prior.rows[0].date_of_birth).toISOString().slice(0,10)!==dob)throw Error('A member with this name and email already exists with a different birth date. Review the existing profile.');
      await identityLock.query('COMMIT');
      return Response.json({ok:true,existingMember:true,memberNumber:prior.rows[0].member_number,paymentStatus:prior.rows[0].status,message:'This player is already registered. Use their existing membership ID for activation or renewal.'},{headers});
     }
    for(let attempt=0;attempt<1;attempt++){
     const requested=String(input.memberNumber||'').trim().toUpperCase();
-    const initials=(name.trim().split(/\\s+/)[0]?.[0]||'X').toUpperCase()+(name.trim().split(/\\s+/).slice(-1)[0]?.[0]||'X').toUpperCase();
+    const initials=(name.trim().split(/\s+/)[0]?.[0]||'X').toUpperCase()+(name.trim().split(/\s+/).slice(-1)[0]?.[0]||'X').toUpperCase();
     if(requested&&!new RegExp('^'+initials+dob.slice(5,7)+dob.slice(8,10)+'$').test(requested))throw Error('Membership ID must match initials and birth month/day.');
     const number=requested||initials+dob.slice(5,7)+dob.slice(8,10);
     const bookingId=(await identityLock.query("SELECT member_number,first_name,last_name,date_of_birth FROM customer_booking_ids WHERE business_id=$1 AND member_number=$2 LIMIT 1",[business.id,number])).rows[0];
-    if(bookingId&&(String(bookingId.first_name+' '+bookingId.last_name).trim().toLowerCase()!==normalizedName||String(bookingId.date_of_birth).slice(0,10)!==dob))throw Error('This six-character ID belongs to another customer. The initials and birth month/day combination is not unique; registration requires a different ID policy.');
+    if(bookingId&&(String(bookingId.first_name+' '+bookingId.last_name).trim().toLowerCase()!==normalizedName||new Date(bookingId.date_of_birth).toISOString().slice(0,10)!==dob))throw Error('This six-character ID belongs to another customer. The initials and birth month/day combination is not unique; registration requires a different ID policy.');
     const existingId=(await identityLock.query("SELECT 1 FROM customer_memberships WHERE business_id=$1 AND member_number=$2 LIMIT 1",[business.id,number])).rowCount;
     if(existingId)throw Error('This six-character ID already belongs to another member. The ID format cannot distinguish customers sharing initials and birthday.');
     const result=await identityLock.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used,date_of_birth) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0,$9) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0,dob]);
     if(result.rows[0]){
-     await identityLock.query('INSERT INTO business_client_profiles(id,owner,source_key,name,email,phone,notes,archived,import_columns) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,$4,$5,$6,$7,false,$8) ON CONFLICT DO NOTHING',[randomUUID(),business.id,'membership:'+result.rows[0].id,name,email,phone,'Membership registration',JSON.stringify(customAnswers)]).catch(()=>{});
+     const matchingProfile=(await identityLock.query(
+      "SELECT id FROM business_client_profiles WHERE owner=(SELECT owner_id FROM businesses WHERE id=$1) AND deleted_at IS NULL AND (member_number=$2 OR (member_number IS NULL AND lower(trim(name))=$3 AND lower(trim(email))=$4)) ORDER BY CASE WHEN member_number=$2 THEN 0 ELSE 1 END,created_at ASC LIMIT 1 FOR UPDATE",
+      [business.id,number,normalizedName,email]
+     )).rows[0];
+     if(matchingProfile){
+      await identityLock.query("UPDATE business_client_profiles SET member_number=$1,date_of_birth=COALESCE(date_of_birth,$2::date),phone=CASE WHEN trim(phone)='' THEN $3 ELSE phone END,updated_at=now() WHERE id=$4",[number,dob,phone,matchingProfile.id]);
+     }else{
+      await identityLock.query("INSERT INTO business_client_profiles(id,owner,name,email,phone,notes,import_columns,member_number,date_of_birth) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,$4,$5,$6,$7::jsonb,$8,$9::date)",[randomUUID(),business.id,name,email,phone,'Membership registration',JSON.stringify(customAnswers),number,dob]);
+     }
      await identityLock.query('COMMIT');
      return Response.json({ok:true,memberNumber:number,paymentStatus:'pending_payment'},{headers});
     }
