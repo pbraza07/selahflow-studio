@@ -61,7 +61,7 @@ export async function changeAppointmentStatus(client,{owner,appointmentId,status
  }catch{}
  // Older bookings did not always store an ID, although the client already had
  // one. Link only when full name and email identify exactly one player.
- if(!memberNumber){
+ if(!memberNumber&&String(appointmentData.name||appointmentData.customerName||'').trim()&&String(appointmentData.email||appointmentData.customerEmail||'').trim()){
   const roster=await loadOwnerMemberRoster(client,owner);
   memberNumber=ownerAppointmentMember(appointmentData,roster).memberNumber;
   if(memberNumber){
