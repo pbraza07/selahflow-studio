@@ -83,7 +83,8 @@ test('owner team setting uses the approved extra capacity and admin UI manages r
  assert.match(studio,/business_team_seat_requests/);
  assert.match(studio,/team member request/i);
  assert.match(business,/approved_extra_team_seats/);
- assert.match(business,/teamLimit:bookableTeamLimit/);
+ assert.match(business,/teamLimit:assignedTeam/);
+ assert.match(business,/bookableTeamLimit\(row.plan_code,row.subscription_status,row.approved_extra_team_seats\)/);
  assert.match(ownerUI,/OwnerExtraTeamSeatRequest/);
  assert.match(ownerUI,/refreshTeamAllowance/);
  assert.match(ownerComponent,/Send request to platform administrator/);

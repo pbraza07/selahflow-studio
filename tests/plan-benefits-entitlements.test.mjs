@@ -99,7 +99,7 @@ test('owner, membership and admin APIs apply database-backed plan benefits rathe
   read('app/studio/owner-dashboard.tsx'),read('app/components/platform-plan-entitlements.tsx')
  ]);
  assert.match(studio,/checkSubscriptionLimits\(planRow,oldConfig,c\)/);
- assert.match(business,/planBenefits:planEntitlements\(row\.plan_code,row\.subscription_status\)/);
+ assert.match(business,/planBenefits:assigned/);
  assert.match(memberships,/activeMembershipLimit\(record\?\.plan_code,record\?\.status\)/);
  assert.match(memberships,/pg_advisory_xact_lock/);
  assert.match(owner,/sf-settings-plan-summary/);

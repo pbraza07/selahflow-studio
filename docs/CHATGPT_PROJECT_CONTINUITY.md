@@ -66,3 +66,7 @@ This repository documentation helps when ChatGPT inspects connected GitHub, but 
 4. Optionally upload this Markdown file to the Project's files/knowledge so new chats can find the detailed handoff.
 
 The ChatGPT assistant cannot directly edit the Project's settings from a conversation. After these steps, new chats in this Project can use these rules; still re-check the LIVE deploy each time.
+
+## 2026-10-13 — v1.3.60 release handoff
+
+Verified prior LIVE baseline: v1.3.59, commit `85601176bb5a0acdb430c18753965110f5f4f150`, Render `dep-db724u2bt3mc73dvl0m0`. The requested Overview IDs, once-only attendance deductions, neutral exhausted badges, and additive renewal with preserved history are present in that baseline. v1.3.60 carries these forward and makes health and visible version labels follow package.json. No data migrations or rewrites. Verify the v1.3.60 deployment independently; this source note is not a LIVE claim.

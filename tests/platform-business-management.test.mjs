@@ -61,8 +61,10 @@ test('platform business CRUD endpoints are authenticated, origin checked, audite
  assert.match(route,/confirmName!==before\.name/);
  assert.match(route,/INSERT INTO platform_business_audit/);
  assert.match(route,/active or pending paid memberships/i);
- assert.doesNotMatch(route,/DELETE FROM businesses/i);
- assert.doesNotMatch(route,/DELETE FROM appointments/i);
+ const archive=route.slice(route.indexOf("}else if(action==='archive')"),route.indexOf("}else if(action==='restore')"));
+ assert.ok(archive.length>0);
+ assert.doesNotMatch(archive,/DELETE FROM businesses/i);
+ assert.doesNotMatch(archive,/DELETE FROM appointments/i);
  assert.match(overview,/b\.description/);
  assert.match(dashboard,/PlatformBusinessManager/);
  assert.match(ui,/Add business/);

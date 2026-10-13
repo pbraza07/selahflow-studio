@@ -27,5 +27,5 @@ test('original Crawford migration remains unchanged',async()=>{
  const source=await read('scripts/migrate.mjs');
  assert.match(source,/const slug='crawford'/);
  const health=await read('app/api/health/route.ts');
- assert.match(health,/version:'1.3.15'/);
+ assert.match(health,/version:APP_VERSION/);
 });

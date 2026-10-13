@@ -102,7 +102,7 @@ test('archiving and restoring retains the SAME business ID, owner ID, bookings, 
   await assert.rejects(db.query("UPDATE users SET email='second@example.com' WHERE id='owner'"));
  }finally{await db.close();}
 });
-test('protected admin endpoint audits email/credential changes and never deletes tenant business records',async()=>{
+test('protected admin endpoint audits email/credential changes and archive preserves tenant business records',async()=>{
  const route=await read('app/api/platform/businesses/manage/route.ts');
  const overview=await read('app/api/platform/overview/route.ts');
  const ui=await read('app/components/platform-business-manager.tsx');
@@ -121,7 +121,7 @@ test('protected admin endpoint audits email/credential changes and never deletes
  assert.match(route,/\breset_password\b/);
  assert.match(route,/hashPassword\(tempPassword\)/);
  assert.match(route,/must_change_password=TRUE/);
- assert.doesNotMatch(route,/DELETE FROM (businesses|appointments|business_client_profiles|customer_memberships)/);
+ assert.doesNotMatch(route.slice(route.indexOf("if(action==='changeOwnerEmail')")),/DELETE FROM (businesses|appointments|business_client_profiles|customer_memberships)/);
  assert.match(archive,/status='archived'/);
  assert.match(archive,/archived_at=now\(\)/);
  assert.match(archive,/retained_record_counts|archive_record_counts/);

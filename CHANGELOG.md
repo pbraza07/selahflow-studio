@@ -1,3 +1,11 @@
+## v1.3.60 — Verified member ID, attendance credits and badge lifecycle
+- Carries forward the live Overview member ID and package badge implementation.
+- Check in and No-show consume one available session per appointment; repeat transitions cannot charge twice.
+- Exhausted memberships use the neutral permanent ID badge. Confirmed renewal adds purchased credits and restores the package color while preserving usage and payment history.
+- Health endpoint and visible release labels now derive their version from package.json.
+- No database migration or customer data rewrite is required.
+- Refreshed stale test fixtures for required booking identity fields, plan overrides, approval rules and archive-only retention checks; all 169 tests, TypeScript and production build pass.
+
 ## v1.3.50 — Client Excel import and booking share
 - Import .xlsx and .csv clients per business; preserve arbitrary source columns and display them on client details.
 - Match existing contacts, prevent duplicates within imported batch, and restrict import to active owner workspace.

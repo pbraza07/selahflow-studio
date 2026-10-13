@@ -12,7 +12,7 @@ test('repository VERSION marker matches package.json so new conversations have a
  assert.match(marker,/^\d+\.\d+\.\d+$/,'VERSION must be a semantic release version');
  assert.equal(marker,pkg.version,'Update VERSION whenever package.json version is incremented');
 });
-test('durable project context snapshot matches the actual version and requires update on new releases',async()=>{
+test('source release is documented separately from verified deployment snapshots',async()=>{
  const [agents,project,readme,rawPackage]=await Promise.all([
   readFile(new URL('AGENTS.md',root),'utf8'),
   readFile(new URL('docs/CHATGPT_PROJECT_CONTINUITY.md',root),'utf8'),
@@ -25,10 +25,10 @@ test('durable project context snapshot matches the actual version and requires u
  assert.match(agents,/tenant/i);
  assert.match(project,/Project Instructions/);
  assert.match(project,/not automatically injected/i);
- assert.equal(agents.match(/Snapshot verified[^\n]*\*\*v(\d+\.\d+\.\d+) LIVE\*\*/)?.[1],version,
-  'Update the AGENTS.md snapshot when bumping the app version');
- assert.equal(project.match(/\| Live version \| \*\*(\d+\.\d+\.\d+)\*\*/)?.[1],version,
-  'Update the ChatGPT project handoff snapshot when bumping the app version');
- assert.equal(readme.match(/Current snapshot[^\n]*v(\d+\.\d+\.\d+) LIVE/)?.[1],version,
-  'Update the README snapshot on each new functional release');
+ assert.ok(project.includes('v'+version+' release handoff'),'Document the current source release without claiming it is live');
+ assert.ok(readme.includes('Release source: v'+version),'README identifies the source release');
+ const health=await readFile(new URL('app/api/health/route.ts',root),'utf8');
+ const shared=await readFile(new URL('lib/app-version.ts',root),'utf8');
+ assert.match(health,/version:APP_VERSION/);
+ assert.match(shared,/APP_VERSION = packageInfo.version/);
 });

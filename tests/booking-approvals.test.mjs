@@ -49,7 +49,7 @@ test('v1.3.9 migration preserves existing confirmed bookings and creates pending
 });
 test('v1.3.9 public booking is pending only when enabled; staff access is limited',async()=>{
  const handler=await read('lib/studio-handler.ts');
- assert.match(handler,/isPublic&&approvalSettings\(config\).enabled/);
+ assert.match(handler,/isPublic&&\(approvalSettings\(config\).enabled\|\|services.some/);
  assert.match(handler,/INSERT INTO booking_requests/);
  assert.match(handler,/confirmBooking\(/);
  assert.match(handler,/capacityOpen:serviceCapacityOpen/);
