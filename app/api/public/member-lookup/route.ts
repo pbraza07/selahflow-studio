@@ -5,7 +5,7 @@ export async function POST(req:Request){
  try{
   const body=await req.json();
   const slug=String(body.slug||'').trim(),memberNumber=String(body.memberNumber||'').trim().toUpperCase(),dob=String(body.dateOfBirth||'');
-  if(!slug||!/^[A-Z]{2}[0-9]{6}$/.test(memberNumber)||!/^\d{4}-\d{2}-\d{2}$/.test(dob))return Response.json({error:'Enter your membership ID and date of birth.'},{status:400,headers:{'Cache-Control':'no-store'}});
+  if(!slug||!/^[A-Z]{2}[0-9]{4}$/.test(memberNumber)||!/^\d{4}-\d{2}-\d{2}$/.test(dob))return Response.json({error:'Enter your membership ID and date of birth.'},{status:400,headers:{'Cache-Control':'no-store'}});
   const db=getPool();
   const q=await db.query("SELECT m.customer_name,m.customer_email,m.member_number,b.owner_id FROM customer_memberships m JOIN businesses b ON b.id=m.business_id WHERE b.slug=$1 AND b.status='active' AND m.member_number=$2 AND m.date_of_birth=$3::date LIMIT 1",[slug,memberNumber,dob]);
   if(!q.rows[0])return Response.json({error:'Member ID and birth date did not match.'},{status:404,headers:{'Cache-Control':'no-store'}});
