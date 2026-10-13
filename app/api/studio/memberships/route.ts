@@ -172,18 +172,33 @@ export async function POST(req:Request){
    const parts=name.split(/\s+/),initials=(parts[0][0]+(parts.length>1?parts[parts.length-1][0]:'X')).toUpperCase().replace(/[^A-Z]/g,'X');
    const plan=(await pool.query('SELECT id,price_cents,sessions_included FROM membership_plans WHERE business_id=$1 AND id=$2',[business.id,planId])).rows[0];
    if(!plan)throw Error('Choose a membership package for this business.');
+   // A player has one permanent ID per business, independent of their membership package.
+   // Serialize enrollment checks by business and normalized identity to avoid concurrent duplicate IDs.
+   const normalizedName=name.normalize('NFKC').trim().replace(/\\s+/g,' ').toLowerCase();
+   const identityKey=business.id+'|'+normalizedName+'|'+email;
+   const identityLock=await pool.connect();
+   try{
+    await identityLock.query('BEGIN');
+    await identityLock.query('SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))',[business.id,identityKey]);
+    const prior=await identityLock.query("SELECT id,member_number,status,customer_name,customer_email FROM customer_memberships WHERE business_id=$1 AND lower(trim(regexp_replace(customer_name,'\\s+',' ','g')))= $2 AND lower(trim(customer_email))=$3 ORDER BY created_at ASC NULLS LAST,id ASC LIMIT 1",[business.id,normalizedName,email]);
+    if(prior.rows[0]){
+     await identityLock.query('COMMIT');
+     return Response.json({ok:true,existingMember:true,memberNumber:prior.rows[0].member_number,paymentStatus:prior.rows[0].status,message:'This player is already registered. Use their existing membership ID for activation or renewal.'},{headers});
+    }
    for(let attempt=0;attempt<12;attempt++){
     const requested=String(input.memberNumber||'').trim().toUpperCase();
     if(requested&&!new RegExp('^'+initials+'[0-9]{6}$').test(requested))throw Error('Member number must match initials plus six digits.');
     const number=requested||initials+String(randomInt(0,1000000)).padStart(6,'0');
-    const result=await pool.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0]);
+    const result=await identityLock.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0]);
     if(result.rows[0]){
-     await pool.query('INSERT INTO business_client_profiles(id,owner,source_key,name,email,phone,notes,archived,import_columns) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,$4,$5,$6,$7,false,$8) ON CONFLICT DO NOTHING',[randomUUID(),business.id,'membership:'+result.rows[0].id,name,email,phone,'Membership registration',JSON.stringify(customAnswers)]).catch(()=>{});
+     await identityLock.query('INSERT INTO business_client_profiles(id,owner,source_key,name,email,phone,notes,archived,import_columns) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,$4,$5,$6,$7,false,$8) ON CONFLICT DO NOTHING',[randomUUID(),business.id,'membership:'+result.rows[0].id,name,email,phone,'Membership registration',JSON.stringify(customAnswers)]).catch(()=>{});
+     await identityLock.query('COMMIT');
      return Response.json({ok:true,memberNumber:number,paymentStatus:'pending_payment'},{headers});
     }
     if(requested)throw Error('This membership number is already in use.');
    }
    throw Error('Unable to allocate a unique membership number.');
+   }catch(e){await identityLock.query('ROLLBACK');throw e;}finally{identityLock.release();}
   }
   if(input.action==='updateMember'){
    const id=String(input.id||''),planId=String(input.planId||'');
