@@ -41,7 +41,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
  useEffect(()=>{void reload();const changed=()=>void reload();window.addEventListener('selahflow:booking-reviewed',changed);
   return ()=>window.removeEventListener('selahflow:booking-reviewed',changed);},[reload]);
  const filtered=useMemo(()=>clients.filter(c=>
-  [c.name,c.email,c.phone,c.serviceTypes.join(' '),c.serviceNames.join(' ')].join(' ').toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())
+  [c.name,c.email,c.phone,c.memberNumber||'',c.serviceTypes.join(' '),c.serviceNames.join(' ')].join(' ').toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())
  ),[clients,search]);
  const selected=clients.find(c=>c.id===selectedId);
  const visited=selected?selected.history.filter(v=>!attendedOnly||v.attended):[];
@@ -132,7 +132,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    </div>
    <article className="sf-client-profile">
     <div className="sf-client-profile-heading"><span className="sf-client-avatar" aria-hidden="true">{selected.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span>
-     <div><h3>{selected.name} {selected.membershipName&&<span style={{display:'inline-block',borderRadius:8,padding:'4px 10px',marginLeft:8,color:'white',background:/gold/i.test(selected.membershipName)?'#a67c00':/pro/i.test(selected.membershipName)?'#b91c1c':/academy/i.test(selected.membershipName)?'#2563eb':'#475569'}}>{selected.membershipName} · {selected.memberNumber||'Member'}</span>}</h3><p>{selected.email||'No email recorded'}{selected.phone?' · '+selected.phone:''}</p>
+     <div><h3>{selected.name} {selected.membershipName&&<span style={{display:'inline-block',borderRadius:8,padding:'4px 10px',marginLeft:8,color:'white',background:/gold/i.test(selected.membershipName)?'#a67c00':/pro/i.test(selected.membershipName)?'#b91c1c':/academy/i.test(selected.membershipName)?'#2563eb':'#475569'}}>{selected.membershipName} · {selected.memberNumber||'Member'}</span>}{!selected.membershipName&&selected.memberNumber&&<span style={{display:'inline-block',borderRadius:8,padding:'4px 10px',marginLeft:8,background:'#fff2a8',color:'#392b00',fontWeight:700}}>Membership ID: {selected.memberNumber}</span>}</h3><p>{selected.email||'No email recorded'}{selected.phone?' · '+selected.phone:''}</p>
       <span className="sf-client-profile-note">Service history and attendance for this business only</span></div>
     </div>
     {selected.firstBooking&&<section className="sf-client-first-booking">
