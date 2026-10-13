@@ -19,7 +19,7 @@ const humanDate=(date:string)=>date?new Date(date+'T12:00:00Z').toLocaleDateStri
  {month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}):'—';
 const money=(amount:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(amount||0);
 
-export default function OwnerClientDirectory({onBook}:{onBook:()=>void}){
+export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()=>void;onAddMembership:(client:{name:string;email:string;phone:string})=>void}){
  const importInput=useRef<HTMLInputElement>(null);
  const [importing,setImporting]=useState(false),[importMessage,setImportMessage]=useState('');
  const [clients,setClients]=useState<Client[]>([]),[selectedId,setSelectedId]=useState<string|null>(null);
@@ -125,7 +125,7 @@ export default function OwnerClientDirectory({onBook}:{onBook:()=>void}){
    <div className="sf-client-detail-nav">
     <button type="button" className="outline" onClick={()=>{setSelectedId(null);setAttendedOnly(false);}}><ArrowLeft size={17}/> Back to clients</button>
     <div className="sf-client-management-buttons">
-     <button type="button" className="outline" onClick={()=>beginEdit(selected)}><Pencil size={16}/> Edit client</button>
+     <button type="button" className="outline" onClick={()=>beginEdit(selected)}><Pencil size={16}/> Edit client</button><button type="button" className="outline" onClick={()=>onAddMembership({name:selected.name,email:selected.email,phone:selected.phone})}>Add membership</button>
      <a className="primary sf-clients-export" href={exported(selected.id)}><Download size={16}/> Export this client to Excel</a>
      <button type="button" className="outline sf-client-remove" disabled={!!actionBusy} onClick={()=>void removeClient(selected)}><Trash2 size={16}/> Remove client</button>
     </div>
