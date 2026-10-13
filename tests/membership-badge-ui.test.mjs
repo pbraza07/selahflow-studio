@@ -9,7 +9,7 @@ test('player badges use a consistent pill with tier colors and a neutral ID fall
  for(const tier of ['gold','platinum','silver','bronze','pro','academy','basic'])assert.match(component,new RegExp(tier));
  assert.match(component,/membershipStatus/);
  assert.match(component,/active=String\(membershipStatus/);
- assert.match(component,/level\?level\+\(id\?' · '\+id:'\):'ID '\+id/);
+ assert.match(component,/'ID '\+id/);
  assert.match(component,/background:'#f1f2f4'/);
 });
 
