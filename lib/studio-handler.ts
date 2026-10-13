@@ -111,7 +111,7 @@ if(b.action==='registration_code_request'){
  const email=String(b.email||'').trim().toLowerCase();
  if(!validEmail(email))return reply({error:'Enter a valid email address.'},400);
  const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();
- if(!await takeLimit('registration-code-ip:'+owner+':'+tokenHash(ip),8)||!await takeLimit('registration-code-email:'+owner+':'+tokenHash(email),3))return reply({error:'Too many requests. Try again later.'},429);
+ if(!await takeLimit('registration-code-ip:'+owner+':'+tokenHash(ip),8)||!await takeLimit('registration-code-email:'+owner+':'+tokenHash(memberNumber),3))return reply({error:'Too many requests. Try again later.'},429);
  if(!deliveryProviderStatus().emailConfigured)return reply({error:'Email verification is currently unavailable. Please contact the business.'},503);
  const code=String(randomInt(0,1000000)).padStart(6,'0'),hash=tokenHash(owner+':'+email+':'+code);
  const sent=await sendNotificationChannel('email',email,{subject:'SelahFlow registration verification code',text:'Your SelahFlow registration verification code is '+code+'. It expires in 10 minutes. If you did not request this, ignore this message.'});
@@ -149,13 +149,13 @@ if(b.action==='registration_email_lookup'){
  return reply({ok:true,registrations:matches.slice(0,100)});
 }
 if(b.action==='registration_latest_status'){
- const email=String(b.email||'').trim().toLowerCase(),name=String(b.name||'').trim().toLowerCase().replace(/\s+/g,' ');
- if(!validEmail(email)||name.length<2||name.length>100)return reply({error:'Enter your full name and booking email.'},400);
+ const memberNumber=String(b.memberNumber||'').trim().toUpperCase();
+ if(!/^[A-Z]{2}[0-9]{4}$/.test(memberNumber))return reply({error:'Enter your six-character membership ID.'},400);
  const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();
  if(!await takeLimit('latest-status-ip:'+owner+':'+tokenHash(ip),8)||!await takeLimit('latest-status-email:'+owner+':'+tokenHash(email),8))return reply({error:'Too many searches. Try again later.'},429);
  const requests=(await db().prepare('SELECT status,date,details,appointment_id FROM booking_requests WHERE owner_id=? ORDER BY created_at DESC LIMIT 500').bind(owner).all()).results as any[];
  const appointments=(await db().prepare('SELECT id,status,date,data FROM appointments WHERE owner=? ORDER BY date DESC LIMIT 500').bind(owner).all()).results as any[];
- const match=(d:any)=>String(d.email||d.customerEmail||'').trim().toLowerCase()===email&&String(d.name||d.customerName||'').trim().toLowerCase().replace(/\s+/g,' ')===name;
+ const match=(d:any)=>String(d.memberNumber||'').trim().toUpperCase()===memberNumber;
  const results:{date:string;status:string}[]=[];
  for(const r of requests){
   let d:any={};try{d=JSON.parse(r.details||'{}');}catch{}
