@@ -24,9 +24,9 @@ export function restoreBookingCustomAnswers(fields, ...sources){
 
 /** Prefer the latest submitted registration, keeping existing client edits as backup. */
 export function restoredContact(identity={},profile={},latest={}){
- const parts=String(profile.name||latest.name||latest.customerName||identity.customer_name||'').trim().split(/\s+/);
- const firstName=String(latest.firstName||parts[0]||'').trim();
- const lastName=String(latest.lastName||parts.slice(1).join(' ')||'').trim();
+ const parts=String(identity.customer_name||profile.name||latest.name||latest.customerName||'').trim().split(/\s+/);
+ const firstName=String(parts[0]||latest.firstName||'').trim();
+ const lastName=String(parts.slice(1).join(' ')||latest.lastName||'').trim();
  return {
   firstName,lastName,
   email:String(profile.email||latest.email||latest.customerEmail||identity.customer_email||'').trim(),
