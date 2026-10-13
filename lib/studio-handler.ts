@@ -248,7 +248,7 @@ if(b.action==='availability')return reply({slots:available,sessionAvailability:a
 if(b.key){const prior=await db().prepare('SELECT id FROM appointments WHERE owner=? AND id=?').bind(owner,b.key).first();if(prior)return reply({ok:true,id:prior.id});const pending=await db().prepare('SELECT id,status,appointment_id FROM booking_requests WHERE owner_id=? AND id=?').bind(owner,b.key).first<{id:string;status:string;appointment_id:string|null}>();if(pending)return reply({ok:true,id:pending.id,pending:pending.status==='pending',status:pending.status,appointmentId:pending.appointment_id});}if(b.expectedPrice!==services.reduce((a:number,s:any)=>a+s.price,0)||b.expectedDuration!==duration)return reply({error:'Service prices or durations changed. Refresh the studio and review your booking again.'},409);if(!available.includes(b.start))return reply({error:'That time is no longer available. Please choose another.'},409);if(typeof b.name!=='string'||typeof b.email!=='string'||!b.name.trim()||b.name.length>100||!/^\S+@\S+\.\S+$/.test(b.email)||b.email.length>200)throw Error('Enter a name and valid email.');if(isPublic){
  if(b.notMember!==true){
   const number=String(b.memberNumber||'').trim().toUpperCase();
-  if(!/^[A-Z]{2}[0-9]{6}$/.test(number))throw Error('Enter your member number or choose N/A.');
+  if(!/^[A-Z]{2}[0-9]{4}$/.test(number))throw Error('Enter your member number or choose N/A.');
   const membership=await db().prepare("SELECT m.id,m.customer_name,m.status FROM customer_memberships m JOIN businesses business ON business.id=m.business_id WHERE business.owner_id=? AND m.member_number=?").bind(owner,number).first() as any;
   if(!membership)throw Error('Member number was not found for this business.');
   if(String(membership.customer_name||'').trim().toLowerCase()!==String(b.name||'').trim().toLowerCase())throw Error('Member number does not match the booking name.');
@@ -273,8 +273,8 @@ if(isPublic){
    else{
     const initials=(firstName[0]+lastName[0]).toUpperCase().replace(/[^A-Z]/g,'X');
     const base=initials+dob.slice(5,7)+dob.slice(8,10);
-    for(let n=0;n<100;n++){
-     const candidate=base+String(n).padStart(2,'0');
+    for(let n=0;n<1;n++){
+     const candidate=base;
      const used=(await client.query("SELECT 1 FROM customer_memberships WHERE business_id=$1 AND member_number=$2 UNION ALL SELECT 1 FROM customer_booking_ids WHERE business_id=$1 AND member_number=$2 LIMIT 1",[business.id,candidate])).rowCount;
      if(!used){issuedMemberNumber=candidate;break;}
     }
