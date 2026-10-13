@@ -39,7 +39,7 @@ export default function OwnerMemberships({slug}:{slug:string}){
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function assignMember(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');
-  try{const r=await post('assignMember',{name:(memberFirst.trim()+' '+memberLast.trim()).trim(),firstName:memberFirst,lastName:memberLast,email:newMemberEmail,phone:memberPhone,customAnswers:memberAnswers,planId:newMemberPlan,memberNumber:manualMemberNumber});setMessage('Member assigned. Number: '+r.memberNumber+'. Payment remains pending until verified.');setNewMemberName('');setMemberFirst('');setMemberLast('');setMemberPhone('');setMemberAnswers({});setNewMemberEmail('');setManualMemberNumber('');await load();}
+  try{const r=await post('assignMember',{name:(memberFirst.trim()+' '+memberLast.trim()).trim(),firstName:memberFirst,lastName:memberLast,email:newMemberEmail,phone:memberPhone,customAnswers:memberAnswers,planId:newMemberPlan,memberNumber:manualMemberNumber});setMessage(r.existingMember?'Existing player found. Reuse membership ID '+r.memberNumber+'. No duplicate ID was created.':'Member assigned. Number: '+r.memberNumber+'. Payment remains pending until verified.');setNewMemberName('');setMemberFirst('');setMemberLast('');setMemberPhone('');setMemberAnswers({});setNewMemberEmail('');setManualMemberNumber('');await load();}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function confirmPayment(m:Member,renew=false){
