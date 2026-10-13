@@ -17,7 +17,7 @@ type Visit={
  originalSubmission?:{customerName:string;customerEmail:string;customerPhone:string;customAnswers?:Record<string,string|boolean>}|null;submittedAt?:string|null;policyAccepted?:boolean;policyAcceptedAt?:string|null;
 };
 type Client={
- memberNumber?:string;membershipName?:string;membershipStatus?:string;membershipAnswers?:Answer[];membershipDetails?:MembershipDetails;dateOfBirth?:string;
+ memberNumber?:string;membershipName?:string;membershipStatus?:string;membershipAnswers?:Answer[];membershipDetails?:MembershipDetails;membershipRegistration?:{name:string;firstName:string;lastName:string;email:string;phone:string;dateOfBirth:string;memberNumber:string};dateOfBirth?:string;
  id:string;name:string;email:string;phone:string;bookedSessions:number;attendedSessions:number;
  attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;importColumns?:Record<string,string|boolean>;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:Answer[];
 };
@@ -162,6 +162,12 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
     {selected.membershipName&&<section className="sf-client-first-booking sf-client-membership-registration">
      <div className="sf-client-history-heading"><h3>Membership registration</h3><small>Membership enrollment and the answers submitted when registering</small></div>
      <div className="sf-client-first-details">
+      <div><small>Registered full name</small><b>{selected.membershipRegistration?.name||selected.name}</b></div>
+      <div><small>Registered first name</small><b>{selected.membershipRegistration?.firstName||'Not available'}</b></div>
+      <div><small>Registered last name</small><b>{selected.membershipRegistration?.lastName||'Not available'}</b></div>
+      <div><small>Registered email</small><b>{selected.membershipRegistration?.email||'Not provided'}</b></div>
+      <div><small>Registered phone</small><b>{selected.membershipRegistration?.phone||'Not provided'}</b></div>
+      <div><small>Registered birth date</small><b>{selected.membershipRegistration?.dateOfBirth?humanDate(selected.membershipRegistration.dateOfBirth):'Not recorded'}</b></div>
       <div><small>Membership package</small><b>{selected.membershipName}</b></div>
       <div><small>Membership ID</small><b>{selected.memberNumber||'Not assigned'}</b></div>
       <div><small>Enrollment status</small><b>{selected.membershipStatus?.replaceAll('_',' ')||'Not available'}</b></div>
