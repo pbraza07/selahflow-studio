@@ -118,13 +118,21 @@ export function buildClientDirectory(appointments,settings={},owner=''){
    const current=(settings.bookingCustomFields||[]).find(f=>f.id===key);
    return {id:key,label:clean(labels[key]||current?.label||key,80),value:typeof value==='boolean'?value:clean(value,500),type:savedTypes[key]||current?.type||(typeof value==='boolean'?'checkbox':'text')};
   });
+  const original=data.originalSubmission&&typeof data.originalSubmission==='object'?data.originalSubmission:null;
+  const originalAnswers=original?.customAnswers&&typeof original.customAnswers==='object'
+   ?Object.entries(original.customAnswers).map(([key,value])=>{
+     const current=(settings.bookingCustomFields||[]).find(f=>f.id===key);
+     return {id:key,label:clean(labels[key]||current?.label||key,80),
+      value:typeof value==='boolean'?value:clean(value,500),
+      type:savedTypes[key]||current?.type||(typeof value==='boolean'?'checkbox':'text')};
+    }):[];
   const visit={
    id:String(row.id),date,time:Number(row.start)||0,duration:Number(row.duration)||0,
    serviceNames,serviceTypes:types,staff,status,attended,
    sessionType:data.sessionId?'Group session':'Individual appointment',
    quotedPrice:Number(data.price)||0,
    customerEmail:email,customerPhone:phone,customerName:name,customerMemberNumber:data.memberNumber||null,dateOfBirth:clean(data.dateOfBirth,10),firstName:clean(data.firstName,50),lastName:clean(data.lastName,50),
-   answers,originalSubmission:data.originalSubmission||null,
+   answers,originalAnswers,originalSubmission:data.originalSubmission||null,
    submittedAt:data.created||null,policyAccepted:data.policyAccepted===true,policyAcceptedAt:data.policyAcceptedAt||null
   };
   client.history.push(visit);
