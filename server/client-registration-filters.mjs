@@ -1,4 +1,5 @@
 import {displayAnswer,dateOnly} from './client-registration-fields.mjs';
+import {hasUsableMembership} from './member-badge-state.mjs';
 
 /** Read only owner-visible client-directory data; no remote operations. */
 const STANDARD_FILTERS=Object.freeze([
@@ -79,8 +80,9 @@ export function registrationFieldCatalog(clients,formFields=[]){
 export function filterRegistrationClients(clients,{search='',membershipLevel='',fieldKey='',fieldValue=''}={}){
  const q=text(search).toLowerCase(),level=text(membershipLevel),fieldQ=text(fieldValue).toLowerCase();
  return (clients||[]).filter(c=>{
-  if(level==='__no_active__'&&c.membershipStatus==='active')return false;
-  if(level&&level!=='__no_active__'&&c.membershipName!==level)return false;
+  const usable=hasUsableMembership({status:c.membershipStatus,sessionsIncluded:c.membershipDetails?.sessionsIncluded,sessionsUsed:c.membershipDetails?.sessionsUsed});
+  if(level==='__no_active__'&&usable)return false;
+  if(level&&level!=='__no_active__'&&(!usable||c.membershipName!==level))return false;
   if(q){
    const basic=[c.name,c.email,c.phone,c.dateOfBirth,c.memberNumber,c.membershipName,c.membershipStatus,...(c.serviceNames||[]),...(c.serviceTypes||[]),...Object.values(c.membershipRegistration||{}),...(c.history||[]).flatMap(h=>[h.customerName,h.customerEmail,h.customerPhone,h.dateOfBirth,h.customerMemberNumber,...Object.values(h.originalSubmission||{})].filter(v=>typeof v==='string'))];
    const answers=[...(c.membershipAnswers||[]),...(c.history||[]).flatMap(h=>[...(h.answers||[]),...(h.originalAnswers||[])])].flatMap(a=>[a.label,displayAnswer(a.value)]);
