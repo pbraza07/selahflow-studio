@@ -82,7 +82,7 @@ export function filterRegistrationClients(clients,{search='',membershipLevel='',
   if(level==='__no_active__'&&c.membershipStatus==='active')return false;
   if(level&&level!=='__no_active__'&&c.membershipName!==level)return false;
   if(q){
-   const basic=[c.name,c.email,c.phone,c.dateOfBirth,c.memberNumber,c.membershipName,c.membershipStatus,...(c.serviceNames||[]),...(c.serviceTypes||[])];
+   const basic=[c.name,c.email,c.phone,c.dateOfBirth,c.memberNumber,c.membershipName,c.membershipStatus,...(c.serviceNames||[]),...(c.serviceTypes||[]),...Object.values(c.membershipRegistration||{}),...(c.history||[]).flatMap(h=>[h.customerName,h.customerEmail,h.customerPhone,h.dateOfBirth,h.customerMemberNumber,...Object.values(h.originalSubmission||{})].filter(v=>typeof v==='string'))];
    const answers=[...(c.membershipAnswers||[]),...(c.history||[]).flatMap(h=>[...(h.answers||[]),...(h.originalAnswers||[])])].flatMap(a=>[a.label,displayAnswer(a.value)]);
    const imported=Object.entries(c.importColumns||{}).flatMap(([k,v])=>[k,displayAnswer(v)]);
    if(![...basic,...answers,...imported].some(value=>text(value).toLowerCase().includes(q)))return false;
