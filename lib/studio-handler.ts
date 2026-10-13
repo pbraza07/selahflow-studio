@@ -111,7 +111,7 @@ if(b.action==='registration_code_request'){
  const email=String(b.email||'').trim().toLowerCase();
  if(!validEmail(email))return reply({error:'Enter a valid email address.'},400);
  const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();
- if(!await takeLimit('registration-code-ip:'+owner+':'+tokenHash(ip),8)||!await takeLimit('registration-code-email:'+owner+':'+tokenHash(memberNumber),3))return reply({error:'Too many requests. Try again later.'},429);
+ if(!await takeLimit('registration-code-ip:'+owner+':'+tokenHash(ip),8)||!await takeLimit('registration-code-email:'+owner+':'+tokenHash(email),3))return reply({error:'Too many requests. Try again later.'},429);
  if(!deliveryProviderStatus().emailConfigured)return reply({error:'Email verification is currently unavailable. Please contact the business.'},503);
  const code=String(randomInt(0,1000000)).padStart(6,'0'),hash=tokenHash(owner+':'+email+':'+code);
  const sent=await sendNotificationChannel('email',email,{subject:'SelahFlow registration verification code',text:'Your SelahFlow registration verification code is '+code+'. It expires in 10 minutes. If you did not request this, ignore this message.'});
