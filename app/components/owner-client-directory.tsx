@@ -145,10 +145,47 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
      <div><h3 style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>{selected.name}<MembershipBadge memberNumber={selected.memberNumber} membershipName={selected.membershipName} membershipStatus={selected.membershipStatus}/></h3><p>{selected.email||'No email recorded'}{selected.phone?' · '+selected.phone:''}</p>
       <span className="sf-client-profile-note">Service history and attendance for this business only</span></div>
     </div>
+    <section className="sf-client-first-booking sf-client-registration-overview">
+     <div className="sf-client-history-heading"><h3>Client information & registration</h3><small>Current client record, including original registration details when available</small></div>
+     <div className="sf-client-first-details">
+      <div><small>Full name</small><b>{selected.name}</b></div>
+      <div><small>First name</small><b>{selected.name.trim().split(/\s+/)[0]||'Not available'}</b></div>
+      <div><small>Last name</small><b>{selected.name.trim().split(/\s+/).slice(1).join(' ')||'Not available'}</b></div>
+      <div><small>Birth date</small><b>{dateOnly(selected.dateOfBirth||selected.firstBooking?.dateOfBirth)?humanDate(dateOnly(selected.dateOfBirth||selected.firstBooking?.dateOfBirth)):'Not recorded'}</b></div>
+      <div><small>Email address</small><b>{selected.email||'Not provided'}</b></div>
+      <div><small>Phone number</small><b>{selected.phone||'Not provided'}</b></div>
+      <div><small>Unique membership ID</small><b>{selected.memberNumber||'Not assigned'}</b></div>
+      <div><small>Membership level</small><b>{selected.membershipName||'No membership package'}</b></div>
+      <div><small>Membership status</small><b>{selected.membershipStatus?.replaceAll('_',' ')||'Not enrolled'}</b></div>
+     </div>
+    </section>
+    {selected.membershipName&&<section className="sf-client-first-booking sf-client-membership-registration">
+     <div className="sf-client-history-heading"><h3>Membership registration</h3><small>Membership enrollment and the answers submitted when registering</small></div>
+     <div className="sf-client-first-details">
+      <div><small>Membership package</small><b>{selected.membershipName}</b></div>
+      <div><small>Membership ID</small><b>{selected.memberNumber||'Not assigned'}</b></div>
+      <div><small>Enrollment status</small><b>{selected.membershipStatus?.replaceAll('_',' ')||'Not available'}</b></div>
+      <div><small>Registered on</small><b>{selected.membershipDetails?.registeredAt?new Date(selected.membershipDetails.registeredAt).toLocaleString('en-US',{timeZone:'America/New_York'}):'Not available'}</b></div>
+      <div><small>Membership billing frequency</small><b>{selected.membershipDetails?.interval||'Not available'}</b></div>
+      <div><small>Membership price</small><b>{selected.membershipDetails?.priceCents!==undefined?money(selected.membershipDetails.priceCents/100):'Not available'}</b></div>
+      <div><small>Sessions included</small><b>{selected.membershipDetails?.sessionsIncluded??'Not available'}</b></div>
+      <div><small>Sessions used</small><b>{selected.membershipDetails?.sessionsUsed??'Not available'}</b></div>
+      <div><small>Last payment confirmed</small><b>{selected.membershipDetails?.lastPaidAt?new Date(selected.membershipDetails.lastPaidAt).toLocaleString('en-US',{timeZone:'America/New_York'}):'Not yet recorded'}</b></div>
+      <div><small>Paid through</small><b>{selected.membershipDetails?.paidThrough?humanDate(selected.membershipDetails.paidThrough):'Not yet recorded'}</b></div>
+     </div>
+     <h4>Original membership form questions and answers</h4>
+     {!!selected.membershipAnswers?.length?
+      <div className="sf-client-original-answers">{selected.membershipAnswers.map(answer=><div key={answer.id}><small>{answer.label}</small><b>{displayAnswer(answer.value)}</b></div>)}</div>:
+      <p className="muted">No additional membership form answers were saved for this registration.</p>}
+    </section>}
     {selected.firstBooking&&<section className="sf-client-first-booking">
      <div className="sf-client-history-heading"><h3>First booking information</h3><small>Copied from the original customer booking request</small></div>
      <div className="sf-client-first-details">
       <div><small>Customer name</small><b>{selected.firstBooking.originalSubmission?.customerName||selected.firstBooking.customerName||selected.name}</b></div>
+      <div><small>First name as booked</small><b>{selected.firstBooking.firstName||selected.firstBooking.customerName?.trim().split(/\s+/)[0]||'Not recorded'}</b></div>
+      <div><small>Last name as booked</small><b>{selected.firstBooking.lastName||selected.firstBooking.customerName?.trim().split(/\s+/).slice(1).join(' ')||'Not recorded'}</b></div>
+      <div><small>Date of birth provided</small><b>{dateOnly(selected.firstBooking.dateOfBirth||selected.dateOfBirth)?humanDate(dateOnly(selected.firstBooking.dateOfBirth||selected.dateOfBirth)):'Not recorded'}</b></div>
+      <div><small>Membership ID provided</small><b>{selected.firstBooking.customerMemberNumber||selected.memberNumber||'Not recorded'}</b></div>
       <div><small>Email provided</small><b>{selected.firstBooking.originalSubmission?.customerEmail||selected.firstBooking.customerEmail||selected.email}</b></div>
       <div><small>Phone provided</small><b>{selected.firstBooking.originalSubmission?.customerPhone||selected.firstBooking.customerPhone||'Not provided'}</b></div>
       <div><small>Activity date & time</small><b>{humanDate(selected.firstBooking.date)} · {timeLabel(selected.firstBooking.time)} Eastern</b></div>
@@ -161,7 +198,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
       <div><small>Booking policy consent</small><b>{selected.firstBooking.policyAccepted?'Accepted':'Not recorded'}</b></div>
      </div>
      {!!selected.firstBooking.answers?.length&&<div className="sf-client-original-answers"><h4>Initial booking questions and answers</h4>
-      {selected.firstBooking.answers.map(answer=><div key={answer.id}><small>{answer.label}</small><b>{String(selected.firstBooking?.originalSubmission?.customAnswers?.[answer.id]??answer.value)}</b></div>)}
+      {selected.firstBooking.answers.map(answer=><div key={answer.id}><small>{answer.label}</small><b>{displayAnswer(selected.firstBooking?.originalSubmission?.customAnswers?.[answer.id]??answer.value)}</b></div>)}
      </div>}
     </section>}
     <div className="sf-client-metrics">
@@ -173,10 +210,24 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
     <div className="sf-client-service-panel"><h4>Service types utilized</h4><div className="sf-client-tags">{selected.serviceTypes.length?selected.serviceTypes.map(type=><span key={type}>{type}</span>):<small>No current service type recorded</small>}</div>
      <h4>Services utilized</h4><div className="sf-client-tags">{selected.serviceNames.length?selected.serviceNames.map(name=><span key={name}>{name}</span>):<small>No services recorded</small>}</div>
     </div>
-    {!!selected.latestBookingAnswers?.length&&<section className="sf-client-first-booking sf-client-last-answers"><h4>Latest booking answers</h4>
-     <div className="sf-client-original-answers">{selected.latestBookingAnswers.map(answer=><div key={answer.id}><small>{answer.label}</small><b>{String(answer.value)}</b></div>)}</div>
+    {!!selected.history?.length&&<section className="sf-client-first-booking sf-client-last-answers">
+     <div className="sf-client-history-heading"><h3>Latest booking registration</h3><small>Latest recorded booking information and submitted answers</small></div>
+     <div className="sf-client-first-details">
+      <div><small>Customer name</small><b>{selected.history[0].customerName||selected.name}</b></div>
+      <div><small>Email address</small><b>{selected.history[0].customerEmail||selected.email||'Not provided'}</b></div>
+      <div><small>Phone number</small><b>{selected.history[0].customerPhone||selected.phone||'Not provided'}</b></div>
+      <div><small>Date of birth</small><b>{dateOnly(selected.history[0].dateOfBirth||selected.dateOfBirth)?humanDate(dateOnly(selected.history[0].dateOfBirth||selected.dateOfBirth)):'Not recorded'}</b></div>
+      <div><small>Membership ID</small><b>{selected.history[0].customerMemberNumber||selected.memberNumber||'Not assigned'}</b></div>
+      <div><small>Booking date and time</small><b>{humanDate(selected.history[0].date)} · {timeLabel(selected.history[0].time)} Eastern</b></div>
+      <div><small>Service(s)</small><b>{selected.history[0].serviceNames.join(', ')||'Not specified'}</b></div>
+      <div><small>Team member</small><b>{selected.history[0].staff||'Not specified'}</b></div>
+      <div><small>Booking status</small><b>{selected.history[0].status}</b></div>
+      <div><small>Policy consent</small><b>{selected.history[0].policyAccepted?'Accepted':'Not recorded'}</b></div>
+     </div>
+     {!!selected.history[0].answers?.length&&<><h4>Booking form questions and answers</h4>
+      <div className="sf-client-original-answers">{selected.history[0].answers.map(answer=><div key={answer.id}><small>{answer.label}</small><b>{displayAnswer(answer.value)}</b></div>)}</div></>}
     </section>}
-    {selected.importColumns&&Object.keys(selected.importColumns).length>0&&<section className="sf-client-first-booking"><h4>Imported spreadsheet fields</h4><div className="sf-client-first-details">{Object.entries(selected.importColumns).map(([heading,value])=><div key={heading}><small>{heading}</small><b>{String(value)||'—'}</b></div>)}</div></section>}
+    {selected.importColumns&&Object.keys(selected.importColumns).length>0&&selected.notes!=='Membership registration'&&<section className="sf-client-first-booking"><h4>{selected.notes==='First online booking'?'Saved legacy booking fields':'Imported spreadsheet fields'}</h4><div className="sf-client-first-details">{Object.entries(selected.importColumns).map(([heading,value])=><div key={heading}><small>{heading}</small><b>{displayAnswer(value)}</b></div>)}</div></section>}
     {selected.notes&&<div className="sf-client-private-notes"><h4>Private business notes</h4><p>{selected.notes}</p></div>}
     <div className="sf-client-attendance"><h4>Days attended <span>({selected.attendanceDays.length})</span></h4>
      {selected.attendanceDays.length?<div className="sf-client-day-tags">{selected.attendanceDays.map(day=><time dateTime={day} key={day}>{humanDate(day)}</time>)}</div>:<p>Attendance is recorded when an appointment is marked <strong>Checked in</strong> or <strong>Completed</strong>.</p>}
