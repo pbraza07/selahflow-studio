@@ -89,7 +89,7 @@ test('client API retains original membership fields and booking registration sna
  assert.match(api,/registrationAnswerRows/);
  assert.match(api,/membershipRegistration/);
  assert.match(api,/formFields/);
- assert.match(handler,/data\.dateOfBirth/);
+ assert.match(handler,/dateOfBirth:isPublic/);
  assert.match(handler,/data\.customFieldTypes/);
  assert.match(member,/registration_field_labels/);
  assert.match(member,/registration_answers/);
