@@ -166,6 +166,8 @@ export async function POST(req:Request){
    const name=String(input.name||'').trim(),email=String(input.email||'').trim().toLowerCase(),planId=String(input.planId||'');
    if(name.length<2||name.length>100||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Enter a valid member name and email.');
    const phone=String(input.phone||'').trim().slice(0,40);
+   const dob=String(input.dateOfBirth||'');
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(dob)||!Number.isFinite(Date.parse(dob))||new Date(dob).toISOString().slice(0,10)!==dob||dob>new Date().toISOString().slice(0,10))throw Error('Enter a valid date of birth.');
    const settings=(await pool.query('SELECT data FROM settings WHERE owner=(SELECT owner_id FROM businesses WHERE id=$1)',[business.id])).rows[0]?.data;
    const config=typeof settings==='string'?JSON.parse(settings):settings||{};
    const customAnswers=sanitizeBookingAnswers(config.bookingCustomFields||[],input.customAnswers||{});
@@ -175,20 +177,80 @@ export async function POST(req:Request){
    // A player has one permanent ID per business, independent of their membership package.
    // Serialize enrollment checks by business and normalized identity to avoid concurrent duplicate IDs.
    const normalizedName=name.normalize('NFKC').trim().replace(/\\s+/g,' ').toLowerCase();
-   const identityKey=business.id+'|'+normalizedName+'|'+email;
+   const identityKey=business.id+'|'+normalizedName+'|'+dob;
    const identityLock=await pool.connect();
    try{
     await identityLock.query('BEGIN');
     await identityLock.query('SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))',[business.id,identityKey]);
-    const prior=await identityLock.query("SELECT id,member_number,status,customer_name,customer_email FROM customer_memberships WHERE business_id=$1 AND lower(trim(regexp_replace(customer_name,'\\s+',' ','g')))= $2 AND lower(trim(customer_email))=$3 ORDER BY created_at ASC NULLS LAST,id ASC LIMIT 1",[business.id,normalizedName,email]);
+    const prior=await identityLock.query("SELECT id,member_number,status,customer_name,customer_email,date_of_birth FROM customer_memberships WHERE business_id=$1 AND ((lower(trim(regexp_replace(customer_name,'\\s+',' ','g')))=$2 AND date_of_birth=$3::date) OR (lower(trim(regexp_replace(customer_name,'\\s+',' ','g')))=$2 AND lower(trim(customer_email))=$4)) ORDER BY created_at ASC NULLS LAST,id ASC LIMIT 1",[business.id,normalizedName,dob,email]);
     if(prior.rows[0]){
+     if(prior.rows[0].date_of_birth&&String(prior.rows[0].date_of_birth).slice(0,10)!==dob)throw Error('A member with this name and email already exists with a different birth date. Review the existing profile.');
      await identityLock.query('COMMIT');
      return Response.json({ok:true,existingMember:true,memberNumber:prior.rows[0].member_number,paymentStatus:prior.rows[0].status,message:'This player is already registered. Use their existing membership ID for activation or renewal.'},{headers});
     }
    for(let attempt=0;attempt<12;attempt++){
     const requested=String(input.memberNumber||'').trim().toUpperCase();
-    if(requested&&!new RegExp('^'+initials+'[0-9]{6}$').test(requested))throw Error('Member number must match initials plus six digits.');
-    const number=requested||initials+String(randomInt(0,1000000)).padStart(6,'0');
+    if(requested&&!new RegExp('^'+initials+dob.slice(5,7)+dob.slice(8,10)+'[0-9]{2}
+    const result=await identityLock.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used,date_of_birth) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0,$9) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0,dob]);
+    if(result.rows[0]){
+     await identityLock.query('INSERT INTO business_client_profiles(id,owner,source_key,name,email,phone,notes,archived,import_columns) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,$4,$5,$6,$7,false,$8) ON CONFLICT DO NOTHING',[randomUUID(),business.id,'membership:'+result.rows[0].id,name,email,phone,'Membership registration',JSON.stringify(customAnswers)]).catch(()=>{});
+     await identityLock.query('COMMIT');
+     return Response.json({ok:true,memberNumber:number,paymentStatus:'pending_payment'},{headers});
+    }
+    if(requested)throw Error('This membership number is already in use.');
+   }
+   throw Error('Unable to allocate a unique membership number.');
+   }catch(e){await identityLock.query('ROLLBACK');throw e;}finally{identityLock.release();}
+  }
+  if(input.action==='updateMember'){
+   const id=String(input.id||''),planId=String(input.planId||'');
+   const plan=(await pool.query('SELECT id,sessions_included FROM membership_plans WHERE business_id=$1 AND id=$2',[business.id,planId])).rows[0];
+   if(!plan)throw Error('Choose a valid membership package.');
+   const member=(await pool.query('SELECT id,sessions_used FROM customer_memberships WHERE business_id=$1 AND id=$2',[business.id,id])).rows[0];
+   if(!member)throw Error('Member not found.');
+   const used=Number(input.sessionsUsed),included=Number(input.sessionsIncluded);
+   if(!Number.isInteger(used)||!Number.isInteger(included)||used<0||included<0||included>100000||used>included)throw Error('Enter valid sessions used and included.');
+   await pool.query('UPDATE customer_memberships SET plan_id=$1,sessions_used=$2,sessions_included=$3,updated_at=now() WHERE business_id=$4 AND id=$5',[planId,used,included,business.id,id]);
+   return Response.json({ok:true},{headers});
+  }
+  if(input.action==='connect'){
+   if(!paymentConfigured())throw Error('Stripe payments require STRIPE_SECRET_KEY and STRIPE_CONNECT_WEBHOOK_SECRET in the SelahFlow Render environment before enrollment can accept money.');
+   const current=(await pool.query('SELECT external_account_id FROM merchant_accounts WHERE business_id=$1',[business.id])).rows[0];
+   let accountId=current?.external_account_id;
+   if(!accountId){
+    const created=await stripeApi('accounts',{params:{
+     type:'express',country:'US',email:input.email||undefined,
+     'business_profile[name]':business.name,
+     'capabilities[card_payments][requested]':'true',
+     'capabilities[transfers][requested]':'true',
+     'metadata[selahflow_business_id]':business.id
+    },idempotencyKey:'selahflow-connect-'+business.id});
+    accountId=created.id;
+    await pool.query("INSERT INTO merchant_accounts(business_id,provider,external_account_id) VALUES($1,'stripe',$2) ON CONFLICT(business_id) DO UPDATE SET external_account_id=excluded.external_account_id",
+     [business.id,accountId]);
+   }
+   const origin=trustedOrigin(req);
+   const link=await stripeApi('account_links',{params:{
+    account:accountId,refresh_url:origin+'/studio/'+business.slug+'?stripe=retry',
+    return_url:origin+'/studio/'+business.slug+'?stripe=connected',type:'account_onboarding'
+   }});
+   return Response.json({url:link.url},{headers});
+  }
+  if(input.action==='verify'){
+   if(!paymentConfigured())throw Error('Stripe payments are not yet configured.');
+   const account=(await pool.query('SELECT external_account_id FROM merchant_accounts WHERE business_id=$1',[business.id])).rows[0];
+   if(!account?.external_account_id)throw Error('Connect Stripe before verifying payments.');
+   const info=await stripeApi('accounts/'+account.external_account_id,{method:'GET'});
+   const ready=info.charges_enabled===true&&info.details_submitted===true;
+   await pool.query('UPDATE merchant_accounts SET charges_enabled=$1,onboarding_complete=$2,updated_at=now() WHERE business_id=$3',
+    [info.charges_enabled===true,info.details_submitted===true,business.id]);
+   return Response.json({ok:true,ready},{headers});
+  }
+  throw Error('Invalid membership action.');
+ }catch(e){return error(e);}
+}
+).test(requested))throw Error('Member ID must contain initials, birth month/day, and two collision digits.');
+    const number=requested||initials+dob.slice(5,7)+dob.slice(8,10)+String(attempt).padStart(2,'0');
     const result=await identityLock.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0]);
     if(result.rows[0]){
      await identityLock.query('INSERT INTO business_client_profiles(id,owner,source_key,name,email,phone,notes,archived,import_columns) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,$4,$5,$6,$7,false,$8) ON CONFLICT DO NOTHING',[randomUUID(),business.id,'membership:'+result.rows[0].id,name,email,phone,'Membership registration',JSON.stringify(customAnswers)]).catch(()=>{});
