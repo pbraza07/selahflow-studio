@@ -94,3 +94,28 @@ test('client API retains original membership fields and booking registration sna
  assert.match(member,/registration_field_labels/);
  assert.match(member,/registration_answers/);
 });
+
+test('review edits keep both original and revised answers visible and filterable',()=>{
+ const row={id:'visit-updated',date:'2026-10-30',start:600,duration:60,staff:'trainer',status:'Confirmed',data:JSON.stringify({
+  name:'Taylor Allen',email:'taylor@example.com',phone:'8135550123',memberNumber:'TA0704',
+  services:['Training'],customAnswers:{group:'U13',consent:true},
+  customFieldLabels:{group:'Age group',consent:'Parent consent'},
+  customFieldTypes:{group:'select',consent:'checkbox'},
+  originalSubmission:{customerName:'Taylor Allen',customerEmail:'taylor@example.com',customerPhone:'8135550123',
+   customAnswers:{group:'U12',consent:false}}
+ })};
+ const clients=buildClientDirectory([row],{staff:[{id:'trainer',name:'Trainer'}]},'owner-1');
+ assert.equal(clients.length,1);
+ const visit=clients[0].history[0];
+ assert.deepEqual(visit.answers.map(a=>a.value),['U13',true]);
+ assert.deepEqual(visit.originalAnswers.map(a=>a.value),['U12',false]);
+ assert.deepEqual(filterRegistrationClients(clients,{fieldKey:'question:group',fieldValue:'U12'}).map(c=>c.memberNumber),['TA0704']);
+ assert.deepEqual(filterRegistrationClients(clients,{fieldKey:'question:group',fieldValue:'U13'}).map(c=>c.memberNumber),['TA0704']);
+ assert.ok(registrationFieldCatalog(clients).some(x=>x.key==='question:group'));
+});
+
+test('re-enrolling a member never replaces their original form answers',async()=>{
+ const member=await readFile(new URL('../app/api/studio/memberships/route.ts',import.meta.url),'utf8');
+ assert.match(member,/registration_answers=CASE WHEN registration_answers='\{\}'::jsonb/);
+ assert.match(member,/registration_field_labels=CASE WHEN registration_field_labels='\{\}'::jsonb/);
+});
