@@ -11,9 +11,9 @@ import {loadOwnerMemberRoster,ownerAppointmentMember} from './owner-appointment-
  */
 export const CREDIT_CONSUMING_STATUSES=new Set(['Checked in','No-show','Completed']);
 
-export async function debitAppointmentMembershipSession(client,{owner,memberNumber,appointmentId,status,ledgerId}){
+export async function debitAppointmentMembershipSession(client,{owner,memberNumber,appointmentId,status,ledgerId,creditAllowed=true}){
  const number=String(memberNumber||'').trim().toUpperCase();
- if(!CREDIT_CONSUMING_STATUSES.has(status)||!number){
+ if(!CREDIT_CONSUMING_STATUSES.has(status)||!number||creditAllowed===false){
   return {deducted:false,alreadyDeducted:false,memberFound:false,remaining:null};
  }
  const result=await client.query(
@@ -85,7 +85,7 @@ export async function changeAppointmentStatus(client,{owner,appointmentId,status
   if(!session)for(let minute=appointment.start;minute<appointment.start+appointment.duration+buffer;minute+=15)await client.query('INSERT INTO slots(owner,date,staff,minute,appointment) VALUES($1,$2,$3,$4,$5)',[owner,appointment.date,appointment.staff,minute,appointmentId]);
  }
  const usage=await debitAppointmentMembershipSession(client,{
-  owner,memberNumber,appointmentId,status,ledgerId
+  owner,memberNumber,appointmentId,status,ledgerId,creditAllowed:appointmentData.membershipCreditAllowed!==false
  });
  await client.query('UPDATE appointments SET status=$1 WHERE owner=$2 AND id=$3',[status,owner,appointmentId]);
  if(status==='Cancelled'||status==='No-show')

@@ -1898,6 +1898,8 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
 [data-selah-theme] .sf-registration-fields input:autofill{background:var(--sf-card,#fff)!important;color:var(--sf-on-card,#17251d)!important}
 
 /* Registration and dashboard accessibility: visible response controls. */
+[data-selah-theme] :is(.dark,.public-header,.booking-success .eyebrow){color:#fff!important}
+[data-selah-theme] :is(.dark,.public-header,.booking-success .eyebrow) :is(a,b,strong,p,small,span){color:#fff!important}
 input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=range]):not([type=color]),textarea,select{border:1.5px solid #84958e!important;border-radius:8px!important;padding:10px 12px;min-height:42px;box-sizing:border-box}
 [data-selah-theme] :is(input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=range]):not([type=color]),textarea,select){border-color:color-mix(in srgb,var(--sf-on-card,#17251d) 50%,var(--sf-card,#fff))!important}
 input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #439f88;outline-offset:2px}

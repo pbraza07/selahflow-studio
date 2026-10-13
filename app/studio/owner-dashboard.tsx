@@ -43,7 +43,6 @@ const SETTINGS_AREAS=[
  {id:'availability',title:'Booking rules',description:'Booking intervals, cleanup buffer, policies and tax.',icon:CalendarDays},
  {id:'sessions',title:'Bookable sessions',description:'Session times, assigned staff and seats available.',icon:Clock},
  {id:'notifications',title:'Notifications',description:'Approval requests and business-specific delivery settings.',icon:MessageCircle},
- {id:'questions',title:'Booking questions',description:'Custom questions and push notification content.',icon:ClipboardList},
  {id:'catalog',title:'Service catalog',description:'Services, pricing, duration and capacity.',icon:Shapes},
  {id:'team',title:'Team members',description:'Staff profiles, services and contact preferences.',icon:Users}
 ] as const;
@@ -151,7 +150,7 @@ const sessionLeft=(session:Any)=>Math.max(0,session.capacity-sessionBookings(ses
 const sessionLabel=(session:Any)=>{const service=config.services.find((v:Any)=>v.id===session.service);return (service?.name||'Session')+' · '+sessionLeft(session)+'/'+session.capacity+' slots left';};
 const studioDate=(d:string)=>d.includes('T')?new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d)):d;
 const inRange=(raw:string)=>{const d=studioDate(raw);return range==='All time'||(range==='Today'?d.slice(0,10)===date:d.slice(0,7)===date.slice(0,7));};
-const sales=events.filter(e=>e.kind==='cash_sale'&&inRange(e.created));const revenue=sales.reduce((n,e)=>n+e.total,0);const reportAppointments=appointments.filter(a=>inRange(a.date));
+const sales=events.filter(e=>e.kind==='cash_sale'&&inRange(e.created));const membershipPayments=events.filter(e=>e.kind==='membership_payment'&&inRange(e.created));const revenue=sales.reduce((n,e)=>n+e.total,0)+membershipPayments.reduce((n,e)=>n+Number(e.total||0),0);const reportAppointments=appointments.filter(a=>inRange(a.date));
 const projectedAppointments=reportAppointments.filter((a:Any)=>['Confirmed','Scheduled','Completed'].includes(a.status));
 const appointmentEstimate=(a:Any)=>{
  const dataPrice=Number(a.price);
@@ -275,7 +274,7 @@ return <div className="app-shell" data-selah-theme="true" style={{...themeStyles
  <button type="button" className="outline sf-add-session" disabled={!!planBenefits&&(config.bookableSessions||[]).length>=planBenefits.limits.sessionSeries} title={planBenefits?'Your plan allows '+planBenefits.limits.sessionSeries+' scheduled session templates':''} onClick={()=>
   setConfig((c:Any)=>({...c,bookableSessions:[...(c.bookableSessions||[]),{
    id:crypto.randomUUID(),date,service:c.staff[0]?.services[0]||c.services[0]?.id||'',
-   staff:c.staff[0]?.id||'',start:Math.max(0,(c.open||9)*60),capacity:10
+   staff:c.staff[0]?.id||'',start:Math.max(0,(c.open||9)*60),capacity:10,membershipCreditAllowed:true
   }]}))}><Plus size={16}/> Create session</button>
  {(config.bookableSessions||[]).length===0&&<p className="muted sf-session-empty">No sessions configured yet. Create a session to publish a one-time date or a repeating schedule.</p>}
  {(config.bookableSessions||[]).map((x:Any,i:number)=><div key={x.id} className="sf-session-editor sf-recurring-session-editor">
@@ -307,6 +306,7 @@ return <div className="app-shell" data-selah-theme="true" style={{...themeStyles
     if(Number.isFinite(hour)&&Number.isFinite(minute))updateSession(x.id,{start:hour*60+minute});
    }}/></label>
    <label>Maximum customers per occurrence<input type="number" min={1} max={100} value={x.capacity} onChange={e=>updateSession(x.id,{capacity:Number(e.target.value)})}/></label>
+   <label><input type="checkbox" checked={x.membershipCreditAllowed!==false} onChange={e=>updateSession(x.id,{membershipCreditAllowed:e.target.checked})}/> Membership session credit allowed</label>
   </div>
   <label className="sf-session-repeat-toggle"><input type="checkbox" checked={!!x.repeat}
    onChange={e=>updateSession(x.id,{repeat:e.target.checked?{
@@ -334,6 +334,7 @@ return <div className="app-shell" data-selah-theme="true" style={{...themeStyles
      <>Review the repetition interval and end date before saving.</>}</span>
    </div>
   </div>}
+  <RegistrationQuestionSettings config={config} setConfig={setConfig} limit={planBenefits?.limits.bookingFields??5} sessionId={x.id}/>
   <p className="sf-session-capacity"><b>{sessionLeft(seriesOccurrences(config,x.id)[0]||x)}/{(seriesOccurrences(config,x.id)[0]||x).capacity} slots left</b> on the first occurrence · {sessionBookings((seriesOccurrences(config,x.id)[0]||x).id)} confirmed customer{sessionBookings((seriesOccurrences(config,x.id)[0]||x).id)===1?'':'s'}{x.repeat&&<> · Later dates have independent availability</>}</p>
   {rescheduling?.seriesId===x.id&&<section className="sf-session-reschedule-panel" aria-label="Reschedule without losing booked customers">
    <div className="sf-session-reschedule-heading">

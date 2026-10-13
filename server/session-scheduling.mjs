@@ -63,6 +63,7 @@ export function validateBookableSessions(config) {
         Number.isNaN(Date.parse(session.date + 'T12:00:00Z')) ||
         new Date(session.date + 'T12:00:00Z').toISOString().slice(0,10) !== session.date ||
         !Number.isInteger(session.start) || session.start % 15 !== 0 ||
+        (session.membershipCreditAllowed !== undefined && typeof session.membershipCreditAllowed !== 'boolean') ||
         !Number.isInteger(session.capacity) || session.capacity < 1 || session.capacity > 100 ||
         !service || !member || !member.services.includes(service.id) ||
         !Number.isInteger(service.duration) || service.duration < 15 || service.duration > 480 ||

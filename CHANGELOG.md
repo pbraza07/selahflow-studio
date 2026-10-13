@@ -1,3 +1,11 @@
+## v1.3.62 — Membership-credit eligibility and session-specific controls
+- Enforces the six-character member format (first initial, last initial, birth month and day) for new and changed member records across booking, memberships and clients.
+- Eligible active members with available credits receive a $0 quote for services/sessions that allow membership credit; those bookings are excluded from appointment revenue and do not consume a credit when marked attended if credit use is disabled.
+- Membership payments and renewals are included in owner paid-revenue reporting from the immutable membership ledger.
+- Bookable sessions can independently allow or disallow membership credits and now host their own required, notification-enabled questions. The standalone Booking questions settings tab is removed.
+- Strengthens themed black-background text contrast for Arcila Training and every other business theme.
+- Migration 030 adds future-facing six-character ID constraints without rewriting historical records.
+
 ## v1.3.61 — Owner controls, attendance corrections and membership requests
 - Sort owner dashboard data columns ascending or descending; show all appointment dates on Overview and change attendance from calendar details and session rosters.
 - Correct Check in ↔ No-show without a second membership debit. Reinstating attendance safely checks capacity and restores reserved time.

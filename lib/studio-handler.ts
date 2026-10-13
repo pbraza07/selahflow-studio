@@ -20,21 +20,23 @@ import {defaultSettings,today} from './defaults';
 import {validDuration,isCalendarUnit} from './service-terms';
 import {validSlotCapacity,serviceCapacityOpen,confirmBooking} from '../server/booking-approvals.mjs';
 import {approvalSettings,bookingRequestDetail} from '../server/booking-review.mjs';
+import {hasUsableMembership} from '../server/member-badge-state.mjs';
 
 const reply=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 async function context(req:Request,isPublic=false){const slug=isPublic?new URL(req.url).searchParams.get('slug'):null;const account=isPublic?(slug?await db().prepare("SELECT owner_id AS id FROM businesses WHERE slug=? AND status='active'").bind(slug).first<{id:string}>():await db().prepare("SELECT owner_id AS id FROM businesses WHERE slug='crawford' AND status='active'").first<{id:string}>()):null;const owner=isPublic?account?.id:await requireOwner(req);if(!owner)throw Error('Studio is not configured yet.');if(!isPublic){const business=await db().prepare('SELECT status FROM businesses WHERE owner_id=?').bind(owner).first<{status:string}>();if(!business||business.status!=='active')throw Error('Business awaiting platform approval.');}const row=await db().prepare('SELECT data FROM settings WHERE owner=?').bind(owner).first<{data:string}>();return {owner,config:row?JSON.parse(row.data):structuredClone(defaultSettings)};}
 export async function ownerGet(req:Request){
  try{
   const {owner,config}=await context(req);
-  const [a,e,roster]=await Promise.all([
+  const [a,e,roster,membershipPayments]=await Promise.all([
    db().prepare('SELECT * FROM appointments WHERE owner=? ORDER BY date,start').bind(owner).all(),
    db().prepare('SELECT * FROM events WHERE owner=? ORDER BY created DESC LIMIT 500').bind(owner).all(),
-   loadOwnerMemberRoster(getPool(),owner)
+   loadOwnerMemberRoster(getPool(),owner),
+   getPool().query("SELECT l.id,l.created_at::text AS created,l.amount_cents,l.membership_id FROM membership_session_ledger l JOIN businesses b ON b.id=l.business_id WHERE b.owner_id=$1 AND l.event_type='payment_confirmed' ORDER BY l.created_at DESC LIMIT 500",[owner])
   ]);
   const visits=a.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   return reply({
    config,appointments:decorateOwnerAppointments(visits,roster),
-   events:e.results.map((r:any)=>({...r,...JSON.parse(r.data)}))
+   events:[...e.results.map((r:any)=>({...r,...JSON.parse(r.data)})),...membershipPayments.rows.map((r:any)=>({id:r.id,created:r.created,kind:'membership_payment',total:Number(r.amount_cents||0)/100,membershipId:r.membership_id}))]
   });
  }catch(e){
   return reply({error:(e as Error).message==='AUTH_REQUIRED'?'Please sign in.':'Studio data is unavailable or this business is waiting for approval.'},(e as Error).message==='AUTH_REQUIRED'?401:503);
@@ -269,17 +271,18 @@ const availability=computeDayAvailability({config,date:b.date,staff:b.staff,serv
 const available=availability.slots;
 if(b.action==='availability')return reply({slots:available,sessionAvailability:availability.sessionAvailability,
  sessions:availability.sessions,earliestStart:availability.earliestStart,firstAvailable:availability.firstAvailable,timezone:'America/New_York',duration,price:services.reduce((a:number,s:any)=>a+s.price,0)});
-if(b.key){const prior=await db().prepare('SELECT id FROM appointments WHERE owner=? AND id=?').bind(owner,b.key).first();if(prior)return reply({ok:true,id:prior.id});const pending=await db().prepare('SELECT id,status,appointment_id FROM booking_requests WHERE owner_id=? AND id=?').bind(owner,b.key).first<{id:string;status:string;appointment_id:string|null}>();if(pending)return reply({ok:true,id:pending.id,pending:pending.status==='pending',status:pending.status,appointmentId:pending.appointment_id});}if(b.expectedPrice!==services.reduce((a:number,s:any)=>a+s.price,0)||b.expectedDuration!==duration)return reply({error:'Service prices or durations changed. Refresh the studio and review your booking again.'},409);if(!available.includes(b.start))return reply({error:'That time is no longer available. Please choose another.'},409);if(typeof b.name!=='string'||typeof b.email!=='string'||!b.name.trim()||b.name.length>100||!/^\S+@\S+\.\S+$/.test(b.email)||b.email.length>200)throw Error('Enter a name and valid email.');if(isPublic){
+if(b.key){const prior=await db().prepare('SELECT id FROM appointments WHERE owner=? AND id=?').bind(owner,b.key).first();if(prior)return reply({ok:true,id:prior.id});const pending=await db().prepare('SELECT id,status,appointment_id FROM booking_requests WHERE owner_id=? AND id=?').bind(owner,b.key).first<{id:string;status:string;appointment_id:string|null}>();if(pending)return reply({ok:true,id:pending.id,pending:pending.status==='pending',status:pending.status,appointmentId:pending.appointment_id});}if(b.expectedPrice!==services.reduce((a:number,s:any)=>a+s.price,0)||b.expectedDuration!==duration)return reply({error:'Service prices or durations changed. Refresh the studio and review your booking again.'},409);if(!available.includes(b.start))return reply({error:'That time is no longer available. Please choose another.'},409);if(typeof b.name!=='string'||typeof b.email!=='string'||!b.name.trim()||b.name.length>100||!/^\S+@\S+\.\S+$/.test(b.email)||b.email.length>200)throw Error('Enter a name and valid email.');let verifiedMembership:any=null;if(isPublic){
  if(b.notMember!==true){
   const number=String(b.memberNumber||'').trim().toUpperCase();
   if(!/^[A-Z]{2}[0-9]{4}$/.test(number))throw Error('Enter your six-character membership ID or choose N/A.');
-  const member=await db().prepare("SELECT m.customer_name,m.date_of_birth FROM customer_memberships m JOIN businesses biz ON biz.id=m.business_id WHERE biz.owner_id=? AND m.member_number=?").bind(owner,number).first() as any;
+  const member=await db().prepare("SELECT m.customer_name,m.date_of_birth,m.status,m.sessions_included,m.sessions_used FROM customer_memberships m JOIN businesses biz ON biz.id=m.business_id WHERE biz.owner_id=? AND m.member_number=?").bind(owner,number).first() as any;
   const customer=await db().prepare("SELECT c.first_name,c.last_name,c.date_of_birth FROM customer_booking_ids c JOIN businesses biz ON biz.id=c.business_id WHERE biz.owner_id=? AND c.member_number=?").bind(owner,number).first() as any;
   if(!member&&!customer)throw Error('Membership ID was not found for this business.');
   const expectedName=String(member?.customer_name||[customer?.first_name,customer?.last_name].join(' ')).trim().replace(/\s+/g,' ').toLowerCase();
   if(expectedName!==String(b.name||'').trim().replace(/\s+/g,' ').toLowerCase())throw Error('Membership ID does not match the booking name.');
   const storedDob=member?.date_of_birth||customer?.date_of_birth;
   if(storedDob&&new Date(storedDob).toISOString().slice(0,10)!==String(b.dateOfBirth||''))throw Error('Membership ID and birth date do not match.');
+  verifiedMembership=member;
  }
  if(b.notMember!==true&&b.notMember!==false)throw Error('Select N/A if you are not a member.');
 }
@@ -331,7 +334,8 @@ if(isPublic){
   await client.query('COMMIT');
  }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
 }
-const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID();const data:any={name:b.name.trim(),firstName:isPublic?String(b.firstName||'').trim():undefined,lastName:isPublic?String(b.lastName||'').trim():undefined,dateOfBirth:isPublic?String(b.dateOfBirth||''):undefined,email:b.email,phone:String(b.phone||'').slice(0,40),services:services.map((s:any)=>s.name),price:services.reduce((a:number,s:any)=>a+s.price,0),channel:isPublic?'Online booking':b.channel==='Booking portal'?'Booking portal':'Front desk',created:new Date().toISOString()};data.serviceIds=services.map((s:any)=>s.id);data.customAnswers=customAnswers;data.memberNumber=isPublic?issuedMemberNumber:null;data.policyAccepted=isPublic?b.policyAccepted===true:null;data.policyAcceptedAt=isPublic?new Date().toISOString():null;data.customFieldLabels=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.label]));data.customFieldTypes=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.type]));const bookedSession=selectedSession(config,b.date,b.staff,services,b.start);if(bookedSession)data.sessionId=bookedSession.id;
+const bookedSession=selectedSession(config,b.date,b.staff,services,b.start);const membershipCreditAllowed=bookedSession?bookedSession.membershipCreditAllowed!==false:services.every((service:any)=>service.membershipCreditAllowed!==false);const membershipCovered=!!verifiedMembership&&hasUsableMembership(verifiedMembership)&&membershipCreditAllowed;
+const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID();const data:any={name:b.name.trim(),firstName:isPublic?String(b.firstName||'').trim():undefined,lastName:isPublic?String(b.lastName||'').trim():undefined,dateOfBirth:isPublic?String(b.dateOfBirth||''):undefined,email:b.email,phone:String(b.phone||'').slice(0,40),services:services.map((s:any)=>s.name),price:membershipCovered?0:services.reduce((a:number,s:any)=>a+s.price,0),membershipCovered,membershipCreditAllowed,channel:isPublic?'Online booking':b.channel==='Booking portal'?'Booking portal':'Front desk',created:new Date().toISOString()};data.serviceIds=services.map((s:any)=>s.id);data.customAnswers=customAnswers;data.memberNumber=isPublic?issuedMemberNumber:null;data.policyAccepted=isPublic?b.policyAccepted===true:null;data.policyAcceptedAt=isPublic?new Date().toISOString():null;data.customFieldLabels=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.label]));data.customFieldTypes=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.type]));if(bookedSession)data.sessionId=bookedSession.id;
  if(isPublic&&(approvalSettings(config).enabled||services.some((service:any)=>service.requiresApproval===true))){
   const approval=services.some((service:any)=>service.requiresApproval===true)&&!approvalSettings(config).enabled?{reviewer:'owner'}:approvalSettings(config);
   const business=await db().prepare("SELECT id FROM businesses WHERE owner_id=? AND status='active'").bind(owner).first<{id:string}>();
@@ -344,12 +348,12 @@ const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.ran
   let delivery:any={email:'not_requested',sms:'not_requested'};
   try{delivery=await notifyBookingRequest({requestId:id,origin:trustedOrigin(req)});}
   catch(error){console.error('Booking notification dispatch error for request',id);delivery={email:config.bookingNotifyEmail===true?'failed':'not_requested',sms:config.bookingNotifySms===true?'failed':'not_requested'};}
-  return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:true,status:'pending',notificationDelivery:delivery,message:'Booking request received, awaiting approval. The appointment is not confirmed until accepted.'});
+  return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:true,status:'pending',chargedPrice:data.price,membershipCovered,notificationDelivery:delivery,message:'Booking request received, awaiting approval. The appointment is not confirmed until accepted.'});
  }
  try{await confirmBooking({owner,services,staff:b.staff,date:b.date,start:b.start,duration,buffer:config.buffer,id,data});}
  catch(error){return reply({error:(error as Error).message},(error as {status?:number}).status||409);}
  await db().batch([audit('booking',{appointment:id})]);
- return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:false,status:'confirmed'});}
+ return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:false,status:'confirmed',chargedPrice:data.price,membershipCovered});}
 if(b.action==='deleteAppointments'){
  if(isPublic)return reply({error:'Not permitted.'},403);
  const ids=Array.isArray(b.ids)?b.ids:[];

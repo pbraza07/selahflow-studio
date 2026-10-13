@@ -133,6 +133,7 @@ export async function POST(req:Request){
     if(existing){await client.query('COMMIT');return Response.json({ok:true,credited:0,alreadyProcessed:true},{headers});}
     await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[randomUUID(),business.id,id,requestId,credits,selectedPlan?selectedPlan.price_cents:member.price_cents]);
     await client.query("UPDATE customer_memberships SET sessions_included=sessions_included+$1,status='active',last_paid_at=now(),updated_at=now(),plan_id=COALESCE($4,plan_id),price_cents=COALESCE($5,price_cents) WHERE business_id=$2 AND id=$3",[credits,business.id,id,selectedPlan?.id||null,selectedPlan?.price_cents??null]);
+    await client.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,'membership_payment',$4)",[randomUUID(),business.id,new Date().toISOString(),JSON.stringify({membershipId:id,memberNumber:member.member_number,total:Number(selectedPlan?.price_cents??member.price_cents),renewal:input.action==='renewMembership'})]);
     await client.query('COMMIT');
     return Response.json({ok:true,credited:credits},{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
