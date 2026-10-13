@@ -248,7 +248,9 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
      <tbody>{visited.map(v=><tr key={v.id}>
       <td><b>{humanDate(v.date)}</b><small>{timeLabel(v.time)} Eastern</small></td>
       <td>{v.serviceNames.join(', ')||'Unspecified'}{!!v.answers?.length&&<details className="sf-client-visit-answers"><summary>Booking answers ({v.answers.length})</summary>
-       {v.answers.map(a=><div key={a.id}><strong>{a.label}:</strong> {String(a.value)}</div>)}
+       {v.answers.map(a=><div key={a.id}><strong>{a.label}:</strong> {displayAnswer(a.value)}</div>)}
+      </details>}{!!v.originalAnswers?.length&&<details className="sf-client-visit-answers"><summary>Original registration answers ({v.originalAnswers.length})</summary>
+       {v.originalAnswers.map(a=><div key={a.id}><strong>{a.label}:</strong> {displayAnswer(a.value)}</div>)}
       </details>}</td><td>{v.serviceTypes.join(', ')||'Not categorized'}</td>
       <td>{v.sessionType}</td><td>{v.staff||'—'}</td>
       <td><span className={'sf-client-visit-status '+(v.attended?'attended':v.status==='No-show'||v.status==='Cancelled'?'missed':'scheduled')}>{v.status}{v.attended?' · Attended':''}</span></td>
