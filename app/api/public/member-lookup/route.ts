@@ -1,18 +1,81 @@
 import {getPool} from '../../../../server/database.mjs';
+import {tokenHash,validOrigin} from '../../../../server/security.mjs';
+import {restoreBookingCustomAnswers,restoredContact} from '../../../../server/returning-member-prefill.mjs';
+
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
+const headers={'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'};
+
 export async function POST(req:Request){
+ if(!validOrigin(req))return Response.json({error:'Invalid origin.'},{status:403,headers});
  try{
-  const body=await req.json();
-  const slug=String(body.slug||'').trim(),memberNumber=String(body.memberNumber||'').trim().toUpperCase(),dob=String(body.dateOfBirth||'');
-  if(!slug||!/^[A-Z]{2}[0-9]{4}$/.test(memberNumber)||!/^\d{4}-\d{2}-\d{2}$/.test(dob))return Response.json({error:'Enter your membership ID and date of birth.'},{status:400,headers:{'Cache-Control':'no-store'}});
+  const raw=await req.text();
+  if(raw.length>1500)return Response.json({error:'Invalid lookup request.'},{status:400,headers});
+  const body=JSON.parse(raw);
+  const slug=String(body.slug||'').trim();
+  const memberNumber=String(body.memberNumber||'').trim().toUpperCase();
+  const dob=String(body.dateOfBirth||'');
+  if(!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(slug)
+   ||!/^[A-Z]{2}[0-9]{4}$/.test(memberNumber)
+   ||!/^\d{4}-\d{2}-\d{2}$/.test(dob)
+   ||Number.isNaN(Date.parse(dob))||new Date(dob).toISOString().slice(0,10)!==dob)
+   return Response.json({error:'Enter your six-character Membership ID and valid date of birth.'},{status:400,headers});
+
   const db=getPool();
-  const q=await db.query("SELECT m.customer_name,m.customer_email,m.member_number,b.owner_id FROM customer_memberships m JOIN businesses b ON b.id=m.business_id WHERE b.slug=$1 AND b.status='active' AND m.member_number=$2 AND m.date_of_birth=$3::date LIMIT 1",[slug,memberNumber,dob]);
-  const booking=await db.query("SELECT c.first_name||' '||c.last_name AS customer_name,c.email AS customer_email,c.phone,c.member_number,b.owner_id FROM customer_booking_ids c JOIN businesses b ON b.id=c.business_id WHERE b.slug=$1 AND b.status='active' AND c.member_number=$2 AND c.date_of_birth=$3::date LIMIT 1",[slug,memberNumber,dob]);
-  const m=q.rows[0]||booking.rows[0];
-  if(!m)return Response.json({error:'Member ID and birth date did not match.'},{status:404,headers:{'Cache-Control':'no-store'}});
-  const profile=await db.query("SELECT phone,import_columns FROM business_client_profiles WHERE owner=$1 AND deleted_at IS NULL AND (member_number=$2 OR (lower(email)=lower($3) AND lower(trim(name))=lower(trim($4)))) ORDER BY CASE WHEN member_number=$2 THEN 0 ELSE 1 END,created_at DESC LIMIT 1",[m.owner_id,memberNumber,m.customer_email,m.customer_name]);
-  const full=String(m.customer_name||'').trim().split(/\s+/);
-  return Response.json({firstName:full[0]||'',lastName:full.slice(1).join(' '),email:m.customer_email,phone:profile.rows[0]?.phone||m.phone||'',memberNumber:m.member_number,customAnswers:profile.rows[0]?.import_columns||{}},{headers:{'Cache-Control':'no-store'}});
- }catch{return Response.json({error:'Member lookup is temporarily unavailable.'},{status:503,headers:{'Cache-Control':'no-store'}});}
+  const business=(await db.query("SELECT id,owner_id FROM businesses WHERE slug=$1 AND status='active' LIMIT 1",[slug])).rows[0];
+  if(!business)return Response.json({error:'Business not found.'},{status:404,headers});
+  // A six-character initials + MMDD ID is guessable. A matching birth year is
+  // required, and lookup requests are limited per IP and per business/member.
+  const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim().slice(0,128);
+  for(const [key,maximum] of [
+   ['member-prefill-ip:'+business.id+':'+tokenHash(ip),15],
+   ['member-prefill-id:'+business.id+':'+tokenHash(memberNumber),10]
+  ] as const){
+   const limits=await db.query(
+    "INSERT INTO public_limits(key,count,window_start) VALUES($1,1,now()) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN 1 ELSE public_limits.count+1 END,window_start=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN now() ELSE public_limits.window_start END RETURNING count",
+    [key]
+   );
+   if(Number(limits.rows[0]?.count)>maximum)
+    return Response.json({error:'Too many lookup attempts. Please try again later.'},{status:429,headers});
+  }
+
+  const [member,booking]=await Promise.all([
+   db.query("SELECT customer_name,customer_email,customer_phone,registration_answers,member_number,date_of_birth::text AS dob FROM customer_memberships WHERE business_id=$1 AND member_number=$2 AND date_of_birth=$3::date LIMIT 1",[business.id,memberNumber,dob]),
+   db.query("SELECT first_name||' '||last_name AS customer_name,email AS customer_email,phone AS customer_phone,member_number,date_of_birth::text AS dob FROM customer_booking_ids WHERE business_id=$1 AND member_number=$2 AND date_of_birth=$3::date LIMIT 1",[business.id,memberNumber,dob])
+  ]);
+  const identity=member.rows[0]||booking.rows[0];
+  if(!identity)return Response.json({error:'Membership ID and date of birth did not match. Check both values or contact the business.'},{status:404,headers});
+  const profile=(await db.query(
+   "SELECT name,email,phone,notes,import_columns FROM business_client_profiles WHERE owner=$1 AND deleted_at IS NULL AND (member_number=$2 OR (member_number IS NULL AND lower(trim(name))=lower(trim($3)) AND lower(trim(email))=lower(trim($4)))) ORDER BY CASE WHEN member_number=$2 THEN 0 ELSE 1 END,created_at DESC LIMIT 1",
+   [business.owner_id,memberNumber,identity.customer_name,identity.customer_email]
+  )).rows[0]||{};
+  const [appointment,request,settings]=await Promise.all([
+   db.query("SELECT data FROM appointments WHERE owner=$1 AND data::jsonb->>'memberNumber'=$2 ORDER BY COALESCE(data::jsonb->>'created','') DESC,date DESC,start DESC LIMIT 1",[business.owner_id,memberNumber]),
+   db.query("SELECT details,created_at FROM booking_requests WHERE business_id=$1 AND details::jsonb->>'memberNumber'=$2 ORDER BY created_at DESC LIMIT 1",[business.id,memberNumber]),
+   db.query("SELECT data FROM settings WHERE owner=$1 LIMIT 1",[business.owner_id])
+  ]);
+  let config:any={};
+  try{config=JSON.parse(settings.rows[0]?.data||'{}');}catch{}
+  let latestAppointment:any={};
+  try{const value=appointment.rows[0]?.data;latestAppointment=typeof value==='string'?JSON.parse(value):value||{};}catch{}
+  let latestRequest:any={};
+  try{const value=request.rows[0]?.details;latestRequest=typeof value==='string'?JSON.parse(value):value||{};}catch{}
+  const appointedAt=Date.parse(String(latestAppointment.created||''));
+  const requestedAt=Date.parse(String(request.rows[0]?.created_at||''));
+  const latest=Number.isFinite(requestedAt)&&(!Number.isFinite(appointedAt)||requestedAt>appointedAt)?latestRequest:latestAppointment;
+  const backup=latest===latestRequest?latestAppointment:latestRequest;
+  const fields=Array.isArray(config.bookingCustomFields)?config.bookingCustomFields:[];
+  const customAnswers=restoreBookingCustomAnswers(
+   fields,latest.customAnswers,backup.customAnswers,member.rows[0]?.registration_answers,
+   profile.import_columns
+  );
+  const contact=restoredContact(
+   identity,{...profile,phone:profile.phone||identity.customer_phone},
+   Object.keys(latest).length?latest:backup
+  );
+  return Response.json({...contact,memberNumber,customAnswers},{headers});
+ }catch(error){
+  console.error('Member prefill lookup failed:',error);
+  return Response.json({error:'Saved player details are temporarily unavailable. Please retry.'},{status:503,headers});
+ }
 }
