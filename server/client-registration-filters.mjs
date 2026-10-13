@@ -33,13 +33,16 @@ export function clientFieldValues(client,key){
    ...history.flatMap(h=>[...(h.answers||[]),...(h.originalAnswers||[])].filter(a=>a.id===id).map(a=>displayAnswer(a.value)))
   ]);
  }
- if(key.startsWith('import:'))return one(displayAnswer(c.importColumns?.[key.slice(7)]));
- const name=text(c.name),parts=name.split(/\s+/);
+ if(key.startsWith('import:')){const column=key.slice(7);return Object.prototype.hasOwnProperty.call(c.importColumns||{},column)?one(displayAnswer(c.importColumns[column])):[];}
+ const originalNames=[c.name,c.membershipRegistration?.name,...history.map(h=>h.customerName),...history.map(h=>h.originalSubmission?.customerName)].map(text).filter(Boolean);
+ const firstNames=originalNames.map(name=>name.split(/\s+/)[0]);
+ const lastNames=originalNames.map(name=>name.split(/\s+/).slice(1).join(' '));
  const based={
-  name:[name],firstName:[parts[0]||''],lastName:[parts.length>1?parts.slice(1).join(' '):''],
-  email:one(c.email),phone:one(c.phone),
-  dateOfBirth:one(dateOnly(c.dateOfBirth)||dateOnly(history.find(h=>h.dateOfBirth)?.dateOfBirth)),
-  memberNumber:one(c.memberNumber),
+  name:originalNames,firstName:firstNames,lastName:lastNames,
+  email:[c.email,c.membershipRegistration?.email,...history.map(h=>h.customerEmail),...history.map(h=>h.originalSubmission?.customerEmail)],
+  phone:[c.phone,c.membershipRegistration?.phone,...history.map(h=>h.customerPhone),...history.map(h=>h.originalSubmission?.customerPhone)],
+  dateOfBirth:[dateOnly(c.dateOfBirth),dateOnly(c.membershipRegistration?.dateOfBirth),...history.map(h=>dateOnly(h.dateOfBirth))],
+  memberNumber:[c.memberNumber,c.membershipRegistration?.memberNumber,...history.map(h=>h.customerMemberNumber)],
   membershipName:one(c.membershipName),membershipStatus:one(c.membershipStatus),
   membershipInterval:one(c.membershipDetails?.interval),
   services:[...(c.serviceNames||[])],
