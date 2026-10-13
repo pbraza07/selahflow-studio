@@ -8,7 +8,9 @@ test('player badges use a consistent pill with tier colors and a neutral ID fall
  assert.match(component,/border:'1\.5px solid #171717'/);
  for(const tier of ['gold','platinum','silver','bronze','pro','academy','basic'])assert.match(component,new RegExp(tier));
  assert.match(component,/membershipStatus/);
- assert.match(component,/active=String\(membershipStatus/);
+ assert.match(component,/hasUsableMembership/);
+ assert.match(component,/sessionsIncluded/);
+ assert.match(component,/sessionsUsed/);
  assert.match(component,/'ID '\+id/);
  assert.match(component,/background:'#f1f2f4'/);
 });
