@@ -6,6 +6,7 @@ import {buildClientDirectory,clientWorkbookSheets,pendingBookingAsAppointment} f
 import {applyClientProfiles,findClientForEdit,sameClientContact,validateClientInput} from '../../../../server/client-profile-logic.mjs';
 import {createClientXlsx} from '../../../../server/client-xlsx.mjs';
 import {resolveTheme} from '../../../../server/themes.mjs';
+import {registrationAnswerRows,dateOnly} from '../../../../server/client-registration-fields.mjs';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -27,10 +28,32 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
  ]);
  const derived=buildClientDirectory([...appointments.rows,...requests.rows.map(pendingBookingAsAppointment)],settings,owner);
  const combined=applyClientProfiles(derived,profiles.rows);
- const members=(await db.query("SELECT m.id,m.customer_name,m.customer_email,m.member_number,m.status,p.name AS membership_name FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id WHERE b.owner_id=$1",[owner])).rows;
- const clients=combined.clients.map((c:any)=>{const m=members.find((x:any)=>(x.member_number&&x.member_number===c.memberNumber)||(x.customer_name?.trim().toLowerCase()===c.name?.trim().toLowerCase()&&x.customer_email?.toLowerCase()===c.email?.toLowerCase()&&(!c.memberNumber||c.memberNumber===x.member_number)));return m?{...c,memberNumber:m.member_number,membershipName:m.membership_name,membershipStatus:m.status}:c;});
- for(const m of members){if(!clients.some((c:any)=>c.memberNumber===m.member_number||(c.name?.trim().toLowerCase()===m.customer_name?.trim().toLowerCase()&&c.email?.toLowerCase()===m.customer_email?.toLowerCase())))clients.push({id:'membership-'+m.id,name:m.customer_name,email:m.customer_email,phone:'',bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],latestDate:'',history:[],memberNumber:m.member_number,membershipName:m.membership_name,membershipStatus:m.status});}
- return {derived,profiles:profiles.rows,clients,archived:combined.archived.filter((c:{id:string})=>!profiles.rows.some((p:any)=>p.id===c.id&&p.deleted_at))};
+ const fields=Array.isArray(settings.bookingCustomFields)?settings.bookingCustomFields:[];
+ const members=(await db.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.last_paid_at,m.paid_through,m.price_cents,m.sessions_included,m.sessions_used,m.member_number,m.status,p.name AS membership_name,p.interval_unit FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id WHERE b.owner_id=$1 ORDER BY m.created_at DESC",[owner])).rows;
+ const memberData=(m:any,client:any={})=>{
+  const legacy=client.notes==='Membership registration'&&m.registration_answers&&Object.keys(m.registration_answers).length===0?client.importColumns||{}:{};
+  const submitted=Object.keys(m.registration_answers||{}).length?m.registration_answers:legacy;
+  return {
+   memberNumber:m.member_number||client.memberNumber,
+   membershipName:m.membership_name,membershipStatus:m.status,
+   membershipAnswers:registrationAnswerRows(submitted,m.registration_field_labels,fields),
+   membershipDetails:{registeredAt:m.created_at,paidThrough:dateOnly(m.paid_through),lastPaidAt:m.last_paid_at,
+    interval:m.interval_unit,priceCents:Number(m.price_cents)||0,
+    sessionsIncluded:Number(m.sessions_included)||0,sessionsUsed:Number(m.sessions_used)||0},
+   dateOfBirth:client.dateOfBirth||dateOnly(m.date_of_birth),
+   phone:client.phone||m.customer_phone||''
+  };
+ };
+ const clients=combined.clients.map((c:any)=>{
+  const m=members.find((x:any)=>(x.member_number&&x.member_number===c.memberNumber)||
+   (x.customer_name?.trim().toLowerCase()===c.name?.trim().toLowerCase()&&x.customer_email?.toLowerCase()===c.email?.toLowerCase()&&(!c.memberNumber||c.memberNumber===x.member_number)));
+  return m?{...c,...memberData(m,c)}:c;
+ });
+ for(const m of members){
+  if(!clients.some((c:any)=>c.memberNumber===m.member_number||(c.name?.trim().toLowerCase()===m.customer_name?.trim().toLowerCase()&&c.email?.toLowerCase()===m.customer_email?.toLowerCase())))
+   clients.push({id:'membership-'+m.id,name:m.customer_name,email:m.customer_email,phone:m.customer_phone||'',bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],latestDate:'',history:[],firstBooking:null,latestBookingAnswers:[],...memberData(m)});
+ }
+ return {derived,profiles:profiles.rows,clients,formFields:fields.map((f:any)=>({id:f.id,label:f.label,type:f.type,options:Array.isArray(f.options)?f.options:[]})),archived:combined.archived.filter((c:{id:string})=>!profiles.rows.some((p:any)=>p.id===c.id&&p.deleted_at))};
 }
 function failure(error:unknown){
  const message=(error as Error).message||'Client operation could not be completed.';
@@ -44,10 +67,10 @@ export async function GET(req:Request){
   const owner=await requireOwner(req);
   const pool=getPool(),business=await businessFor(owner,pool);
   const settings=JSON.parse(business.settings_data||'{}');
-  const {clients,archived}=await directory(owner,pool,settings);
+  const {clients,archived,formFields}=await directory(owner,pool,settings);
   const url=new URL(req.url);
   if(url.searchParams.get('export')!=='xlsx')
-   return Response.json({clients,archived,total:clients.length},{headers:noStore});
+   return Response.json({clients,archived,formFields,total:clients.length},{headers:noStore});
   const id=url.searchParams.get('clientId');
   if(id&&!validId(id))return Response.json({error:'Invalid client.'},{status:400,headers:noStore});
   const selected=id?clients.filter(c=>c.id===id):clients;
