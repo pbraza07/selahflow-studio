@@ -62,7 +62,7 @@ export function registrationFieldCatalog(clients,formFields=[]){
   for(const answer of [...(c.membershipAnswers||[]),...(c.history||[]).flatMap(v=>v.answers||[])]){
    if(!answer||!answer.id)continue;
    const key='question:'+answer.id;
-   if(!fields.has(key))fields.set(key,{key,label:answer.label||answer.id,type:answer.type||typeof answer.value==='boolean'?'checkbox':'text',options:[]});
+   if(!fields.has(key))fields.set(key,{key,label:answer.label||answer.id,type:answer.type||(typeof answer.value==='boolean'?'checkbox':'text'),options:[]});
   }
   for(const heading of Object.keys(c.importColumns||{})){
    const key='import:'+heading;
