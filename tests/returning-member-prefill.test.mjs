@@ -31,6 +31,16 @@ test('return saved contact details with first and last name separated',()=>{
  const result=restoredContact({customer_name:'Levi Alves'},profile,{});
  assert.deepEqual(result,{firstName:'Levi',lastName:'Alves',email:'levi@example.test',phone:'813-555-0100'});
 });
+test('prefill preserves the verified membership identity even if an editable client card was renamed',()=>{
+ const result=restoredContact(
+  {customer_name:'Levi Alves',customer_email:'legacy@example.test'},
+  {name:'Different Display Name',email:'current@example.test',phone:'8135550222'},
+  {firstName:'Other',lastName:'Name'}
+ );
+ assert.equal(result.firstName,'Levi');
+ assert.equal(result.lastName,'Alves');
+ assert.equal(result.email,'current@example.test');
+});
 test('booking form shows membership ID before first name and uses one required DOB field',async()=>{
  const page=await readFile(new URL('../app/book/page.tsx',import.meta.url),'utf8');
  const form=page.slice(page.indexOf('{step===3&&<form'));
