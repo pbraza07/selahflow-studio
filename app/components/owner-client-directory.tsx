@@ -3,6 +3,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowLeft,CalendarDays,CheckCircle2,ChevronRight,Download,Upload,RefreshCw,Search,Users,UserPlus,Pencil,Trash2,RotateCcw,ArchiveRestore} from 'lucide-react';
 import ClientEditor,{type ClientDetails} from './client-editor';
 import MembershipBadge from './membership-badge';
+import {membershipDisplayStatus} from '../../server/member-badge-state.mjs';
 import {timeLabel} from '../../lib/defaults';
 import {registrationFieldCatalog,filterRegistrationClients} from '../../server/client-registration-filters.mjs';
 import {displayAnswer,dateOnly} from '../../server/client-registration-fields.mjs';
@@ -142,7 +143,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    </div>
    <article className="sf-client-profile">
     <div className="sf-client-profile-heading"><span className="sf-client-avatar" aria-hidden="true">{selected.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span>
-     <div><h3 style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>{selected.name}<MembershipBadge memberNumber={selected.memberNumber} membershipName={selected.membershipName} membershipStatus={selected.membershipStatus}/></h3><p>{selected.email||'No email recorded'}{selected.phone?' · '+selected.phone:''}</p>
+     <div><h3 style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>{selected.name}<MembershipBadge memberNumber={selected.memberNumber} membershipName={selected.membershipName} membershipStatus={selected.membershipStatus} sessionsIncluded={selected.membershipDetails?.sessionsIncluded} sessionsUsed={selected.membershipDetails?.sessionsUsed}/></h3><p>{selected.email||'No email recorded'}{selected.phone?' · '+selected.phone:''}</p>
       <span className="sf-client-profile-note">Service history and attendance for this business only</span></div>
     </div>
     <section className="sf-client-first-booking sf-client-registration-overview">
@@ -156,7 +157,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
       <div><small>Phone number</small><b>{selected.phone||'Not provided'}</b></div>
       <div><small>Unique membership ID</small><b>{selected.memberNumber||'Not assigned'}</b></div>
       <div><small>Membership level</small><b>{selected.membershipName||'No membership package'}</b></div>
-      <div><small>Membership status</small><b>{selected.membershipStatus?.replaceAll('_',' ')||'Not enrolled'}</b></div>
+      <div><small>Membership status</small><b>{membershipDisplayStatus({status:selected.membershipStatus,sessionsIncluded:selected.membershipDetails?.sessionsIncluded,sessionsUsed:selected.membershipDetails?.sessionsUsed}).replaceAll('_',' ')}</b></div>
      </div>
     </section>
     {selected.membershipName&&<section className="sf-client-first-booking sf-client-membership-registration">
@@ -286,7 +287,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    </div>
    <p className="muted" role="status">{filtered.length} matching {filtered.length===1?'client':'clients'} · Filters apply together</p>
    {filtered.length?<div className="sf-client-directory-grid">{filtered.map(c=><article className="sf-client-summary" key={c.id}>
-    <div className="sf-client-summary-top"><span className="sf-client-avatar" aria-hidden="true">{c.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span><div><h3 style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>{c.name}<MembershipBadge memberNumber={c.memberNumber} membershipName={c.membershipName} membershipStatus={c.membershipStatus}/></h3><p>{c.email||c.phone||'Contact not provided'}</p></div></div>
+    <div className="sf-client-summary-top"><span className="sf-client-avatar" aria-hidden="true">{c.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span><div><h3 style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>{c.name}<MembershipBadge memberNumber={c.memberNumber} membershipName={c.membershipName} membershipStatus={c.membershipStatus} sessionsIncluded={c.membershipDetails?.sessionsIncluded} sessionsUsed={c.membershipDetails?.sessionsUsed}/></h3><p>{c.email||c.phone||'Contact not provided'}</p></div></div>
     <div className="sf-client-summary-metrics"><span><b>{c.bookedSessions}</b> sessions booked</span><span><b>{c.attendedSessions}</b> attended</span><span><b>{c.attendanceDays.length}</b> attendance days</span></div>
     {!!c.latestBookingAnswers?.length&&<p className="sf-client-booking-answer-preview">{c.latestBookingAnswers.length} booking question{c.latestBookingAnswers.length===1?'':'s'} answered · See full details</p>}
     <div className="sf-client-summary-types"><small>Service types</small><strong>{c.serviceTypes.join(' · ')||'Not categorized'}</strong></div>
