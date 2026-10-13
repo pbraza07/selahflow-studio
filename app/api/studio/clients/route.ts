@@ -22,14 +22,14 @@ async function businessFor(owner: string,db:{query:(sql:string,values:unknown[])
 async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>Promise<{rows:any[]}>},settings:Record<string,unknown>){
  const [appointments,profiles,requests]=await Promise.all([
   db.query('SELECT id,date,start,duration,staff,status,data FROM appointments WHERE owner=$1 ORDER BY date DESC,start DESC',[owner]),
-  db.query('SELECT id,source_key,anchor_appointment_id,name,email,phone,notes,archived,import_columns,deleted_at FROM business_client_profiles WHERE owner=$1 ORDER BY created_at,id',[owner]),
+  db.query('SELECT id,source_key,anchor_appointment_id,name,email,phone,notes,archived,import_columns,member_number,date_of_birth,deleted_at FROM business_client_profiles WHERE owner=$1 ORDER BY created_at,id',[owner]),
   db.query("SELECT id,date,staff_id,start_minute,duration,details,status,created_at FROM booking_requests WHERE owner_id=$1 AND status IN ('pending','declined') ORDER BY created_at DESC",[owner])
  ]);
  const derived=buildClientDirectory([...appointments.rows,...requests.rows.map(pendingBookingAsAppointment)],settings,owner);
  const combined=applyClientProfiles(derived,profiles.rows);
  const members=(await db.query("SELECT m.id,m.customer_name,m.customer_email,m.member_number,m.status,p.name AS membership_name FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id WHERE b.owner_id=$1",[owner])).rows;
- const clients=combined.clients.map((c:any)=>{const m=members.find((x:any)=>x.customer_email?.toLowerCase()===c.email?.toLowerCase());return m?{...c,memberNumber:m.member_number,membershipName:m.membership_name,membershipStatus:m.status}:c;});
- for(const m of members){if(!clients.some((c:any)=>c.email?.toLowerCase()===m.customer_email?.toLowerCase()))clients.push({id:'membership-'+m.id,name:m.customer_name,email:m.customer_email,phone:'',bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],latestDate:'',history:[],memberNumber:m.member_number,membershipName:m.membership_name,membershipStatus:m.status});}
+ const clients=combined.clients.map((c:any)=>{const m=members.find((x:any)=>(x.member_number&&x.member_number===c.memberNumber)||(x.customer_name?.trim().toLowerCase()===c.name?.trim().toLowerCase()&&x.customer_email?.toLowerCase()===c.email?.toLowerCase()&&(!c.memberNumber||c.memberNumber===x.member_number)));return m?{...c,memberNumber:m.member_number,membershipName:m.membership_name,membershipStatus:m.status}:c;});
+ for(const m of members){if(!clients.some((c:any)=>c.memberNumber===m.member_number||(c.name?.trim().toLowerCase()===m.customer_name?.trim().toLowerCase()&&c.email?.toLowerCase()===m.customer_email?.toLowerCase())))clients.push({id:'membership-'+m.id,name:m.customer_name,email:m.customer_email,phone:'',bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],latestDate:'',history:[],memberNumber:m.member_number,membershipName:m.membership_name,membershipStatus:m.status});}
  return {derived,profiles:profiles.rows,clients,archived:combined.archived.filter((c:{id:string})=>!profiles.rows.some((p:any)=>p.id===c.id&&p.deleted_at))};
 }
 function failure(error:unknown){
