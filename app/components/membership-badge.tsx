@@ -1,11 +1,14 @@
 'use client';
 import {BadgeCheck, Crown, GraduationCap, Hash, Medal, ShieldCheck, Star, Gem} from 'lucide-react';
 import type {CSSProperties} from 'react';
+import {hasUsableMembership} from '../../server/member-badge-state.mjs';
 
 type MembershipBadgeProps={
  memberNumber?:string|null;
  membershipName?:string|null;
  membershipStatus?:string|null;
+ sessionsIncluded?:number|null;
+ sessionsUsed?:number|null;
 };
 
 /**
@@ -27,9 +30,9 @@ export function membershipBadgeTheme(name:string){
  return {background:palette[hash%palette.length],Icon:BadgeCheck};
 }
 
-export default function MembershipBadge({memberNumber,membershipName,membershipStatus}:MembershipBadgeProps){
+export default function MembershipBadge({memberNumber,membershipName,membershipStatus,sessionsIncluded,sessionsUsed}:MembershipBadgeProps){
  const id=String(memberNumber||'').trim().toUpperCase();
- const active=String(membershipStatus||'').toLowerCase()==='active';
+ const active=hasUsableMembership({status:membershipStatus,sessionsIncluded,sessionsUsed});
  const level=active?String(membershipName||'').trim():'';
  if(!id&&!level)return null;
  const theme=level?membershipBadgeTheme(level):{background:'#f1f2f4',Icon:Hash};
