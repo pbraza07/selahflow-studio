@@ -193,6 +193,10 @@ export async function POST(req:Request){
     const initials=(name.trim().split(/\\s+/)[0]?.[0]||'X').toUpperCase()+(name.trim().split(/\\s+/).slice(-1)[0]?.[0]||'X').toUpperCase();
     if(requested&&!new RegExp('^'+initials+dob.slice(5,7)+dob.slice(8,10)+'$').test(requested))throw Error('Membership ID must match initials and birth month/day.');
     const number=requested||initials+dob.slice(5,7)+dob.slice(8,10);
+    const bookingId=(await identityLock.query("SELECT member_number,first_name,last_name,date_of_birth FROM customer_booking_ids WHERE business_id=$1 AND member_number=$2 LIMIT 1",[business.id,number])).rows[0];
+    if(bookingId&&(String(bookingId.first_name+' '+bookingId.last_name).trim().toLowerCase()!==normalizedName||String(bookingId.date_of_birth).slice(0,10)!==dob))throw Error('This six-character ID belongs to another customer. The initials and birth month/day combination is not unique; registration requires a different ID policy.');
+    const existingId=(await identityLock.query("SELECT 1 FROM customer_memberships WHERE business_id=$1 AND member_number=$2 LIMIT 1",[business.id,number])).rowCount;
+    if(existingId)throw Error('This six-character ID already belongs to another member. The ID format cannot distinguish customers sharing initials and birthday.');
     const result=await identityLock.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used,date_of_birth) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0,$9) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0,dob]);
     if(result.rows[0]){
      await identityLock.query('INSERT INTO business_client_profiles(id,owner,source_key,name,email,phone,notes,archived,import_columns) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,$4,$5,$6,$7,false,$8) ON CONFLICT DO NOTHING',[randomUUID(),business.id,'membership:'+result.rows[0].id,name,email,phone,'Membership registration',JSON.stringify(customAnswers)]).catch(()=>{});
