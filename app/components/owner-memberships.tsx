@@ -5,8 +5,9 @@ type Plan={id:string;name:string;description:string;interval:'week'|'month'|'yea
 type Member={id:string;customer_name:string;customer_email:string;member_number:string|null;plan_id:string;sessions_included:number;sessions_used:number;recorded_sessions:number;history:{appointment_id:string;event_type:string;session_delta:number;created_at:string}[];plan_name:string;interval_unit:string;status:string;paid_through:string|null};
 type Payload={businessName:string;plans:Plan[];members:Member[];planBenefits:{name:string;limits:{membershipPlans:number}};payments:{connected:boolean;configured:boolean;ready:boolean}};
 const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
-export default function OwnerMemberships({slug}:{slug:string}){
+export default function OwnerMemberships({slug,prefill}:{slug:string;prefill?:{name:string;email:string;phone:string}|null}){
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+ useEffect(()=>{if(!prefill)return;const parts=prefill.name.trim().split(/\s+/);setMemberFirst(parts[0]||'');setMemberLast(parts.slice(1).join(' '));setNewMemberEmail(prefill.email||'');setMemberPhone(prefill.phone||'');},[prefill]);
  const [manualMemberNumber,setManualMemberNumber]=useState('');
  const [memberDob,setMemberDob]=useState('');
  const [memberFirst,setMemberFirst]=useState(''),[memberLast,setMemberLast]=useState(''),[memberPhone,setMemberPhone]=useState(''),[memberAnswers,setMemberAnswers]=useState<Record<string,string|boolean>>({}),[bookingFields,setBookingFields]=useState<any[]>([]);
