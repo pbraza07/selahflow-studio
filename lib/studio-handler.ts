@@ -1,7 +1,7 @@
 import {randomInt,randomBytes} from 'node:crypto';
 import {db} from './database';
 import {getPool} from '../server/database.mjs';
-import {debitAppointmentMembershipSession} from '../server/appointment-membership-usage.mjs';
+import {changeAppointmentStatus} from '../server/appointment-membership-usage.mjs';
 import {bookableTeamLimit} from '../server/team-seat-policy.mjs';
 import {checkSubscriptionLimits,planEntitlements} from '../server/plan-entitlements.mjs';
 import {appointmentData,overlaps,easternClock,bookingDateRange,computeDayAvailability,selectedSession,sessionsForDate,sessionRemaining,validateBookableSessions,validateExistingSessionReservations} from '../server/session-scheduling.mjs';
@@ -353,37 +353,17 @@ if(b.action==='status'){
  const client=await getPool().connect();
  try{
   await client.query('BEGIN');
-  const old=(await client.query('SELECT id,status,data FROM appointments WHERE owner=$1 AND id=$2 FOR UPDATE',[owner,b.id])).rows[0];
-  if(!old){await client.query('ROLLBACK');return reply({error:'Appointment not found'},404);}
-  if(old.status===b.status){
-   await client.query('ROLLBACK');
-   return reply({ok:true,alreadyProcessed:true,membershipDeducted:false});
-  }
-  if(['Completed','Cancelled','No-show'].includes(String(old.status)))throw Error('This appointment is already closed.');
-  let memberNumber='';
-  try{const data=typeof old.data==='string'?JSON.parse(old.data||'{}'):old.data||{};memberNumber=String(data.memberNumber||'').trim().toUpperCase();}catch{}
-  const usage=await debitAppointmentMembershipSession(client,{
-   owner,memberNumber,appointmentId:b.id,status:b.status,ledgerId:crypto.randomUUID()
+  const result=await changeAppointmentStatus(client,{
+   owner,appointmentId:b.id,status:b.status,
+   ledgerId:crypto.randomUUID(),
+   eventId:typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID(),
+   createdAt:new Date().toISOString()
   });
-  await client.query('UPDATE appointments SET status=$1 WHERE owner=$2 AND id=$3',[b.status,owner,b.id]);
-  if(b.status==='Cancelled'||b.status==='No-show')
-   await client.query('DELETE FROM slots WHERE owner=$1 AND appointment=$2',[owner,b.id]);
-  const eventId=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID();
-  await client.query(
-   "INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'status',$4) ON CONFLICT DO NOTHING",
-   [eventId,owner,new Date().toISOString(),JSON.stringify({
-    appointment:b.id,status:b.status,memberNumber:memberNumber||null,
-    membershipDeducted:usage.deducted,alreadyDeducted:usage.alreadyDeducted,
-    membershipSessionsRemaining:usage.remaining
-   })]
-  );
+  if(result.notFound){await client.query('ROLLBACK');return reply({error:'Appointment not found'},404);}
   await client.query('COMMIT');
-  return reply({ok:true,membershipDeducted:usage.deducted,alreadyDeducted:usage.alreadyDeducted,
-   memberFound:usage.memberFound,membershipSessionsRemaining:usage.remaining});
- }catch(error){
-  await client.query('ROLLBACK');
-  throw error;
- }finally{client.release();}
+  return reply(result);
+ }catch(error){await client.query('ROLLBACK');throw error;}
+ finally{client.release();}
 }
 if(b.action==='sale'){if(!Array.isArray(b.items)||!b.items.length)throw Error('Add items to checkout.');const lines=b.items.map((l:any)=>{const item=[...config.services.map((s:any)=>({...s,type:'service',cost:null})),...config.products.map((p:any)=>({...p,type:'product'}))].find((x:any)=>x.id===l.id);if(!item||!Number.isInteger(l.qty)||l.qty<1||l.qty>50)throw Error('Invalid checkout item.');return {...item,qty:l.qty};});const total=lines.reduce((n:number,l:any)=>n+l.qty*l.price,0);await db().batch([audit('cash_sale',{lines,total,tax:total*config.tax/100,payment:'Cash recorded manually'})]);return reply({ok:true});}
 if(b.action==='handoff'){if(!String(b.message||'').trim())throw Error('Enter a message');await db().batch([audit('handoff',{message:String(b.message).slice(0,2000),status:'Open'})]);return reply({ok:true});}return reply({error:'Unknown action'},400);
