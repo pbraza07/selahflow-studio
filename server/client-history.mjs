@@ -36,7 +36,7 @@ export function pendingBookingAsAppointment(row){
   id:row.id,date:row.date,start:row.start_minute,duration:row.duration,staff:row.staff_id,
   status:row.status==='pending'?'Pending approval':'Declined',
   data:JSON.stringify({
-   name:info.customerName||'',email:info.customerEmail||'',phone:info.customerPhone||'',memberNumber:info.memberNumber||null,
+   name:info.customerName||'',firstName:info.firstName||'',lastName:info.lastName||'',dateOfBirth:info.dateOfBirth||'',email:info.customerEmail||'',phone:info.customerPhone||'',memberNumber:info.memberNumber||null,
    services:Array.isArray(info.services)?info.services:[],
    serviceIds:Array.isArray(info.serviceIds)?info.serviceIds:[],
    price:Number(info.quotedPrice)||0,sessionId:info.sessionId||null,
@@ -97,6 +97,7 @@ export function buildClientDirectory(appointments,settings={},owner=''){
   if(email)client.email=email;
   if(phone)client.phone=phone;
   if(data.memberNumber&&!client.memberNumber)client.memberNumber=String(data.memberNumber).trim().toUpperCase();
+  if(data.dateOfBirth&&!client.dateOfBirth)client.dateOfBirth=clean(data.dateOfBirth,10);
   const serviceNames=Array.isArray(data.services)?data.services.filter(x=>typeof x==='string').map(x=>clean(x,100)):[];
   const ids=Array.isArray(data.serviceIds)?data.serviceIds.filter(x=>typeof x==='string'):[];
   const items=ids.map(sid=>catalog.find(s=>s.id===sid)).filter(Boolean);
@@ -121,7 +122,7 @@ export function buildClientDirectory(appointments,settings={},owner=''){
    serviceNames,serviceTypes:types,staff,status,attended,
    sessionType:data.sessionId?'Group session':'Individual appointment',
    quotedPrice:Number(data.price)||0,
-   customerEmail:email,customerPhone:phone,customerName:name,
+   customerEmail:email,customerPhone:phone,customerName:name,customerMemberNumber:data.memberNumber||null,dateOfBirth:clean(data.dateOfBirth,10),firstName:clean(data.firstName,50),lastName:clean(data.lastName,50),
    answers,originalSubmission:data.originalSubmission||null,
    submittedAt:data.created||null,policyAccepted:data.policyAccepted===true,policyAcceptedAt:data.policyAcceptedAt||null
   };
