@@ -1,4 +1,5 @@
 import {normalizeClientEmail,normalizeClientName,normalizeClientPhone,isAttended} from './client-history.mjs';
+import {dateOnly} from './client-registration-fields.mjs';
 
 const clean=(value,max)=>typeof value==='string'?value.trim().slice(0,max):'';
 export function validateClientInput(body){
@@ -16,7 +17,7 @@ export function sameClientContact(a,b){
  return Boolean((aEmail&&bEmail&&aEmail===bEmail)||(aPhone&&bPhone&&aPhone===bPhone));
 }
 function freshClient(profile){
- return {id:profile.id,name:profile.name,email:profile.email||'',phone:profile.phone||'',memberNumber:profile.member_number||undefined,dateOfBirth:profile.date_of_birth||undefined,notes:profile.notes||'',importColumns:profile.import_columns||{},
+ return {id:profile.id,name:profile.name,email:profile.email||'',phone:profile.phone||'',memberNumber:profile.member_number||undefined,dateOfBirth:dateOnly(profile.date_of_birth)||undefined,notes:profile.notes||'',importColumns:profile.import_columns||{},
   bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],
   latestDate:'',history:[],firstBooking:null,latestBookingAnswers:[],managed:true};
 }
@@ -48,8 +49,9 @@ export function applyClientProfiles(derived,profiles){
  for(const client of rows){
   const anchor=records.find(p=>p.anchor_appointment_id&&client.history?.some(v=>v.id===p.anchor_appointment_id));
   const source=records.find(p=>p.source_key===client.id);
+  const member=records.find(p=>p.member_number&&client.memberNumber&&p.member_number===client.memberNumber);
   const contact=records.find(p=>sameClientContact(p,client));
-  const profile=anchor||source||contact;
+  const profile=member||anchor||source||contact;
   if(!profile){detached.push({...client,notes:'',managed:false});continue;}
   managed.get(profile.id).history.push(...(client.history||[]));
  }
