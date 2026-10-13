@@ -23,18 +23,18 @@ function error(err:unknown){
 export async function GET(req:Request){
  try{
   const {pool,business}=await ctx(req);
-  const [plans,members,merchant,visits,ledger]=await Promise.all([
+  const [plans,members,merchant,usageCounts,ledger]=await Promise.all([
    pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",active FROM membership_plans WHERE business_id=$1 ORDER BY created_at DESC',[business.id]),
    pool.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
    pool.query("SELECT external_account_id,charges_enabled,onboarding_complete FROM merchant_accounts WHERE business_id=$1",[business.id]),
-   pool.query("SELECT a.id,a.date,a.data,a.status FROM appointments a JOIN businesses b ON b.owner_id=a.owner WHERE b.id=$1 AND a.status IN ('Completed','Attended')",[business.id]),
+   pool.query("SELECT membership_id,COUNT(*)::int AS recorded_sessions FROM membership_session_ledger WHERE business_id=$1 AND event_type='session_used' GROUP BY membership_id",[business.id]),
    pool.query('SELECT l.membership_id,l.appointment_id,l.event_type,l.session_delta,l.amount_cents,l.created_at,a.status AS appointment_status FROM membership_session_ledger l LEFT JOIN appointments a ON a.id=l.appointment_id AND a.owner=(SELECT owner_id FROM businesses WHERE id=l.business_id) WHERE l.business_id=$1 ORDER BY l.created_at DESC LIMIT 500',[business.id])
   ]);
   const account=merchant.rows[0]||{};
   const individual=(await pool.query('SELECT limits FROM business_entitlement_overrides WHERE business_id=$1',[business.id])).rows[0]?.limits||{};
   const benefits=planEntitlements(business.plan_code,business.subscription_status);
   if(Number.isInteger(individual.membershipPlans))benefits.limits.membershipPlans=individual.membershipPlans;
-  return Response.json({businessName:business.name,plans:plans.rows,members:members.rows.map((m:any)=>{const actual=visits.rows.filter((v:any)=>{try{const d=typeof v.data==='string'?JSON.parse(v.data):v.data||{};return !!m.member_number&&String(d.memberNumber||'').toUpperCase()===String(m.member_number).toUpperCase();}catch{return false;}}).length;return {...m,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
+  return Response.json({businessName:business.name,plans:plans.rows,members:members.rows.map((m:any)=>{const actual=Number(usageCounts.rows.find((u:any)=>u.membership_id===m.id)?.recorded_sessions||0);return {...m,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
    payments:{configured:paymentConfigured(),connected:!!account.external_account_id,
     ready:paymentConfigured()&&account.charges_enabled===true&&account.onboarding_complete===true}}, {headers});
  }catch(e){return error(e);}
