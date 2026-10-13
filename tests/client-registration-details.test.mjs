@@ -39,6 +39,7 @@ test('filter by package, current and historical form answers, birthday, consent,
  assert.deepEqual(filterRegistrationClients(clients,{membershipLevel:'__no_active__'}).map(c=>c.name),['Jordan Bennett']);
  assert.deepEqual(filterRegistrationClients(clients,{fieldKey:'dateOfBirth',fieldValue:'2015-07-04'}).map(c=>c.name),['Taylor Allen']);
  assert.deepEqual(filterRegistrationClients(clients,{fieldKey:'import:School',fieldValue:'West'}).map(c=>c.name),['Taylor Allen']);
+ assert.deepEqual(clientFieldValues(noPlan,'import:School'),[],'a missing imported field is not the same as an unanswered field');
  assert.deepEqual(filterRegistrationClients(clients,{search:'parent approval'}).map(c=>c.name),['Taylor Allen']);
 });
 
@@ -101,7 +102,7 @@ test('review edits keep both original and revised answers visible and filterable
   services:['Training'],customAnswers:{group:'U13',consent:true},
   customFieldLabels:{group:'Age group',consent:'Parent consent'},
   customFieldTypes:{group:'select',consent:'checkbox'},
-  originalSubmission:{customerName:'Taylor Allen',customerEmail:'taylor@example.com',customerPhone:'8135550123',
+  originalSubmission:{customerName:'Taylor Allen',customerEmail:'taylor-original@example.com',customerPhone:'8135550123',
    customAnswers:{group:'U12',consent:false}}
  })};
  const clients=buildClientDirectory([row],{staff:[{id:'trainer',name:'Trainer'}]},'owner-1');
@@ -112,6 +113,8 @@ test('review edits keep both original and revised answers visible and filterable
  assert.deepEqual(filterRegistrationClients(clients,{fieldKey:'question:group',fieldValue:'U12'}).map(c=>c.memberNumber),['TA0704']);
  assert.deepEqual(filterRegistrationClients(clients,{fieldKey:'question:group',fieldValue:'U13'}).map(c=>c.memberNumber),['TA0704']);
  assert.ok(registrationFieldCatalog(clients).some(x=>x.key==='question:group'));
+ assert.deepEqual(filterRegistrationClients(clients,{fieldKey:'email',fieldValue:'taylor-original@example.com'}).map(c=>c.memberNumber),['TA0704']);
+ assert.deepEqual(filterRegistrationClients(clients,{search:'taylor-original@example.com'}).map(c=>c.memberNumber),['TA0704']);
 });
 
 test('re-enrolling a member never replaces their original form answers',async()=>{
