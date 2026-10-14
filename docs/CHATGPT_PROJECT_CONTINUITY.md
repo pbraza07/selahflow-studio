@@ -1,5 +1,10 @@
 # SelahFlow Booking App — ChatGPT Project Continuity
 
+# v1.3.71 handoff — collapsed blockout schedules (2026-10-14)
+
+- Owner booking blockout schedules are collapsed by default and expand on demand for editing.
+- Release metadata is `1.3.71`; verify the matching Render deploy and `/api/health` before handoff.
+
 # v1.3.70 handoff — remove pre-tax wording (2026-10-14)
 
 - Booking summaries and confirmation surfaces no longer display “before applicable tax” or related pre-tax wording.

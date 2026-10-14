@@ -1,3 +1,7 @@
+## v1.3.71 — Collapsed blockout schedules
+
+- Blockout schedules in owner settings now appear collapsed by default with an expandable summary for editing.
+
 ## v1.3.70 — Remove pre-tax wording
 
 - Removed “before applicable tax” and related pre-tax wording from public and owner booking summaries and confirmations.
