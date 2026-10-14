@@ -782,7 +782,9 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
 .sf-client-editor-note{font-size:12px;line-height:1.6;margin:15px 20px;color:var(--sf-on-surface)!important}
 .sf-client-editor form{display:grid;gap:14px;padding:0 20px 16px}
 .sf-client-editor form>label,.sf-client-editor-row label{display:grid;gap:7px;min-width:0;color:var(--sf-on-surface)!important;font-size:12px;font-weight:700}
-.sf-client-editor form :is(input,textarea){width:100%;max-width:100%;box-sizing:border-box;padding:11px 12px;min-height:44px;border-radius:9px;border:1px solid var(--sf-border);background:var(--sf-input);color:var(--sf-on-input);font-size:13px;font-weight:500;outline-offset:2px}
+.sf-client-editor form :is(input,textarea,select){width:100%;max-width:100%;box-sizing:border-box;padding:11px 12px;min-height:44px;border-radius:9px;border:1px solid var(--sf-border);background:var(--sf-input);color:var(--sf-on-input);font-size:13px;font-weight:500;outline-offset:2px}
+.sf-client-editor .sf-registration-fields{display:grid;gap:14px}
+.sf-client-editor .sf-registration-field>label{display:grid;gap:7px;min-width:0;color:var(--sf-on-surface)!important;font-size:12px;font-weight:700}
 .sf-client-editor form textarea{min-height:100px;resize:vertical}
 .sf-client-editor form :is(input,textarea):focus-visible{outline:2px solid var(--sf-accent)}
 .sf-client-editor-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}

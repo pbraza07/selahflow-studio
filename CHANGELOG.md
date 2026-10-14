@@ -273,3 +273,9 @@ Current release: 1.3.1. Branding/fix patches remain in the 1.3.x series; feature
 ZIP filenames: SelahFlow_Studio_v1.zip, SelahFlow_Studio_v1.1.zip, …
 The package.json machine version for version 1 is 1.0.0; version 1.1 uses 1.1.0.
 Do not create an empty new version without actual changes.
+## v1.3.65 — Owner registration parity and session question editing
+
+- Client Directory **Add client** and **Edit client** now use the same standard and global booking registration fields that customers see, including owner-configured labels, required fields, and custom questions.
+- Owner-entered registration answers are stored with the client profile separately from spreadsheet imports and remain available when the profile is edited.
+- Every Bookable Session now has an **Edit session questions** button. Its editor shows standard fields as well as the global and session-specific questions that apply to that session; standard-field changes remain consistently applied across booking forms.
+- Migration 032 adds dedicated client-profile registration-answer and original-label storage without changing existing client, membership, appointment, or import history.

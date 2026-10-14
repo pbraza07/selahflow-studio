@@ -21,7 +21,7 @@ type Visit={
 type Client={
  memberNumber?:string;membershipName?:string;membershipStatus?:string;membershipAnswers?:Answer[];membershipDetails?:MembershipDetails;membershipRegistration?:{name:string;firstName:string;lastName:string;email:string;phone:string;dateOfBirth:string;memberNumber:string};dateOfBirth?:string;
  id:string;name:string;email:string;phone:string;bookedSessions:number;attendedSessions:number;
- attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;importColumns?:Record<string,string|boolean>;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:Answer[];
+ attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;importColumns?:Record<string,string|boolean>;registrationAnswers?:Record<string,string|boolean>;registrationFieldLabels?:Record<string,string>;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:Answer[];
 };
 const humanDate=(date:string)=>date?new Date(date+'T12:00:00Z').toLocaleDateString('en-US',
  {month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}):'—';
@@ -33,6 +33,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
  const [clients,setClients]=useState<Client[]>([]),[selectedId,setSelectedId]=useState<string|null>(null);
  const [search,setSearch]=useState(''),[busy,setBusy]=useState(true),[error,setError]=useState('');
  const [formFields,setFormFields]=useState<FormField[]>([]);
+ const [registrationConfig,setRegistrationConfig]=useState<any>({});
  const [membershipLevel,setMembershipLevel]=useState(''),[filterField,setFilterField]=useState(''),[filterValue,setFilterValue]=useState('');
  const [attendedOnly,setAttendedOnly]=useState(false);
  const [archived,setArchived]=useState<{id:string;name:string;email:string;phone:string}[]>([]);
@@ -46,7 +47,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    const r=await fetch('/api/studio/clients',{cache:'no-store'});
    const result=await r.json();
    if(!r.ok)throw Error(result.error||'Client records are unavailable.');
-   setClients(result.clients||[]);setArchived(result.archived||[]);setFormFields(result.formFields||[]);setError('');
+   setClients(result.clients||[]);setArchived(result.archived||[]);setFormFields(result.formFields||[]);setRegistrationConfig(result.registrationConfig||{});setError('');
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  },[]);
  useEffect(()=>{void reload();const changed=()=>void reload();window.addEventListener('selahflow:booking-reviewed',changed);
@@ -316,7 +317,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
     </div>):<p className="muted">No removed clients.</p>}
    </div>}
   </div>
-  {editing&&<ClientEditor client={editing==='new'?null:{name:editing.name,email:editing.email,phone:editing.phone,notes:editing.notes||''}}
+  {editing&&<ClientEditor config={registrationConfig} client={editing==='new'?null:{name:editing.name,email:editing.email,phone:editing.phone,notes:editing.notes||'',memberNumber:editing.memberNumber||'',dateOfBirth:editing.dateOfBirth||'',registrationAnswers:editing.registrationAnswers||{}}}
    onClose={()=>{if(!saving)setEditing(null);}} onSave={saveClient} busy={saving} error={editError}/>}
   {removing&&<div className="sf-client-editor-backdrop" role="presentation"><section className="sf-client-editor" role="dialog" aria-modal="true" aria-labelledby="remove-client-title"><header><div className="sf-client-editor-heading"><Trash2 size={20}/><div><small>CLIENT DIRECTORY</small><h2 id="remove-client-title">Remove {removing.name}?</h2></div></div></header><p className="sf-client-editor-note">This removes the client from this business directory. Their membership, bookings, and attendance history remain preserved, and you can restore the client later from Removed clients.</p><footer><button type="button" className="outline" disabled={!!actionBusy} onClick={()=>setRemoving(null)}>Keep client</button><button type="button" className="primary" disabled={!!actionBusy} onClick={()=>void confirmRemoveClient()}><Trash2 size={16}/>{actionBusy?'Removing…':'Remove client'}</button></footer></section></div>}
  </section>;

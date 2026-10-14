@@ -57,6 +57,7 @@ const [appointmentDetail,setAppointmentDetail]=useState<Any|null>(null);
 const [rosterAddOpen,setRosterAddOpen]=useState(false),[rosterName,setRosterName]=useState(''),[rosterEmail,setRosterEmail]=useState(''),[rosterPhone,setRosterPhone]=useState('');
 const [appointmentListOpen,setAppointmentListOpen]=useState(false),[deleteSelection,setDeleteSelection]=useState<string[]>([]),[deleteAllConfirm,setDeleteAllConfirm]=useState(false),[deleteBusinessName,setDeleteBusinessName]=useState(''),[deletePhrase,setDeletePhrase]=useState('');
 const [membershipPrefill,setMembershipPrefill]=useState<{name:string;email:string;phone:string}|null>(null);
+const [sessionQuestionEditor,setSessionQuestionEditor]=useState<string|null>(null);
 const [view,setView]=useState('Overview'),[config,setConfig]=useState<Any>(defaultSettings),[appointments,setAppointments]=useState<Any[]>([]),[events,setEvents]=useState<Any[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[toast,setToast]=useState(''),[date,setDate]=useState(today()),[staffFilter,setStaffFilter]=useState('all'),[search,setSearch]=useState(''),[modal,setModal]=useState(false),[portal,setPortal]=useState(false),[step,setStep]=useState(1),[selected,setSelected]=useState<string[]>([]),[provider,setProvider]=useState(''),[slots,setSlots]=useState<number[]>([]),[ownerEarliestStart,setOwnerEarliestStart]=useState<number|null>(null),[ownerFirstAvailable,setOwnerFirstAvailable]=useState<number|null>(null),[slot,setSlot]=useState<number|null>(null),[busy,setBusy]=useState(false),[booked,setBooked]=useState(''),[cart,setCart]=useState<Any[]>([]),[category,setCategory]=useState('All'),[chat,setChat]=useState(false),[messages,setMessages]=useState<Any[]>([{from:'bot',text:'Hello! I can help you explore our services, hours, and booking policy. What can I help you with?'}]),[query,setQuery]=useState(''),[mobile,setMobile]=useState(false),[demo,setDemo]=useState(true),[range,setRange]=useState('Today'),[settingsTab,setSettingsTab]=useState<(typeof SETTINGS_AREAS)[number]['id']>('business'),[calendarMode,setCalendarMode]=useState<'day'|'week'|'month'>('day');
 async function refresh(){try{const r=await fetch('/api/studio');const d=await r.json() as Any;if(r.status===401){window.location.assign('/login');return;}if(!r.ok)throw Error(d.error);setConfig(d.config);setAppointments(d.appointments);setEvents(d.events);setError('');}catch(e){setError((e as Error).message);}finally{setLoading(false);}}
 const refreshTeamAllowance=useCallback(async()=>{try{
@@ -286,6 +287,7 @@ return <div className="app-shell" data-selah-theme="true" style={{...themeStyles
      onClick={()=>{const occurrence=seriesOccurrences(config,x.id)[0];if(occurrence)openSessionReschedule(occurrence);}}>
      <CalendarDays size={15}/> Reschedule · keep customers
     </button>
+    <button type="button" className="outline" aria-expanded={sessionQuestionEditor===x.id} onClick={()=>setSessionQuestionEditor(current=>current===x.id?null:x.id)}>Edit session questions</button>
     <button type="button" className="outline sf-session-remove" onClick={()=>removeSession(x.id)}>Remove session</button>
    </div>
   </div>
@@ -334,7 +336,7 @@ return <div className="app-shell" data-selah-theme="true" style={{...themeStyles
      <>Review the repetition interval and end date before saving.</>}</span>
    </div>
   </div>}
-  <RegistrationQuestionSettings config={config} setConfig={setConfig} limit={planBenefits?.limits.bookingFields??5} sessionId={x.id}/>
+  {sessionQuestionEditor===x.id&&<section className="sf-session-question-editor"><RegistrationQuestionSettings config={config} setConfig={setConfig} limit={planBenefits?.limits.bookingFields??5} sessionId={x.id}/></section>}
   <p className="sf-session-capacity"><b>{sessionLeft(seriesOccurrences(config,x.id)[0]||x)}/{(seriesOccurrences(config,x.id)[0]||x).capacity} slots left</b> on the first occurrence · {sessionBookings((seriesOccurrences(config,x.id)[0]||x).id)} confirmed customer{sessionBookings((seriesOccurrences(config,x.id)[0]||x).id)===1?'':'s'}{x.repeat&&<> · Later dates have independent availability</>}</p>
   {rescheduling?.seriesId===x.id&&<section className="sf-session-reschedule-panel" aria-label="Reschedule without losing booked customers">
    <div className="sf-session-reschedule-heading">

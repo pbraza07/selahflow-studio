@@ -87,6 +87,7 @@ test('migration allows per-owner profiles, enforces source uniqueness and archiv
   await db.exec(await readFile(new URL('../migrations/001_initial.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../migrations/011_business_client_profiles.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../migrations/031_membership_client_archive_source.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../migrations/032_client_registration_answers.sql',import.meta.url),'utf8'));
   await db.query("INSERT INTO users(id,email,password_hash) VALUES('first','first@example.com','hash'),('second','second@example.com','hash')");
   await db.query("INSERT INTO appointments(id,owner,date,staff,start,duration,data,status) VALUES('appointment-one','first','2026-10-01','coach',540,60,'{}','Completed')");
   await db.query("INSERT INTO business_client_profiles(id,owner,source_key,anchor_appointment_id,name,email) VALUES('p1','first','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','appointment-one','Client A','shared@example.com')");
@@ -97,6 +98,7 @@ test('migration allows per-owner profiles, enforces source uniqueness and archiv
   await db.query("UPDATE business_client_profiles SET archived=TRUE WHERE owner='first' AND id='p1'");
   assert.equal((await db.query('SELECT archived FROM business_client_profiles WHERE id=$1',['p1'])).rows[0].archived,true);
   assert.equal((await db.query("SELECT COUNT(*)::int AS n FROM appointments WHERE owner='first'")).rows[0].n,1);
+  assert.ok((await db.query("SELECT column_name FROM information_schema.columns WHERE table_name='business_client_profiles' AND column_name IN ('registration_answers','registration_field_labels')")).rows.length===2);
  }finally{await db.close();}
 });
 test('client-management endpoints enforce owner scope and protect appointment history',async()=>{
@@ -113,6 +115,7 @@ test('client-management endpoints enforce owner scope and protect appointment hi
  assert.doesNotMatch(route,/DELETE FROM appointments/i);
  assert.doesNotMatch(route,/DELETE FROM business_client_profiles/i);
  assert.match(screen,/Add client/);
+ assert.match(screen,/registrationConfig/);
  assert.match(screen,/Edit client/);
  assert.match(screen,/Remove client/);
  assert.match(screen,/aria-modal="true"/);
@@ -120,4 +123,15 @@ test('client-management endpoints enforce owner scope and protect appointment hi
  assert.match(screen,/Restore/);
  assert.match(css,/\.sf-client-editor-backdrop/);
  assert.match(css,/var\(--sf-surface/);
+});
+test('owner client editor reuses booking registration fields and persists their answers',async()=>{
+ const base=new URL('../',import.meta.url);
+ const editor=await readFile(new URL('app/components/client-editor.tsx',base),'utf8');
+ const route=await readFile(new URL('app/api/studio/clients/route.ts',base),'utf8');
+ assert.match(editor,/RegistrationFields/);
+ assert.match(editor,/form="booking"/);
+ assert.match(editor,/sessionId=\{null\}/);
+ assert.match(route,/validateStandardRegistration\(settings,'booking',body\)/);
+ assert.match(route,/registration_answers/);
+ assert.match(route,/registration_field_labels/);
 });

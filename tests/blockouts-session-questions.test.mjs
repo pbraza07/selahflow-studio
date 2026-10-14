@@ -3,6 +3,7 @@ import {isBlocked,validateBlockouts} from '../server/booking-blockouts.mjs';
 import {computeDayAvailability} from '../server/session-scheduling.mjs';
 import {customRegistrationFields,validateRegistrationQuestions} from '../server/registration-questions.mjs';
 import {sanitizeBookingAnswers} from '../server/booking-custom-fields.mjs';
+import {readFile} from 'node:fs/promises';
 test('blockouts apply by date, staff and intersecting interval including full days',()=>{
  const config={staff:[{id:'coach'}],bookingBlockouts:[{id:'one',date:'2026-11-01',start:600,end:660,staff:'coach',reason:'Away'}]};validateBlockouts(config);
  assert.equal(isBlocked(config,'2026-11-01','coach',585,30),true);assert.equal(isBlocked(config,'2026-11-01','coach',660,30),false);assert.equal(isBlocked(config,'2026-11-01','other',600,30),false);
@@ -16,4 +17,12 @@ test('existing sessions and recurring occurrences receive only their selected qu
  assert.deepEqual(customRegistrationFields(config,'booking',null).map(f=>f.id),['global']);
  assert.deepEqual(sanitizeBookingAnswers(customRegistrationFields(config,'booking','training'),{global:'ok',level:'intermediate'}),{global:'ok',level:'intermediate'});
  assert.throws(()=>sanitizeBookingAnswers(customRegistrationFields(config,'booking','evaluation'),{global:'ok'}),/history is required/);
+});
+test('each bookable session exposes standard and applicable custom fields in its editor',async()=>{
+ const component=await readFile(new URL('../app/components/registration-question-settings.tsx',import.meta.url),'utf8');
+ const dashboard=await readFile(new URL('../app/studio/owner-dashboard.tsx',import.meta.url),'utf8');
+ assert.match(component,/registrationQuestions\(config,sessionId\?'booking':form,sessionId\|\|undefined\)/);
+ assert.match(component,/including standard registration fields/);
+ assert.match(dashboard,/Edit session questions/);
+ assert.match(dashboard,/sessionQuestionEditor===x.id/);
 });
