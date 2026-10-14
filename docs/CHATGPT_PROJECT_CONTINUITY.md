@@ -80,3 +80,7 @@ Validation: all 178 automated tests and TypeScript pass. Production build passes
 ## 2026-10-13 — v1.3.62 release handoff
 
 The next release adds a future-facing six-character member-ID constraint, service/session membership-credit eligibility, ledger-backed membership payment revenue, and session-local required/push questions. Existing history is preserved. The Arcila Training Noah Alves deletion must be verified against the exact member record and performed through the authenticated owner interface; do not delete similarly named records. Verify Render LIVE commit and health version before describing this source as deployed.
+# v1.3.66 handoff — dark-surface text contrast (2026-10-14)
+
+- `app/globals.css` now explicitly preserves readable text and placeholder contrast in themed dark registration/booking surfaces, including optional markers and helper/status copy.
+- Release metadata is `1.3.66`; verify the matching Render deploy and `/api/health` before handoff.

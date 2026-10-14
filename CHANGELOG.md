@@ -1,3 +1,8 @@
+## v1.3.66 — Dark-surface text contrast
+
+- Ensured themed dark cards and booking identity panels use readable foreground text for labels, helper copy, optional markers, status text, and placeholders.
+- Removed the low-contrast opacity treatment from optional markers inside dark registration panels while preserving intentional placeholder hierarchy.
+
 ## v1.3.64 — Reliable member deletion
 
 - Deleting a member now detaches linked membership-request audit records before the membership row is removed, resolving the foreign-key error shown for Noah Alves.
