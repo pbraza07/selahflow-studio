@@ -1,4 +1,5 @@
 import {validatePageContent} from '../server/page-content.mjs';
+import {themeIsValid,resolveTheme} from '../server/themes.mjs';
 import {validateBlockouts,isBlocked} from '../server/booking-blockouts.mjs';
 import {customRegistrationFields,validateRegistrationQuestions,validateStandardRegistration,publicRegistrationSettings} from '../server/registration-questions.mjs';
 import {randomInt,randomBytes} from 'node:crypto';
@@ -44,6 +45,7 @@ export async function ownerGet(req:Request){
 }
 export async function studioPost(req:Request,isPublic=false){try{if(!validOrigin(req))return reply({error:'Invalid origin'},403);const raw=await req.text();if(raw.length>(isPublic?20000:120000))return reply({error:'Request too large.'},413);let b;try{b=JSON.parse(raw);}catch{return reply({error:'Invalid request.'},400);}if(!b||typeof b!=='object')return reply({error:'Invalid request.'},400);if(isPublic&&!['availability','book','calendar','session_calendar','verify_registration','registration_code_request','registration_email_lookup','registration_latest_status'].includes(b.action))return reply({error:'Action not permitted.'},403);const {owner,config}=await context(req,isPublic);if(isPublic){if(b.website)return reply({error:'Unable to process request.'},400);const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();if(!await takeLimit('public:'+owner+':'+tokenHash(ip),120))return reply({error:'Too many requests. Please try again in 15 minutes.'},429);if(b.action==='book'){if(b.policyAccepted!==true)return reply({error:'Please accept the booking policy.'},400);if(!await takeLimit('book:'+owner+':'+tokenHash(ip),12))return reply({error:'Booking limit reached. Please contact the studio.'},429);if(typeof b.email==='string'&&!await takeLimit('email:'+owner+':'+tokenHash(b.email.trim().toLowerCase()),6))return reply({error:'Too many booking requests for this email. Please contact the studio.'},429);}}const audit=(kind:string,data:any)=>db().prepare('INSERT OR IGNORE INTO events(id,owner,created,kind,data) VALUES(?,?,?,?,?)').bind(typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID(),owner,new Date().toISOString(),kind,JSON.stringify(data));
 if(b.action==='settings'){const c=b.config;
+ if(c?.theme!==undefined&&c.theme!==null){if(!themeIsValid(c.theme))throw Error('Choose valid theme colors and fonts.');c.theme=resolveTheme(c.theme);}
  validateBookingFields(c?.bookingCustomFields||[],c?.bookingPushFields||['customerName','services','date']);
  validateRegistrationQuestions(c);
  validateBlockouts(c);

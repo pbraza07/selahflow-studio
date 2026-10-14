@@ -1,3 +1,10 @@
+## v1.3.75 — White membership labels and automatic text contrast
+
+- Fixed the shared membership-ID label cascade so public booking and owner form rules cannot override white text on the black panel, including optional/help/status text.
+- Preserved readable dark values and placeholders in white response fields, including browser autofill.
+- Removed remaining text-color controls from the visual page editor. Legacy text-color overrides are ignored by shared theme rendering and normalized by all owner theme/settings save paths; dark theme surfaces use pure white text automatically.
+- Applies to every existing and future business without changing bookings, memberships, credits or history.
+
 ## v1.3.74 — Editable booking header phrase
 
 - Added a dedicated owner setting and visual-editor field for the booking header phrase, including the circled “Your time. Your style.” text.

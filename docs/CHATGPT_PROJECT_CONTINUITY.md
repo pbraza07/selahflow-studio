@@ -1,5 +1,12 @@
 # SelahFlow Booking App — ChatGPT Project Continuity
 
+## v1.3.75 release handoff — white membership labels and no text-color controls (2026-10-14)
+
+- Verified prior LIVE baseline: v1.3.74, GitHub main `6535de85245a7ef0e9b343e503bd0e108e6da48d`, Render `dep-db7npqm0tbcc73c3td4g`.
+- Fixed CSS specificity overriding the membership-ID label on black shared registration panels. Labels/helpers/status are white; white input fields retain dark values and placeholders.
+- Removed visual editor text-color controls and derive text colors from backgrounds in shared theme resolution and all owner theme/settings saves. Legacy color keys are retained only for schema compatibility, not customization.
+- No data migration or customer/financial record changes. Release source is v1.3.75; verify its exact Render LIVE commit and health version before claiming deployment.
+
 # v1.3.74 handoff — editable booking header phrase (2026-10-14)
 
 - Added `bookingHeaderNote` as an owner-editable booking page setting and visual-editor field; the live booking header now uses the saved value.

@@ -3,7 +3,7 @@ import {requireOwner} from '../../../lib/auth';
 import {validOrigin} from '../../../server/security.mjs';
 import {bookableTeamLimit} from '../../../server/team-seat-policy.mjs';
 import {planEntitlements} from '../../../server/plan-entitlements.mjs';
-import {themeIsValid} from '../../../server/themes.mjs';
+import {themeIsValid,resolveTheme} from '../../../server/themes.mjs';
 import {googleListingUrl} from '../../../server/membership-payments.mjs';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -40,7 +40,7 @@ export async function POST(req:Request){
    if(b.requestListing&&(!settings?.services?.length||!settings?.staff?.length))
     {await client.query('ROLLBACK');return Response.json({error:'Add at least one service and team member before requesting a listing.'},{status:400});}
    await client.query('UPDATE businesses SET name=$1,description=$2,city=$3,region=$4,listing_requested=FALSE,is_listed=TRUE,brand_primary=COALESCE($7,brand_primary),brand_background=COALESCE($8,brand_background),business_model=COALESCE($9,business_model),google_listing_url=COALESCE($10,google_listing_url),updated_at=now() WHERE owner_id=$6',[name,description,city,region,b.requestListing,owner,brandPrimary,brandBackground,businessModel,googleLink]);
-   if(settings){settings.name=name;if(requestedTheme!==null)settings.theme=requestedTheme;if(address!==null)settings.address=address;await client.query('UPDATE settings SET data=$1 WHERE owner=$2',[JSON.stringify(settings),owner]);}
+   if(settings){settings.name=name;if(requestedTheme!==null)settings.theme=resolveTheme(requestedTheme);if(address!==null)settings.address=address;await client.query('UPDATE settings SET data=$1 WHERE owner=$2',[JSON.stringify(settings),owner]);}
    await client.query('COMMIT');
    return Response.json({ok:true,listingPending:!!b.requestListing},{headers:noStore});
   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}

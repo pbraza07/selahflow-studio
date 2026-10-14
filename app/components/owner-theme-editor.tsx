@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useMemo,useState} from 'react';
 import type {CSSProperties} from 'react';
-import {COLOR_ROLES,PALETTES,FONTS,resolveTheme,themeStyles} from '../../server/themes.mjs';
+import {COLOR_ROLES,EDITABLE_COLOR_ROLES,PALETTES,FONTS,resolveTheme,themeStyles} from '../../server/themes.mjs';
 type Theme={palette:string;bodyFont:string;headingFont:string;colors:Record<string,string>};
 type Profile={name:string;description:string;city:string;region:string;brand_primary:string;brand_background:string;theme?:Theme};
 const GROUPS=[
@@ -21,7 +21,7 @@ export default function OwnerThemeEditor(){
  async function load(){const r=await fetch('/api/business',{cache:'no-store'}),data=await r.json();if(!r.ok||!data.business)throw Error(data.error||'Unable to load theme.');const b=data.business as Profile;setProfile(b);setTheme(resolveTheme(b.theme,b.brand_primary,b.brand_background));}
  useEffect(()=>{load().catch(e=>setStatus((e as Error).message));},[]);
  function applyPalette(id:string){const p=PALETTES.find(p=>p.id===id);if(!p)return;setTheme(old=>({...old,palette:p.id,colors:{...p.colors}}));setStatus('Palette selected. Save to publish the changes.');}
- function setColor(role:string,value:string){if(!hex.test(value))return;setTheme(old=>({...old,palette:'custom',colors:{...old.colors,[role]:value.toUpperCase()}}));setStatus('Custom color selected. Save to publish.');}
+ function setColor(role:string,value:string){if(!hex.test(value)||!EDITABLE_COLOR_ROLES.some(([id])=>id===role))return;setTheme(old=>({...old,palette:'custom',colors:{...old.colors,[role]:value.toUpperCase()}}));setStatus('Custom color selected. Save to publish.');}
  async function save(){if(!profile)return;setBusy(true);setStatus('');try{const r=await fetch('/api/business/theme',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme})}),d=await r.json();if(!r.ok)throw Error(d.error||'Save failed.');await load();window.dispatchEvent(new Event('selahflow:theme-updated'));setStatus('Saved! Your booking page, public business page and workspace now use this theme.');}catch(e){setStatus((e as Error).message);}finally{setBusy(false);}}
  return <section className="sf-editor" id={bodyId} aria-label="Business color and font editor">
  <div className="sf-editor-heading"><div><h2>Full-page themes &amp; fonts</h2><p>Choose one of 20 designer combinations or pick any color for each page area. Changes are unique to your business.</p></div><button type="button" className="primary" disabled={busy||!profile} onClick={save}>{busy?'Saving…':'Save & publish theme'}</button></div>

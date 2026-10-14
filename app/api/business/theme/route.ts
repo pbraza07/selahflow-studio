@@ -1,7 +1,7 @@
 import {getPool} from '../../../../server/database.mjs';
 import {requireOwner} from '../../../../lib/auth';
 import {validOrigin} from '../../../../server/security.mjs';
-import {themeIsValid} from '../../../../server/themes.mjs';
+import {themeIsValid,resolveTheme} from '../../../../server/themes.mjs';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 export async function POST(req:Request){
  if(!validOrigin(req))return Response.json({error:'Invalid request origin.'},{status:403});
@@ -9,8 +9,9 @@ export async function POST(req:Request){
   const owner=await requireOwner(req);
   const raw=await req.text();
   if(raw.length>12000)return Response.json({error:'Theme selection is too large.'},{status:413});
-  const input=JSON.parse(raw),theme=input?.theme;
-  if(!themeIsValid(theme))return Response.json({error:'Choose valid theme colors and fonts.'},{status:400});
+  const input=JSON.parse(raw);
+  if(!themeIsValid(input?.theme))return Response.json({error:'Choose valid theme colors and fonts.'},{status:400});
+  const theme=resolveTheme(input.theme);
   const pool=getPool(),client=await pool.connect();
   try{
    await client.query('BEGIN');

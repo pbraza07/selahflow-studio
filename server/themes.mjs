@@ -25,18 +25,22 @@ const BASE=[
 ];
 export const PALETTES=BASE.map(([name,dark,page,surface,accent,text,muted,soft,border],i)=>({id:'palette-'+String(i+1).padStart(2,'0'),name,colors:{page,header:dark,hero:page,surface,card:surface,policy:soft,footer:dark,button:dark,buttonHover:accent,secondaryButton:soft,selected:soft,step:soft,input:surface,border,heading:text,text,muted,link:dark,accent}}));
 export const DEFAULT_THEME={palette:PALETTES[0].id,bodyFont:'dm',headingFont:'manrope',colors:{...PALETTES[0].colors}};
+export const EDITABLE_COLOR_ROLES=COLOR_ROLES.filter(([id])=>!['heading','text','muted','link'].includes(id));
 const HEX=/^#[0-9a-fA-F]{6}$/,ROLES=COLOR_ROLES.map(([id])=>id),FONT_IDS=FONTS.map(([id])=>id);
 export function themeIsValid(t){return !!t&&typeof t==='object'&&!Array.isArray(t)&&(t.palette==='custom'||PALETTES.some(p=>p.id===t.palette))&&FONT_IDS.includes(t.bodyFont)&&FONT_IDS.includes(t.headingFont)&&!!t.colors&&typeof t.colors==='object'&&!Array.isArray(t.colors)&&Object.keys(t.colors).length===ROLES.length&&Object.keys(t.colors).every(k=>ROLES.includes(k))&&ROLES.every(k=>typeof t.colors[k]==='string'&&HEX.test(t.colors[k]));}
 export function resolveTheme(input,primary='#123F3A',background='#F7F4EC'){
- if(themeIsValid(input))return {palette:input.palette,bodyFont:input.bodyFont,headingFont:input.headingFont,colors:{...input.colors}};
+ if(themeIsValid(input))return {...input,colors:automaticTextColors(input.colors)};
  const colors={...PALETTES[0].colors};
  if(HEX.test(primary)){colors.header=primary;colors.button=primary;colors.link=primary;}
  if(HEX.test(background)){colors.page=background;colors.hero=background;}
- return {palette:'custom',bodyFont:'dm',headingFont:'manrope',colors};
+ return {palette:'custom',bodyFont:'dm',headingFont:'manrope',colors:automaticTextColors(colors)};
 }
+// Legacy text keys remain readable for stored theme compatibility, but are no
+// longer configurable. Every renderer and save derives them from backgrounds.
+function automaticTextColors(colors){return {...colors,heading:accessibleText(colors.hero),text:accessibleText(colors.page),muted:accessibleText(colors.page),link:accessibleText(colors.page)};}
 function lum(h){const a=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255).map(x=>x<=0.04045?x/12.92:((x+.055)/1.055)**2.4);return a[0]*.2126+a[1]*.7152+a[2]*.0722;}
 export function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
-export function accessibleText(bg,pref='#183330'){if(HEX.test(pref)&&contrast(bg,pref)>=4.5)return pref;return contrast(bg,'#000000')>=contrast(bg,'#FFFFFF')?'#000000':'#FFFFFF';}
+export function accessibleText(bg,pref='#183330'){if(contrast(bg,'#FFFFFF')>contrast(bg,'#000000'))return '#FFFFFF';if(HEX.test(pref)&&contrast(bg,pref)>=4.5)return pref;return '#000000';}
 export function themeStyles(raw,primary,background){
  const t=resolveTheme(raw,primary,background),c=t.colors,out={};
  for(const [id] of COLOR_ROLES)out['--sf-'+id.replace(/[A-Z]/g,x=>'-'+x.toLowerCase())]=c[id];
