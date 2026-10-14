@@ -1,5 +1,10 @@
 # SelahFlow Booking App — ChatGPT Project Continuity
 
+# v1.3.74 handoff — editable booking header phrase (2026-10-14)
+
+- Added `bookingHeaderNote` as an owner-editable booking page setting and visual-editor field; the live booking header now uses the saved value.
+- Release metadata is `1.3.74`; verify the matching Render deploy and `/api/health` before handoff.
+
 # v1.3.73 handoff — visual page editing (2026-10-14)
 
 - **Edit this page** now opens a page-style owner editor with inline editable copy, page switching, direct color controls, live-page preview and one save action.

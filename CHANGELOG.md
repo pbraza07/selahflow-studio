@@ -1,3 +1,8 @@
+## v1.3.74 — Editable booking header phrase
+
+- Added a dedicated owner setting and visual-editor field for the booking header phrase, including the circled “Your time. Your style.” text.
+- The saved phrase now renders on the live public booking page for each business.
+
 ## v1.3.73 — Visual page editing
 
 - Replaced the field-list page editor flow with an actual page-style editor opened by **Edit this page**.
