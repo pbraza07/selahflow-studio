@@ -39,6 +39,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
  const [editing,setEditing]=useState<Client|'new'|null>(null),[saving,setSaving]=useState(false),[editError,setEditError]=useState('');
  const [removedSelection,setRemovedSelection]=useState<string[]>([]);
  const [showRemoved,setShowRemoved]=useState(false),[actionBusy,setActionBusy]=useState(''),[actionError,setActionError]=useState('');
+ const [removing,setRemoving]=useState<Client|null>(null);
  const reload=useCallback(async()=>{
   setBusy(true);
   try{
@@ -79,11 +80,15 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
   }catch(error){setEditError((error as Error).message);}finally{setSaving(false);}
  }
  async function removeClient(client:Client){
-  if(!window.confirm('Remove '+client.name+' from this business client directory?\n\nTheir bookings and attendance history will remain saved. You can restore the client later.'))return;
+  setRemoving(client);
+ }
+ async function confirmRemoveClient(){
+  const client=removing;
+  if(!client)return;
   setActionBusy(client.id);setActionError('');
   try{
    await postClient('archive',{clientId:client.id});
-   setSelectedId(null);await reload();
+   setSelectedId(null);setRemoving(null);await reload();
   }catch(error){setActionError((error as Error).message);}finally{setActionBusy('');}
  }
  async function restoreClient(id:string){
@@ -313,5 +318,6 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
   </div>
   {editing&&<ClientEditor client={editing==='new'?null:{name:editing.name,email:editing.email,phone:editing.phone,notes:editing.notes||''}}
    onClose={()=>{if(!saving)setEditing(null);}} onSave={saveClient} busy={saving} error={editError}/>}
+  {removing&&<div className="sf-client-editor-backdrop" role="presentation"><section className="sf-client-editor" role="dialog" aria-modal="true" aria-labelledby="remove-client-title"><header><div className="sf-client-editor-heading"><Trash2 size={20}/><div><small>CLIENT DIRECTORY</small><h2 id="remove-client-title">Remove {removing.name}?</h2></div></div></header><p className="sf-client-editor-note">This removes the client from this business directory. Their membership, bookings, and attendance history remain preserved, and you can restore the client later from Removed clients.</p><footer><button type="button" className="outline" disabled={!!actionBusy} onClick={()=>setRemoving(null)}>Keep client</button><button type="button" className="primary" disabled={!!actionBusy} onClick={()=>void confirmRemoveClient()}><Trash2 size={16}/>{actionBusy?'Removing…':'Remove client'}</button></footer></section></div>}
  </section>;
 }

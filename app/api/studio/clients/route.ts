@@ -12,6 +12,8 @@ export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const noStore={'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'};
 const validId=(id:unknown)=>typeof id==='string'&&/^[a-f0-9-]{32,36}$/i.test(id);
+const membershipClientId=(id:unknown)=>typeof id==='string'&&/^membership-[a-f0-9-]{36}$/i.test(id);
+const validClientId=(id:unknown)=>validId(id)||membershipClientId(id);
 async function businessFor(owner: string,db:{query:(sql:string,values:unknown[])=>Promise<{rows:any[]}>}){
  const result=await db.query(
   "SELECT b.slug,b.name,b.status,b.brand_primary,b.brand_background,s.data AS settings_data FROM businesses b JOIN settings s ON s.owner=b.owner_id WHERE b.owner_id=$1",
@@ -51,8 +53,13 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
   return m?{...c,...memberData(m,c)}:c;
  });
  for(const m of members){
+  const virtualId='membership-'+m.id;
+  const profile=profiles.rows.find((p:any)=>p.source_key===virtualId);
+  // A membership without appointments is still a client card. Its persisted
+  // profile is the source of truth when the owner archives/restores it.
+  if(profile?.archived&&!profile.deleted_at)continue;
   if(!clients.some((c:any)=>c.memberNumber===m.member_number||(c.name?.trim().toLowerCase()===m.customer_name?.trim().toLowerCase()&&c.email?.toLowerCase()===m.customer_email?.toLowerCase())))
-   clients.push({id:'membership-'+m.id,name:m.customer_name,email:m.customer_email,bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],latestDate:'',history:[],firstBooking:null,latestBookingAnswers:[],...memberData(m)});
+   clients.push({id:profile?.id||virtualId,name:m.customer_name,email:m.customer_email,bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],latestDate:'',history:[],firstBooking:null,latestBookingAnswers:[],...memberData(m)});
  }
  return {derived,profiles:profiles.rows,clients,formFields:fields.map((f:any)=>({id:f.id,label:f.label,type:f.type,options:Array.isArray(f.options)?f.options:[]})),archived:combined.archived.filter((c:{id:string})=>!profiles.rows.some((p:any)=>p.id===c.id&&p.deleted_at))};
 }
@@ -103,7 +110,7 @@ export async function POST(req:Request){
    const settings=JSON.parse(business.settings_data||'{}');
    const result=await directory(owner,db,settings);
    const id=body.clientId;
-   const selected=validId(id)?result.clients.find(c=>c.id===id):null;
+   const selected=validClientId(id)?result.clients.find(c=>c.id===id):null;
    const archived=validId(id)?result.archived.find(c=>c.id===id):null;
    const profile=validId(id)?result.profiles.find(p=>p.id===id):null;
    const client=selected||archived;
@@ -139,8 +146,8 @@ export async function POST(req:Request){
      responseId=randomUUID();
      const sourceAnchor=selected.history?.[selected.history.length-1]?.id||null;
      await db.query(
-      'INSERT INTO business_client_profiles(id,owner,source_key,anchor_appointment_id,name,email,phone,notes,archived) VALUES($1,$2,$3,$4,$5,$6,$7,$8,TRUE)',
-      [responseId,owner,id,sourceAnchor,selected.name,selected.email,selected.phone,selected.notes||'']);
+      'INSERT INTO business_client_profiles(id,owner,source_key,anchor_appointment_id,name,email,phone,notes,member_number,date_of_birth,archived) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE)',
+      [responseId,owner,id,sourceAnchor,selected.name,selected.email,selected.phone,selected.notes||'',selected.memberNumber||null,selected.dateOfBirth||null]);
     }
    }else if(body.action==='deleteArchived'){
     const ids=body.clientIds;

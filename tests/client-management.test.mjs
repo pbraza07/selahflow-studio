@@ -86,11 +86,13 @@ test('migration allows per-owner profiles, enforces source uniqueness and archiv
  try{
   await db.exec(await readFile(new URL('../migrations/001_initial.sql',import.meta.url),'utf8'));
   await db.exec(await readFile(new URL('../migrations/011_business_client_profiles.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../migrations/031_membership_client_archive_source.sql',import.meta.url),'utf8'));
   await db.query("INSERT INTO users(id,email,password_hash) VALUES('first','first@example.com','hash'),('second','second@example.com','hash')");
   await db.query("INSERT INTO appointments(id,owner,date,staff,start,duration,data,status) VALUES('appointment-one','first','2026-10-01','coach',540,60,'{}','Completed')");
   await db.query("INSERT INTO business_client_profiles(id,owner,source_key,anchor_appointment_id,name,email) VALUES('p1','first','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','appointment-one','Client A','shared@example.com')");
   await db.query("INSERT INTO business_client_profiles(id,owner,source_key,name,email) VALUES('p2','second','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','Client B','shared@example.com')");
-  assert.equal((await db.query('SELECT id FROM business_client_profiles WHERE owner=$1',['first'])).rows.length,1);
+  await db.query("INSERT INTO business_client_profiles(id,owner,source_key,name,email) VALUES('membership-profile','first','membership-0eb06d1e-6228-4a61-b0c6-41f2752dd29d','Membership client','member@example.com')");
+  assert.equal((await db.query('SELECT id FROM business_client_profiles WHERE owner=$1',['first'])).rows.length,2);
   await assert.rejects(db.query("INSERT INTO business_client_profiles(id,owner,source_key,name) VALUES('p3','first','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','Other')"));
   await db.query("UPDATE business_client_profiles SET archived=TRUE WHERE owner='first' AND id='p1'");
   assert.equal((await db.query('SELECT archived FROM business_client_profiles WHERE id=$1',['p1'])).rows[0].archived,true);
@@ -106,11 +108,14 @@ test('client-management endpoints enforce owner scope and protect appointment hi
  assert.match(route,/validOrigin\(req\)/);
  assert.match(route,/WHERE owner=\$1/);
  assert.match(route,/UPDATE business_client_profiles SET archived=TRUE/);
+ assert.match(route,/membershipClientId/);
+ assert.match(route,/source_key===virtualId/);
  assert.doesNotMatch(route,/DELETE FROM appointments/i);
  assert.doesNotMatch(route,/DELETE FROM business_client_profiles/i);
  assert.match(screen,/Add client/);
  assert.match(screen,/Edit client/);
  assert.match(screen,/Remove client/);
+ assert.match(screen,/aria-modal="true"/);
  assert.match(screen,/Removed clients/);
  assert.match(screen,/Restore/);
  assert.match(css,/\.sf-client-editor-backdrop/);

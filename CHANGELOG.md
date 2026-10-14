@@ -1,3 +1,8 @@
+## v1.3.63 — Membership client removal
+
+- Membership-only client cards, including Noah Alves, can be removed from the owner directory and restored later without deleting membership, bookings, or attendance history.
+- Replaced the browser-native removal prompt with an accessible in-app confirmation dialog.
+
 ## v1.3.62 — Membership-credit eligibility and session-specific controls
 - Enforces the six-character member format (first initial, last initial, birth month and day) for new and changed member records across booking, memberships and clients.
 - Eligible active members with available credits receive a $0 quote for services/sessions that allow membership credit; those bookings are excluded from appointment revenue and do not consume a credit when marked attended if credit use is disabled.
