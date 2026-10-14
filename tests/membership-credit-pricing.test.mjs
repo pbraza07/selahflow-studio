@@ -30,3 +30,11 @@ test('member lookup drives a zero-price confirmation while preserving the regula
  assert.match(lookup,/membershipCovered/);
  assert.match(lookup,/sessionsLeft/);
 });
+test('booking surfaces do not show pre-tax wording',async()=>{
+ const [publicPage,ownerDashboard]=await Promise.all([
+  readFile(new URL('../app/book/page.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../app/studio/owner-dashboard.tsx',import.meta.url),'utf8')
+ ]);
+ assert.doesNotMatch(publicPage,/before applicable tax|applicable tax|before tax/i);
+ assert.doesNotMatch(ownerDashboard,/before applicable tax|applicable tax|before tax/i);
+});

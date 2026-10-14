@@ -1,5 +1,10 @@
 # SelahFlow Booking App — ChatGPT Project Continuity
 
+# v1.3.70 handoff — remove pre-tax wording (2026-10-14)
+
+- Booking summaries and confirmation surfaces no longer display “before applicable tax” or related pre-tax wording.
+- Release metadata is `1.3.70`; verify the matching Render deploy and `/api/health` before handoff.
+
 This document is a durable **handoff** for new ChatGPT conversations in the **SelahFlow Booking App** Project. It is also mirrored in the GitHub repository. Its "latest" facts are only a dated snapshot; verify the actual live deployment at the beginning of every implementation or version-status request.
 
 ## One-time Project Instructions (copy this section into ChatGPT Project settings)

@@ -1,3 +1,6 @@
+## v1.3.70 — Remove pre-tax wording
+
+- Removed “before applicable tax” and related pre-tax wording from public and owner booking summaries and confirmations.
 ## v1.3.69 — Membership-credit booking price
 
 - A verified member ID with an active membership and sessions remaining now displays `$0.00` on the final booking confirmation.
@@ -300,3 +303,6 @@ Do not create an empty new version without actual changes.
 - Owner-entered registration answers are stored with the client profile separately from spreadsheet imports and remain available when the profile is edited.
 - Every Bookable Session now has an **Edit session questions** button. Its editor shows standard fields as well as the global and session-specific questions that apply to that session; standard-field changes remain consistently applied across booking forms.
 - Migration 032 adds dedicated client-profile registration-answer and original-label storage without changing existing client, membership, appointment, or import history.
+## v1.3.70 — Remove pre-tax wording
+
+- Removed “before applicable tax” and related pre-tax wording from public and owner booking summaries and confirmations.
