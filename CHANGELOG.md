@@ -1,3 +1,8 @@
+## v1.3.72 — Owner page editor
+
+- Added a Settings → Page editor workspace with an Edit this page control on owner dashboard pages.
+- Consolidated supported page wording, booking copy, colors, fonts, logo and imagery controls while preserving business-scoped settings and records.
+
 ## v1.3.71 — Collapsed blockout schedules
 
 - Blockout schedules in owner settings now appear collapsed by default with an expandable summary for editing.

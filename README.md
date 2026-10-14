@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Release source: v1.3.71 (2026-10-14).** Verified members with an active membership session credit see a zero-priced booking confirmation; the server preserves regular-price validation and applies the credit only when the selected session permits it. Confirm Render LIVE and `/api/health` before treating this source version as deployed.
+**Release source: v1.3.72 (2026-10-14).** Verified members with an active membership session credit see a zero-priced booking confirmation; the server preserves regular-price validation and applies the credit only when the selected session permits it. Confirm Render LIVE and `/api/health` before treating this source version as deployed.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 

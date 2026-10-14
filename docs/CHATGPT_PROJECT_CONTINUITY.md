@@ -1,5 +1,10 @@
 # SelahFlow Booking App — ChatGPT Project Continuity
 
+# v1.3.72 handoff — owner page editor (2026-10-14)
+
+- Added owner-only Page editor access from dashboard pages and Settings, consolidating supported wording, appearance, colors, fonts, logo and imagery controls.
+- Release metadata is `1.3.72`; verify the matching Render deploy and `/api/health` before handoff.
+
 # v1.3.71 handoff — collapsed blockout schedules (2026-10-14)
 
 - Owner booking blockout schedules are collapsed by default and expand on demand for editing.
