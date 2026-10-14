@@ -19,10 +19,11 @@ export async function GET(req:Request){
   const pool=getPool();
   const b=(await pool.query("SELECT b.id,b.name,b.slug,b.brand_primary,b.brand_background,s.data AS settings_data,a.charges_enabled,a.onboarding_complete FROM businesses b LEFT JOIN settings s ON s.owner=b.owner_id LEFT JOIN merchant_accounts a ON a.business_id=b.id WHERE b.slug=$1 AND b.status='active'",[slug])).rows[0];
   if(!b)return Response.json({error:'Business not found.'},{status:404,headers:noStore});
-  const plans=(await pool.query("SELECT id,name,description,interval_unit AS interval,price_cents AS \"priceCents\" FROM membership_plans WHERE business_id=$1 AND active=TRUE ORDER BY display_order,created_at DESC,name",[b.id])).rows;
+  const plans=(await pool.query("SELECT id,name,description,interval_unit AS interval,price_cents AS \"priceCents\",group_id AS \"groupId\" FROM membership_plans WHERE business_id=$1 AND active=TRUE ORDER BY display_order,created_at DESC,name",[b.id])).rows;
+  const groups=(await pool.query('SELECT g.id,g.name FROM membership_groups g WHERE g.business_id=$1 AND EXISTS(SELECT 1 FROM membership_plans p WHERE p.business_id=g.business_id AND p.group_id=g.id AND p.active=true) ORDER BY g.display_order,g.created_at,g.id',[b.id])).rows;
   let config:any={};try{config=JSON.parse(b.settings_data||'{}')}catch{}
   const theme=config.theme||null;
-  return Response.json({slug:b.slug,name:b.name,plans,brandPrimary:b.brand_primary,brandBackground:b.brand_background,theme,registrationConfig:publicRegistrationSettings(config),
+  return Response.json({slug:b.slug,name:b.name,plans,groups,brandPrimary:b.brand_primary,brandBackground:b.brand_background,theme,registrationConfig:publicRegistrationSettings(config),
    acceptsRequests:true,canPay:paymentConfigured()&&b.charges_enabled===true&&b.onboarding_complete===true},{headers:noStore});
  }catch{return Response.json({error:'Membership enrollment unavailable.'},{status:503,headers:noStore});}
 }

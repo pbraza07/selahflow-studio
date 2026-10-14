@@ -1,3 +1,10 @@
+## v1.3.76 — Membership type tabs and cleaner owner management
+
+- Owners can add, rename, reorder and remove membership types from Memberships, and choose a type when creating or editing each plan.
+- Customer membership pages show type tabs with keyboard navigation, an All memberships view, and access to ungrouped plans. Empty types stay hidden and switching tabs clears a selected plan when it is no longer visible.
+- Plan creation/editing and member assignment now open in separate accessible dialogs with focus containment, Escape/Cancel controls and focus restoration, leaving the main page for plans and enrollments.
+- Migration 033 adds business-scoped groups and an optional plan group link with a composite foreign key preventing cross-business assignments. Removing a type preserves its plans, memberships, credits and history. Existing plan limits remain enforced.
+
 ## v1.3.75 — White membership labels and automatic text contrast
 
 - Fixed the shared membership-ID label cascade so public booking and owner form rules cannot override white text on the black panel, including optional/help/status text.

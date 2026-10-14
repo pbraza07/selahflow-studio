@@ -1,5 +1,13 @@
 # SelahFlow Booking App — ChatGPT Project Continuity
 
+## v1.3.76 release handoff — membership type tabs and owner dialogs (2026-10-14)
+
+- Prior verified LIVE baseline: v1.3.75, main `468b3615cd62d7939b8dfd2f5606ea7acaa48de1`, Render `dep-db7o3r942hec739erdpg`.
+- Memberships now has Membership types, Create membership plan, and Assign a member buttons. Types can be created/renamed/reordered/removed; plan create/edit and member assignment are modal-only. Existing client-prefill opens the assignment modal.
+- Customer membership pages show nonempty type tabs plus All memberships and an ungrouped fallback. No demo types or memberships are added automatically.
+- Migration 033 adds groups and nullable plan group references constrained to the same business. Removing a type only clears plan grouping, preserving plans, member IDs, session balances, payment records and request/attendance history. Existing active-plan subscription quotas still apply.
+- Release source is v1.3.76; verify the matching Render LIVE deployment, startup migration and health endpoint before reporting it deployed.
+
 ## v1.3.75 release handoff — white membership labels and no text-color controls (2026-10-14)
 
 - Verified prior LIVE baseline: v1.3.74, GitHub main `6535de85245a7ef0e9b343e503bd0e108e6da48d`, Render `dep-db7npqm0tbcc73c3td4g`.

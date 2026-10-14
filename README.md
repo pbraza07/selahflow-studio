@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Release source: v1.3.75 (2026-10-14).** Shared membership-ID panels enforce white labels/help text on black, overriding form-specific rules. Text-color controls are removed; text colors are derived automatically, and legacy text-color overrides are ineffective. Background colors, fonts, business isolation and historical records are preserved. Confirm Render LIVE and `/api/health` before treating this source version as deployed.
+**Release source: v1.3.76 (2026-10-14).** Owners can manage membership types and assign plans to customer-facing tabs. Plan creation/editing and member assignment open in separate dialogs, leaving more room for existing plans and enrollments. Migration 033 adds optional business-scoped group links without changing membership credits, payments or historical records. Confirm Render LIVE and `/api/health` before treating this source version as deployed.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 

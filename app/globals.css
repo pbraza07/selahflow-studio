@@ -869,6 +869,30 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
 .sf-membership-merchant p,.sf-membership-merchant small{display:block;margin:7px 0;color:var(--sf-on-surface)!important;font-size:12px;line-height:1.6}
 .sf-membership-actions{display:flex;gap:10px;flex-wrap:wrap;margin:15px 0}
 .sf-owner-membership-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);gap:16px;align-items:start}
+.sf-owner-membership-layout-clean{grid-template-columns:minmax(0,1fr)}
+.sf-owner-membership-layout-clean .sf-owner-plan-list{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.sf-membership-toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.sf-membership-toolbar button{min-height:44px}
+.sf-membership-modal{width:min(760px,calc(100vw - 28px));max-height:90dvh;margin:auto;padding:0;border:1px solid var(--sf-border,#b7c7bd);border-radius:16px;background:var(--sf-surface,#fff);color:var(--sf-on-surface,#183330);box-shadow:0 24px 80px #0005;overflow:auto}
+.sf-membership-modal::backdrop{background:#0b201bd9}
+.sf-membership-modal>header{display:flex;align-items:center;justify-content:space-between;gap:15px;position:sticky;top:0;z-index:1;padding:18px 22px;border-bottom:1px solid var(--sf-border);background:var(--sf-surface);color:var(--sf-on-surface)}
+.sf-membership-modal>header h2{color:var(--sf-on-surface)!important;font-size:20px}
+.sf-membership-modal>header button{min-width:44px;min-height:44px}
+.sf-membership-modal-body{padding:20px}
+.sf-membership-modal-body>.sf-owner-membership-form{border:0;padding:0}
+.sf-membership-modal-body .muted,.sf-membership-modal-body small{color:var(--sf-on-surface)}
+.sf-membership-group-add{display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding:0 0 22px;border-bottom:1px solid var(--sf-border)}
+.sf-membership-group-add label{flex:1;min-width:180px}
+.sf-membership-group-list{display:grid;gap:14px;margin-top:16px}
+.sf-membership-group-list form{border:1px solid var(--sf-border);border-radius:10px;padding:14px;background:var(--sf-card);color:var(--sf-on-card)}
+.sf-membership-group-list label{margin:0;color:var(--sf-on-card)}
+.sf-membership-group-list small{color:var(--sf-on-card);margin-top:8px}
+.sf-membership-group-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.sf-membership-group-actions button{min-height:40px;font-size:12px}
+.sf-membership-type-tabs{display:flex;gap:8px;overflow-x:auto;padding:8px 0 14px;margin-top:12px}
+.sf-membership-type-tabs [role=tab]{flex-shrink:0;border:1px solid var(--sf-border);border-radius:9px;padding:10px 14px;min-height:44px;background:var(--sf-secondary-button);color:var(--sf-on-secondary-button);font-size:13px}
+.sf-membership-type-tabs [aria-selected=true]{background:var(--sf-button);color:var(--sf-on-button);border-color:var(--sf-button);font-weight:700}
+@media(max-width:600px){.sf-membership-toolbar{width:100%}.sf-membership-toolbar button{flex:1 1 160px}.sf-membership-modal-body{padding:15px}.sf-membership-modal>header{padding:14px}.sf-membership-modal .sf-membership-field-row{grid-template-columns:1fr}}
 .sf-owner-memberships-title{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:13px}
 .sf-owner-memberships-title h3{margin:0}
 .sf-owner-memberships-title span{font-size:12px}
