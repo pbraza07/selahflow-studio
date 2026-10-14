@@ -40,4 +40,7 @@ test('owner theme editor does not expose text-color controls',async()=>{
  assert.doesNotMatch(editor,/title:'Typography & details'/);
  assert.doesNotMatch(editor,/roles:\['heading','text','muted','link'/);
  assert.match(editor,/Text colors are fixed to white on dark surfaces/);
+ const css=await src('app/globals.css');
+ assert.match(css,/\.sf-member-number-booking\{background:#000!important;color:#fff!important\}/);
+ assert.match(css,/\.sf-member-number-booking :is\(label,p,strong,small,span,em,\[role=status\]\)\{color:#fff!important\}/);
 });

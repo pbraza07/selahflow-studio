@@ -1,3 +1,8 @@
+## v1.3.68 — Precise white text enforcement
+
+- Fixed the membership-ID booking panel to a black surface with white text for every label, helper/status message, optional marker, and placeholder.
+- Removed remaining text-color wording from the owner theme editor so text color cannot be customized or reintroduced through that screen.
+
 ## v1.3.67 — Fixed white text on dark surfaces
 
 - Removed the Typography & details text-color settings box from the owner theme editor.

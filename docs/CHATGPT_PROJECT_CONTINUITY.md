@@ -88,3 +88,7 @@ The next release adds a future-facing six-character member-ID constraint, servic
 
 - Owner theme settings no longer render Typography & details text-color controls; text on dark booking/registration surfaces remains readable white.
 - Release metadata is `1.3.67`; verify the matching Render deploy and `/api/health` before handoff.
+# v1.3.68 handoff — precise white membership-panel text (2026-10-14)
+
+- The membership-ID booking panel is explicitly black with white text, including optional/helper/status content and placeholders; the owner theme editor has no text-color control.
+- Release metadata is `1.3.68`; verify the matching Render deploy and `/api/health` before handoff.
