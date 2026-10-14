@@ -167,7 +167,14 @@ export async function POST(req:Request){
     await client.query('BEGIN');
     const member=(await client.query('SELECT id,customer_name,member_number FROM customer_memberships WHERE business_id=$1 AND id=$2 FOR UPDATE',[business.id,id])).rows[0];
     if(!member)throw Error('Member not found.');
+    // Keep the original membership-request audit record, but remove its
+    // foreign-key link before deleting the member. Approved requests are
+    // otherwise the only remaining dependency that prevents a valid delete.
+    await client.query('UPDATE membership_requests SET membership_id=NULL WHERE business_id=$1 AND membership_id=$2',[business.id,id]);
     await client.query('DELETE FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2',[business.id,id]);
+    // Hide any membership-only directory profile created for this member so
+    // the deleted member cannot reappear in Clients or Removed clients.
+    await client.query("UPDATE business_client_profiles SET deleted_at=now(),name='Deleted client',email='',phone='',notes='',import_columns='{}'::jsonb,updated_at=now() WHERE owner=(SELECT owner_id FROM businesses WHERE id=$1) AND deleted_at IS NULL AND (member_number=$2 OR source_key=$3)",[business.id,member.member_number,'membership-'+id]);
     await client.query('DELETE FROM customer_memberships WHERE business_id=$1 AND id=$2',[business.id,id]);
     await client.query('COMMIT');
     return Response.json({ok:true,deleted:member.customer_name},{headers});

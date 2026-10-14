@@ -22,5 +22,11 @@ test('owner approval creates one stable member and directory profile; retries an
  const second=await review('owner1','request2');assert.equal(second.membershipId,first.membershipId);assert.equal(second.existingMember,true);
  assert.equal((await db.query('SELECT count(*)::int AS n FROM customer_memberships')).rows[0].n,1);
  assert.equal((await db.query('SELECT count(*)::int AS n FROM business_client_profiles')).rows[0].n,1);
+ // A deletion keeps the approved request as audit history while detaching its
+ // foreign-key reference, so it can never block removal of the member.
+ await db.query('UPDATE membership_requests SET membership_id=NULL WHERE business_id=$1 AND membership_id=$2',['biz1',first.membershipId]);
+ await db.query('DELETE FROM customer_memberships WHERE business_id=$1 AND id=$2',['biz1',first.membershipId]);
+ assert.equal((await db.query('SELECT count(*)::int AS n FROM customer_memberships')).rows[0].n,0);
+ assert.equal((await db.query('SELECT count(*)::int AS n FROM membership_requests WHERE membership_id IS NOT NULL')).rows[0].n,0);
  }finally{await db.close();}
 });

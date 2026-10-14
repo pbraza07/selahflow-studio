@@ -1,3 +1,8 @@
+## v1.3.64 — Reliable member deletion
+
+- Deleting a member now detaches linked membership-request audit records before the membership row is removed, resolving the foreign-key error shown for Noah Alves.
+- The matching membership-only client profile is hidden as part of the same transaction, so a deleted member cannot reappear in the directory.
+
 ## v1.3.63 — Membership client removal
 
 - Membership-only client cards, including Noah Alves, can be removed from the owner directory and restored later without deleting membership, bookings, or attendance history.

@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Release source: v1.3.63 (2026-10-13).** Membership-only client records can be removed and restored correctly, with an in-app confirmation instead of a browser-native prompt. Confirm Render LIVE and `/api/health` before treating this source version as deployed.
+**Release source: v1.3.64 (2026-10-13).** Membership deletion now safely detaches approved membership-request history before deleting the member and hides their matching client profile. Confirm Render LIVE and `/api/health` before treating this source version as deployed.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 
