@@ -1,4 +1,5 @@
 import {validatePageContent} from '../server/page-content.mjs';
+import {memberIdMembershipSummary} from '../server/member-id-summary.mjs';
 import {themeIsValid,resolveTheme} from '../server/themes.mjs';
 import {validateBlockouts,isBlocked} from '../server/booking-blockouts.mjs';
 import {customRegistrationFields,validateRegistrationQuestions,validateStandardRegistration,publicRegistrationSettings} from '../server/registration-questions.mjs';
@@ -197,7 +198,8 @@ if(b.action==='registration_latest_status'){
   if(!results.some(x=>x.date===a.date&&x.status===a.status))results.push({date:a.date,status:a.status});
  }
  results.sort((a,b)=>b.date.localeCompare(a.date));
- return reply({ok:true,latest:results[0]||null});
+ const membership=await memberIdMembershipSummary(getPool(),owner,memberNumber);
+ return reply({ok:true,latest:results[0]||null,membership});
 }
 if(b.action==='verify_registration'){
  const reference=String(b.reference||'').trim(),email=String(b.email||'').trim().toLowerCase();

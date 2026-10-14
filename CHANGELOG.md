@@ -1,3 +1,9 @@
+## v1.3.78 — Membership details from ID-only registration check
+
+- Check My Registration now retrieves the real membership package, membership type, status and available sessions using the unique ID alone, alongside the existing latest appointment status/date.
+- Queries are business-scoped and use the current linked plan/group names and membership credit counters. Exhausted/inactive packages show zero usable sessions; renewal changes are reflected on the next lookup.
+- Membership-only and booking-only records have clear result messages, and editing the ID clears the previous result. Existing ID validation and throttling remain in place. No personal contact data is added to the response and no booking, credit or historical records are modified.
+
 ## v1.3.77 — Editable membership type and plan badges
 
 - Owners can customize badge label, background, icon and pill/rounded shape with a live preview for each membership type and individual plan. Plan badges inherit type settings unless overridden, and can revert to inherited/automatic styling.

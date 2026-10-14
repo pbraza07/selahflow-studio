@@ -1,5 +1,12 @@
 # SelahFlow Booking App — ChatGPT Project Continuity
 
+## v1.3.78 release handoff — ID-only membership summary (2026-10-14)
+
+- Prior verified LIVE baseline: v1.3.77, main `d111c7c7e076ac9da63791ec92d23814137163f5`, Render `dep-db7rbeugekts73eahrgg`.
+- Fixed the missing membership payload in `registration_latest_status`. Check My Registration now shows membership type/group, package, status and usable sessions left, plus the existing latest appointment status/date, from the unique ID only.
+- Lookup uses joined plan/group names and the membership counters within the requested business. Exhausted/inactive memberships show zero usable sessions; ID-only searches keep existing validation/throttling and do not return contact or birth-date details.
+- No migration or mutation of memberships, bookings, credits, payments or history. The detailed booking auto-fill flow remains separate. Verify the exact v1.3.78 LIVE deployment and health before handoff.
+
 ## v1.3.77 release handoff — editable membership badges (2026-10-14)
 
 - Prior verified LIVE baseline: v1.3.76, main `69e9432596437c1f70d6b44ce42107a75f060626`, Render `dep-db7qvllbedkc7390m88g`.

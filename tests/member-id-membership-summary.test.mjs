@@ -1,0 +1,56 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile,readdir} from 'node:fs/promises';
+import {PGlite} from '@electric-sql/pglite';
+import {createRequire} from 'node:module';
+import {pathToFileURL} from 'node:url';
+import ts from 'typescript';
+import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {postgresSQL} from '../server/database.mjs';
+import {memberIdMembershipSummary} from '../server/member-id-summary.mjs';
+test('ID-only status lookup returns current membership type and available credits within the requested business',async()=>{
+ const pg=new PGlite();try{
+  for(const file of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort())await pg.exec(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8'));
+  await pg.exec("INSERT INTO users(id,email,password_hash) VALUES('u1','owner-one@example.com','hash'),('u2','owner-two@example.com','hash'); INSERT INTO businesses(id,owner_id,slug,name,status) VALUES('b1','u1','club-one','Club One','active'),('b2','u2','club-two','Club Two','active'); INSERT INTO membership_groups(id,business_id,name) VALUES('g1','b1','Private Training'); INSERT INTO membership_plans(id,business_id,name,interval_unit,price_cents,sessions_included,group_id) VALUES('p1','b1','Private Pro','month',60000,8,'g1'),('p2','b2','Other Package','month',10000,12,NULL); INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,customer_phone,date_of_birth,status,price_cents,sessions_included,sessions_used,member_number,stripe_account_id) VALUES('m1','b1','p1','Client One','client@example.com','8135550100','2013-08-14','active',60000,16,5,'CA0814','manual'),('m2','b2','p2','Other Client','other@example.com','8135550200','2013-08-14','active',10000,12,1,'CA0814','manual'); INSERT INTO appointments(id,owner,date,staff,start,duration,status,data) VALUES('a1','u1','2026-10-16','coach',1080,60,'No-show','{\"memberNumber\":\"CA0814\"}'),('a2','u2','2026-10-20','other',1080,60,'Confirmed','{\"memberNumber\":\"CA0814\"}');");
+  const before=(await pg.query('SELECT * FROM customer_memberships ORDER BY id')).rows;
+  const summary=await memberIdMembershipSummary(pg,'u1','CA0814');
+  assert.deepEqual(summary,{name:'Private Pro',type:'Private Training',status:'active',sessionsLeft:11,sessionsIncluded:16,sessionsUsed:5});
+  assert.equal((await memberIdMembershipSummary(pg,'u2','CA0814')).name,'Other Package');
+  assert.equal((await memberIdMembershipSummary(pg,'u2','CA0814')).sessionsLeft,11);
+  assert.equal(await memberIdMembershipSummary(pg,'u1','XX0101'),null);
+  // Execute the actual handler branch against PostgreSQL, not a copy of its query.
+  const source=await readFile(new URL('../lib/studio-handler.ts',import.meta.url),'utf8');
+  const section=source.split("if(b.action==='registration_latest_status'){")[1].split("if(b.action==='verify_registration'){")[0].trim().replace(/\}$/,'');
+  const body=ts.transpileModule(section,{compilerOptions:{module:ts.ModuleKind.None,target:ts.ScriptTarget.ES2022}}).outputText;
+  const db=()=>({prepare(sql){return {values:[],bind(...v){this.values=v;return this;},async all(){return {results:(await pg.query(postgresSQL(sql),this.values)).rows};}};}});
+  const lookup=new Function('b','owner','req','db','getPool','memberIdMembershipSummary','reply','takeLimit','tokenHash','return (async()=>{'+body+'})()');
+  const req=new Request('https://example.com/api/booking?slug=club-one',{headers:{'x-forwarded-for':'198.51.100.5'}});
+  const call=(number,rate=async()=>true)=>lookup({memberNumber:number},'u1',req,db,()=>pg,memberIdMembershipSummary,(d,status=200)=>Response.json(d,{status}),rate,s=>s);
+  const result=await (await call(' ca0814 ')).json();
+  assert.deepEqual(result.latest,{date:'2026-10-16',status:'No-show'});assert.deepEqual(result.membership,summary);
+  assert.doesNotMatch(JSON.stringify(result),/client@example|Other Client|813555|2013-08-14|password_hash/);
+  assert.equal((await call('BAD')).status,400);assert.equal((await call('CA0814',async()=>false)).status,429);
+  assert.deepEqual((await pg.query('SELECT * FROM customer_memberships ORDER BY id')).rows,before,'lookup never deducts or modifies credits');
+  await pg.query("UPDATE customer_memberships SET sessions_used=16 WHERE id='m1'");
+  assert.deepEqual((await memberIdMembershipSummary(pg,'u1','CA0814')).sessionsLeft,0);
+  assert.equal((await memberIdMembershipSummary(pg,'u1','CA0814')).status,'exhausted');
+  await pg.query("UPDATE customer_memberships SET sessions_included=24 WHERE id='m1'");
+  assert.equal((await memberIdMembershipSummary(pg,'u1','CA0814')).sessionsLeft,8);
+  await pg.query("UPDATE customer_memberships SET status='pending_payment' WHERE id='m1'");
+  assert.equal((await memberIdMembershipSummary(pg,'u1','CA0814')).sessionsLeft,0);
+  await pg.query("UPDATE membership_plans SET group_id=NULL WHERE id='p1'");
+  assert.equal((await memberIdMembershipSummary(pg,'u1','CA0814')).type,'Private Pro');
+ }finally{await pg.close();}
+});
+test('the rendered lookup result includes type, package, sessions left and existing appointment status',async()=>{
+ const require=createRequire(import.meta.url),source=await readFile(new URL('../app/components/registration-lookup-result.tsx',import.meta.url),'utf8');
+ let compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
+ compiled=compiled.replace('"react/jsx-runtime"',JSON.stringify(pathToFileURL(require.resolve('react/jsx-runtime')).href));
+ const {default:Result}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
+ const membership={name:'Private Pro',type:'Private Training',status:'active',sessionsLeft:11,sessionsIncluded:16,sessionsUsed:5};
+ const html=renderToStaticMarkup(React.createElement(Result,{membership,result:{date:'2026-10-16',status:'No-show'}}));
+ for(const text of ['Membership type: Private Training','Membership package: Private Pro','Sessions left: 11','Latest appointment: No-show','Appointment date: 2026-10-16'])assert.ok(html.includes(text),text);
+ const noVisit=renderToStaticMarkup(React.createElement(Result,{membership,result:null}));assert.match(noVisit,/Sessions left: 11/);assert.match(noVisit,/No recent appointment/);
+ const noPlan=renderToStaticMarkup(React.createElement(Result,{membership:null,result:{date:'2026-10-16',status:'Confirmed'}}));assert.match(noPlan,/No membership assigned/);assert.match(noPlan,/0 sessions left/);
+});

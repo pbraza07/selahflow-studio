@@ -1926,6 +1926,10 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
 
 /* v1.3.61 — consistent registration questions and readable autofill. */
 .sf-registration-fields{display:grid;gap:14px;width:100%;min-width:0}
+.sf-registration-lookup-result{margin-top:14px;padding:16px;border-radius:10px;background:#eaf3ee;color:#16251d!important;border:1px solid #bacfc2}
+.sf-registration-membership-summary{display:grid;gap:7px}
+.sf-registration-appointment-summary{margin-top:14px;padding-top:12px;border-top:1px solid #bacfc2}
+[data-selah-theme] .sf-registration-lookup-result :is(p,span,strong){color:#16251d!important}
 .sf-registration-field{min-width:0}
 .sf-registration-field label{display:grid;gap:6px}
 .sf-registration-field input:not([type=checkbox]),.sf-registration-field select{width:100%;min-width:0}
