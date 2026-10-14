@@ -1948,3 +1948,24 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px soli
 [data-selah-theme] .sf-registration-field legend {
   color:inherit;
 }
+
+/* Booking membership panel: scoped editable colors, including nested label text. */
+[data-selah-theme] .sf-registration-fields .sf-member-number-booking,
+[data-selah-theme] .sf-registration-fields .sf-member-number-booking label,
+[data-selah-theme] .sf-registration-fields .sf-member-number-booking label :is(span,strong,small,em),
+[data-selah-theme] .sf-registration-fields .sf-member-number-booking :is(p,p *,h1,h2,h3,h4,small,legend,[role=status]) {
+ color:var(--sf-booking-question-color,#ffffff)!important;
+ -webkit-text-fill-color:var(--sf-booking-question-color,#ffffff)!important;
+}
+[data-selah-theme] .sf-registration-fields .sf-member-number-booking :is(input:not([type=checkbox]),select,textarea){
+ background:#fff!important;
+ color:var(--sf-booking-input-color,#171717)!important;
+ -webkit-text-fill-color:var(--sf-booking-input-color,#171717)!important;
+ color-scheme:light;
+}
+[data-selah-theme] .sf-registration-fields .sf-member-number-booking .sf-booking-font-editor{margin:12px 0 4px}
+[data-selah-theme] .sf-registration-fields .sf-member-number-booking .sf-booking-font-toggle{background:#fff!important;color:#171717!important;-webkit-text-fill-color:#171717!important;border:1px solid #aeb4b2;border-radius:8px;padding:8px 12px;cursor:pointer}
+[data-selah-theme] .sf-registration-fields .sf-member-number-booking .sf-booking-font-options{display:grid;gap:10px;padding:12px;margin-top:8px;border:1px solid #777;border-radius:10px}
+[data-selah-theme] .sf-registration-fields .sf-member-number-booking .sf-booking-font-options label{display:flex;align-items:center;justify-content:space-between;gap:12px}
+[data-selah-theme] .sf-registration-fields .sf-member-number-booking .sf-booking-font-options input[type=color]{width:52px;height:38px;min-height:38px;padding:2px;background:#fff!important}
+[data-selah-theme] .sf-registration-fields .sf-member-number-booking .sf-booking-font-options button{background:#fff!important;color:#171717!important;-webkit-text-fill-color:#171717!important;padding:8px;border-radius:8px}
