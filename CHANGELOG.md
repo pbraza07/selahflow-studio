@@ -1,3 +1,9 @@
+## v1.3.69 — Membership-credit booking price
+
+- A verified member ID with an active membership and sessions remaining now displays `$0.00` on the final booking confirmation.
+- The server still validates the original service price and independently applies the membership credit, including session-level credit eligibility rules.
+- Lookup responses now include membership status and sessions remaining so the confirmation UI reflects the actual benefit.
+
 ## v1.3.68 — Precise white text enforcement
 
 - Fixed the membership-ID booking panel to a black surface with white text for every label, helper/status message, optional marker, and placeholder.

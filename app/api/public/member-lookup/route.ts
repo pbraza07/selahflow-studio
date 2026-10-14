@@ -1,6 +1,7 @@
 import {getPool} from '../../../../server/database.mjs';
 import {tokenHash,validOrigin} from '../../../../server/security.mjs';
 import {restoreBookingCustomAnswers,restoredContact} from '../../../../server/returning-member-prefill.mjs';
+import {hasUsableMembership,remainingMembershipSessions} from '../../../../server/member-badge-state.mjs';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -39,9 +40,10 @@ export async function POST(req:Request){
     return Response.json({error:'Too many lookup attempts. Please try again later.'},{status:429,headers});
   }
 
-  const [member,booking]=await Promise.all([
-   db.query("SELECT customer_name,customer_email,customer_phone,registration_answers,member_number,date_of_birth::text AS dob FROM customer_memberships WHERE business_id=$1 AND member_number=$2 AND date_of_birth=$3::date LIMIT 1",[business.id,memberNumber,dob]),
+  const [member,booking,membership]=await Promise.all([
+   db.query("SELECT customer_name,customer_email,customer_phone,registration_answers,member_number,date_of_birth::text AS dob,status,sessions_included,sessions_used FROM customer_memberships WHERE business_id=$1 AND member_number=$2 AND date_of_birth=$3::date LIMIT 1",[business.id,memberNumber,dob]),
    db.query("SELECT first_name||' '||last_name AS customer_name,email AS customer_email,phone AS customer_phone,member_number,date_of_birth::text AS dob FROM customer_booking_ids WHERE business_id=$1 AND member_number=$2 AND date_of_birth=$3::date LIMIT 1",[business.id,memberNumber,dob])
+   ,db.query("SELECT p.name AS membership_name,m.status,m.sessions_included,m.sessions_used FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 AND m.member_number=$2 AND m.date_of_birth=$3::date ORDER BY CASE WHEN m.status='active' THEN 0 ELSE 1 END,m.updated_at DESC LIMIT 1",[business.id,memberNumber,dob])
   ]);
   const identity=member.rows[0]||booking.rows[0];
   if(!identity)return Response.json({error:'Membership ID and date of birth did not match. Check both values or contact the business.'},{status:404,headers});
@@ -73,7 +75,12 @@ export async function POST(req:Request){
    identity,{...profile,phone:profile.phone||identity.customer_phone},
    Object.keys(latest).length?latest:backup
   );
-  return Response.json({...contact,memberNumber,customAnswers},{headers});
+  const membershipRow=membership.rows[0]||null;
+  const sessionsIncluded=membershipRow?Number(membershipRow.sessions_included):0;
+  const sessionsUsed=membershipRow?Number(membershipRow.sessions_used):0;
+  const sessionsLeft=membershipRow?remainingMembershipSessions(sessionsIncluded,sessionsUsed):0;
+  const membershipCovered=!!membershipRow&&hasUsableMembership({status:membershipRow.status,sessions_included:sessionsIncluded,sessions_used:sessionsUsed});
+  return Response.json({...contact,memberNumber,customAnswers,membership:membershipRow?{name:membershipRow.membership_name,status:membershipRow.status,sessionsIncluded,sessionsUsed,sessionsLeft,membershipCovered}:null,membershipCovered},{headers});
  }catch(error){
   console.error('Member prefill lookup failed:',error);
   return Response.json({error:'Saved player details are temporarily unavailable. Please retry.'},{status:503,headers});

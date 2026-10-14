@@ -19,3 +19,14 @@ test('bookable session credit flag is validated and used in final booking and at
  assert.match(booking,/membershipCreditAllowed/);
  assert.match(attendance,/creditAllowed:appointmentData\.membershipCreditAllowed!==false/);
 });
+test('member lookup drives a zero-price confirmation while preserving the regular price for server validation',async()=>{
+ const [page,lookup]=await Promise.all([
+  readFile(new URL('../app/book/page.tsx',import.meta.url),'utf8'),
+  readFile(new URL('../app/api/public/member-lookup/route.ts',import.meta.url),'utf8')
+ ]);
+ assert.match(page,/const regularPrice=services\.reduce/);
+ assert.match(page,/const price=membershipCovered\?0:regularPrice/);
+ assert.match(page,/expectedPrice:regularPrice/);
+ assert.match(lookup,/membershipCovered/);
+ assert.match(lookup,/sessionsLeft/);
+});

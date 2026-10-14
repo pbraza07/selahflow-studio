@@ -92,3 +92,7 @@ The next release adds a future-facing six-character member-ID constraint, servic
 
 - The membership-ID booking panel is explicitly black with white text, including optional/helper/status content and placeholders; the owner theme editor has no text-color control.
 - Release metadata is `1.3.68`; verify the matching Render deploy and `/api/health` before handoff.
+# v1.3.69 handoff — membership-credit booking price (2026-10-14)
+
+- Verified active members with remaining sessions see `$0.00` on the final booking confirmation; regular-price validation remains server-side and session credit eligibility is respected.
+- Release metadata is `1.3.69`; verify the matching Render deploy and `/api/health` before handoff.
