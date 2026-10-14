@@ -1,5 +1,6 @@
 import {customRegistrationFields,validateStandardRegistration} from '../../../../server/registration-questions.mjs';
 import {changeMembershipGroup,requireMembershipGroup} from '../../../../server/membership-groups.mjs';
+import {validateMembershipBadge} from '../../../../server/membership-badges.mjs';
 import {randomUUID,randomInt} from 'node:crypto';
 import {sanitizeBookingAnswers} from '../../../../server/booking-custom-fields.mjs';
 import {getPool} from '../../../../server/database.mjs';
@@ -26,18 +27,18 @@ export async function GET(req:Request){
  try{
   const {pool,business}=await ctx(req);
   const [plans,members,merchant,usageCounts,ledger,groups]=await Promise.all([
-   pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",group_id AS "groupId",active FROM membership_plans WHERE business_id=$1 ORDER BY display_order,created_at DESC',[business.id]),
+   pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",group_id AS "groupId",badge,active FROM membership_plans WHERE business_id=$1 ORDER BY display_order,created_at DESC',[business.id]),
    pool.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
    pool.query("SELECT external_account_id,charges_enabled,onboarding_complete FROM merchant_accounts WHERE business_id=$1",[business.id]),
    pool.query("SELECT membership_id,COUNT(*)::int AS recorded_sessions FROM membership_session_ledger WHERE business_id=$1 AND event_type='session_used' GROUP BY membership_id",[business.id]),
    pool.query('SELECT l.membership_id,l.appointment_id,l.event_type,l.session_delta,l.amount_cents,l.created_at,a.status AS appointment_status FROM membership_session_ledger l LEFT JOIN appointments a ON a.id=l.appointment_id AND a.owner=(SELECT owner_id FROM businesses WHERE id=l.business_id) WHERE l.business_id=$1 ORDER BY l.created_at DESC',[business.id]),
-   pool.query('SELECT id,name FROM membership_groups WHERE business_id=$1 ORDER BY display_order,created_at,id',[business.id])
+   pool.query('SELECT id,name,badge FROM membership_groups WHERE business_id=$1 ORDER BY display_order,created_at,id',[business.id])
   ]);
   const account=merchant.rows[0]||{};
   const individual=(await pool.query('SELECT limits FROM business_entitlement_overrides WHERE business_id=$1',[business.id])).rows[0]?.limits||{};
   const benefits=planEntitlements(business.plan_code,business.subscription_status);
   if(Number.isInteger(individual.membershipPlans))benefits.limits.membershipPlans=individual.membershipPlans;
-  return Response.json({businessName:business.name,plans:plans.rows,groups:groups.rows,members:members.rows.map((m:any)=>{const actual=Number(usageCounts.rows.find((u:any)=>u.membership_id===m.id)?.recorded_sessions||0);return {...m,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
+  return Response.json({businessName:business.name,plans:plans.rows,groups:groups.rows,members:members.rows.map((m:any)=>{const actual=Number(usageCounts.rows.find((u:any)=>u.membership_id===m.id)?.recorded_sessions||0);const plan=plans.rows.find((p:any)=>p.id===m.plan_id);return {...m,badge:plan?.badge||groups.rows.find((g:any)=>g.id===plan?.groupId)?.badge||null,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
    payments:{configured:paymentConfigured(),connected:!!account.external_account_id,
     ready:paymentConfigured()&&account.charges_enabled===true&&account.onboarding_complete===true}}, {headers});
  }catch(e){return error(e);}
@@ -82,6 +83,7 @@ export async function POST(req:Request){
     if(input.action==='save'){
      const plan=validateMembershipPlan(input);
      const groupId=await requireMembershipGroup(client,business.id,input.groupId);
+     const badge=validateMembershipBadge(input.badge);
      const active=input.active!==false;
      const sessionsIncluded=Number(input.sessionsIncluded??0);
      if(!Number.isInteger(sessionsIncluded)||sessionsIncluded<0||sessionsIncluded>100000)throw Error('Enter a valid session allowance.');
@@ -94,14 +96,14 @@ export async function POST(req:Request){
       if(active&&!old.active&&count>=limit)
        throw Error('Your '+planEntitlements(record?.plan_code,record?.status).name+' plan allows up to '+limit+' active customer membership offers. Existing offers are preserved.');
       await client.query(
-       'UPDATE membership_plans SET name=$1,description=$2,interval_unit=$3,price_cents=$4,active=$5,updated_at=now(),sessions_included=$8,group_id=CASE WHEN $10 THEN $9 ELSE group_id END WHERE id=$6 AND business_id=$7',
-       [plan.name,plan.description,plan.interval,plan.price,active,input.id,business.id,sessionsIncluded,groupId,input.groupId!==undefined]);
+       'UPDATE membership_plans SET name=$1,description=$2,interval_unit=$3,price_cents=$4,active=$5,updated_at=now(),sessions_included=$8,group_id=CASE WHEN $10 THEN $9 ELSE group_id END,badge=CASE WHEN $12 THEN $11::jsonb ELSE badge END WHERE id=$6 AND business_id=$7',
+       [plan.name,plan.description,plan.interval,plan.price,active,input.id,business.id,sessionsIncluded,groupId,input.groupId!==undefined,badge?JSON.stringify(badge):null,input.badge!==undefined]);
      }else{
       if(active&&count>=limit)
        throw Error('Your '+planEntitlements(record?.plan_code,record?.status).name+' plan allows up to '+limit+' active customer membership offers. Existing offers are preserved.');
       await client.query(
-       'INSERT INTO membership_plans(id,business_id,name,description,interval_unit,price_cents,active,sessions_included,group_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',
-       [randomUUID(),business.id,plan.name,plan.description,plan.interval,plan.price,active,sessionsIncluded,groupId]);
+       'INSERT INTO membership_plans(id,business_id,name,description,interval_unit,price_cents,active,sessions_included,group_id,badge) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb)',
+       [randomUUID(),business.id,plan.name,plan.description,plan.interval,plan.price,active,sessionsIncluded,groupId,badge?JSON.stringify(badge):null]);
      }
     }else{
      if(!/^[a-f0-9-]{36}$/i.test(input.id||''))throw Error('Invalid membership offer.');

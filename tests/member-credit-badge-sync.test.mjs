@@ -10,7 +10,8 @@ async function fixture(){
  const db=new PGlite();
  await db.exec(`
  CREATE TABLE businesses(id TEXT PRIMARY KEY,owner_id TEXT NOT NULL);
- CREATE TABLE membership_plans(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,name TEXT);
+ CREATE TABLE membership_groups(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,badge JSONB);
+ CREATE TABLE membership_plans(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,name TEXT,group_id TEXT,badge JSONB);
  CREATE TABLE customer_memberships(id TEXT PRIMARY KEY,business_id TEXT NOT NULL REFERENCES businesses(id),plan_id TEXT NOT NULL REFERENCES membership_plans(id),
  member_number TEXT NOT NULL,customer_name TEXT,customer_email TEXT,date_of_birth DATE,status TEXT NOT NULL,
  sessions_included INTEGER NOT NULL,sessions_used INTEGER NOT NULL,updated_at TIMESTAMPTZ DEFAULT now());
@@ -24,7 +25,7 @@ async function fixture(){
  await db.exec(await readFile(new URL('../migrations/024_membership_session_ledger.sql',import.meta.url),'utf8'));
  await db.exec(`
  INSERT INTO businesses VALUES('biz1','owner1'),('biz2','owner2');
- INSERT INTO membership_plans VALUES('plan1','biz1','Membership Gold'),('otherPlan','biz2','Private Club');
+ INSERT INTO membership_plans(id,business_id,name) VALUES('plan1','biz1','Membership Gold'),('otherPlan','biz2','Private Club');
  INSERT INTO customer_memberships(id,business_id,plan_id,member_number,customer_name,customer_email,date_of_birth,status,sessions_included,sessions_used)
  VALUES('member1','biz1','plan1','LA1103','Levi Alves','family@example.com','2017-11-03','active',2,0),
  ('other-member','biz2','otherPlan','LA1103','Levi Alves','family@example.com','2017-11-03','active',12,0);

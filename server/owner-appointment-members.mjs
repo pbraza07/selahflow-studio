@@ -3,19 +3,20 @@ import {hasUsableMembership,remainingMembershipSessions} from './member-badge-st
 export const ownerMemberRosterSQL=`
  SELECT 'membership' AS source,m.member_number,m.customer_name AS name,m.customer_email AS email,
   p.name AS membership_name,m.status AS membership_status,m.sessions_included,m.sessions_used,
-  m.date_of_birth::text AS date_of_birth
+  m.date_of_birth::text AS date_of_birth,COALESCE(p.badge,g.badge) AS membership_badge
  FROM customer_memberships m
  JOIN businesses b ON b.id=m.business_id
  JOIN membership_plans p ON p.id=m.plan_id
+ LEFT JOIN membership_groups g ON g.id=p.group_id AND g.business_id=m.business_id
  WHERE b.owner_id=$1 AND m.member_number IS NOT NULL
  UNION ALL
  SELECT 'booking' AS source,c.member_number,concat(c.first_name,' ',c.last_name) AS name,
-  c.email,NULL::text,NULL::text,NULL::integer,NULL::integer,c.date_of_birth::text
+  c.email,NULL::text,NULL::text,NULL::integer,NULL::integer,c.date_of_birth::text,NULL::jsonb
  FROM customer_booking_ids c JOIN businesses b ON b.id=c.business_id
  WHERE b.owner_id=$1
  UNION ALL
  SELECT 'profile' AS source,p.member_number,p.name,p.email,
-  NULL::text,NULL::text,NULL::integer,NULL::integer,p.date_of_birth::text
+  NULL::text,NULL::text,NULL::integer,NULL::integer,p.date_of_birth::text,NULL::jsonb
  FROM business_client_profiles p
  WHERE p.owner=$1 AND p.deleted_at IS NULL AND p.member_number IS NOT NULL
 `;
@@ -61,6 +62,7 @@ export function decorateOwnerAppointments(appointments,roster=[]){
   const used=membership?Number(membership.sessions_used):null;
   return {...appt,memberNumber:memberNumber||null,
    membershipName:membership?.membership_name||null,
+   membershipBadge:membership?.membership_badge||null,
    membershipStatus:membership?.membership_status||null,
    membershipSessionsIncluded:included,membershipSessionsUsed:used,
    membershipSessionsRemaining:membership?remainingMembershipSessions(included,used):null,

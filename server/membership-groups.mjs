@@ -1,3 +1,4 @@
+import {validateMembershipBadge} from './membership-badges.mjs';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export async function requireMembershipGroup(client,businessId,value){
  if(value===undefined||value===null||value==='')return null;
@@ -8,18 +9,19 @@ export async function requireMembershipGroup(client,businessId,value){
 // Caller owns a transaction and the business membership-offers advisory lock.
 export async function changeMembershipGroup(client,businessId,input){
  if(input.action==='saveGroup'){
+  const badge=validateMembershipBadge(input.badge);
   const name=typeof input.name==='string'?input.name.trim().replace(/\s+/g,' '):'';
   if(name.length<2||name.length>80)throw Error('Enter a membership type name between 2 and 80 characters.');
   const groups=(await client.query('SELECT id,name FROM membership_groups WHERE business_id=$1 FOR UPDATE',[businessId])).rows;
   if(groups.some(g=>g.id!==input.id&&g.name.toLowerCase()===name.toLowerCase()))throw Error('Choose a unique membership type name.');
   if(input.id){
    const id=await requireMembershipGroup(client,businessId,input.id);
-   await client.query('UPDATE membership_groups SET name=$1 WHERE business_id=$2 AND id=$3',[name,businessId,id]);
+   await client.query('UPDATE membership_groups SET name=$1,badge=CASE WHEN $5 THEN $4::jsonb ELSE badge END WHERE business_id=$2 AND id=$3',[name,businessId,id,badge?JSON.stringify(badge):null,input.badge!==undefined]);
    return {id};
   }
   if(groups.length>=30)throw Error('This business allows up to 30 membership types.');
   const id=crypto.randomUUID();
-  await client.query('INSERT INTO membership_groups(id,business_id,name,display_order) SELECT $1,$2,$3,COALESCE(MAX(display_order),-1)+1 FROM membership_groups WHERE business_id=$2',[id,businessId,name]);
+  await client.query('INSERT INTO membership_groups(id,business_id,name,display_order,badge) SELECT $1,$2,$3,COALESCE(MAX(display_order),-1)+1,$4::jsonb FROM membership_groups WHERE business_id=$2',[id,businessId,name,badge?JSON.stringify(badge):null]);
   return {id};
  }
  if(input.action==='removeGroup'){

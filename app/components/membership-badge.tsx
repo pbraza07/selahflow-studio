@@ -1,7 +1,11 @@
 'use client';
-import {BadgeCheck, Crown, GraduationCap, Hash, Medal, ShieldCheck, Star, Gem} from 'lucide-react';
+import {BadgeCheck, Crown, GraduationCap, Hash, Medal, ShieldCheck, Star, Gem, Heart, Trophy, Users} from 'lucide-react';
 import type {CSSProperties} from 'react';
 import {hasUsableMembership} from '../../server/member-badge-state.mjs';
+import {resolveMembershipBadge} from '../../server/membership-badges.mjs';
+import {accessibleText} from '../../server/themes.mjs';
+export type MembershipBadgeDesign={label:string;color:string;icon:string;shape:'pill'|'rounded'};
+const icons:Record<string,typeof BadgeCheck>={badge:BadgeCheck,crown:Crown,graduation:GraduationCap,medal:Medal,shield:ShieldCheck,star:Star,gem:Gem,heart:Heart,trophy:Trophy,users:Users};
 
 type MembershipBadgeProps={
  memberNumber?:string|null;
@@ -9,6 +13,7 @@ type MembershipBadgeProps={
  membershipStatus?:string|null;
  sessionsIncluded?:number|null;
  sessionsUsed?:number|null;
+ badge?:MembershipBadgeDesign|null;
 };
 
 /**
@@ -30,22 +35,24 @@ export function membershipBadgeTheme(name:string){
  return {background:palette[hash%palette.length],Icon:BadgeCheck};
 }
 
-export default function MembershipBadge({memberNumber,membershipName,membershipStatus,sessionsIncluded,sessionsUsed}:MembershipBadgeProps){
+export default function MembershipBadge({memberNumber,membershipName,membershipStatus,sessionsIncluded,sessionsUsed,badge}:MembershipBadgeProps){
  const id=String(memberNumber||'').trim().toUpperCase();
  const active=hasUsableMembership({status:membershipStatus,sessionsIncluded,sessionsUsed});
  const level=active?String(membershipName||'').trim():'';
  if(!id&&!level)return null;
- const theme=level?membershipBadgeTheme(level):{background:'#f1f2f4',Icon:Hash};
+ const design=active?resolveMembershipBadge(badge):null;
+ const theme=level?(design?{background:design.color,Icon:icons[design.icon]}:membershipBadgeTheme(level)):{background:'#f1f2f4',Icon:Hash};
+ const label=level?(design?.label||level):'';
  const Icon=theme.Icon;
  const style:CSSProperties={
   display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,
-  background:theme.background,color:'#171717',border:'1.5px solid #171717',
-  borderRadius:999,padding:'4px 10px',fontSize:12,fontWeight:750,lineHeight:1.25,
+  background:theme.background,color:accessibleText(theme.background,'#171717'),border:'1.5px solid #171717',
+  borderRadius:999,...(design?.shape==='rounded'?{borderRadius:8}:{}),padding:'4px 10px',fontSize:12,fontWeight:750,lineHeight:1.25,
   width:'fit-content',maxWidth:'100%',verticalAlign:'middle',
   whiteSpace:'normal',overflowWrap:'anywhere',
  };
  return <span className="sf-membership-level-badge" style={style} aria-label={level?level+' membership'+(id?' ID '+id:''):'Membership ID '+id}>
   <Icon aria-hidden="true" size={14} strokeWidth={2.5} style={{flexShrink:0}}/>
-  <span>{level?level+(id?' · '+id:''):'ID '+id}</span>
+  <span>{level?label+(id?' · '+id:''):'ID '+id}</span>
  </span>;
 }

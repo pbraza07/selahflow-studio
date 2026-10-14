@@ -19,8 +19,8 @@ export async function GET(req:Request){
   const pool=getPool();
   const b=(await pool.query("SELECT b.id,b.name,b.slug,b.brand_primary,b.brand_background,s.data AS settings_data,a.charges_enabled,a.onboarding_complete FROM businesses b LEFT JOIN settings s ON s.owner=b.owner_id LEFT JOIN merchant_accounts a ON a.business_id=b.id WHERE b.slug=$1 AND b.status='active'",[slug])).rows[0];
   if(!b)return Response.json({error:'Business not found.'},{status:404,headers:noStore});
-  const plans=(await pool.query("SELECT id,name,description,interval_unit AS interval,price_cents AS \"priceCents\",group_id AS \"groupId\" FROM membership_plans WHERE business_id=$1 AND active=TRUE ORDER BY display_order,created_at DESC,name",[b.id])).rows;
-  const groups=(await pool.query('SELECT g.id,g.name FROM membership_groups g WHERE g.business_id=$1 AND EXISTS(SELECT 1 FROM membership_plans p WHERE p.business_id=g.business_id AND p.group_id=g.id AND p.active=true) ORDER BY g.display_order,g.created_at,g.id',[b.id])).rows;
+  const plans=(await pool.query("SELECT p.id,p.name,p.description,p.interval_unit AS interval,p.price_cents AS \"priceCents\",p.group_id AS \"groupId\",COALESCE(p.badge,g.badge) AS badge FROM membership_plans p LEFT JOIN membership_groups g ON g.id=p.group_id AND g.business_id=p.business_id WHERE p.business_id=$1 AND p.active=TRUE ORDER BY p.display_order,p.created_at DESC,p.name",[b.id])).rows;
+  const groups=(await pool.query('SELECT g.id,g.name,g.badge FROM membership_groups g WHERE g.business_id=$1 AND EXISTS(SELECT 1 FROM membership_plans p WHERE p.business_id=g.business_id AND p.group_id=g.id AND p.active=true) ORDER BY g.display_order,g.created_at,g.id',[b.id])).rows;
   let config:any={};try{config=JSON.parse(b.settings_data||'{}')}catch{}
   const theme=config.theme||null;
   return Response.json({slug:b.slug,name:b.name,plans,groups,brandPrimary:b.brand_primary,brandBackground:b.brand_background,theme,registrationConfig:publicRegistrationSettings(config),

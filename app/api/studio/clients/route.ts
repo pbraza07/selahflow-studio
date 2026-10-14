@@ -33,13 +33,13 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
  const derived=buildClientDirectory([...appointments.rows,...requests.rows.map(pendingBookingAsAppointment)],settings,owner);
  const combined=applyClientProfiles(derived,profiles.rows);
  const fields=Array.isArray(settings.bookingCustomFields)?settings.bookingCustomFields:[];
- const members=(await db.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.last_paid_at,m.paid_through,m.price_cents,m.sessions_included,m.sessions_used,m.member_number,m.status,p.name AS membership_name,p.interval_unit FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id WHERE b.owner_id=$1 ORDER BY m.created_at DESC",[owner])).rows;
+ const members=(await db.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.last_paid_at,m.paid_through,m.price_cents,m.sessions_included,m.sessions_used,m.member_number,m.status,p.name AS membership_name,p.interval_unit,COALESCE(p.badge,g.badge) AS membership_badge FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id LEFT JOIN membership_groups g ON g.id=p.group_id AND g.business_id=m.business_id WHERE b.owner_id=$1 ORDER BY m.created_at DESC",[owner])).rows;
  const memberData=(m:any,client:any={})=>{
   const legacy=client.notes==='Membership registration'&&m.registration_answers&&Object.keys(m.registration_answers).length===0?client.importColumns||{}:{};
   const submitted=Object.keys(m.registration_answers||{}).length?m.registration_answers:legacy;
   return {
    memberNumber:m.member_number||client.memberNumber,
-   membershipName:m.membership_name,membershipStatus:m.status,
+   membershipName:m.membership_name,membershipStatus:m.status,membershipBadge:m.membership_badge||null,
    membershipRegistration:{name:m.customer_name,firstName:String(m.customer_name||'').trim().split(/\s+/)[0]||'',lastName:String(m.customer_name||'').trim().split(/\s+/).slice(1).join(' '),email:m.customer_email,phone:m.customer_phone||'',dateOfBirth:dateOnly(m.date_of_birth),memberNumber:m.member_number||''},
    membershipAnswers:registrationAnswerRows(submitted,m.registration_field_labels,fields),
    membershipDetails:{registeredAt:m.created_at,paidThrough:dateOnly(m.paid_through),lastPaidAt:m.last_paid_at,

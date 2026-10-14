@@ -1,5 +1,13 @@
 # SelahFlow Booking App — ChatGPT Project Continuity
 
+## v1.3.77 release handoff — editable membership badges (2026-10-14)
+
+- Prior verified LIVE baseline: v1.3.76, main `69e9432596437c1f70d6b44ce42107a75f060626`, Render `dep-db7qvllbedkc7390m88g`.
+- Membership type forms and plan create/edit dialogs now include badge controls for label, background, curated icon and shape, plus a live preview. A plan-specific badge overrides the type badge; null restores inheritance/automatic styling.
+- Badge settings flow to member enrollments, client cards/details, Overview appointments, customer plan cards and type tabs. Dashboard data refreshes on membership changes. Text contrast is automatic; no text-color settings were reintroduced.
+- Migration 034 adds nullable JSON badge fields to membership groups and plans. Existing automatic badge colors remain the default. Exhausted/inactive members stay neutral ID-only; active renewal restores saved badge styling with unchanged IDs, credits and history.
+- Source release v1.3.77 requires independent LIVE deployment/startup/health verification before handoff.
+
 ## v1.3.76 release handoff — membership type tabs and owner dialogs (2026-10-14)
 
 - Prior verified LIVE baseline: v1.3.75, main `468b3615cd62d7939b8dfd2f5606ea7acaa48de1`, Render `dep-db7o3r942hec739erdpg`.

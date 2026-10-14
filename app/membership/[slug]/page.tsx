@@ -1,13 +1,14 @@
 'use client';
 import RegistrationFields from '../../components/registration-fields';
+import MembershipBadge,{type MembershipBadgeDesign} from '../../components/membership-badge';
 import {membershipTabs,plansForMembershipTab} from '../../../server/membership-groups.mjs';
 import {useEffect,useState,useRef} from 'react';
 import {ArrowLeft,ArrowRight,CalendarDays,CheckCircle2,CreditCard,ShieldCheck} from 'lucide-react';
 import type {CSSProperties} from 'react';
 import {themeStyles} from '../../../server/themes.mjs';
 import GoogleBusinessGallery from '../../components/google-business-gallery';
-type Plan={id:string;name:string;description:string;interval:'week'|'month'|'year';priceCents:number;groupId:string|null};
-type Summary={slug:string;name:string;plans:Plan[];groups:{id:string;name:string}[];canPay:boolean;theme:any;brandPrimary:string;brandBackground:string;registrationConfig:any};
+type Plan={id:string;name:string;description:string;interval:'week'|'month'|'year';priceCents:number;groupId:string|null;badge:MembershipBadgeDesign|null};
+type Summary={slug:string;name:string;plans:Plan[];groups:{id:string;name:string;badge:MembershipBadgeDesign|null}[];canPay:boolean;theme:any;brandPrimary:string;brandBackground:string;registrationConfig:any};
 const price=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
 export default function MembershipEnrollment(){
  const [data,setData]=useState<Summary|null>(null),[slug,setSlug]=useState(''),[planId,setPlanId]=useState(''),[step,setStep]=useState(1);
@@ -81,10 +82,10 @@ export default function MembershipEnrollment(){
     <div className="sf-membership-steps">{['Choose plan','Your details','Submit request'].map((label,i)=><span key={label} className={step===i+1?'active':''}>{i+1}. {label}</span>)}</div>
     {error&&<p className="sf-membership-error" role="alert">{error}</p>}
     {!data?<p>Loading available plans…</p>:step===1?<><h2>Choose your membership</h2>
-     {tabs.length>0&&<div className="sf-membership-type-tabs" role="tablist" aria-label="Membership types">{tabs.map((tab:{id:string;name:string},i:number)=><button key={tab.id} type="button" id={'membership-type-'+tab.id} role="tab" aria-selected={groupTab===tab.id} aria-controls="membership-plan-options" tabIndex={groupTab===tab.id?0:-1} onClick={()=>chooseGroup(tab.id)} onKeyDown={e=>{let next=i;if(e.key==='ArrowRight')next=(i+1)%tabs.length;else if(e.key==='ArrowLeft')next=(i+tabs.length-1)%tabs.length;else if(e.key==='Home')next=0;else if(e.key==='End')next=tabs.length-1;else return;e.preventDefault();chooseGroup(tabs[next].id);document.getElementById('membership-type-'+tabs[next].id)?.focus();}}>{tab.name}</button>)}</div>}
+     {tabs.length>0&&<div className="sf-membership-type-tabs" role="tablist" aria-label="Membership types">{tabs.map((tab:{id:string;name:string;badge?:MembershipBadgeDesign|null},i:number)=><button key={tab.id} type="button" id={'membership-type-'+tab.id} role="tab" aria-selected={groupTab===tab.id} aria-controls="membership-plan-options" tabIndex={groupTab===tab.id?0:-1} onClick={()=>chooseGroup(tab.id)} onKeyDown={e=>{let next=i;if(e.key==='ArrowRight')next=(i+1)%tabs.length;else if(e.key==='ArrowLeft')next=(i+tabs.length-1)%tabs.length;else if(e.key==='Home')next=0;else if(e.key==='End')next=tabs.length-1;else return;e.preventDefault();chooseGroup(tabs[next].id);document.getElementById('membership-type-'+tabs[next].id)?.focus();}}>{tab.badge?<MembershipBadge membershipName={tab.name} membershipStatus="active" sessionsIncluded={1} sessionsUsed={0} badge={tab.badge}/>:tab.name}</button>)}</div>}
      <div id="membership-plan-options" role={tabs.length?'tabpanel':undefined} aria-labelledby={tabs.length?'membership-type-'+groupTab:undefined}>
      {data.plans.length?<div className="sf-membership-plans">{visiblePlans.map((p:Plan)=><button key={p.id} type="button" aria-pressed={planId===p.id} className={planId===p.id?'selected':''} onClick={()=>setPlanId(p.id)}>
-      <span><b>{p.name}</b><small>{p.description||'Recurring business membership'}</small></span>
+      <span><b>{p.name}</b>{p.badge&&<span className="sf-membership-plan-badge"><MembershipBadge membershipName={p.name} membershipStatus="active" sessionsIncluded={1} sessionsUsed={0} badge={p.badge}/></span>}<small>{p.description||'Recurring business membership'}</small></span>
       <strong>{price(p.priceCents)} <small>/ {p.interval}</small></strong>
      </button>)}</div>:<p className="sf-membership-empty">No memberships are available yet. Contact the business for more information.</p>}
      </div>

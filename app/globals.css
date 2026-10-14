@@ -872,6 +872,20 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
 .sf-owner-membership-layout-clean{grid-template-columns:minmax(0,1fr)}
 .sf-owner-membership-layout-clean .sf-owner-plan-list{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
 .sf-membership-toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.sf-membership-badge-settings{border:1px solid var(--sf-border);border-radius:10px;padding:14px;min-width:0;margin:12px 0;color:var(--sf-on-surface)}
+.sf-membership-badge-settings legend{font-size:13px;font-weight:750;padding:0 6px}
+.sf-membership-badge-settings .sf-membership-badge-toggle{display:flex;flex-direction:row;align-items:center;gap:9px;margin:0;font-size:13px;color:inherit}
+.sf-membership-badge-toggle input[type=checkbox]{width:18px;height:18px;min-height:18px;flex:none}
+.sf-membership-badge-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.sf-membership-badge-fields label{margin:0;font-size:12px;color:inherit}
+.sf-membership-badge-fields input[type=color]{width:100%;min-height:44px;padding:4px}
+.sf-membership-badge-settings p{font-size:11px;line-height:1.6;margin:10px 0 0;color:inherit!important}
+.sf-membership-badge-preview{display:grid;gap:6px;margin-top:12px}
+.sf-membership-plan-badge{display:block;margin:7px 0}
+.sf-membership-group-add>.sf-membership-badge-settings{flex-basis:100%}
+.sf-membership-group-list .sf-membership-badge-settings{color:var(--sf-on-card)}
+.sf-membership-type-tabs [role=tab] .sf-membership-level-badge{pointer-events:none}
+@media(max-width:500px){.sf-membership-badge-fields{grid-template-columns:1fr}}
 .sf-membership-toolbar button{min-height:44px}
 .sf-membership-modal{width:min(760px,calc(100vw - 28px));max-height:90dvh;margin:auto;padding:0;border:1px solid var(--sf-border,#b7c7bd);border-radius:16px;background:var(--sf-surface,#fff);color:var(--sf-on-surface,#183330);box-shadow:0 24px 80px #0005;overflow:auto}
 .sf-membership-modal::backdrop{background:#0b201bd9}

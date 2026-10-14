@@ -1,3 +1,10 @@
+## v1.3.77 — Editable membership type and plan badges
+
+- Owners can customize badge label, background, icon and pill/rounded shape with a live preview for each membership type and individual plan. Plan badges inherit type settings unless overridden, and can revert to inherited/automatic styling.
+- Saved badges appear consistently in membership enrollments, client cards/details, Overview appointments and customer membership selection. Owner badge edits refresh related dashboard views immediately.
+- Automatic text contrast preserves pure white on dark badges without restoring removed text-color controls. Exhausted/inactive members retain neutral IDs; active credit renewal restores the saved badge with the same member ID.
+- Migration 034 adds nullable badge presentation settings only; balances, membership/request history and financial records remain unchanged. Badge input is validated server-side and settings remain business-scoped.
+
 ## v1.3.76 — Membership type tabs and cleaner owner management
 
 - Owners can add, rename, reorder and remove membership types from Memberships, and choose a type when creating or editing each plan.
