@@ -84,3 +84,7 @@ The next release adds a future-facing six-character member-ID constraint, servic
 
 - `app/globals.css` now explicitly preserves readable text and placeholder contrast in themed dark registration/booking surfaces, including optional markers and helper/status copy.
 - Release metadata is `1.3.66`; verify the matching Render deploy and `/api/health` before handoff.
+# v1.3.67 handoff — fixed white dark-surface text (2026-10-14)
+
+- Owner theme settings no longer render Typography & details text-color controls; text on dark booking/registration surfaces remains readable white.
+- Release metadata is `1.3.67`; verify the matching Render deploy and `/api/health` before handoff.

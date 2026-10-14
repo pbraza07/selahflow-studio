@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Release source: v1.3.66 (2026-10-14).** Dark-surface cards and booking identity panels keep labels, optional markers, helper text, and placeholders readable across themed businesses. Confirm Render LIVE and `/api/health` before treating this source version as deployed.
+**Release source: v1.3.67 (2026-10-14).** Owner theme settings no longer expose text-color controls; dark booking surfaces use fixed readable white text while page-area and accent colors remain configurable. Confirm Render LIVE and `/api/health` before treating this source version as deployed.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 

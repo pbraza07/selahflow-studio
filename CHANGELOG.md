@@ -1,3 +1,8 @@
+## v1.3.67 — Fixed white text on dark surfaces
+
+- Removed the Typography & details text-color settings box from the owner theme editor.
+- Text colors on dark booking/registration surfaces remain fixed to readable white; owners can still customize page-area, interactive, border, and accent colors.
+
 ## v1.3.66 — Dark-surface text contrast
 
 - Ensured themed dark cards and booking identity panels use readable foreground text for labels, helper copy, optional markers, status text, and placeholders.

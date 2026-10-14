@@ -34,3 +34,10 @@ test('each owner saves theme through authenticated business settings and custome
  const businessPage=await src('app/[slug]/page.tsx');assert.match(businessPage,/themeStyles\(config.theme/);
  const workspace=await src('app/studio/owner-dashboard.tsx');assert.match(workspace,/themeStyles\(savedTheme/);
 });
+test('owner theme editor does not expose text-color controls',async()=>{
+ const editor=await src('app/components/owner-theme-editor.tsx');
+ assert.match(editor,/title:'Borders & accents'/);
+ assert.doesNotMatch(editor,/title:'Typography & details'/);
+ assert.doesNotMatch(editor,/roles:\['heading','text','muted','link'/);
+ assert.match(editor,/Text colors are fixed to white on dark surfaces/);
+});
