@@ -195,7 +195,12 @@ if(b.action==='registration_latest_status'){
   if(!results.some(x=>x.date===a.date&&x.status===a.status))results.push({date:a.date,status:a.status});
  }
  results.sort((a,b)=>b.date.localeCompare(a.date));
- return reply({ok:true,latest:results[0]||null});
+ const membership=await db().prepare("SELECT m.status,m.sessions_included,m.sessions_used,to_jsonb(m) AS details FROM customer_memberships m JOIN businesses biz ON biz.id=m.business_id WHERE biz.owner_id=? AND m.member_number=? ORDER BY m.updated_at DESC LIMIT 1").bind(owner,memberNumber).first<any>();
+ const details=membership?.details||{};
+ const membershipName=String(details.membership_name||details.plan_name||details.tier_name||details.membership_type||details.name||'Membership');
+ const sessionsLeft=membership?Math.max(0,Number(membership.sessions_included||0)-Number(membership.sessions_used||0)):0;
+ return reply({ok:true,latest:results[0]||null,membership:membership?{name:membershipName,status:membership.status,sessionsLeft,sessionsIncluded:Number(membership.sessions_included||0)}:null});
+
 }
 if(b.action==='verify_registration'){
  const reference=String(b.reference||'').trim(),email=String(b.email||'').trim().toLowerCase();
