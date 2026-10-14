@@ -1910,3 +1910,41 @@ input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=range]
 input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #439f88;outline-offset:2px}
 .sf-sort-heading{font:inherit;font-weight:700;color:inherit;background:transparent;border:0;cursor:pointer;text-align:left;padding:5px 0;display:inline-flex;gap:5px;align-items:center}
 .sf-attendance-actions{display:inline-flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+
+
+/* v1.3.67 — booking questions: prevent dark-on-dark text on public and owner forms.
+   The membership lookup panel uses a dark surface; do not pair it with on-card
+   text tokens intended for light surfaces. Keep form controls light and legible. */
+[data-selah-theme] .sf-member-number-booking {
+  background:#090909!important;
+  color:#fff!important;
+  color-scheme:dark;
+}
+[data-selah-theme] .sf-member-number-booking :is(label,legend,h1,h2,h3,h4,p,strong,b,small,span,em,dt,dd,[role=status],.sf-field-optional),
+[data-selah-theme] .sf-member-number-booking .sf-registration-field :is(label,legend,p,small,span,strong) {
+  color:#fff!important;
+  opacity:1;
+}
+[data-selah-theme] .sf-member-number-booking :is(input:not([type=checkbox]):not([type=radio]),select,textarea) {
+  background:#fff!important;
+  color:#171717!important;
+  -webkit-text-fill-color:#171717!important;
+  caret-color:#171717!important;
+  color-scheme:light;
+}
+[data-selah-theme] .sf-member-number-booking :is(input,textarea)::placeholder {
+  color:#686868!important;
+  -webkit-text-fill-color:#686868!important;
+  opacity:1!important;
+}
+[data-selah-theme] .sf-member-number-booking :is(input,textarea):-webkit-autofill {
+  -webkit-text-fill-color:#171717!important;
+  -webkit-box-shadow:0 0 0 1000px #fff inset!important;
+}
+[data-selah-theme] .sf-member-number-booking :is(button,[role=button]) {
+  color:inherit;
+}
+[data-selah-theme] .sf-registration-field > label,
+[data-selah-theme] .sf-registration-field legend {
+  color:inherit;
+}
