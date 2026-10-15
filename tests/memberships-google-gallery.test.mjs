@@ -37,7 +37,7 @@ test('Google business gallery matches selected business names and only trusted p
 });
 test('Stripe Connect signatures reject tampering, wrong secret and expired events',()=>{
  const secret='whsec_test-signature',now=1800000000;
- const json=JSON.stringify({id:'evt_123',account:'acct_12345',type:'invoice.paid',data:{object:{id:'in_123'}}});
+ const json=JSON.stringify({id:'evt_123',account:'acct_12345',livemode:false,type:'invoice.paid',data:{object:{id:'in_123'}}});
  const sig=createHmac('sha256',secret).update(now+'.'+json).digest('hex');
  assert.equal(verifyStripeWebhook(json,'t='+now+',v1='+sig,secret,now).id,'evt_123');
  assert.throws(()=>verifyStripeWebhook(json+' ','t='+now+',v1='+sig,secret,now),/invalid/i);

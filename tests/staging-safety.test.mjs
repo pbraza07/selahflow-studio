@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHmac} from 'node:crypto';
+import {verifyStripeWebhook} from '../server/membership-payments.mjs';
 import {assertStagingDatabase,assertSandboxPayments,stagingNotificationAllowed} from '../server/staging-safety.mjs';
 import {sendNotificationChannel} from '../server/notification-delivery.mjs';
 import {configured,sendWebPush} from '../server/push-crypto.mjs';
@@ -29,4 +31,13 @@ test('staging push is disabled even if credentials are accidentally inherited',a
  const push={...env,VAPID_PUBLIC_KEY:'example',VAPID_PRIVATE_KEY:'example',VAPID_SUBJECT:'mailto:test@example.com'};
  assert.equal(configured(push),false);
  assert.equal((await sendWebPush({}, {}, push,()=>{throw Error('Must not send')})).status,'not_configured');
+});
+test('a correctly signed live Stripe event is rejected in staging, while a signed sandbox event passes',()=>{
+ const now=1800000000,secret='whsec_synthetic_staging_test';
+ for(const livemode of [true,false,undefined]){
+  const raw=JSON.stringify({id:'evt_test',account:'acct_test',type:'invoice.paid',livemode,data:{object:{}}});
+  const signature='t='+now+',v1='+createHmac('sha256',secret).update(now+'.'+raw).digest('hex');
+  if(livemode===false)assert.equal(verifyStripeWebhook(raw,signature,secret,now,env).id,'evt_test');
+  else assert.throws(()=>verifyStripeWebhook(raw,signature,secret,now,env),/only sandbox/);
+ }
 });

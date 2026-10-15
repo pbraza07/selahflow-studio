@@ -48,7 +48,7 @@ export async function stripeApi(endpoint,options={}){
   return result;
  }finally{clearTimeout(timer);}
 }
-export function verifyStripeWebhook(raw,signature,secret,now=Math.floor(Date.now()/1000)){
+export function verifyStripeWebhook(raw,signature,secret,now=Math.floor(Date.now()/1000),env=process.env){
  if(!signature||!secret)throw Error('Missing payment webhook signature.');
  const attrs=Object.fromEntries(signature.split(',').map(v=>v.trim().split('=').slice(0,2)));
  const timestamp=Number(attrs.t);
@@ -58,7 +58,7 @@ export function verifyStripeWebhook(raw,signature,secret,now=Math.floor(Date.now
  if(!signatures.some(v=>/^[\da-f]{64}$/i.test(v)&&timingSafeEqual(Buffer.from(v,'hex'),Buffer.from(mac,'hex'))))
   throw Error('Payment webhook signature invalid.');
  const event=JSON.parse(raw);
- if(isStaging()&&event.livemode!==false)throw Error('Staging accepts only sandbox payment events.');
+ if(isStaging(env)&&event.livemode!==false)throw Error('Staging accepts only sandbox payment events.');
  if(!event.id||!event.type||!event.data?.object||!event.account)throw Error('Invalid connected-account payment event.');
  return event;
 }
