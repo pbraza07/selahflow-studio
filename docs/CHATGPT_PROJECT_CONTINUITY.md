@@ -4,6 +4,7 @@
 - Shared-instance database/user isolation is separately provisioned; startup verifies staging database, username, host, branch and URL before migrations. No production records or payment credentials are copied.
 - Stripe only accepts test keys and test webhook events. External email/SMS require staging enablement and recipient allowlists; push defaults disabled.
 - See `docs/STAGING_ENVIRONMENT.md` for configuration, validation and promotion procedure. This handoff is source state, not a claim of a LIVE staging deployment.
+- Staging acceptance exposed an existing profile-save SQL placeholder gap. The shared profile persistence helper removes the unused bound parameter and has a tenant-scope/branding regression test. Home footer now follows APP_VERSION. These corrections remain confined to staging.
 
 # SelahFlow Booking App — ChatGPT Project Continuity
 
