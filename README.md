@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Release source: v1.3.86 (2026-10-15), staging branch only.** Owners choose a six-character membership ID policy under Memberships. Shared allocation and database reservations prevent reuse across different clients within a business; existing IDs remain unchanged. Verify Render LIVE and health before claiming deployment.
+**Release source: v1.3.86 (2026-10-15), staging branch only.** Booking and membership Make Payment use the existing connected Stripe sandbox, with server-verified payment, once-only revenue and membership credits, and preserved per-business IDs/history. Staging checkout and membership activation were verified; see [staging verification](docs/STAGING_ENVIRONMENT.md). Production remains separate at v1.3.81. Verify Render LIVE and health for current deployment status.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 

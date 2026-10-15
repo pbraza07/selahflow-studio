@@ -2,7 +2,20 @@
 
 The staging branch prepares v1.4 development; the v1.4 feature milestone is not complete. Production is the separate `selahflow-studio` service on `main`, with its existing URL, database, credentials and release v1.3.81. Never merge or deploy to production without explicit owner authorization.
 
-## Latest staging fix — 2026-10-15
+## Verified checkout release — 2026-10-15
+
+v1.3.86 is LIVE, code commit `d4a42e93609eed3412a14502fcb11a37b84bc12d`, Render `dep-db8j358473hc73f49c90`. Health reports 1.3.86; TypeScript, all 215 tests and production build passed locally and on Render. Migration 036 is additive. Current Stripe account readiness was verified through the authenticated owner button.
+
+- Both public flows show Make Payment and open the business's existing connected Stripe sandbox Checkout. A $25 booking test succeeded. Cancelling/retrying reused the same Checkout; revisiting its return page kept the single paid record.
+- The $20/month synthetic Sandbox Checkout membership activated with ID SC0203, 0/3 sessions used, and paid-through November 15, 2026. Refreshing verification retained three credits and one provider-linked payment ledger entry.
+- Reports show the new $25 service payment and $20 membership payment once each. The $85 selected-period total includes $40 of earlier synthetic manual membership payments; it is not $85 of provider charges.
+- Actual sandbox checkout and server-to-Stripe return verification are tested. Signed webhook validation/idempotence and renewal credits are automated-test-covered; independent live webhook delivery and a future recurring cycle were not separately observed. Do not imply those are independently provider-tested.
+- Tests use published Stripe test cards and synthetic contacts; no real funds. No new resources, plan changes, or additional build-minute blocks were purchased. Billing remained in the existing $5/1,000-minute block.
+- Production remains v1.3.81, commit `806a87f23e211b1259af6415f7e54c1d27b4822d`, LIVE `dep-db8ao7rrjlhs73cvrf3g`; health 200. Documentation commits following the LIVE code are not new application deployments. Auto-deploy remains off for staging.
+
+Provider testing uncovered two current API changes: Checkout now uses allowed_payment_method_types; invoice verification must accept paid status/amount without the removed paid boolean. Off-Stripe invoice amounts are retrieved and excluded. Existing paid checkout returns reconcile without charging again.
+
+## Previous staging fix — 2026-10-15
 
 v1.3.83 is LIVE at commit `cafcfe1540c9c99fd71fedb105140943ed2409be`, deploy `dep-db8fhvs9v7es73bmd8s0`. 211 automated tests, TypeScript and build passed. Sandbox credentials were configured by the owner. The authenticated Connect button created the business account through Accounts v2 with Stripe fees/losses responsibility and opened Stripe-hosted onboarding (test account banner confirmed). The owner must finish onboarding; readiness and checkout remain unverified. No real payment, new paid resources, or production change. Production deployment remains `dep-db8ao7rrjlhs73cvrf3g` on v1.3.81. Billing before this fix: 684 total pipeline minutes, 184 used in the existing $5/1,000-minute block.
 
