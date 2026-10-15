@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Release source: v1.3.78 (2026-10-14).** Check My Registration returns membership type, package, status and available sessions from the unique ID alone, alongside the latest appointment status/date. It uses business-scoped live credit counters and preserves all booking, membership and payment history. Confirm Render LIVE and `/api/health` before treating this source version as deployed.
+**Release source: v1.3.79 (2026-10-15).** Paid revenue converts historical membership cents to dollars, reconciles audit/ledger copies once, and includes membership purchases and renewals in the transaction breakdown. Historical payments remain preserved. Verify Render LIVE and health before claiming deployment.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 

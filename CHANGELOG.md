@@ -1,3 +1,9 @@
+## v1.3.79 — Correct membership revenue totals
+
+- Normalize membership amounts from cents and reconcile audit/ledger copies once per payment. Preserve audit-only history and distinct renewals.
+- Show membership revenue and recorded membership transactions alongside paid service/retail sales; include all historical payments beyond the former 500-row cap.
+- New manual payments include explicit amountCents and requestId fields. Pending requests and membership-credit visits do not create additional paid revenue.
+
 ## v1.3.78 — Membership details from ID-only registration check
 
 - Check My Registration now retrieves the real membership package, membership type, status and available sessions using the unique ID alone, alongside the existing latest appointment status/date.

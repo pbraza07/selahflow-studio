@@ -1,3 +1,4 @@
+import {loadMembershipReportPayments} from '../server/report-payments.mjs';
 import {validatePageContent} from '../server/page-content.mjs';
 import {memberIdMembershipSummary} from '../server/member-id-summary.mjs';
 import {themeIsValid,resolveTheme} from '../server/themes.mjs';
@@ -31,14 +32,14 @@ export async function ownerGet(req:Request){
   const {owner,config}=await context(req);
   const [a,e,roster,membershipPayments]=await Promise.all([
    db().prepare('SELECT * FROM appointments WHERE owner=? ORDER BY date,start').bind(owner).all(),
-   db().prepare('SELECT * FROM events WHERE owner=? ORDER BY created DESC LIMIT 500').bind(owner).all(),
+   db().prepare("SELECT * FROM events WHERE owner=? AND kind<>'membership_payment' ORDER BY created DESC").bind(owner).all(),
    loadOwnerMemberRoster(getPool(),owner),
-   getPool().query("SELECT l.id,l.created_at::text AS created,l.amount_cents,l.membership_id FROM membership_session_ledger l JOIN businesses b ON b.id=l.business_id WHERE b.owner_id=$1 AND l.event_type='payment_confirmed' ORDER BY l.created_at DESC LIMIT 500",[owner])
+   loadMembershipReportPayments(getPool(),owner)
   ]);
   const visits=a.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   return reply({
    config,appointments:decorateOwnerAppointments(visits,roster),
-   events:[...e.results.map((r:any)=>({...r,...JSON.parse(r.data)})),...membershipPayments.rows.map((r:any)=>({id:r.id,created:r.created,kind:'membership_payment',total:Number(r.amount_cents||0)/100,membershipId:r.membership_id}))]
+   events:[...e.results.map((r:any)=>({...r,...JSON.parse(r.data)})),...membershipPayments]
   });
  }catch(e){
   return reply({error:(e as Error).message==='AUTH_REQUIRED'?'Please sign in.':'Studio data is unavailable or this business is waiting for approval.'},(e as Error).message==='AUTH_REQUIRED'?401:503);

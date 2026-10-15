@@ -1,5 +1,11 @@
 # SelahFlow Booking App — ChatGPT Project Continuity
 
+## v1.3.79 release handoff — Paid revenue reconciliation (2026-10-15)
+
+- Prior LIVE baseline: v1.3.78, main `6b286be87d2b428572b5a1b4a55c673494e9ccb7`.
+- Legacy membership audit totals are cents; normalize once and reconcile ledger copies by request ID, or one-to-one member/amount/timestamp matching for legacy writes. Audit-only history survives removed clients.
+- Future manual payments explicitly store amountCents/requestId. Reports show memberships in breakdown and transaction list; no 500-row payment truncation. No migration or financial-history mutation. Verify exact Render LIVE commit and health before handoff.
+
 ## v1.3.78 release handoff — ID-only membership summary (2026-10-14)
 
 - Prior verified LIVE baseline: v1.3.77, main `d111c7c7e076ac9da63791ec92d23814137163f5`, Render `dep-db7rbeugekts73eahrgg`.
