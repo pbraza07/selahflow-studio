@@ -7,7 +7,7 @@ import {sanitizeBookingAnswers} from '../../../../server/booking-custom-fields.m
 import {getPool} from '../../../../server/database.mjs';
 import {requireOwner} from '../../../../lib/auth';
 import {validOrigin,trustedOrigin} from '../../../../server/security.mjs';
-import {paymentConfigured,validateMembershipPlan,stripeApi} from '../../../../server/membership-payments.mjs';
+import {paymentConfigured,validateMembershipPlan,stripeApi,createStripeMerchantAccount} from '../../../../server/membership-payments.mjs';
 import {planEntitlements,activeMembershipLimit} from '../../../../server/plan-entitlements.mjs';
 // Manual payment confirmation and session usage are maintained in an auditable ledger.
 // Stripe integration remains optional and can be revisited separately.
@@ -266,13 +266,7 @@ export async function POST(req:Request){
    const current=(await pool.query('SELECT external_account_id FROM merchant_accounts WHERE business_id=$1',[business.id])).rows[0];
    let accountId=current?.external_account_id;
    if(!accountId){
-    const created=await stripeApi('accounts',{params:{
-     type:'express',country:'US',email:input.email||undefined,
-     'business_profile[name]':business.name,
-     'capabilities[card_payments][requested]':'true',
-     'capabilities[transfers][requested]':'true',
-     'metadata[selahflow_business_id]':business.id
-    },idempotencyKey:'selahflow-connect-'+business.id});
+    const created=await createStripeMerchantAccount(business,input.email);
     accountId=created.id;
     await pool.query("INSERT INTO merchant_accounts(business_id,provider,external_account_id) VALUES($1,'stripe',$2) ON CONFLICT(business_id) DO UPDATE SET external_account_id=excluded.external_account_id",
      [business.id,accountId]);

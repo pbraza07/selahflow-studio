@@ -1,3 +1,7 @@
+# v1.3.83 release handoff — Stripe managed-risk onboarding (staging only)
+
+New accounts use v2/core/accounts, JSON and pinned 2026-09-30.endive, with dashboard=full and Stripe fees/losses responsibility. Existing account IDs and v1 hosted account links/readiness remain compatible. This fixes the legacy Express type rejection without changing platform loss liability. Tests mock the Stripe transport; provider onboarding must still be verified against the deployed sandbox. Production remains untouched. Do not infer LIVE from this source note.
+
 # v1.3.82 release handoff — Staging setup (2026-10-15)
 
 Verified staging: https://selahflow-staging.onrender.com/; LIVE code `304e8ed4decbbfffc453f1d643adc2a9528ba85e`, deploy `dep-db8egau89jmc73d74i80`. 208 automated tests and 47 live checks passed. Production remains v1.3.81 unchanged. Stripe sandbox credentials and real provider checkout testing remain pending. See `docs/STAGING_ENVIRONMENT.md` before changes.

@@ -1,3 +1,9 @@
+## v1.3.83 — Stripe managed-risk Connect onboarding (staging only)
+
+- New merchants use Accounts v2 JSON requests with Stripe as fee/loss collector and full Stripe dashboard access. Removes the rejected legacy Express type request; no platform liability acknowledgement or Stripe settings change is required.
+- Existing connected accounts, v1 hosted onboarding links, readiness checks and direct Checkout remain preserved. No migrations, payment transactions or production changes.
+- Sandbox checkout UI and invoice session/revenue credit integration remain separate pending work.
+
 ## v1.3.82 — Isolated staging environment
 
 - Staging-only database/user/host/branch/origin checks run before startup migrations.
