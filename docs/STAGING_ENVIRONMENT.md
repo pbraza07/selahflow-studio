@@ -2,6 +2,20 @@
 
 The staging branch prepares v1.4 development; the v1.4 feature milestone is not complete. Production is the separate `selahflow-studio` service on `main`, with its existing URL, database, credentials and release v1.3.81. Never merge or deploy to production without explicit owner authorization.
 
+## Verified deployment — 2026-10-15
+
+- URL: https://selahflow-staging.onrender.com/
+- Render service: `srv-db8e9dajnfac73fa0vo0`; code release v1.3.82.
+- LIVE code commit: `304e8ed4decbbfffc453f1d643adc2a9528ba85e`; deployment `dep-db8egau89jmc73d74i80`.
+- TypeScript, 208 automated tests, and the staging production build passed. All 47 live API/security/functional checks passed, including successful business-profile saves, two attendees in one session, full-capacity rejection, membership activation, zero-price member booking, once-only attendance debit, renewal with unchanged ID, logo upload/storage, logout, and post-deployment persistence.
+- Synthetic fixture only: SelahFlow Staging Test Studio at `/book/crawford`, two synthetic clients, a three-session package with synthetic manual payment/renewal entries. These are not actual provider charges.
+- Staging administrator: `pbraza@gmail.com`. The independently generated password is the staging service's `ADMIN_PASSWORD` in Render Environment; never copy the production password.
+- Staging login was directly denied access to `amanda_realtor_db` (no CONNECT privilege). Existing login-role access was preserved. Amanda's plan, 5 GB allocation, original database name/user/credentials and application settings were not changed; only the authorized database access grants were hardened.
+- Production service/settings/main remained unchanged at v1.3.81, commit `806a87f23e211b1259af6415f7e54c1d27b4822d`, deployment `dep-db8ao7rrjlhs73cvrf3g`. Both production and Amanda health endpoints returned HTTP 200 after setup.
+- No paid resources or plan/storage upgrades were created. Existing pipeline-minute charges remained $5.00; usage advanced within the already purchased block. Free compute still shares workspace limits.
+- Pending: owner-supplied Stripe sandbox secret key and a separate staging webhook secret. Real sandbox checkout/provider webhook delivery has NOT been tested. External email/SMS/push remain disabled.
+- Automatic staging deploys remain disabled; production deployment still requires explicit authorization. Documentation commits after the LIVE commit do not imply another application deployment.
+
 ## Hosting and data
 
 - Staging service: `selahflow-staging`, Node, Virginia, Free compute, GitHub branch `staging`. Auto-deploy is disabled to control build spending; deployments are deliberate staging actions.

@@ -1,5 +1,7 @@
 # v1.3.82 release handoff — Staging setup (2026-10-15)
 
+Verified staging: https://selahflow-staging.onrender.com/; LIVE code `304e8ed4decbbfffc453f1d643adc2a9528ba85e`, deploy `dep-db8egau89jmc73d74i80`. 208 automated tests and 47 live checks passed. Production remains v1.3.81 unchanged. Stripe sandbox credentials and real provider checkout testing remain pending. See `docs/STAGING_ENVIRONMENT.md` before changes.
+
 - This release is confined to `staging`. Production main remains v1.3.81, commit `806a87f23e211b1259af6415f7e54c1d27b4822d`. Do not merge or deploy to production without the owner's explicit authorization.
 - Shared-instance database/user isolation is separately provisioned; startup verifies staging database, username, host, branch and URL before migrations. No production records or payment credentials are copied.
 - Stripe only accepts test keys and test webhook events. External email/SMS require staging enablement and recipient allowlists; push defaults disabled.
