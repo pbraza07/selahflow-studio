@@ -35,15 +35,15 @@ export async function sendNotificationChannel(channel,destination,message,env=pr
  if(channel==='email'&&!validEmail(destination)||channel==='sms'&&!validE164(destination))return {status:'invalid_destination',detail:'Invalid recipient'};
  try{
   if(channel==='email'){
-   const result=await fetcher('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','User-Agent':'SelahFlow/1.3.10'},body:JSON.stringify({from:env.RESEND_FROM_EMAIL,to:[destination],subject:message.subject,text:message.text}),signal:AbortSignal.timeout(7500)});
-   if(!result.ok)return {status:'failed',detail:'Email provider rejected request (HTTP '+result.status+')'};
+   const result=await fetcher('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','User-Agent':'SelahFlow/1.3.87',...(message.idempotencyKey?{'Idempotency-Key':message.idempotencyKey}:{})},body:JSON.stringify({from:env.RESEND_FROM_EMAIL,to:[destination],subject:message.subject,text:message.text}),signal:AbortSignal.timeout(7500)});
+   if(!result.ok)return {status:message.trackAmbiguous&&result.status>=500?'unknown':'failed',detail:'Email provider rejected request (HTTP '+result.status+')'};
    return {status:'submitted',detail:'Accepted by email provider'};
   }
   const sid=env.TWILIO_ACCOUNT_SID,form=new URLSearchParams({From:env.TWILIO_FROM_NUMBER,To:destination,Body:message.sms});
   const result=await fetcher('https://api.twilio.com/2010-04-01/Accounts/'+encodeURIComponent(sid)+'/Messages.json',{method:'POST',headers:{Authorization:'Basic '+Buffer.from(sid+':'+env.TWILIO_AUTH_TOKEN).toString('base64'),'Content-Type':'application/x-www-form-urlencoded'},body:form.toString(),signal:AbortSignal.timeout(7500)});
-  if(!result.ok)return {status:'failed',detail:'SMS provider rejected request (HTTP '+result.status+')'};
+  if(!result.ok)return {status:message.trackAmbiguous&&result.status>=500?'unknown':'failed',detail:'SMS provider rejected request (HTTP '+result.status+')'};
   return {status:'submitted',detail:'Accepted by SMS provider'};
- }catch{return {status:'failed',detail:'Provider request failed or timed out'};}
+ }catch{return {status:message.trackAmbiguous?'unknown':'failed',detail:'Provider request failed or timed out'};}
 }
 /** @param {{requestId:string,origin:string}} input */
 export async function notifyBookingRequest({requestId,origin}){

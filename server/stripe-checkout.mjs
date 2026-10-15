@@ -2,6 +2,7 @@ import {randomUUID} from 'node:crypto';
 import {stripeApi,paymentConfigured,invoiceSubscriptionId,invoicePaidThrough,shouldActivateInvoice} from './membership-payments.mjs';
 import {isStaging} from './staging-safety.mjs';
 import {tokenHash} from './security.mjs';
+import {queueBookingPaid} from './booking-client-notifications.mjs';
 
 export function assertTestPayment(object){
  if(isStaging()&&object?.livemode!==false)throw Error('Staging accepts only Stripe sandbox payments.');
@@ -89,6 +90,7 @@ export async function applyBookingPayment(db,businessId,account,session){
  const payment={bookingId:row.booking_id,lines:row.lines,total:row.amount_cents/100,tax:0,payment:isStaging()?'Stripe sandbox':'Stripe',providerReference:session.payment_intent};
  await db.query("INSERT INTO events(id,owner,created,kind,data) SELECT $1,owner_id,$2,'cash_sale',$3 FROM businesses WHERE id=$4",['stripe-booking-'+account+'-'+session.payment_intent,new Date().toISOString(),JSON.stringify(payment),businessId]);
  await db.query("UPDATE appointments SET data=(data::jsonb||$1::jsonb)::text WHERE id=$2 AND owner=(SELECT owner_id FROM businesses WHERE id=$3)",[JSON.stringify({paymentStatus:'paid',paymentProvider:'stripe',paymentReference:session.payment_intent}),row.booking_id,businessId]);
+ await queueBookingPaid(db,businessId,row.booking_id);
  return true;
 }
 

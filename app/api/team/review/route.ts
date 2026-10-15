@@ -1,6 +1,6 @@
 import {customRegistrationFields} from '../../../../server/registration-questions.mjs';
 import {getPool} from '../../../../server/database.mjs';
-import {tokenHash,validOrigin} from '../../../../server/security.mjs';
+import {tokenHash,validOrigin,trustedOrigin} from '../../../../server/security.mjs';
 import {reviewPendingRequest} from '../../../../lib/booking-review-actions';
 import {editPendingRequest} from '../../../../server/booking-review-edits.mjs';
 import {approvalFieldsForBusiness,sessionReviewSummary} from '../../../../server/booking-approval-display.mjs';
@@ -29,6 +29,6 @@ export async function POST(req:Request){if(!validOrigin(req))return Response.jso
  const raw=await req.text();if(raw.length>25000)throw Error('Invalid request.');
  const b=JSON.parse(raw);if(b.action==='editBooking')return Response.json(await editPendingRequest(link.owner_id,String(b.id||''),link.staff_id,b.details),{headers});
  if(b.action!=='review'||typeof b.accept!=='boolean')throw Error('Invalid review action.');
- const result=await reviewPendingRequest(link.owner_id,String(b.id||''),link.staff_id,b.accept);
+ const result=await reviewPendingRequest(link.owner_id,String(b.id||''),link.staff_id,b.accept,trustedOrigin(req));
  return Response.json(result,{headers});
  }catch(e){const m=(e as Error).message;return Response.json({error:m==='ACCESS_DENIED'?'Team review link expired or revoked.':m},{status:m==='ACCESS_DENIED'?403:409,headers});}}

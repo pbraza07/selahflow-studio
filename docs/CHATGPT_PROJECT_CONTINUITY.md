@@ -1,3 +1,11 @@
+# v1.3.87 release handoff — Approval payment notifications
+
+- Additive migration 037 commits one email and SMS message with each payable booking approval; a private 30-day fragment-token link opens existing connected Stripe Checkout. Free/covered bookings skip payment. Registration identity/payment snapshots are retained on acceptance.
+- Verified connected-account receipt commits confirmation messages with the financial writes. Duplicate callbacks do not duplicate messages or revenue. A startup worker uses the existing process/pool, durable claims and bounded retries; ambiguous outcomes require a provider check. No paid worker or resources.
+- Owner approval inbox shows masked destinations, channel/provider status and retries for unsent failed/unconfigured messages. Submitted means provider-accepted, not delivered. Phone requires an explicit country code. Email security scanners cannot start checkout.
+- Staging UI on 2026-10-15 reports Resend and Twilio not configured. Keep external delivery disabled until test provider credentials and explicit recipient allowlists are supplied. Never claim actual SMS/email delivery or independent live webhook delivery without evidence.
+- Run typecheck, all tests and build, then verify exact staging LIVE release/health before claiming deployment. Production remains v1.3.81; do not merge to main without authorization.
+
 # v1.3.86 release handoff — VERIFIED staging checkout
 
 LIVE code `d4a42e93609eed3412a14502fcb11a37b84bc12d`, Render `dep-db8j358473hc73f49c90`; health 1.3.86. TypeScript, 215 tests and build passed locally and on Render. Both Make Payment buttons opened existing connected sandbox Checkout. Verified $25 booking payment, cancellation/retry session reuse, $20/month membership activation with three credits, refresh without duplicate credit, and once-only report entries. Current invoice verification handles the removed paid boolean and excludes off-Stripe totals. No real funds, new paid resources or production changes. Production stays v1.3.81 at its existing LIVE deploy. See STAGING_ENVIRONMENT.md for exact checks and webhook/recurring-cycle test limitations. Documentation commits after the LIVE code do not imply another app deployment.

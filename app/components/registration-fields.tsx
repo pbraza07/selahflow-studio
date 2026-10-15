@@ -11,7 +11,7 @@ export default function RegistrationFields({config,form,values,answers,onValue,o
  {f.type==='checkbox'?<input type="checkbox" required={f.required} checked={value===true} onChange={e=>change(e.target.checked)}/>:
  f.type==='select'?<select required={f.required} value={String(value||'')} onChange={e=>change(e.target.value)}><option value="">Choose an option</option>{(f.options||[]).map((o:string)=><option key={o} value={o}>{o}</option>)}</select>:
  <input name={f.id} type={f.type==='number'?'number':f.type} required={f.required} value={String(value||'')} placeholder={f.placeholder||''} maxLength={f.id==='memberNumber'?6:f.id==='firstName'||f.id==='lastName'?50:f.id==='email'?200:f.id==='phone'?40:500} max={f.id==='dateOfBirth'?new Date().toISOString().slice(0,10):undefined} pattern={f.id==='memberNumber'?'[A-Za-z]{2}[0-9]{4}':undefined} autoCapitalize={f.id==='memberNumber'?'characters':undefined} autoComplete={f.id==='firstName'?'given-name':f.id==='lastName'?'family-name':'off'} onChange={e=>change(e.target.value)}/>}
- </label>{f.help&&<small>{f.help}</small>}{f.id==='memberNumber'&&identityHelp}
+ </label>{f.help&&<small>{f.help}</small>}{f.id==='phone'&&<small>For booking payment links and confirmations by text, include your country code (for example +14155552671).</small>}{f.id==='memberNumber'&&identityHelp}
  </div>;
  })}</div>;
 }
