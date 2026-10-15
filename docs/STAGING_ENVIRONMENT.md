@@ -2,7 +2,11 @@
 
 The staging branch prepares v1.4 development; the v1.4 feature milestone is not complete. Production is the separate `selahflow-studio` service on `main`, with its existing URL, database, credentials and release v1.3.81. Never merge or deploy to production without explicit owner authorization.
 
-## Verified deployment — 2026-10-15
+## Latest staging fix — 2026-10-15
+
+v1.3.83 is LIVE at commit `cafcfe1540c9c99fd71fedb105140943ed2409be`, deploy `dep-db8fhvs9v7es73bmd8s0`. 211 automated tests, TypeScript and build passed. Sandbox credentials were configured by the owner. The authenticated Connect button created the business account through Accounts v2 with Stripe fees/losses responsibility and opened Stripe-hosted onboarding (test account banner confirmed). The owner must finish onboarding; readiness and checkout remain unverified. No real payment, new paid resources, or production change. Production deployment remains `dep-db8ao7rrjlhs73cvrf3g` on v1.3.81. Billing before this fix: 684 total pipeline minutes, 184 used in the existing $5/1,000-minute block.
+
+## Initial verified deployment — 2026-10-15
 
 - URL: https://selahflow-staging.onrender.com/
 - Render service: `srv-db8e9dajnfac73fa0vo0`; code release v1.3.82.

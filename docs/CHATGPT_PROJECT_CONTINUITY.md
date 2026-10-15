@@ -1,6 +1,6 @@
 # v1.3.83 release handoff — Stripe managed-risk onboarding (staging only)
 
-New accounts use v2/core/accounts, JSON and pinned 2026-09-30.endive, with dashboard=full and Stripe fees/losses responsibility. Existing account IDs and v1 hosted account links/readiness remain compatible. This fixes the legacy Express type rejection without changing platform loss liability. Tests mock the Stripe transport; provider onboarding must still be verified against the deployed sandbox. Production remains untouched. Do not infer LIVE from this source note.
+New accounts use v2/core/accounts, JSON and pinned 2026-09-30.endive, with dashboard=full and Stripe fees/losses responsibility. Existing account IDs and v1 hosted account links/readiness remain compatible. This fixes the legacy Express type rejection without changing platform loss liability. Verified LIVE staging commit cafcfe1540c9c99fd71fedb105140943ed2409be, deployment dep-db8fhvs9v7es73bmd8s0. TypeScript, 211 tests and build passed locally and on Render. The authenticated Connect button created the sandbox account and redirected to Stripe hosted onboarding with the test-account banner. Onboarding was left incomplete for the owner; no payment was attempted. Production remains untouched. Do not infer LIVE from this source note.
 
 # v1.3.82 release handoff — Staging setup (2026-10-15)
 
