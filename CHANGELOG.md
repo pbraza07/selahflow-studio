@@ -382,3 +382,9 @@ Do not create an empty new version without actual changes.
 ## v1.3.70 — Remove pre-tax wording
 
 - Removed “before applicable tax” and related pre-tax wording from public and owner booking summaries and confirmations.
+## v1.3.84 — Booking and membership Stripe checkout (staging only)
+
+- Make Payment opens hosted Stripe Checkout on the business's existing connected account, for confirmed paid bookings and recurring membership signup. Pay-at-business and manual membership requests remain available. Approval-required bookings cannot be charged before acceptance; membership-covered bookings remain free.
+- Server-saved booking prices, membership price/credit snapshots, account/tenant checks, verified webhook fulfillment and server-verified return pages. Provider receipts prevent duplicate revenue or session credits, including recurring invoices and repeated clicks.
+- Additive migration 036 stores checkout/receipt references without card details or changes to historical payments. Stripe-linked memberships cannot be manually double-credited. Production remains unchanged.
+

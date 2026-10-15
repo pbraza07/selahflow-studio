@@ -85,8 +85,10 @@ test('public booking and business pages link to memberships, owner dashboard can
  assert.match(files[3],/Google Maps business listing link/);
  assert.match(files[4],/Next photo/);
  assert.match(files[4],/Previous photo/);
- assert.match(files[5],/mode:'subscription'/);
- assert.match(files[5],/payment_method_collection/);
+ assert.match(files[5],/startMembershipCheckout/);
+ const checkout=await readFile(new URL('server/membership-checkout.mjs',base),'utf8');
+ assert.match(checkout,/mode:'subscription'/);
+ assert.match(checkout,/payment_method_collection/);
  assert.match(files[6],/verifyStripeWebhook/);
  assert.match(files[6],/invoice\.paid/);
  assert.match(files[6],/checkout\.session\.completed/);

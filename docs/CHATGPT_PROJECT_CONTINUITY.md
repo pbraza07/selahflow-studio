@@ -184,3 +184,7 @@ The next release adds a future-facing six-character member-ID constraint, servic
 
 - Verified active members with remaining sessions see `$0.00` on the final booking confirmation; regular-price validation remains server-side and session credit eligibility is respected.
 - Release metadata is `1.3.69`; verify the matching Render deploy and `/api/health` before handoff.
+## 2026-10-15 — v1.3.84 release handoff
+
+Staging-only source adds booking and recurring membership Make Payment through the existing connected Stripe sandbox. Checkout prices and session credits are server-snapshotted; tenant checks and provider-reference receipts protect against duplicate charges, revenue or credits. Membership-covered bookings remain $0, approval-required bookings must be accepted first, manual requests/pay-at-business remain. Additive migration 036. Do not promote to main or production without explicit owner authorization. This source note is not proof of a LIVE deploy; verify Render and health and record provider-test limitations in STAGING_ENVIRONMENT.md.
+
