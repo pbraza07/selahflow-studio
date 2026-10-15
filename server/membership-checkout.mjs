@@ -35,7 +35,7 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
    member=(await db.query("INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,status,stripe_account_id,price_cents,date_of_birth,customer_phone,registration_answers,registration_field_labels,member_number,stripe_sessions_per_period,stripe_signup_fingerprint,stripe_interval_unit) VALUES($1,$2,$3,$4,$5,'pending_payment',$6,$7,$8::date,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15) RETURNING *",[body.requestId,business.id,plan.id,name,email,account,plan.price_cents,dob,details.phone,JSON.stringify(details.customAnswers||{}),JSON.stringify(labels),number,plan.sessions_included,fingerprint,plan.interval_unit])).rows[0];
   }
   const session=await api('checkout/sessions',{account,idempotencyKey:'membership-'+member.id+'-'+(member.stripe_checkout_session_id||'initial'),params:{
-   mode:'subscription','payment_method_types[0]':'card','line_items[0][quantity]':'1',
+   mode:'subscription','allowed_payment_method_types[0]':'card','line_items[0][quantity]':'1',
    'line_items[0][price_data][currency]':'usd','line_items[0][price_data][unit_amount]':String(member.price_cents),
    'line_items[0][price_data][recurring][interval]':member.stripe_interval_unit,
    'line_items[0][price_data][product_data][name]':business.name+' · '+plan.name,

@@ -388,3 +388,8 @@ Do not create an empty new version without actual changes.
 - Server-saved booking prices, membership price/credit snapshots, account/tenant checks, verified webhook fulfillment and server-verified return pages. Provider receipts prevent duplicate revenue or session credits, including recurring invoices and repeated clicks.
 - Additive migration 036 stores checkout/receipt references without card details or changes to historical payments. Stripe-linked memberships cannot be manually double-credited. Production remains unchanged.
 
+## v1.3.85 — Current Stripe Checkout payment-method filter (staging only)
+
+- Replaces removed payment_method_types with the documented allowed_payment_method_types card filter in booking and membership Checkout; found through the real sandbox smoke test.
+- Booking footer actions wrap on narrow mobile screens. Existing records and production are unchanged.
+

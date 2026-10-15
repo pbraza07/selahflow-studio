@@ -61,7 +61,7 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
    record=(await db.query('INSERT INTO booking_payments(booking_id,business_id,stripe_account_id,amount_cents,lines) VALUES($1,$2,$3,$4,$5::jsonb) RETURNING *',[actualId,business.id,account,cents,JSON.stringify(lines)])).rows[0];
   }else if(record.amount_cents!==cents)throw Error('The booking price changed. Contact the business before paying.');
   const session=await api('checkout/sessions',{account,idempotencyKey:'booking-'+actualId+'-'+(record.stripe_checkout_session_id||'initial'),params:{
-   mode:'payment','payment_method_types[0]':'card',client_reference_id:actualId,customer_email:data.email,
+   mode:'payment','allowed_payment_method_types[0]':'card',client_reference_id:actualId,customer_email:data.email,
    'line_items[0][quantity]':'1','line_items[0][price_data][currency]':'usd',
    'line_items[0][price_data][unit_amount]':String(record.amount_cents),
    'line_items[0][price_data][product_data][name]':business.name+' · '+(data.services||['Appointment']).join(' + ').slice(0,150),

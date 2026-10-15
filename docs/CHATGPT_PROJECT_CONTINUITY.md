@@ -188,3 +188,7 @@ The next release adds a future-facing six-character member-ID constraint, servic
 
 Staging-only source adds booking and recurring membership Make Payment through the existing connected Stripe sandbox. Checkout prices and session credits are server-snapshotted; tenant checks and provider-reference receipts protect against duplicate charges, revenue or credits. Membership-covered bookings remain $0, approval-required bookings must be accepted first, manual requests/pay-at-business remain. Additive migration 036. Do not promote to main or production without explicit owner authorization. This source note is not proof of a LIVE deploy; verify Render and health and record provider-test limitations in STAGING_ENVIRONMENT.md.
 
+# v1.3.85 release handoff — Stripe Checkout API compatibility (staging only)
+
+Provider testing on LIVE v1.3.84 exposed rejection of the removed payment_method_types creation parameter. Both checkout flows now use the current allowed_payment_method_types card filter. Public booking footer actions wrap on narrow screens. Preserve receipts, snapshots and all v1.3.84 safeguards. Verify the new LIVE deploy and actual sandbox checkouts before claiming success. Production remains v1.3.81 and must not be deployed without authorization.
+

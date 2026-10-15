@@ -14,6 +14,13 @@ test('staging refuses live payment objects and redirects outside Stripe',()=>{
   for(const url of ['http://checkout.stripe.com/x','https://checkout.stripe.com.evil/x','javascript:alert(1)'])assert.throws(()=>checkoutUrl({url}),/secure/);
  }finally{if(old===undefined)delete process.env.APP_ENV;else process.env.APP_ENV=old;}
 });
+test('Checkout uses the supported dynamic payment-method filter in both flows',async()=>{
+ for(const file of ['server/stripe-checkout.mjs','server/membership-checkout.mjs']){
+  const source=await readFile(new URL('../'+file,import.meta.url),'utf8');
+  assert.match(source,/'allowed_payment_method_types\[0\]':'card'/);
+  assert.doesNotMatch(source,/'payment_method_types\[0\]'/);
+ }
+});
 test('booking Checkout is server-priced, account-scoped, reusable, and recorded once after verified payment',async()=>{
  const pg=new PGlite(),old=[process.env.STRIPE_SECRET_KEY,process.env.STRIPE_CONNECT_WEBHOOK_SECRET];
  process.env.STRIPE_SECRET_KEY='sk_test_fixture';process.env.STRIPE_CONNECT_WEBHOOK_SECRET='whsec_fixture';
