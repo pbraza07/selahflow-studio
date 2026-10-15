@@ -1,4 +1,5 @@
 import {createHmac,timingSafeEqual} from 'node:crypto';
+import {assertSandboxPayments,isStaging} from './staging-safety.mjs';
 export const paymentConfigured=()=>Boolean(process.env.STRIPE_SECRET_KEY&&process.env.STRIPE_CONNECT_WEBHOOK_SECRET);
 export const stripeConfigured=()=>Boolean(process.env.STRIPE_SECRET_KEY);
 export function validateMembershipPlan(data){
@@ -23,6 +24,7 @@ export function googleListingUrl(value){
  return url.toString();
 }
 export async function stripeApi(endpoint,options={}){
+ assertSandboxPayments();
  const secret=process.env.STRIPE_SECRET_KEY;
  if(!secret)throw Error('Stripe payments are not configured for SelahFlow.');
  const {account,params,method='POST',idempotencyKey}=options;
@@ -56,6 +58,7 @@ export function verifyStripeWebhook(raw,signature,secret,now=Math.floor(Date.now
  if(!signatures.some(v=>/^[\da-f]{64}$/i.test(v)&&timingSafeEqual(Buffer.from(v,'hex'),Buffer.from(mac,'hex'))))
   throw Error('Payment webhook signature invalid.');
  const event=JSON.parse(raw);
+ if(isStaging()&&event.livemode!==false)throw Error('Staging accepts only sandbox payment events.');
  if(!event.id||!event.type||!event.data?.object||!event.account)throw Error('Invalid connected-account payment event.');
  return event;
 }

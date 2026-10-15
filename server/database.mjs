@@ -1,8 +1,10 @@
 import pg from 'pg';
+import {assertStagingDatabase,isStaging} from './staging-safety.mjs';
 let pool;
 export function getPool(){
  if(!process.env.DATABASE_URL)throw new Error('DATABASE_URL is required.');
- if(!pool)pool=new pg.Pool({connectionString:process.env.DATABASE_URL,max:10,connectionTimeoutMillis:10000,idleTimeoutMillis:30000,...(process.env.DATABASE_SSL==='true'?{ssl:{rejectUnauthorized:true}}:{})});
+ assertStagingDatabase();
+ if(!pool)pool=new pg.Pool({connectionString:process.env.DATABASE_URL,max:isStaging()?3:10,connectionTimeoutMillis:10000,idleTimeoutMillis:30000,...(process.env.DATABASE_SSL==='true'?{ssl:{rejectUnauthorized:true}}:{})});
  return pool;
 }
 export function postgresSQL(sql){let index=0;let out=sql.replaceAll('?',()=>`$${++index}`);if(out.startsWith('INSERT OR IGNORE INTO'))out=out.replace('INSERT OR IGNORE INTO','INSERT INTO')+' ON CONFLICT DO NOTHING';return out;}

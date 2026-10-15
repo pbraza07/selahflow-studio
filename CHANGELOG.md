@@ -1,3 +1,9 @@
+## v1.3.82 — Isolated staging environment
+
+- Staging-only database/user/host/branch/origin checks run before startup migrations.
+- Stripe test-key enforcement and sandbox-only webhooks; outbound notifications default off, with explicit test-recipient allowlists for email/SMS.
+- Separate staging banner, search-engine exclusion, and a three-connection pool. Production main and its deployment are unchanged.
+
 ## v1.3.81 — Configurable unique membership IDs
 
 - Membership ID settings offers initials + birth month/day with collision fallback, initials + sequential digits, or random two letters/four digits.

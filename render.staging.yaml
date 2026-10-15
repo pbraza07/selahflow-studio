@@ -1,0 +1,35 @@
+# Staging web service only. Does not provision a PostgreSQL instance or modify production.
+# Use this file explicitly; the historic root render.yaml provisions paid resources.
+services:
+  - type: web
+    name: selahflow-staging
+    runtime: node
+    region: virginia
+    plan: free
+    repo: https://github.com/pbraza07/selahflow-studio
+    branch: staging
+    autoDeploy: false
+    buildCommand: npm ci --include=dev --no-audit --no-fund && npm run typecheck && npm test && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_ENV
+        value: staging
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: STAGING_DATABASE_HOST
+        value: dpg-db3f1hegekts73egtus0-a
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_EMAIL
+        value: pbraza@gmail.com
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: STAGING_NOTIFICATIONS_ENABLED
+        value: "false"
+      - key: STAGING_PUSH_ENABLED
+        value: "false"
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"

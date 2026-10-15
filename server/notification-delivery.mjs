@@ -2,9 +2,11 @@
 import {randomBytes,randomUUID} from 'node:crypto';
 import {getPool} from './database.mjs';
 import {tokenHash} from './security.mjs';
+import {isStaging,stagingNotificationAllowed} from './staging-safety.mjs';
 export const validEmail=x=>typeof x==='string'&&x.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x);
 export const validE164=x=>typeof x==='string'&&/^\+[1-9]\d{7,14}$/.test(x);
 export function deliveryProviderStatus(env=process.env){
+ if(isStaging(env)&&env.STAGING_NOTIFICATIONS_ENABLED!=='true')return {emailConfigured:false,smsConfigured:false};
  return {emailConfigured:!!(env.RESEND_API_KEY&&env.RESEND_FROM_EMAIL),smsConfigured:!!(env.TWILIO_ACCOUNT_SID&&env.TWILIO_AUTH_TOKEN&&env.TWILIO_FROM_NUMBER)};
 }
 export function notificationRecipient(config,ownerEmail){
@@ -26,6 +28,7 @@ export function notificationMessage({businessName,request,link}){
  return {subject:`SelahFlow: Booking approval needed — ${safeValue(businessName)}`,text:summary,sms:`SelahFlow ${safeValue(businessName)}: ${safeValue(d.customerName)}, ${safeValue(request.date)} ${timeOf(request.start_minute)}, ${(d.services||[]).map(safeValue).join('+').slice(0,65)}. Review Accept/Decline: ${link}`};
 }
 export async function sendNotificationChannel(channel,destination,message,env=process.env,fetcher=fetch){
+ if(!stagingNotificationAllowed(channel,destination,env))return {status:'not_configured',detail:'External staging notifications are disabled for this recipient'};
  const cfg=deliveryProviderStatus(env);
  if(channel==='email'&&!cfg.emailConfigured)return {status:'not_configured',detail:'Resend email is not configured'};
  if(channel==='sms'&&!cfg.smsConfigured)return {status:'not_configured',detail:'Twilio SMS is not configured'};

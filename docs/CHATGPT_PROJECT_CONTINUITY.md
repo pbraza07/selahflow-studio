@@ -1,3 +1,10 @@
+# v1.3.82 release handoff — Staging setup (2026-10-15)
+
+- This release is confined to `staging`. Production main remains v1.3.81, commit `806a87f23e211b1259af6415f7e54c1d27b4822d`. Do not merge or deploy to production without the owner's explicit authorization.
+- Shared-instance database/user isolation is separately provisioned; startup verifies staging database, username, host, branch and URL before migrations. No production records or payment credentials are copied.
+- Stripe only accepts test keys and test webhook events. External email/SMS require staging enablement and recipient allowlists; push defaults disabled.
+- See `docs/STAGING_ENVIRONMENT.md` for configuration, validation and promotion procedure. This handoff is source state, not a claim of a LIVE staging deployment.
+
 # SelahFlow Booking App — ChatGPT Project Continuity
 
 ## v1.3.81 release handoff — Membership ID policy (2026-10-15)
