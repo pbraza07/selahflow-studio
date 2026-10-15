@@ -1,4 +1,4 @@
-import {loadMembershipReportPayments} from '../server/report-payments.mjs';
+import {loadMembershipReportPayments,reportSaleEvents} from '../server/report-payments.mjs';
 import {validatePageContent} from '../server/page-content.mjs';
 import {memberIdMembershipSummary} from '../server/member-id-summary.mjs';
 import {themeIsValid,resolveTheme} from '../server/themes.mjs';
@@ -39,7 +39,7 @@ export async function ownerGet(req:Request){
   const visits=a.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   return reply({
    config,appointments:decorateOwnerAppointments(visits,roster),
-   events:[...e.results.map((r:any)=>({...r,...JSON.parse(r.data)})),...membershipPayments]
+   events:[...reportSaleEvents(e.results.map((r:any)=>({...r,...JSON.parse(r.data)})),config.services),...membershipPayments]
   });
  }catch(e){
   return reply({error:(e as Error).message==='AUTH_REQUIRED'?'Please sign in.':'Studio data is unavailable or this business is waiting for approval.'},(e as Error).message==='AUTH_REQUIRED'?401:503);

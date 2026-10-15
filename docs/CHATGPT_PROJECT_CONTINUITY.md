@@ -1,5 +1,11 @@
 # SelahFlow Booking App — ChatGPT Project Continuity
 
+## v1.3.80 release handoff — Exclude deleted records from revenue (2026-10-15)
+
+- Supersedes v1.3.79 inclusion of audit-only payments for removed memberships: paid revenue now requires a retained membership and plan within the owner business. Status/plan inactivity alone is not deletion.
+- Paid service sales exclude lines whose service ID no longer exists in the catalog. Mixed sales retain other lines at original prices; raw events remain unchanged. Shared server filtering drives totals, breakdowns and transactions.
+- Baseline LIVE main was `fc1318422ca78817b6daeb26f4edc7f4a47782bf` (v1.3.79). Verify exact v1.3.80 LIVE commit and health before handoff.
+
 ## v1.3.79 release handoff — Paid revenue reconciliation (2026-10-15)
 
 - Prior LIVE baseline: v1.3.78, main `6b286be87d2b428572b5a1b4a55c673494e9ccb7`.

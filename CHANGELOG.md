@@ -1,3 +1,9 @@
+## v1.3.80 — Exclude deleted memberships and services from paid revenue
+
+- Exclude payments whose membership no longer exists in the same business; preserve the audit history.
+- Remove deleted service lines from report sales and recompute totals using original prices; retain other service and retail lines.
+- Inactive/exhausted memberships remain eligible until deleted. No data migration or historical payment mutation.
+
 ## v1.3.79 — Correct membership revenue totals
 
 - Normalize membership amounts from cents and reconcile audit/ledger copies once per payment. Preserve audit-only history and distinct renewals.
