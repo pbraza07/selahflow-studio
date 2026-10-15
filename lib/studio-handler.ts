@@ -1,3 +1,4 @@
+import {issueMemberId} from '../server/member-id-policy.mjs';
 import {loadMembershipReportPayments,reportSaleEvents} from '../server/report-payments.mjs';
 import {validatePageContent} from '../server/page-content.mjs';
 import {memberIdMembershipSummary} from '../server/member-id-summary.mjs';
@@ -309,14 +310,7 @@ if(isPublic){
    const member=(await client.query("SELECT member_number FROM customer_memberships WHERE business_id=$1 AND lower(customer_name)=lower($2) AND date_of_birth=$3::date LIMIT 1",[business.id,firstName+' '+lastName,dob])).rows[0];
    if(member)issuedMemberNumber=member.member_number;
    else{
-    const initials=(firstName[0]+lastName[0]).toUpperCase().replace(/[^A-Z]/g,'X');
-    const base=initials+dob.slice(5,7)+dob.slice(8,10);
-    for(let n=0;n<1;n++){
-     const candidate=base;
-     const used=(await client.query("SELECT 1 FROM customer_memberships WHERE business_id=$1 AND member_number=$2 UNION ALL SELECT 1 FROM customer_booking_ids WHERE business_id=$1 AND member_number=$2 LIMIT 1",[business.id,candidate])).rowCount;
-     if(!used){issuedMemberNumber=candidate;break;}
-    }
-    if(!issuedMemberNumber)throw Error('Unable to allocate a unique customer ID.');
+    issuedMemberNumber=await issueMemberId(client,{businessId:business.id,name:firstName+' '+lastName,dateOfBirth:dob});
    }
    await client.query("INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,date_of_birth,phone,member_number) VALUES($1,$2,$3,$4,$5::date,$6,$7)",[business.id,firstName,lastName,String(b.email).toLowerCase(),dob,String(b.phone||''),issuedMemberNumber]);
   }

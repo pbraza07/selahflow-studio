@@ -1,5 +1,12 @@
 # SelahFlow Booking App — ChatGPT Project Continuity
 
+## v1.3.81 release handoff — Membership ID policy (2026-10-15)
+
+- Baseline LIVE: v1.3.80, main `14995896bba4a589be4bed5f4f91802905a9a2d4`.
+- Membership ID settings saves a business-scoped policy: initials_birthdate (default, sequential fallback on collisions), initials_sequence, random. All remain two letters/four digits.
+- Migration 035 backfills a business/ID reservation table and adds triggers guarding membership, booking ID and directory writes. Shared allocator uses a transaction-level business lock and never reassigns a reserved number to another identity. Existing identity matching uses normalized name and DOB; no old IDs or attendance/payment records are rewritten.
+- Applied to owner client creation, manual membership registration, request approval, public booking and Stripe checkout. Verify migration startup and exact Render LIVE version before handoff.
+
 ## v1.3.80 release handoff — Exclude deleted records from revenue (2026-10-15)
 
 - Supersedes v1.3.79 inclusion of audit-only payments for removed memberships: paid revenue now requires a retained membership and plan within the owner business. Status/plan inactivity alone is not deletion.

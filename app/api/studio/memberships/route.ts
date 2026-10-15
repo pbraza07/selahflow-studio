@@ -1,3 +1,4 @@
+import {issueMemberId,MEMBER_ID_POLICIES} from '../../../../server/member-id-policy.mjs';
 import {customRegistrationFields,validateStandardRegistration} from '../../../../server/registration-questions.mjs';
 import {changeMembershipGroup,requireMembershipGroup} from '../../../../server/membership-groups.mjs';
 import {validateMembershipBadge} from '../../../../server/membership-badges.mjs';
@@ -14,7 +15,7 @@ export const runtime='nodejs';export const dynamic='force-dynamic';
 const headers={'Cache-Control':'private, no-store'};
 async function ctx(req:Request){
  const owner=await requireOwner(req),pool=getPool();
- const row=(await pool.query("SELECT b.id,b.slug,b.name,s.plan_code,s.status AS subscription_status FROM businesses b JOIN business_subscriptions s ON s.business_id=b.id WHERE b.owner_id=$1 AND b.status='active'",[owner])).rows[0];
+ const row=(await pool.query("SELECT b.id,b.slug,b.name,b.member_id_policy,s.plan_code,s.status AS subscription_status FROM businesses b JOIN business_subscriptions s ON s.business_id=b.id WHERE b.owner_id=$1 AND b.status='active'",[owner])).rows[0];
  if(!row)throw Error('Business unavailable.');
  return {owner,pool,business:row};
 }
@@ -38,7 +39,7 @@ export async function GET(req:Request){
   const individual=(await pool.query('SELECT limits FROM business_entitlement_overrides WHERE business_id=$1',[business.id])).rows[0]?.limits||{};
   const benefits=planEntitlements(business.plan_code,business.subscription_status);
   if(Number.isInteger(individual.membershipPlans))benefits.limits.membershipPlans=individual.membershipPlans;
-  return Response.json({businessName:business.name,plans:plans.rows,groups:groups.rows,members:members.rows.map((m:any)=>{const actual=Number(usageCounts.rows.find((u:any)=>u.membership_id===m.id)?.recorded_sessions||0);const plan=plans.rows.find((p:any)=>p.id===m.plan_id);return {...m,badge:plan?.badge||groups.rows.find((g:any)=>g.id===plan?.groupId)?.badge||null,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
+  return Response.json({businessName:business.name,memberIdPolicy:business.member_id_policy,plans:plans.rows,groups:groups.rows,members:members.rows.map((m:any)=>{const actual=Number(usageCounts.rows.find((u:any)=>u.membership_id===m.id)?.recorded_sessions||0);const plan=plans.rows.find((p:any)=>p.id===m.plan_id);return {...m,badge:plan?.badge||groups.rows.find((g:any)=>g.id===plan?.groupId)?.badge||null,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
    payments:{configured:paymentConfigured(),connected:!!account.external_account_id,
     ready:paymentConfigured()&&account.charges_enabled===true&&account.onboarding_complete===true}}, {headers});
  }catch(e){return error(e);}
@@ -49,6 +50,11 @@ export async function POST(req:Request){
   const {pool,business}=await ctx(req);
   const raw=await req.text();if(raw.length>8000)throw Error('Request too large.');
   const input=JSON.parse(raw);
+  if(input.action==='saveIdPolicy'){
+   if(!MEMBER_ID_POLICIES.includes(input.policy))throw Error('Choose a valid membership ID format.');
+   await pool.query('UPDATE businesses SET member_id_policy=$1 WHERE id=$2',[input.policy,business.id]);
+   return Response.json({ok:true},{headers});
+  }
   if(['saveGroup','removeGroup','reorderGroups'].includes(input.action)){
    const client=await pool.connect();try{await client.query('BEGIN');
     await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[business.id+':membership-offers']);
@@ -224,13 +230,7 @@ export async function POST(req:Request){
     }
    for(let attempt=0;attempt<1;attempt++){
     const requested=String(input.memberNumber||'').trim().toUpperCase();
-    const initials=(name.trim().split(/\s+/)[0]?.[0]||'X').toUpperCase()+(name.trim().split(/\s+/).slice(-1)[0]?.[0]||'X').toUpperCase();
-    if(requested&&!new RegExp('^'+initials+dob.slice(5,7)+dob.slice(8,10)+'$').test(requested))throw Error('Membership ID must match initials and birth month/day.');
-    const number=requested||initials+dob.slice(5,7)+dob.slice(8,10);
-    const bookingId=(await identityLock.query("SELECT member_number,first_name,last_name,date_of_birth FROM customer_booking_ids WHERE business_id=$1 AND member_number=$2 LIMIT 1",[business.id,number])).rows[0];
-    if(bookingId&&(String(bookingId.first_name+' '+bookingId.last_name).trim().toLowerCase()!==normalizedName||new Date(bookingId.date_of_birth).toISOString().slice(0,10)!==dob))throw Error('This six-character ID belongs to another customer. The initials and birth month/day combination is not unique; registration requires a different ID policy.');
-    const existingId=(await identityLock.query("SELECT 1 FROM customer_memberships WHERE business_id=$1 AND member_number=$2 LIMIT 1",[business.id,number])).rowCount;
-    if(existingId)throw Error('This six-character ID already belongs to another member. The ID format cannot distinguish customers sharing initials and birthday.');
+    const number=await issueMemberId(identityLock,{businessId:business.id,name,dateOfBirth:dob,requested});
     const result=await identityLock.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used,date_of_birth,customer_phone,registration_answers,registration_field_labels) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0,$9,$10,$11::jsonb,$12::jsonb) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0,dob,phone,JSON.stringify(customAnswers),JSON.stringify(fieldLabels)]);
     if(result.rows[0]){
      const matchingProfile=(await identityLock.query(

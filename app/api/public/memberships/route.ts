@@ -1,3 +1,4 @@
+import {issueMemberId} from '../../../../server/member-id-policy.mjs';
 import {notifyMembershipRequest} from '../../../../server/notification-delivery.mjs';
 import {membershipRequestDetails} from '../../../../server/membership-requests.mjs';
 import {pushMembershipRequest} from '../../../../server/push-delivery.mjs';
@@ -77,9 +78,15 @@ export async function POST(req:Request){
   if(account.charges_enabled!==true||account.details_submitted!==true)
    throw Error('Payments are temporarily unavailable for this business.');
   const id=randomUUID(),origin=trustedOrigin(req);
-  await pool.query(
-   "INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,status,stripe_account_id,price_cents,date_of_birth,customer_phone,registration_answers,registration_field_labels) VALUES($1,$2,$3,$4,$5,'pending_payment',$6,$7,$8::date,$9,$10::jsonb,$11::jsonb)",
-   [id,item.business_id,item.id,name,email,item.external_account_id,item.price_cents,dob,text(body.phone,40),JSON.stringify(answers),JSON.stringify(labels)]);
+  const registration=await pool.connect();
+  try{
+   await registration.query('BEGIN');
+   const number=await issueMemberId(registration,{businessId:item.business_id,name,dateOfBirth:dob,requested:body.memberNumber});
+  await registration.query(
+   "INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,status,stripe_account_id,price_cents,date_of_birth,customer_phone,registration_answers,registration_field_labels,member_number) VALUES($1,$2,$3,$4,$5,'pending_payment',$6,$7,$8::date,$9,$10::jsonb,$11::jsonb,$12)",
+   [id,item.business_id,item.id,name,email,item.external_account_id,item.price_cents,dob,text(body.phone,40),JSON.stringify(answers),JSON.stringify(labels),number]);
+   await registration.query('COMMIT');
+  }catch(error){await registration.query('ROLLBACK');throw error;}finally{registration.release();}
   const session=await stripeApi('checkout/sessions',{account:item.external_account_id,
    idempotencyKey:'membership-checkout-'+id,
    params:{

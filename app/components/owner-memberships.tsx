@@ -1,4 +1,5 @@
 'use client';
+import MemberIdSettings from './member-id-settings';
 import OwnerMembershipRequests from './owner-membership-requests';
 import MembershipModal from './membership-modal';
 import MembershipBadgeSettings from './membership-badge-settings';
@@ -11,7 +12,7 @@ import {CalendarClock,CheckCircle2,CreditCard,ExternalLink,Plus,RefreshCw,Shield
 import MembershipBadge from './membership-badge';
 type Plan={id:string;name:string;description:string;interval:'week'|'month'|'year';priceCents:number;sessionsIncluded:number;active:boolean;groupId:string|null;badge:MembershipBadgeDesign|null};
 type Member={badge:MembershipBadgeDesign|null;id:string;customer_name:string;customer_email:string;member_number:string|null;plan_id:string;sessions_included:number;sessions_used:number;recorded_sessions:number;history:{appointment_id:string;event_type:string;session_delta:number;created_at:string;appointment_status?:string|null}[];plan_name:string;interval_unit:string;status:string;paid_through:string|null};
-type Payload={businessName:string;plans:Plan[];groups:{id:string;name:string;badge:MembershipBadgeDesign|null}[];members:Member[];planBenefits:{name:string;limits:{membershipPlans:number}};payments:{connected:boolean;configured:boolean;ready:boolean}};
+type Payload={memberIdPolicy:string;businessName:string;plans:Plan[];groups:{id:string;name:string;badge:MembershipBadgeDesign|null}[];members:Member[];planBenefits:{name:string;limits:{membershipPlans:number}};payments:{connected:boolean;configured:boolean;ready:boolean}};
 const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
 export default function OwnerMemberships({slug,prefill}:{slug:string;prefill?:{name:string;email:string;phone:string}|null}){
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
@@ -113,7 +114,7 @@ export default function OwnerMemberships({slug,prefill}:{slug:string;prefill?:{n
  return <section className="sf-owner-memberships">
   <header className="sf-owner-memberships-head"><div><span className="sf-membership-kicker">SELAHFLOW · OWNER WORKSPACE</span><h2>Membership plans & payments</h2>
    <p>Sell weekly, monthly and yearly recurring memberships for your business. New memberships activate only after advance payment is verified.</p></div>
-   <div className="sf-membership-toolbar"><button type="button" className="outline" disabled={busy||!data} onClick={()=>{setError('');setMessage('');setModal('groups');}}>Membership types</button><button type="button" className="primary" disabled={busy||!data||data.plans.filter(p=>p.active).length>=data.planBenefits.limits.membershipPlans} onClick={()=>{clear();setError('');setMessage('');setModal('plan');}}><Plus size={16}/> Create membership plan</button><button type="button" className="outline" disabled={busy||!data?.plans.length} onClick={()=>{setError('');setMessage('');setModal('assign');}}>Assign a member</button><a className="outline sf-membership-owner-link" href={'/membership/'+encodeURIComponent(slug)} target="_blank" rel="noopener noreferrer">Customer signup <ExternalLink size={15}/></a></div>
+   <div className="sf-membership-toolbar">{data&&<MemberIdSettings policy={data.memberIdPolicy} onSaved={()=>void load(true)}/>}<button type="button" className="outline" disabled={busy||!data} onClick={()=>{setError('');setMessage('');setModal('groups');}}>Membership types</button><button type="button" className="primary" disabled={busy||!data||data.plans.filter(p=>p.active).length>=data.planBenefits.limits.membershipPlans} onClick={()=>{clear();setError('');setMessage('');setModal('plan');}}><Plus size={16}/> Create membership plan</button><button type="button" className="outline" disabled={busy||!data?.plans.length} onClick={()=>{setError('');setMessage('');setModal('assign');}}>Assign a member</button><a className="outline sf-membership-owner-link" href={'/membership/'+encodeURIComponent(slug)} target="_blank" rel="noopener noreferrer">Customer signup <ExternalLink size={15}/></a></div>
   </header>
   {error&&!modal&&<p className="sf-membership-error" role="alert">{error}</p>}
   {message&&<p className="sf-membership-success" role="status">{message}</p>}

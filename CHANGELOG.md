@@ -1,3 +1,9 @@
+## v1.3.81 — Configurable unique membership IDs
+
+- Membership ID settings offers initials + birth month/day with collision fallback, initials + sequential digits, or random two letters/four digits.
+- Shared transactional allocation covers owner clients, membership assignment, request approval, public booking and payment checkout.
+- Migration 035 reserves existing IDs per business and guards cross-table identity collisions. Existing IDs are preserved and reservations survive deletion; separate businesses can reuse a number.
+
 ## v1.3.80 — Exclude deleted memberships and services from paid revenue
 
 - Exclude payments whose membership no longer exists in the same business; preserve the audit history.

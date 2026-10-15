@@ -1,3 +1,4 @@
+import {issueMemberId} from './member-id-policy.mjs';
 import {randomUUID} from 'node:crypto';
 import {customRegistrationFields,validateStandardRegistration} from './registration-questions.mjs';
 import {sanitizeBookingAnswers} from './booking-custom-fields.mjs';
@@ -24,7 +25,7 @@ export async function reviewMembershipRequest(client,{owner,id,approve}){
  await client.query('SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))',[request.business_id,identity]);
  const existing=(await client.query('SELECT id,member_number,customer_name,date_of_birth::text AS date_of_birth FROM customer_memberships WHERE business_id=$1 AND lower(customer_name)=lower($2) AND date_of_birth=$3::date FOR UPDATE',[request.business_id,d.name,d.dateOfBirth])).rows[0];
  const booking=(await client.query('SELECT member_number FROM customer_booking_ids WHERE business_id=$1 AND lower(first_name)=lower($2) AND lower(last_name)=lower($3) AND date_of_birth=$4::date',[request.business_id,d.firstName,d.lastName,d.dateOfBirth])).rows[0];
- let number=existing?.member_number||booking?.member_number||(d.firstName[0]+d.lastName[0]).toUpperCase().replace(/[^A-Z]/g,'X')+d.dateOfBirth.slice(5,7)+d.dateOfBirth.slice(8,10);
+ const number=await issueMemberId(client,{businessId:request.business_id,name:d.name,dateOfBirth:d.dateOfBirth,requested:d.memberNumber});
  if(d.memberNumber&&d.memberNumber!==number)throw Error('The submitted member ID does not match this player. Review their registration details.');
  const collision=(await client.query('SELECT 1 FROM customer_memberships WHERE business_id=$1 AND member_number=$2 AND id<>$3',[request.business_id,number,existing?.id||''])).rowCount;
  if(collision)throw Error('This six-character ID belongs to another player. Resolve the ID before approving.');

@@ -1,3 +1,4 @@
+import {issueMemberId} from '../../../../server/member-id-policy.mjs';
 import {randomUUID} from 'node:crypto';
 import {getPool} from '../../../../server/database.mjs';
 import {requireOwner} from '../../../../lib/auth';
@@ -18,7 +19,7 @@ const membershipClientId=(id:unknown)=>typeof id==='string'&&/^membership-[a-f0-
 const validClientId=(id:unknown)=>validId(id)||membershipClientId(id);
 async function businessFor(owner: string,db:{query:(sql:string,values:unknown[])=>Promise<{rows:any[]}>}){
  const result=await db.query(
-  "SELECT b.slug,b.name,b.status,b.brand_primary,b.brand_background,s.data AS settings_data FROM businesses b JOIN settings s ON s.owner=b.owner_id WHERE b.owner_id=$1",
+  "SELECT b.id,b.slug,b.name,b.status,b.brand_primary,b.brand_background,s.data AS settings_data FROM businesses b JOIN settings s ON s.owner=b.owner_id WHERE b.owner_id=$1",
   [owner]);
  const business=result.rows[0];
  if(!business||business.status!=='active')throw new Error('BUSINESS_UNAVAILABLE');
@@ -123,9 +124,9 @@ export async function POST(req:Request){
     const input=validateClientInput({...body,name:(String(body.firstName||'').trim()+' '+String(body.lastName||'').trim()).trim()});
     const dateOfBirth=String(body.dateOfBirth||'');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)||!Number.isFinite(Date.parse(dateOfBirth))||dateOfBirth>new Date().toISOString().slice(0,10))throw Error('Enter a valid date of birth.');
-    const memberNumber=String(body.memberNumber||'').trim().toUpperCase();
-    const expectedId=((input.name.split(/\s+/)[0]?.[0]||'X')+(input.name.split(/\s+/).slice(-1)[0]?.[0]||'X')+dateOfBirth.slice(5,7)+dateOfBirth.slice(8,10)).toUpperCase();
-    if(memberNumber&&memberNumber!==expectedId)throw Error('Membership ID must match the client initials and birth month/day.');
+    const requested=String(body.memberNumber||'').trim().toUpperCase();
+    if(body.action==='update'&&selected?.memberNumber&&requested&&requested!==selected.memberNumber)throw Error('Existing membership IDs cannot be changed.');
+    const memberNumber=body.action==='update'&&selected?.memberNumber?selected.memberNumber:await issueMemberId(db,{businessId:business.id,name:input.name,dateOfBirth,requested});
     const fields=customRegistrationFields(settings,'booking',null);
     const registrationAnswers=sanitizeBookingAnswers(fields,body.customAnswers||{});
     const registrationFieldLabels=Object.fromEntries(fields.map((field:any)=>[field.id,field.label]));
