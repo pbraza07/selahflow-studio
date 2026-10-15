@@ -14,7 +14,7 @@ export async function GET(req:Request){
    if(typeof checkout.subscription==='string'){
     const subscription=await stripeApi('subscriptions/'+checkout.subscription,{method:'GET',account:member.stripe_account_id});
     if(typeof subscription.latest_invoice==='string'){
-     const invoice=await stripeApi('invoices/'+subscription.latest_invoice,{method:'GET',account:member.stripe_account_id});
+     const invoice=await stripeApi('invoices/'+subscription.latest_invoice+'?expand[]=amount_paid_off_stripe',{method:'GET',account:member.stripe_account_id});
      const db=await pool.connect();try{await db.query('BEGIN');await applyMembershipInvoice(db,member.business_id,member.stripe_account_id,invoice,subscription);await db.query('COMMIT');}catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
     }
    }
@@ -23,5 +23,5 @@ export async function GET(req:Request){
   if(!result.rows.length)return Response.json({status:'pending_payment'},{headers:{'Cache-Control':'no-store'}});
   const row=result.rows[0];
   return Response.json({status:row.status,plan:row.plan_name,paidThrough:row.paid_through,...(row.status==='active'?{memberNumber:row.member_number,sessionsLeft:Math.max(0,row.sessions_included-row.sessions_used)}:{})},{headers:{'Cache-Control':'no-store'}});
- }catch{return Response.json({status:'unavailable'},{status:503,headers:{'Cache-Control':'no-store'}});}
+ }catch(e){console.error('Membership payment verification failed',(e as Error).message);return Response.json({status:'unavailable'},{status:503,headers:{'Cache-Control':'no-store'}});}
 }

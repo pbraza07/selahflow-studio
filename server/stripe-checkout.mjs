@@ -94,7 +94,7 @@ export async function applyBookingPayment(db,businessId,account,session){
 
 export async function applyMembershipInvoice(db,businessId,account,invoice,subscription){
  assertTestPayment(invoice);assertTestPayment(subscription);
- if(!shouldActivateInvoice(invoice)||invoice.paid_out_of_band===true||invoice.currency!=='usd'||!['subscription_create','subscription_cycle'].includes(invoice.billing_reason))return false;
+ if(!shouldActivateInvoice(invoice)||invoice.paid_out_of_band===true||Number(invoice.amount_paid_off_stripe||0)>0||invoice.currency!=='usd'||!['subscription_create','subscription_cycle'].includes(invoice.billing_reason))return false;
  const subscriptionId=invoiceSubscriptionId(invoice),paidThrough=invoicePaidThrough(invoice),memberId=subscription.metadata?.membership_id;
  if(!subscriptionId||subscription.id!==subscriptionId||!paidThrough||subscription.metadata?.selahflow_business_id!==businessId)return false;
  const member=(await db.query('SELECT * FROM customer_memberships WHERE id=$1 AND business_id=$2 AND stripe_account_id=$3 FOR UPDATE',[memberId,businessId,account])).rows[0];

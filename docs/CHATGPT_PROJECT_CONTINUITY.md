@@ -192,3 +192,7 @@ Staging-only source adds booking and recurring membership Make Payment through t
 
 Provider testing on LIVE v1.3.84 exposed rejection of the removed payment_method_types creation parameter. Both checkout flows now use the current allowed_payment_method_types card filter. Public booking footer actions wrap on narrow screens. Preserve receipts, snapshots and all v1.3.84 safeguards. Verify the new LIVE deploy and actual sandbox checkouts before claiming success. Production remains v1.3.81 and must not be deployed without authorization.
 
+# v1.3.86 release handoff — Current Stripe invoice schema (staging only)
+
+LIVE sandbox testing on v1.3.85 verified booking payment and cancelled-checkout reuse; recurring Checkout took the test payment but activation stayed pending because the current invoice schema omits the old paid boolean. This fix verifies paid status plus a positive integer amount, retrieves amount_paid_off_stripe for webhook/return fulfillment, and excludes off-Stripe payments. The paid test membership can be reconciled by its existing return page after deployment; do not charge it again. Production remains unchanged. Verify LIVE and the membership's once-only credits/revenue.
+

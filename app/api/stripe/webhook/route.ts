@@ -16,9 +16,13 @@ export async function POST(req:Request){
   const merchant=(await pool.query('SELECT business_id FROM merchant_accounts WHERE external_account_id=$1 AND provider=$2',[account,'stripe'])).rows[0];
   // Unknown Connect account: acknowledge but do not write local membership data.
   if(!merchant)return Response.json({received:true},{headers});
-  const object=event.data.object||{};
+  let object=event.data.object||{};
   let subscriptionId=null,subscription:any=null;
   if(event.type==='invoice.paid'){
+   // Retrieve the provider invoice with its current off-Stripe payment amount.
+   // A dashboard manual mark-as-paid must never issue online membership credits.
+   if(!/^in_[A-Za-z0-9]+$/.test(object.id||''))return Response.json({received:true},{headers});
+   object=await stripeApi('invoices/'+object.id+'?expand[]=amount_paid_off_stripe',{method:'GET',account});
    if(!shouldActivateInvoice(object)||object.paid_out_of_band===true||object.currency!=='usd')
     return Response.json({received:true},{headers});
    subscriptionId=invoiceSubscriptionId(object);

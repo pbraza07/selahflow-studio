@@ -393,3 +393,8 @@ Do not create an empty new version without actual changes.
 - Replaces removed payment_method_types with the documented allowed_payment_method_types card filter in booking and membership Checkout; found through the real sandbox smoke test.
 - Booking footer actions wrap on narrow mobile screens. Existing records and production are unchanged.
 
+## v1.3.86 — Current invoice verification (staging only)
+
+- Accepts the current paid-invoice schema without the removed paid boolean, while retaining explicit-false and amount checks.
+- Retrieves off-Stripe payment totals so manually marked invoices cannot activate online memberships. Existing provider receipts reconcile without charging again or duplicating credits.
+

@@ -75,9 +75,10 @@ test('membership sandbox checkout reuses enrollment; paid invoices add credits/r
   await assert.rejects(startMembershipCheckout(pool,{...body,email:'other@example.com'},'https://staging.example',api),/already/);
   const member=(await db.query('SELECT * FROM customer_memberships')).rows[0];assert.equal(member.sessions_included,0);assert.equal(member.status,'pending_payment');
   const sub={id:'sub_member',livemode:false,status:'active',metadata:{membership_id:member.id,selahflow_business_id:'b1'}};
-  const invoice={id:'in_first',livemode:false,paid:true,status:'paid',amount_paid:2000,currency:'usd',billing_reason:'subscription_create',subscription:sub.id,customer:'cus_one',lines:{data:[{period:{end:Math.floor(Date.now()/1000)+86400*30}}]}};
+  // Current provider schema has no legacy paid boolean or subscription root field.
+  const invoice={id:'in_first',livemode:false,status:'paid',amount_paid:2000,amount_paid_off_stripe:0,currency:'usd',billing_reason:'subscription_create',parent:{subscription_details:{subscription:sub.id}},customer:'cus_one',lines:{data:[{period:{end:Math.floor(Date.now()/1000)+86400*30}}]}};
   const apply=async(obj,biz='b1',acct='acct_one')=>{await db.query('BEGIN');try{const r=await applyMembershipInvoice(db,biz,acct,obj,sub);await db.query('COMMIT');return r;}catch(e){await db.query('ROLLBACK');throw e;}};
-  for(const obj of [{...invoice,paid:false},{...invoice,amount_paid:1},{...invoice,paid_out_of_band:true},{...invoice,billing_reason:'manual'}])assert.equal(await apply(obj),false);
+  for(const obj of [{...invoice,paid:false},{...invoice,amount_paid:1},{...invoice,paid_out_of_band:true},{...invoice,amount_paid_off_stripe:2000},{...invoice,billing_reason:'manual'}])assert.equal(await apply(obj),false);
   assert.equal(await apply(invoice,'b2','acct_two'),false);assert.equal(await apply(invoice),true);assert.equal(await apply(invoice),true);
   let updated=(await db.query('SELECT * FROM customer_memberships')).rows[0];assert.equal(updated.status,'active');assert.equal(updated.sessions_included,3);assert.equal(updated.member_number,member.member_number);
   await db.query('UPDATE customer_memberships SET sessions_used=1');
