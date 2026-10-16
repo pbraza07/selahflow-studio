@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Release source: v1.3.93 (2026-10-16 UTC), staging branch only.** Booking saves preserve previously issued legacy client IDs without permitting new malformed IDs. Client payment SMS normalizes US registration numbers; approval and verified-payment messaging remain queued through configured providers. Production remains separate at v1.3.81.
+**Release source: v1.3.94 (2026-10-16 UTC), staging branch only.** Database pools are shared across route and instrumentation bundles, with two staging connections per process to leave rollout headroom within the five-connection role limit. Gmail delivery still requires connected authorization and an approved test recipient. Production remains separate at v1.3.81.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 

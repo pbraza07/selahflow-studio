@@ -1,3 +1,8 @@
+## v1.3.94 — Shared database pool and staging rollout headroom (staging only)
+
+- PostgreSQL logs confirmed too many connections for the dedicated staging role during the email-enabled rollout. Share one process-global pool across independently bundled instrumentation/routes and cap staging at two connections per process, leaving capacity for old/new instances and diagnostics under the existing five-connection limit. No database permissions, role limits, history or production configuration changes.
+- Regression verifies independently loaded modules reuse the same pool and staging safety guards still run on cached access. Reuse the existing approved synthetic booking for email verification; never duplicate its payment or claim inbox delivery from queue status alone.
+
 ## v1.3.93 — Legacy client booking compatibility and payment SMS (staging only)
 
 - Fixes the business_client_profiles_member_number_six error observed in staging database logs during Arcila booking confirmation. Migration 040 reserves only pre-existing legacy IDs in their original business, preserving history and cross-client ID protection. New IDs retain six-character enforcement. Reviewed snapshot import captures its historical IDs under its existing transaction locks.
