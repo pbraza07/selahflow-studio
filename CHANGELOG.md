@@ -1,3 +1,9 @@
+## v1.3.90 — All-business Stripe setup and synchronization (staging only)
+
+- The primary platform administrator can view every business's Stripe setup, prepare missing sandbox accounts, open business-specific Stripe onboarding and synchronize payment readiness directly from Stripe. Archived/inactive businesses stay disabled. Each business keeps its own connected account.
+- A staging-only startup switch prepares accounts for active businesses, reusing existing connections and idempotent account creation. Uses synthetic sandbox contact emails; it does not submit business agreements, charge clients, modify existing memberships or grant fake readiness. Owner onboarding remains required where Stripe requests it.
+- Existing shared booking and membership Make Payment flows remain in place for every business, including approval and $0 membership-credit checks. No production deployment or credentials change.
+
 ## v1.3.89 — Production business replicas (staging only)
 
 - A deliberate, checksum-verified startup snapshot imports all production businesses, settings, branding, client and membership history into staging. Each row retains its source tenant ID. Existing synthetic staging data and its sandbox merchant connection remain; its conflicting Crawford slug moves to staging-test-studio.
