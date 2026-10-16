@@ -3,11 +3,17 @@ import {randomBytes,randomUUID} from 'node:crypto';
 import {getPool} from './database.mjs';
 import {tokenHash} from './security.mjs';
 import {isStaging,stagingNotificationAllowed} from './staging-safety.mjs';
+import {gmailStatus,sendGmail,selectedEmailProvider} from './gmail-delivery.mjs';
 export const validEmail=x=>typeof x==='string'&&x.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x);
 export const validE164=x=>typeof x==='string'&&/^\+[1-9]\d{7,14}$/.test(x);
 export function deliveryProviderStatus(env=process.env){
  if(isStaging(env)&&env.STAGING_NOTIFICATIONS_ENABLED!=='true')return {emailConfigured:false,smsConfigured:false};
- return {emailConfigured:!!(env.RESEND_API_KEY&&env.RESEND_FROM_EMAIL),smsConfigured:!!(env.TWILIO_ACCOUNT_SID&&env.TWILIO_AUTH_TOKEN&&env.TWILIO_FROM_NUMBER)};
+ return {emailConfigured:selectedEmailProvider(env)==='resend'&&!!(env.RESEND_API_KEY&&env.RESEND_FROM_EMAIL),smsConfigured:!!(env.TWILIO_ACCOUNT_SID&&env.TWILIO_AUTH_TOKEN&&env.TWILIO_FROM_NUMBER)};
+}
+export async function deliveryProviderStatusWithConnection(pool=getPool(),env=process.env){
+ const result=deliveryProviderStatus(env);
+ if(selectedEmailProvider(env)==='gmail'&&(!isStaging(env)||env.STAGING_NOTIFICATIONS_ENABLED==='true'))result.emailConfigured=(await gmailStatus(pool,env)).connected;
+ return {...result,emailProvider:selectedEmailProvider(env)==='gmail'?'Gmail':'Resend'};
 }
 export function notificationRecipient(config,ownerEmail){
  const reviewer=config.bookingApprovalReviewer||'owner';
@@ -29,6 +35,10 @@ export function notificationMessage({businessName,request,link}){
 }
 export async function sendNotificationChannel(channel,destination,message,env=process.env,fetcher=fetch){
  if(!stagingNotificationAllowed(channel,destination,env))return {status:'not_configured',detail:'External staging notifications are disabled for this recipient'};
+ if(channel==='email'&&selectedEmailProvider(env)==='gmail'){
+  if(!validEmail(destination))return {status:'invalid_destination',detail:'Invalid recipient'};
+  try{return await sendGmail(destination,message,env,fetcher);}catch{return {status:'not_configured',detail:'Gmail connection is unavailable; contact the platform administrator'};}
+ }
  const cfg=deliveryProviderStatus(env);
  if(channel==='email'&&!cfg.emailConfigured)return {status:'not_configured',detail:'Resend email is not configured'};
  if(channel==='sms'&&!cfg.smsConfigured)return {status:'not_configured',detail:'Twilio SMS is not configured'};

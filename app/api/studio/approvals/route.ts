@@ -3,7 +3,7 @@ import {randomBytes} from 'node:crypto';
 import {getPool} from '../../../../server/database.mjs';
 import {requireOwner} from '../../../../lib/auth';
 import {validOrigin,tokenHash,trustedOrigin} from '../../../../server/security.mjs';
-import {deliveryProviderStatus,notifyBookingRequest} from '../../../../server/notification-delivery.mjs';
+import {deliveryProviderStatusWithConnection,notifyBookingRequest} from '../../../../server/notification-delivery.mjs';
 import {reviewPendingRequest} from '../../../../lib/booking-review-actions';
 import {editPendingRequest} from '../../../../server/booking-review-edits.mjs';
 import {approvalFieldsForBusiness,sessionReviewSummary} from '../../../../server/booking-approval-display.mjs';
@@ -29,7 +29,7 @@ export async function GET(req:Request){try{const {pool,owner,settings,business}=
  return Response.json({enabled:settings.bookingApprovalEnabled===true,reviewer:settings.bookingApprovalReviewer||'owner',
  pending:rows.map((r:any)=>({...r,sessionInfo:sessionReviewSummary(settings,r,confirmed,rows)})),clientMessages:await listClientMessages(pool,owner),
  approvalFields:approvalFieldsForBusiness(settings),
- customFields:customRegistrationFields(settings,'booking').map((f:{id:string;label:string;type:string;options?:string[];required:boolean})=>({id:f.id,label:f.label,type:f.type,options:f.options||[],required:f.required})),pendingCount:rows.length,businessId:business.id,providerStatus:deliveryProviderStatus(),accountEmail:account.rows[0]?.email||'',deliveryStatus:delivery},{headers});
+ customFields:customRegistrationFields(settings,'booking').map((f:{id:string;label:string;type:string;options?:string[];required:boolean})=>({id:f.id,label:f.label,type:f.type,options:f.options||[],required:f.required})),pendingCount:rows.length,businessId:business.id,providerStatus:await deliveryProviderStatusWithConnection(pool),accountEmail:account.rows[0]?.email||'',deliveryStatus:delivery},{headers});
  }catch(e){return err(e);}}
 export async function POST(req:Request){if(!validOrigin(req))return Response.json({error:'Invalid origin'},{status:403,headers});
  try{

@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Release source: v1.3.87 (2026-10-15), staging branch only.** Booking approval queues a private Stripe payment link to the client’s saved registration email and phone; verified payment queues email/SMS confirmations. Durable per-channel status and retry appear in the owner inbox. Email/SMS provider configuration and staging recipient allowlists are required; actual delivery is not yet enabled. Production remains separate at v1.3.81.
+**Release source: v1.3.88 (2026-10-16 UTC), staging branch only.** Adds a shared Gmail API sender managed by the primary platform administrator, encrypted offline authorization, and Gmail delivery for existing booking/review/payment email paths. Google application credentials and account authorization are required before real email can send; see [Gmail setup](docs/GMAIL_EMAIL_SETUP.md). Production remains separate at v1.3.81.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 

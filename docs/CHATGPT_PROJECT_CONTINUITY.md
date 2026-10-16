@@ -1,3 +1,9 @@
+# v1.3.88 release handoff — Shared Gmail sender
+
+- New Gmail HTTPS API transport and primary-admin-only Connect/Reconnect/Disconnect panel. One sending account serves business-scoped notifications. Gmail.send plus OpenID email identifies the verified sender; no inbox read/delete scope.
+- Migration 038 stores AES-256-GCM encrypted refresh credentials and ten-minute, one-time, session-bound PKCE states. Expired authorization needs reconnection; ambiguous sends are not blindly retried. Staging recipient guards and Stripe/payment/history paths are preserved.
+- Gmail is selected explicitly with EMAIL_PROVIDER=gmail, or by default if no legacy Resend key exists. Existing Resend configurations stay compatible. Google Cloud Console was unavailable in the task browser; application credentials/account consent and actual delivery remain pending. See docs/GMAIL_EMAIL_SETUP.md. Verify exact Render LIVE status before claiming deployment. Production remains v1.3.81.
+
 # v1.3.87 release handoff — Approval payment notifications
 
 VERIFIED LIVE staging: code `5bf2ceea7531e4718d67cec1337088c0050d331e`, Render `dep-db8l5467bikc73feaij0`, health 1.3.87. TypeScript, all 217 tests and build passed locally and on Render; startup migrations succeeded. Owner approval was enabled for the staging test business. A synthetic pending request refused payment until accepted; acceptance created two client payment-link jobs. An actual $25 connected sandbox Checkout then verified as paid and created two confirmation jobs. Repeated return verification retained four message records. The background worker changed both confirmation channels to not configured because external staging delivery is disabled. No actual email/SMS delivery or independent live webhook-only fulfillment was verified. Production remains LIVE v1.3.81, commit `806a87f23e211b1259af6415f7e54c1d27b4822d`. Documentation commits after the code do not imply another deployment.
