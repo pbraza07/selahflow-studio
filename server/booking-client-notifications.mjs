@@ -6,7 +6,11 @@ import {validEmail,validE164,maskDestination,sendNotificationChannel} from './no
 
 const clean=x=>String(x||'').replace(/[<>\r\n]/g,' ').slice(0,150);
 const dataOf=x=>typeof x==='string'?JSON.parse(x):x||{};
-export const clientSmsPhone=x=>String(x||'').trim().replace(/[\s().-]/g,'');
+export const clientSmsPhone=x=>{
+ const value=String(x||'').trim().replace(/[\s().-]/g,'');
+ // US registrations commonly omit +1; explicit international prefixes stay intact.
+ return /^\d{10}$/.test(value)?'+1'+value:/^1\d{10}$/.test(value)?'+'+value:value;
+};
 export function clientPaymentMessage({business,date,start,data,event,link}){
  const time=`${Math.floor(start/60)%12||12}:${String(start%60).padStart(2,'0')} ${start<720?'AM':'PM'} Eastern`;
  const amount=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(data.price));

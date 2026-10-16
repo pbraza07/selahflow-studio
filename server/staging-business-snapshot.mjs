@@ -79,6 +79,8 @@ export async function importBusinessSnapshot(pool,snapshot,digest,env=process.en
     await db.query(`INSERT INTO ${ident(table)} (${keys.map(ident).join(',')}) VALUES (${keys.map((_,i)=>'$'+(i+1)).join(',')})`,values);
    }
   }
+  // Capture only this explicitly reviewed historical import, never normal writes.
+  await db.query("INSERT INTO legacy_business_member_numbers(business_id,member_number) SELECT business_id,member_number FROM business_member_ids WHERE member_number !~ '^[A-Z]{2}[0-9]{4}$' UNION SELECT business_id,member_number FROM customer_booking_ids WHERE member_number !~ '^[A-Z]{2}[0-9]{4}$' UNION SELECT business_id,member_number FROM customer_memberships WHERE member_number !~ '^[A-Z]{2}[0-9]{4}$' UNION SELECT b.id,p.member_number FROM business_client_profiles p JOIN businesses b ON b.owner_id=p.owner WHERE p.member_number !~ '^[A-Z]{2}[0-9]{4}$' ON CONFLICT DO NOTHING");
   for(const [table,trigger] of legacyGuards)await db.query(`ALTER TABLE ${ident(table)} ENABLE TRIGGER ${ident(trigger)}`);
   for(const c of constraints)await db.query(`ALTER TABLE ${ident(c.table)} ADD CONSTRAINT ${ident(c.name)} ${c.definition}`);
   const beforeCounts=(await db.query('SELECT table_name,jsonb_array_length(records) AS n FROM staging_snapshot_backups WHERE run_id=$1',[digest])).rows;

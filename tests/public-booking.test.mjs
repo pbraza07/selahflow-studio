@@ -32,9 +32,15 @@ test('public booking creates protected owner records; exposes catalog only; reje
  const selection={services:['barber'],staff:'james',date};
  const slots=await (await handler.studioPost(req({action:'availability',...selection}),true)).json();assert.ok(slots.slots.length);
  const booking={action:'book',...selection,start:slots.slots[0],expectedPrice:35,expectedDuration:30,name:'Public Customer',firstName:'Public',lastName:'Customer',dateOfBirth:'2000-01-02',notMember:true,email:'client@example.com',key:crypto.randomUUID(),policyAccepted:true};
+ // A client registering online can already have a copied, archived directory
+ // record with an older ID. Reuse it without rewriting identity/history.
+ await pg.exec("INSERT INTO legacy_business_member_numbers(business_id,member_number) VALUES('crawford-biz','PC010200'); INSERT INTO business_client_profiles(id,owner,name,email,date_of_birth,member_number,archived) VALUES('legacy-profile','owner','Public Customer','client@example.com','2000-01-02','PC010200',TRUE)");
  assert.equal((await handler.studioPost(req({...booking,policyAccepted:false}),true)).status,400);
  assert.equal((await handler.studioPost(req({...booking,expectedPrice:1}),true)).status,409);
  let response=await handler.studioPost(req(booking),true);assert.equal(response.status,200,response.status===200?undefined:await response.text());const first=await response.json();assert.ok(first.id);
+ assert.equal(first.memberNumber,'PC010200');
+ const profile=(await pg.query("SELECT id,member_number,archived FROM business_client_profiles WHERE id='legacy-profile'")).rows[0];
+ assert.deepEqual(profile,{id:'legacy-profile',member_number:'PC010200',archived:false});
  response=await handler.studioPost(req(booking),true);assert.equal(response.status,200);assert.equal((await response.json()).id,first.id);
  response=await handler.studioPost(req({...booking,key:crypto.randomUUID(),email:'second@example.com'}),true);assert.equal(response.status,409);
  const rows=(await pg.query('SELECT * FROM appointments')).rows;assert.equal(rows.length,1);assert.equal(rows[0].owner,'owner');assert.equal(JSON.parse(rows[0].data).channel,'Online booking');

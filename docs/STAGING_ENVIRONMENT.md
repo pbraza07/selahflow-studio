@@ -102,6 +102,10 @@ Free compute adds no service plan charge, but shares workspace free hours, bandw
 
 This file describes intended configuration. Actual URL, deployment ID, credentials readiness and completed acceptance checks must be recorded from live verification, without exposing secrets.
 
+## v1.3.93 — Legacy booking compatibility and payment delivery (staging only)
+
+Staging database errors confirm Arcila saves failed on business_client_profiles_member_number_six. Migration 040 preserves only existing tenant-specific legacy IDs, leaving six-character issuance and cross-client uniqueness guards in place. Existing data/history are unchanged. Common US registration phones gain +1 for client payment SMS; explicit international prefixes remain intact. Provider setup/allowlist requirements are unchanged. Startup reports sanitized missing variable names and connection state. Full checks and deployment verification pending; no real email/SMS sent. A pre-fix synthetic booking (Staging Bookingprobe, request 111808aa-946f-47f8-82e8-6482f88347d5) saved and remains pending approval. Render browser setup requires sign-in.
+
 ## v1.3.92 — Six-character password minimum (staging only)
 
 The mandatory temporary-password replacement now accepts six-character passwords, matching signup, login, owner settings, admin creation and server validation. No password/data migration. Confirmation and different-password checks remain. Verified Render LIVE 2026-10-16 12:20 UTC: code 5d64182966409f608f156ab07cb171e64a105883, deployment dep-db91bfnavr4c73cmlrq0. All 226 tests, typecheck and build passed locally and on Render. Production/main unchanged. No actual owner password changed for testing.

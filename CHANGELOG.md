@@ -1,3 +1,9 @@
+## v1.3.93 — Legacy client booking compatibility and payment SMS (staging only)
+
+- Fixes the business_client_profiles_member_number_six error observed in staging database logs during Arcila booking confirmation. Migration 040 reserves only pre-existing legacy IDs in their original business, preserving history and cross-client ID protection. New IDs retain six-character enforcement. Reviewed snapshot import captures its historical IDs under its existing transaction locks.
+- Payment SMS accepts US registration phone numbers with omitted +1; explicit international numbers are preserved. Existing owner-approval links and Stripe-verified confirmations use the saved registration contacts, per-channel idempotency and staging test-recipient guards.
+- Sanitized staging startup readiness lists missing provider variable names and connection/allowlist status without secrets or contacts. Delivery still requires Gmail authorization, Twilio setup and approved test recipients.
+
 ## v1.3.92 — Consistent six-character password minimum (staging only)
 
 - Mandatory password replacement now accepts six or more characters, matching existing signup, sign-in, owner settings, administrator creation and server validation. Confirmation and different-password requirements remain. Existing credentials are unchanged.
