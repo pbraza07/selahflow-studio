@@ -157,3 +157,66 @@
 @media(prefers-reduced-motion:reduce){
  .planDetailsToggle{transition:none}
 }
+
+/* Public discovery: SelahFlow forest, sage and cream; tenant themes untouched. */
+.publicHeader{position:relative;z-index:10;min-height:88px}
+.publicHeader .desktopNav{gap:22px}
+.mobileNav{display:none}
+.skipLink{position:absolute;left:16px;top:-100px;padding:12px 18px;background:#184e49;color:#fff;z-index:50;border-radius:8px}
+.skipLink:focus{top:10px}
+.site a:focus-visible,.site button:focus-visible,.site summary:focus-visible{outline:3px solid #759787;outline-offset:4px}
+.discoveryHero{grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:48px;padding-top:64px;padding-bottom:64px}
+.discoveryHero h1{max-width:700px}
+.discoveryHero .kicker{display:flex;align-items:center;gap:7px;color:#456b5b}
+.discoveryHero .heroPanel .kicker{color:#d5e4d9;line-height:1.6;font-size:10px;letter-spacing:1.6px}
+.homeSearch{display:flex;align-items:end;gap:12px;flex-wrap:wrap;background:#fff;border:1px solid #c6d6cb;border-radius:16px;padding:18px;box-shadow:0 12px 32px #184e4910;margin-top:28px}
+.homeSearch label{display:flex;flex-direction:column;gap:8px;flex:1 1 150px;min-width:0;font-size:12px;font-weight:750;color:#184e49}
+.homeSearch input,.homeSearch select{width:100%;min-width:0;min-height:48px;padding:12px;border:1px solid #a6bbac;border-radius:8px;background:#f8f7f2;color:#184e49;font-family:inherit;font-size:16px}
+.homeSearch input::placeholder{color:#526d60;opacity:1}
+.homeSearch input:focus,.homeSearch select:focus{outline:2px solid #184e49;outline-offset:2px}
+.homeSearch button{cursor:pointer;border:0;justify-content:center;font-family:inherit;font-size:14px}
+.categoryChips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.categoryChips a{display:flex;align-items:center;gap:9px;border:1px solid #c6d6cb;background:#fff9;color:#184e49;padding:11px 14px;min-height:44px;border-radius:30px;font-size:12px;font-weight:650;text-decoration:none}
+.categoryChips a:hover{background:#e5eee6}
+.journey{list-style:none;padding:0;margin:30px 0;display:grid;gap:24px}
+.journey li{display:flex;gap:16px;align-items:flex-start}
+.journey li>span{display:grid;place-items:center;width:36px;height:36px;flex-shrink:0;border:1px solid #8da99b;border-radius:50%;font-size:12px;color:#e1ece6}
+.journey b{font-size:17px;color:#fff}
+.heroPanel .journey p{font-size:14px;line-height:1.6;margin:6px 0 0;color:#e1ece6}
+.panelLink{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #ffffff40;padding-top:22px;color:#fff;font-weight:750;text-decoration:none;min-height:48px}
+.pathSection{max-width:1230px;margin:60px auto;padding:0 24px}
+.sectionIntro{text-align:center;margin:0 auto 30px;max-width:650px}
+.sectionIntro h2{font-size:clamp(28px,4vw,42px);margin:10px 0;letter-spacing:-1px}
+.sectionIntro>p{color:#526d60;line-height:1.7}
+.pathGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.pathGrid article{padding:30px;background:#fff;border:1px solid #c6d6cb;border-radius:16px;display:flex;flex-direction:column;align-items:flex-start}
+.pathGrid h3{font-size:23px;margin:22px 0 10px}
+.pathGrid p{line-height:1.75;color:#526d60;margin:0 0 22px}
+.pathGrid a{display:flex;align-items:center;gap:8px;margin-top:auto;min-height:44px;color:#184e49;font-weight:750;text-underline-offset:4px}
+.footer nav{display:flex;flex-wrap:wrap;gap:20px}
+.site .discoveryMain{max-width:1240px;margin:0 auto;padding:42px 24px 64px;min-height:70vh}
+.discoveryHeading h1{font-size:clamp(32px,4.5vw,56px);letter-spacing:-1.5px;margin:10px 0 18px;line-height:1.12}
+.discoveryHeading>p{max-width:660px;line-height:1.7;color:#526d60}
+.discoverySearch{margin-top:28px}
+.resultsToolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:78px;color:#526d60;font-size:14px}
+.clearFilters{background:transparent;border:0;color:#184e49;font-weight:750;text-decoration:underline;text-underline-offset:4px;min-height:44px;cursor:pointer}
+.businessGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.businessCard,.loadingCard{border:1px solid #c6d6cb;border-radius:18px;padding:25px;background:#fff;min-width:0;display:flex;flex-direction:column;box-shadow:0 5px 24px #184e4908}
+.businessCardTop{display:flex;align-items:center;gap:12px;color:#526d60;font-size:12px;line-height:1.5}
+.businessInitial{display:grid;place-items:center;width:50px;height:50px;border-radius:15px;background:#e5eee6;color:#184e49;font-size:26px;font-weight:700;flex-shrink:0}
+.businessCard h2{font-size:24px;line-height:1.25;margin:22px 0 12px;overflow-wrap:anywhere}
+.businessCard h2 a{color:#184e49;text-decoration:none}
+.businessCard h2 a:hover{text-decoration:underline}
+.businessAddress{display:flex;align-items:flex-start;gap:7px;font-size:13px;line-height:1.6;color:#526d60;margin:0}
+.businessAddress svg{flex-shrink:0;margin-top:2px}
+.businessDescription{font-size:14px;line-height:1.75;color:#526d60;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;margin:18px 0 24px}
+.businessCardActions{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-top:auto;font-size:13px}
+.businessCardActions .button{width:100%;justify-content:space-between}
+.businessCardActions>a:not(.button){color:#184e49;min-height:44px;display:inline-flex;align-items:center;text-underline-offset:4px}
+.loadingCard{min-height:300px;background:linear-gradient(145deg,#e5eee6,#fff);color:#526d60;justify-content:center;align-items:center;text-align:center}
+.discoveryEmpty{padding:50px 24px;text-align:center;background:#fff;border:1px dashed #a6bbac;border-radius:18px}
+.discoveryEmpty h2{font-size:27px}.discoveryEmpty p{color:#526d60;line-height:1.7}.discoveryEmpty button{border:0;cursor:pointer;margin-top:14px;font:inherit}
+.discoveryOwner{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-top:48px;padding:28px;border-radius:16px;background:#e5eee6}
+.discoveryOwner h2{font-size:24px;margin:0 0 8px}.discoveryOwner p{color:#526d60;line-height:1.6;margin:0}
+@media(max-width:1000px){.discoveryHero{grid-template-columns:1fr}.discoveryHero .heroPanel{max-width:700px}.businessGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.pathGrid{grid-template-columns:1fr}.publicHeader .desktopNav{gap:14px;font-size:13px}}
+@media(max-width:700px){.publicHeader{flex-direction:row;align-items:center;padding:16px 20px;min-height:76px;gap:12px}.publicHeader>a img{max-width:160px}.publicHeader .desktopNav{display:none}.mobileNav{display:block}.mobileNav summary{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;list-style:none;font-size:14px;font-weight:750}.mobileNav summary::-webkit-details-marker{display:none}.mobileNav nav{position:absolute;left:16px;right:16px;top:calc(100% - 1px);display:flex;flex-direction:column;align-items:stretch;gap:0;background:#fff;border:1px solid #c6d6cb;border-radius:14px;padding:16px;box-shadow:0 20px 40px #184e4926}.mobileNav nav span{font-size:10px;letter-spacing:1.2px;color:#526d60;padding:15px 10px 8px}.mobileNav nav a{display:flex;align-items:center;justify-content:space-between;min-height:48px;padding:12px 10px;border-radius:8px;font-size:15px}.mobileNav nav a:hover{background:#e5eee6}.discoveryHero{padding:32px 20px;gap:30px}.discoveryHero h1{font-size:44px}.homeSearch{padding:14px;gap:14px}.homeSearch label{flex-basis:100%}.homeSearch button{width:100%}.businessGrid{grid-template-columns:1fr}.site .discoveryMain{padding:28px 20px 44px}.discoveryOwner{align-items:flex-start;flex-direction:column;padding:24px}.discoveryOwner .outline{width:100%;justify-content:center}.pathSection{margin:40px auto;padding:0 20px}.footer nav{flex-direction:column;gap:14px}.footer a{min-height:44px;display:flex;align-items:center}}

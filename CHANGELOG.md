@@ -1,3 +1,9 @@
+## v1.3.95 — Easier discovery with SelahFlow identity (staging only)
+
+- Search directly from the homepage by business keyword and city, or browse category shortcuts. Separate customer and owner journeys, responsive menu, keyboard skip link and clearer next-step explanations.
+- Discovery carries URL filters from home, supports browser back/forward and clear filters, cancels superseded searches, announces results and offers recoverable error/empty states. Business cards use actual marketplace data and direct booking links; no invented reviews, metrics or availability.
+- Preserve platform colors, individual business branding and all payment, membership, booking, history and authentication behavior. No migrations or production changes.
+
 ## v1.3.94 — Shared database pool and staging rollout headroom (staging only)
 
 - PostgreSQL logs confirmed too many connections for the dedicated staging role during the email-enabled rollout. Share one process-global pool across independently bundled instrumentation/routes and cap staging at two connections per process, leaving capacity for old/new instances and diagnostics under the existing five-connection limit. No database permissions, role limits, history or production configuration changes.
