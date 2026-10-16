@@ -102,6 +102,10 @@ Free compute adds no service plan charge, but shares workspace free hours, bandw
 
 This file describes intended configuration. Actual URL, deployment ID, credentials readiness and completed acceptance checks must be recorded from live verification, without exposing secrets.
 
+## v1.3.92 — Six-character password minimum (staging only)
+
+The mandatory temporary-password replacement now accepts six-character passwords, matching signup, login, owner settings, admin creation and server validation. No password/data migration. Confirmation and different-password checks remain. Checks/deployment pending; production/main unchanged.
+
 ## v1.3.91 — Owner reset sign-in recovery (staging only)
 
 - Resetting an owner password now clears only that owner’s sign-in and password-change throttles inside the reset transaction, retaining forced rotation and session revocation.

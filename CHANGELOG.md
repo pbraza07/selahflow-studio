@@ -1,3 +1,7 @@
+## v1.3.92 — Consistent six-character password minimum (staging only)
+
+- Mandatory password replacement now accepts six or more characters, matching existing signup, sign-in, owner settings, administrator creation and server validation. Confirmation and different-password requirements remain. Existing credentials are unchanged.
+
 ## v1.3.91 — Owner reset sign-in recovery (staging only)
 
 - Resetting an owner password now clears only that owner’s sign-in and password-change throttles inside the reset transaction, retaining forced rotation and session revocation.

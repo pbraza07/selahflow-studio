@@ -231,6 +231,10 @@ VERIFIED LIVE on 2026-10-16 UTC: code 2cd1043920aa26b732710c093a92410e60458dcf, 
 Explicit owner authorization permits a one-time read-only production business snapshot into staging. The reviewed startup importer retains business/source IDs, settings, branding and client/history records, preserves the synthetic studio/sandbox merchant under staging-test-studio, excludes production auth/tokens/provider connections, and backs up staging tables transactionally before insert. Destination database/role and notification guards fail closed. Repeated startup is idempotent; a later snapshot requires a new reviewed migration. Migration 039 is additive. Imported owner logins require staging-only admin reset; no production credentials are copied. Verify tests, LIVE deployment and import row counts before declaring completion. Production remains v1.3.81 and must not be deployed without separate authorization.
 
 
+## v1.3.92 release handoff — Six-character password minimum (staging only)
+
+The required temporary-password replacement form was the remaining twelve-character exception. It now uses six for client validation, HTML constraints and error copy, matching all existing server and other form validations. Existing password hashes and generated temporary credentials are unchanged. Checks/deployment pending. Production/main remain unchanged.
+
 ## v1.3.91 release handoff — Owner reset sign-in recovery (staging only)
 
 - Resetting an owner password now clears only that owner’s sign-in and password-change throttles inside the reset transaction, retaining forced rotation and session revocation.
