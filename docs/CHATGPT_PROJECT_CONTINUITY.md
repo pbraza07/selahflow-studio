@@ -230,3 +230,11 @@ VERIFIED LIVE on 2026-10-16 UTC: code 2cd1043920aa26b732710c093a92410e60458dcf, 
 
 Explicit owner authorization permits a one-time read-only production business snapshot into staging. The reviewed startup importer retains business/source IDs, settings, branding and client/history records, preserves the synthetic studio/sandbox merchant under staging-test-studio, excludes production auth/tokens/provider connections, and backs up staging tables transactionally before insert. Destination database/role and notification guards fail closed. Repeated startup is idempotent; a later snapshot requires a new reviewed migration. Migration 039 is additive. Imported owner logins require staging-only admin reset; no production credentials are copied. Verify tests, LIVE deployment and import row counts before declaring completion. Production remains v1.3.81 and must not be deployed without separate authorization.
 
+
+## v1.3.91 release handoff — Owner reset sign-in recovery (staging only)
+
+- Resetting an owner password now clears only that owner’s sign-in and password-change throttles inside the reset transaction, retaining forced rotation and session revocation.
+- One-time credential display offers Copy password only separately from Copy full sign-in message, links to the same environment, and explains that later resets invalidate earlier passwords. No existing passwords or hashes are displayed.
+- User screenshot showed a rejected Arcila login; full-message paste is a possible cause, not confirmed. No real owner password was collected or reset during development. Owner login requires user verification after a fresh reset.
+
+Deployment and full checks pending; no production changes.

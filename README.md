@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Release source: v1.3.90 (2026-10-16 UTC), staging branch only.** Adds a primary-administrator payment connection panel for all businesses, separate sandbox account preparation and provider-verified readiness synchronization. Existing booking and membership Make Payment buttons activate only after the business completes Stripe onboarding. Production remains separate at v1.3.81.
+**Release source: v1.3.91 (2026-10-16 UTC), staging branch only.** Owner password resets clear the target owner’s authentication lockouts and sessions, with a dedicated password-only copy button and environment-specific login link. Production remains separate at v1.3.81.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 

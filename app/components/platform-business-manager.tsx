@@ -27,6 +27,14 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
   const value=e.target.type==='checkbox'?(e.target as HTMLInputElement).checked:e.target.value;
   setValues(p=>({...p,[key]:value,...(key==='name'&&mode==='create'&&!p.slug?{slug:linkFriendly(String(value))}: {})}));
  };
+ async function copyCredentials(text:string,passwordOnly:boolean){
+  setError('');setNotice('');
+  try{
+   if(!navigator.clipboard)throw Error('Clipboard unavailable');
+   await navigator.clipboard.writeText(text);
+   setNotice(passwordOnly?'Temporary password copied. Paste it into the password field.':'Full sign-in message copied for secure sharing. Copy only its password into the password field.');
+  }catch{setError('Copy failed. Reveal the temporary password and select it to copy manually.');}
+ }
  function add(){
   setMode('create');setEditingId('');setValues(empty());setError('');setNotice('');setCredentials(null);
   setTimeout(()=>document.getElementById('sf-admin-business-form')?.scrollIntoView({behavior:'smooth',block:'start'}),0);
@@ -136,7 +144,9 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
     <span className="sf-admin-password-display"><input type={revealCredential?'text':'password'} autoComplete="off" value={credentials.temporaryPassword} readOnly/>
      <button className="outline" type="button" aria-label={revealCredential?'Hide temporary password':'Show temporary password'} onClick={()=>setRevealCredential(v=>!v)}>{revealCredential?<EyeOff size={16}/>:<Eye size={16}/>}</button>
     </span></label>
-   <button className="outline" type="button" onClick={()=>{void navigator.clipboard?.writeText('SelahFlow\nOwner: '+credentials.email+'\nTemporary password: '+credentials.temporaryPassword+'\nSign in: '+window.location.origin+'/login')}}><Copy size={16}/> Copy sign-in details</button>
+   <button className="outline" type="button" onClick={()=>{void copyCredentials(credentials.temporaryPassword,true)}}><Copy size={16}/> Copy password only</button>
+   <p>Paste only the temporary password into the password field. Use the owner email above at <a href="/login" target="_blank" rel="noopener noreferrer">this environment’s sign-in page</a>. A newer reset replaces every earlier temporary password.</p>
+   <button className="outline" type="button" onClick={()=>{void copyCredentials('SelahFlow\nOwner: '+credentials.email+'\nTemporary password: '+credentials.temporaryPassword+'\nSign in: '+window.location.origin+'/login',false)}}><Copy size={16}/> Copy full sign-in message</button>
    <button type="button" className="outline" onClick={()=>{setCredentials(null);setRevealCredential(false)}}>Dismiss credentials</button>
   </section>}
   {mode&&<section id="sf-admin-business-form" className="sf-platform-business-editor">

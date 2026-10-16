@@ -101,3 +101,11 @@ Free compute adds no service plan charge, but shares workspace free hours, bandw
 5. For future promotion, prepare a reviewed PR from staging to main with tests and an additive migration plan. Exclude staging infrastructure changes if inappropriate for main. Obtain the owner's explicit production deployment authorization before merging: production auto-deploys main. Promote source and migrations; never replace production data with staging data or copy staging secrets.
 
 This file describes intended configuration. Actual URL, deployment ID, credentials readiness and completed acceptance checks must be recorded from live verification, without exposing secrets.
+
+## v1.3.91 — Owner reset sign-in recovery (staging only)
+
+- Resetting an owner password now clears only that owner’s sign-in and password-change throttles inside the reset transaction, retaining forced rotation and session revocation.
+- One-time credential display offers Copy password only separately from Copy full sign-in message, links to the same environment, and explains that later resets invalidate earlier passwords. No existing passwords or hashes are displayed.
+- User screenshot showed a rejected Arcila login; full-message paste is a possible cause, not confirmed. No real owner password was collected or reset during development. Owner login requires user verification after a fresh reset.
+
+Deployment and full checks pending; no production changes.
