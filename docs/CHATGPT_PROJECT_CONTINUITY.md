@@ -218,3 +218,7 @@ Provider testing on LIVE v1.3.84 exposed rejection of the removed payment_method
 
 LIVE sandbox testing on v1.3.85 verified booking payment and cancelled-checkout reuse; recurring Checkout took the test payment but activation stayed pending because the current invoice schema omits the old paid boolean. This fix verifies paid status plus a positive integer amount, retrieves amount_paid_off_stripe for webhook/return fulfillment, and excludes off-Stripe payments. The paid test membership can be reconciled by its existing return page after deployment; do not charge it again. Production remains unchanged. Verify LIVE and the membership's once-only credits/revenue.
 
+# v1.3.89 release handoff — Production business replicas (staging only)
+
+Explicit owner authorization permits a one-time read-only production business snapshot into staging. The reviewed startup importer retains business/source IDs, settings, branding and client/history records, preserves the synthetic studio/sandbox merchant under staging-test-studio, excludes production auth/tokens/provider connections, and backs up staging tables transactionally before insert. Destination database/role and notification guards fail closed. Repeated startup is idempotent; a later snapshot requires a new reviewed migration. Migration 039 is additive. Imported owner logins require staging-only admin reset; no production credentials are copied. Verify tests, LIVE deployment and import row counts before declaring completion. Production remains v1.3.81 and must not be deployed without separate authorization.
+

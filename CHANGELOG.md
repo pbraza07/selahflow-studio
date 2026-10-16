@@ -1,3 +1,9 @@
+## v1.3.89 — Production business replicas (staging only)
+
+- A deliberate, checksum-verified startup snapshot imports all production businesses, settings, branding, client and membership history into staging. Each row retains its source tenant ID. Existing synthetic staging data and its sandbox merchant connection remain; its conflicting Crawford slug moves to staging-test-studio.
+- Import requires the dedicated staging database/user and disabled outbound notifications. It backs up affected tables inside staging in the same transaction, rejects conflicts, rolls back on failure and never replays a completed snapshot. Production passwords, sessions, device subscriptions, action links and Stripe connections are excluded. Copied owner logins receive unknown independent credentials and require staging-only reset; an email collision uses a staging.invalid alias.
+- This is a point-in-time copy, not continuous replication. Refreshing another snapshot requires a reviewed migration. Production source and data remain unchanged.
+
 ## v1.3.88 — Shared Gmail transactional email (staging only)
 
 - New Gmail HTTPS API transport and primary-admin-only Connect/Reconnect/Disconnect panel. One sending account serves business-scoped notifications. Gmail.send plus OpenID email identifies the verified sender; no inbox read/delete scope.
