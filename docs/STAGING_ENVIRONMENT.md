@@ -104,7 +104,7 @@ This file describes intended configuration. Actual URL, deployment ID, credentia
 
 ## v1.3.92 — Six-character password minimum (staging only)
 
-The mandatory temporary-password replacement now accepts six-character passwords, matching signup, login, owner settings, admin creation and server validation. No password/data migration. Confirmation and different-password checks remain. Checks/deployment pending; production/main unchanged.
+The mandatory temporary-password replacement now accepts six-character passwords, matching signup, login, owner settings, admin creation and server validation. No password/data migration. Confirmation and different-password checks remain. Verified Render LIVE 2026-10-16 12:20 UTC: code 5d64182966409f608f156ab07cb171e64a105883, deployment dep-db91bfnavr4c73cmlrq0. All 226 tests, typecheck and build passed locally and on Render. Production/main unchanged. No actual owner password changed for testing.
 
 ## v1.3.91 — Owner reset sign-in recovery (staging only)
 

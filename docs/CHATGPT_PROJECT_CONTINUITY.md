@@ -233,7 +233,7 @@ Explicit owner authorization permits a one-time read-only production business sn
 
 ## v1.3.92 release handoff — Six-character password minimum (staging only)
 
-The required temporary-password replacement form was the remaining twelve-character exception. It now uses six for client validation, HTML constraints and error copy, matching all existing server and other form validations. Existing password hashes and generated temporary credentials are unchanged. Checks/deployment pending. Production/main remain unchanged.
+The required temporary-password replacement form was the remaining twelve-character exception. It now uses six for client validation, HTML constraints and error copy, matching all existing server and other form validations. Existing password hashes and generated temporary credentials are unchanged. Verified Render LIVE 2026-10-16 12:20 UTC: code 5d64182966409f608f156ab07cb171e64a105883, deployment dep-db91bfnavr4c73cmlrq0. All 226 tests, typecheck and build passed locally and on Render. Production/main remain unchanged. No actual owner password changed for testing.
 
 ## v1.3.91 release handoff — Owner reset sign-in recovery (staging only)
 
