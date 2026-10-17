@@ -1,3 +1,8 @@
+## v1.3.98 — Separate customer and business pages (staging)
+
+- Clear two-audience homepage. Customer search and registration help at /customers; partner benefits, plans and revenue at /businesses.
+- Shared desktop/mobile links across discovery and pricing. New route slugs reserved. No billing, tenant data or payment behavior changes.
+
 ## v1.3.97 — Clear partner benefits and transparent revenue copy (staging only)
 
 - Homepage replaces redundant journey cards with three practical partner outcomes and expandable business examples. Existing search and client booking journeys are retained.

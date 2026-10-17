@@ -78,12 +78,15 @@ test('manual assignment audit records change, retains existing owner, subscripti
   assert.equal((await db.query("SELECT stripe_subscription_id FROM business_subscriptions WHERE business_id='b1'")).rows[0].stripe_subscription_id,null);
  }finally{await db.close();}
 });
-test('homepage no longer promotes one studio; both public pages use the same interactive plan catalog',async()=>{
- const [home,pricing,cards,css]=await Promise.all([
-  read('app/page.tsx'),read('app/pricing/page.tsx'),read('app/components/plan-benefit-cards.tsx'),read('app/site.module.css')
+test('audience pages separate customer booking from the shared business plan catalog',async()=>{
+ const [home,pricing,cards,css,customers,businesses,navigation]=await Promise.all([
+  read('app/page.tsx'),read('app/pricing/page.tsx'),read('app/components/plan-benefit-cards.tsx'),read('app/site.module.css'),read('app/customers/page.tsx'),read('app/businesses/page.tsx'),read('app/components/public-navigation.tsx')
  ]);
  assert.doesNotMatch(home,/Meet Crawford|Book Crawford|ORIGINAL BUSINESS|\/book\/crawford/);
- assert.match(home,/PlanBenefitCards placement="home"/);
+ assert.match(businesses,/PlanBenefitCards placement="home"/);
+ assert.doesNotMatch(home+customers,/PlanBenefitCards|RevenueExplainer|PartnerValue/);
+ for(const route of ["customers","businesses"])assert.ok(navigation.includes('href="/'+route+'"'));
+ assert.match(customers,/action="\/discover" method="get"/);
  assert.match(pricing,/PlanBenefitCards placement="pricing"/);
  assert.match(cards,/aria-expanded=\{opened\}/);
  assert.match(cards,/See all /);

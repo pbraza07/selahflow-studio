@@ -161,6 +161,7 @@
 /* Public discovery: SelahFlow forest, sage and cream; tenant themes untouched. */
 .publicHeader{position:relative;z-index:10;min-height:88px}
 .publicHeader .desktopNav{gap:22px}
+.publicHeader nav a[aria-current="page"]{text-decoration:underline;text-underline-offset:6px}
 .mobileNav{display:none}
 .skipLink{position:absolute;left:16px;top:-100px;padding:12px 18px;background:#184e49;color:#fff;z-index:50;border-radius:8px}
 .skipLink:focus{top:10px}
