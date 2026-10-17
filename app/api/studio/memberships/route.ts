@@ -7,7 +7,7 @@ import {sanitizeBookingAnswers} from '../../../../server/booking-custom-fields.m
 import {getPool} from '../../../../server/database.mjs';
 import {requireOwner} from '../../../../lib/auth';
 import {validOrigin,trustedOrigin} from '../../../../server/security.mjs';
-import {paymentConfigured,validateMembershipPlan,stripeApi} from '../../../../server/membership-payments.mjs';
+import {paymentConfigured,validateMembershipPlan,stripeApi,createStripeMerchantAccount} from '../../../../server/membership-payments.mjs';
 import {planEntitlements,activeMembershipLimit} from '../../../../server/plan-entitlements.mjs';
 // Manual payment confirmation and session usage are maintained in an auditable ledger.
 // Stripe integration remains optional and can be revisited separately.
@@ -137,8 +137,9 @@ export async function POST(req:Request){
    const client=await pool.connect();
    try{
     await client.query('BEGIN');
-    const member=(await client.query("SELECT m.id,m.status,m.sessions_included,m.sessions_used,m.member_number,p.sessions_included AS plan_sessions,p.price_cents FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 AND m.id=$2 FOR UPDATE",[business.id,id])).rows[0];
+    const member=(await client.query("SELECT m.id,m.status,m.sessions_included,m.sessions_used,m.member_number,m.stripe_account_id,p.sessions_included AS plan_sessions,p.price_cents FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 AND m.id=$2 FOR UPDATE",[business.id,id])).rows[0];
     if(!member)throw Error('Member not found.');
+    if(member.stripe_account_id?.startsWith('acct_'))throw Error('Stripe manages this membership payment and renewal. Do not confirm it manually.');
     if(input.action==='renewMembership'&&String(input.memberNumber||'').trim().toUpperCase()!==String(member.member_number||'').toUpperCase())throw Error('Enter the player membership number to renew.');
     if(input.action==='renewMembership'&&member.status!=='active')throw Error('Confirm the initial payment before renewing this membership.');
     if(input.action==='confirmManualPayment'&&member.status==='active')throw Error('This membership is already active. Use Renew to add another package of sessions.');
@@ -266,13 +267,7 @@ export async function POST(req:Request){
    const current=(await pool.query('SELECT external_account_id FROM merchant_accounts WHERE business_id=$1',[business.id])).rows[0];
    let accountId=current?.external_account_id;
    if(!accountId){
-    const created=await stripeApi('accounts',{params:{
-     type:'express',country:'US',email:input.email||undefined,
-     'business_profile[name]':business.name,
-     'capabilities[card_payments][requested]':'true',
-     'capabilities[transfers][requested]':'true',
-     'metadata[selahflow_business_id]':business.id
-    },idempotencyKey:'selahflow-connect-'+business.id});
+    const created=await createStripeMerchantAccount(business,input.email);
     accountId=created.id;
     await pool.query("INSERT INTO merchant_accounts(business_id,provider,external_account_id) VALUES($1,'stripe',$2) ON CONFLICT(business_id) DO UPDATE SET external_account_id=excluded.external_account_id",
      [business.id,accountId]);

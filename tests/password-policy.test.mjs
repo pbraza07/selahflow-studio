@@ -22,8 +22,11 @@ test('business signup, owner change and administrator API share server validatio
  assert.match(await read('app/api/auth/login/route.ts'),/password\.length<6/);
 });
 test('all password input forms use six-character minimum',async()=>{
- for(const path of ['app/signup/page.tsx','app/components/owner-password.tsx','app/components/platform-admin-manager.tsx','app/login/page.tsx']){
+ for(const path of ['app/signup/page.tsx','app/components/owner-password.tsx','app/components/platform-admin-manager.tsx','app/login/page.tsx','app/components/required-password-change.tsx']){
   assert.match(await read(path),/minLength=\{6\}/,path);
  }
  assert.match(await read('app/components/owner-password.tsx'),/newPassword\.length<6/);
+ const required=await read('app/components/required-password-change.tsx');
+ assert.match(required,/next\.length<6/);
+ assert.doesNotMatch(required,/minLength=\{12\}|length<12|at least 12 characters/);
 });

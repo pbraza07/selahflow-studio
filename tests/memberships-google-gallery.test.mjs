@@ -37,7 +37,7 @@ test('Google business gallery matches selected business names and only trusted p
 });
 test('Stripe Connect signatures reject tampering, wrong secret and expired events',()=>{
  const secret='whsec_test-signature',now=1800000000;
- const json=JSON.stringify({id:'evt_123',account:'acct_12345',type:'invoice.paid',data:{object:{id:'in_123'}}});
+ const json=JSON.stringify({id:'evt_123',account:'acct_12345',livemode:false,type:'invoice.paid',data:{object:{id:'in_123'}}});
  const sig=createHmac('sha256',secret).update(now+'.'+json).digest('hex');
  assert.equal(verifyStripeWebhook(json,'t='+now+',v1='+sig,secret,now).id,'evt_123');
  assert.throws(()=>verifyStripeWebhook(json+' ','t='+now+',v1='+sig,secret,now),/invalid/i);
@@ -85,8 +85,10 @@ test('public booking and business pages link to memberships, owner dashboard can
  assert.match(files[3],/Google Maps business listing link/);
  assert.match(files[4],/Next photo/);
  assert.match(files[4],/Previous photo/);
- assert.match(files[5],/mode:'subscription'/);
- assert.match(files[5],/payment_method_collection/);
+ assert.match(files[5],/startMembershipCheckout/);
+ const checkout=await readFile(new URL('server/membership-checkout.mjs',base),'utf8');
+ assert.match(checkout,/mode:'subscription'/);
+ assert.match(checkout,/payment_method_collection/);
  assert.match(files[6],/verifyStripeWebhook/);
  assert.match(files[6],/invoice\.paid/);
  assert.match(files[6],/checkout\.session\.completed/);

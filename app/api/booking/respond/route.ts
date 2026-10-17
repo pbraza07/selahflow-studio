@@ -1,5 +1,5 @@
 import {getPool} from '../../../../server/database.mjs';
-import {tokenHash,validOrigin} from '../../../../server/security.mjs';
+import {tokenHash,validOrigin,trustedOrigin} from '../../../../server/security.mjs';
 import {reviewPendingRequest} from '../../../../lib/booking-review-actions';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 const headers={'Cache-Control':'private, no-store','Referrer-Policy':'no-referrer','X-Robots-Tag':'noindex, nofollow'};
@@ -20,7 +20,7 @@ export async function POST(req:Request){
   const text=await req.text();if(text.length>500)throw Error('Invalid request.');
   const input=JSON.parse(text);if(typeof input.accept!=='boolean')throw Error('Choose Accept or Decline.');
   if(r.status!=='pending')return Response.json({error:'This booking has already been reviewed.',status:r.status},{status:409,headers});
-  const result=await reviewPendingRequest(r.owner_id,r.request_id,r.reviewer,input.accept);
+  const result=await reviewPendingRequest(r.owner_id,r.request_id,r.reviewer,input.accept,trustedOrigin(req));
   return Response.json(result,{headers});
  }catch(e){const msg=(e as Error).message;return Response.json({error:msg==='INVALID_LINK'?'Review link expired or invalid.':msg},{status:msg==='INVALID_LINK'?403:409,headers});}
 }

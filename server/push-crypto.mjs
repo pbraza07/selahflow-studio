@@ -2,9 +2,10 @@
  * Independent of paid email/SMS providers and npm dependencies.
  */
 import {createECDH,createPrivateKey,createSign,createCipheriv,hkdfSync,randomBytes,createPublicKey,sign} from 'node:crypto';
+import {isStaging} from './staging-safety.mjs';
 const b64=b=>Buffer.from(b).toString('base64url');
 const from=s=>Buffer.from(s,'base64url');
-export function configured(env=process.env){return Boolean(env.VAPID_PUBLIC_KEY&&env.VAPID_PRIVATE_KEY&&env.VAPID_SUBJECT);}
+export function configured(env=process.env){return (!isStaging(env)||env.STAGING_PUSH_ENABLED==='true')&&Boolean(env.VAPID_PUBLIC_KEY&&env.VAPID_PRIVATE_KEY&&env.VAPID_SUBJECT);}
 export function vapidKeys(env=process.env){
  if(!configured(env))throw new Error('Web Push VAPID environment is not configured.');
  const pub=from(env.VAPID_PUBLIC_KEY),priv=from(env.VAPID_PRIVATE_KEY);

@@ -3,6 +3,7 @@ const config: NextConfig = {
   poweredByHeader:false,
   serverExternalPackages:['pg'],
   async headers(){return [{source:'/:path*',headers:[
+    ...(process.env.APP_ENV==='staging'?[{key:'X-Robots-Tag',value:'noindex, nofollow'}]:[]),
     {key:'X-Content-Type-Options',value:'nosniff'},
     {key:'Referrer-Policy',value:'strict-origin-when-cross-origin'},
     {key:'X-Frame-Options',value:'DENY'},

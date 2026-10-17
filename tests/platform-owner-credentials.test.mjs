@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
-import {hashPassword,verifyPassword} from '../server/security.mjs';
+import {hashPassword,verifyPassword,tokenHash} from '../server/security.mjs';
+import {resetOwnerCredentials} from '../server/reset-owner-credentials.mjs';
 const read=async path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 test('business owners have one-way passwords, not visible plaintext secrets',()=>{
  const plain='temporary-password-not-to-reuse-9348';
@@ -38,14 +39,35 @@ test('platform admins can reset a business owner account but not platform admin 
  assert.match(route,/if\(!role\)throw Error\('FORBIDDEN'\)/);
  assert.match(route,/payload.confirmName!==before.name/);
  assert.match(route,/randomBytes\(24\)/);
- assert.match(route,/hashPassword\(tempPassword\)/);
- assert.match(route,/must_change_password=TRUE/);
+ assert.match(route,/resetOwnerCredentials\(client,target,tempPassword\)/);
  assert.match(route,/DELETE FROM sessions WHERE user_id=\$1/);
  assert.match(route,/INSERT INTO platform_business_audit/);
  assert.match(route,/Administrator accounts must change their own passwords/);
  assert.match(route,/payload\.expectedEmail!==target\.email/);
  assert.doesNotMatch(route,/SELECT [^;\n]*password_hash AS password/);
  assert.doesNotMatch(route,/return Response\.json\(\{[^}]*password_hash/);
+});
+test('owner reset replaces the password and clears only that owner’s sessions and authentication lockouts',async()=>{
+ const db=new PGlite();
+ try{
+  await db.exec(await read('migrations/001_initial.sql'));
+  await db.exec('ALTER TABLE users ADD COLUMN must_change_password boolean NOT NULL DEFAULT false');
+  for(const id of ['owner1','owner2']){
+   await db.query('INSERT INTO users(id,email,password_hash) VALUES($1,$2,$3)',[id,id+'@example.com',hashPassword('old-password')]);
+   await db.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '1 hour')",[id,id]);
+   for(const key of [tokenHash(id+'@example.com'),'password-change:'+id])await db.query('INSERT INTO login_attempts(key,count,window_start) VALUES($1,20,now())',[key]);
+  }
+  await db.exec('BEGIN');
+  await resetOwnerCredentials(db,{id:'owner1',email:'owner1@example.com'},'fresh-temporary-password');
+  await db.exec('COMMIT');
+  const users=(await db.query('SELECT * FROM users ORDER BY id')).rows;
+  assert.equal(verifyPassword('fresh-temporary-password',users[0].password_hash),true);
+  assert.equal(verifyPassword('old-password',users[0].password_hash),false);
+  assert.equal(users[0].must_change_password,true);
+  assert.equal(verifyPassword('old-password',users[1].password_hash),true);
+  assert.deepEqual((await db.query('SELECT user_id FROM sessions')).rows,[{user_id:'owner2'}]);
+  assert.deepEqual((await db.query('SELECT key FROM login_attempts ORDER BY key')).rows.map(r=>r.key).sort(),[tokenHash('owner2@example.com'),'password-change:owner2'].sort());
+ }finally{await db.close();}
 });
 test('password-change requirement locks private APIs and redirects sign-in without blocking password rotation',async()=>{
  const [auth,login,studio,password,required,ui]=await Promise.all([

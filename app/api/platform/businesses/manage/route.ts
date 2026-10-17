@@ -2,6 +2,7 @@ import {randomBytes,randomUUID} from 'node:crypto';
 import {getPool} from '../../../../../server/database.mjs';
 import {requireOwner} from '../../../../../lib/auth';
 import {hashPassword,validOrigin} from '../../../../../server/security.mjs';
+import {resetOwnerCredentials} from '../../../../../server/reset-owner-credentials.mjs';
 import {getPlatformRole} from '../../../../../server/platform-roles.mjs';
 import {isReservedBusinessSlug} from '../../../../../server/route-slugs.mjs';
 import {BUSINESS_INDUSTRIES,canonicalState} from '../../../../../lib/business-options';
@@ -159,9 +160,7 @@ export async function POST(req:Request){
    if(platformRole)throw Error('Administrator accounts must change their own passwords through account settings.');
    if(payload.expectedEmail!==target.email)throw Error('Owner email has changed. Refresh the business directory before resetting credentials.');
    const tempPassword=randomBytes(24).toString('base64url');
-   await client.query('UPDATE users SET password_hash=$1,must_change_password=TRUE WHERE id=$2',
-    [hashPassword(tempPassword),target.id]);
-   await client.query('DELETE FROM sessions WHERE user_id=$1',[target.id]);
+   await resetOwnerCredentials(client,target,tempPassword);
    await client.query(
     'INSERT INTO platform_business_audit(id,business_id,actor_id,action,before_record,after_record) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb)',
     [randomUUID(),before.id,actor,'reset_password',

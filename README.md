@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Release source: v1.3.81 (2026-10-15).** Owners choose a six-character membership ID policy under Memberships. Shared allocation and database reservations prevent reuse across different clients within a business; existing IDs remain unchanged. Verify Render LIVE and health before claiming deployment.
+**Release source: v1.3.97 (2026-10-17 UTC), staging branch only.** Homepage partner benefits and a concise revenue explainer adapt the supplied business guide to the existing plan catalog. Compact plan cards retain all included benefits in expandable details. Proposed paid subscriptions, first-customer commission and future extras are explicitly distinguished from active charges. Production remains separate at v1.3.81.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 

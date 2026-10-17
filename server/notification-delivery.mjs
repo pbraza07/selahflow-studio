@@ -2,10 +2,18 @@
 import {randomBytes,randomUUID} from 'node:crypto';
 import {getPool} from './database.mjs';
 import {tokenHash} from './security.mjs';
+import {isStaging,stagingNotificationAllowed} from './staging-safety.mjs';
+import {gmailStatus,sendGmail,selectedEmailProvider} from './gmail-delivery.mjs';
 export const validEmail=x=>typeof x==='string'&&x.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x);
 export const validE164=x=>typeof x==='string'&&/^\+[1-9]\d{7,14}$/.test(x);
 export function deliveryProviderStatus(env=process.env){
- return {emailConfigured:!!(env.RESEND_API_KEY&&env.RESEND_FROM_EMAIL),smsConfigured:!!(env.TWILIO_ACCOUNT_SID&&env.TWILIO_AUTH_TOKEN&&env.TWILIO_FROM_NUMBER)};
+ if(isStaging(env)&&env.STAGING_NOTIFICATIONS_ENABLED!=='true')return {emailConfigured:false,smsConfigured:false};
+ return {emailConfigured:selectedEmailProvider(env)==='resend'&&!!(env.RESEND_API_KEY&&env.RESEND_FROM_EMAIL),smsConfigured:!!(env.TWILIO_ACCOUNT_SID&&env.TWILIO_AUTH_TOKEN&&env.TWILIO_FROM_NUMBER)};
+}
+export async function deliveryProviderStatusWithConnection(pool=getPool(),env=process.env){
+ const result=deliveryProviderStatus(env);
+ if(selectedEmailProvider(env)==='gmail'&&(!isStaging(env)||env.STAGING_NOTIFICATIONS_ENABLED==='true'))result.emailConfigured=(await gmailStatus(pool,env)).connected;
+ return {...result,emailProvider:selectedEmailProvider(env)==='gmail'?'Gmail':'Resend'};
 }
 export function notificationRecipient(config,ownerEmail){
  const reviewer=config.bookingApprovalReviewer||'owner';
@@ -26,21 +34,26 @@ export function notificationMessage({businessName,request,link}){
  return {subject:`SelahFlow: Booking approval needed — ${safeValue(businessName)}`,text:summary,sms:`SelahFlow ${safeValue(businessName)}: ${safeValue(d.customerName)}, ${safeValue(request.date)} ${timeOf(request.start_minute)}, ${(d.services||[]).map(safeValue).join('+').slice(0,65)}. Review Accept/Decline: ${link}`};
 }
 export async function sendNotificationChannel(channel,destination,message,env=process.env,fetcher=fetch){
+ if(!stagingNotificationAllowed(channel,destination,env))return {status:'not_configured',detail:'External staging notifications are disabled for this recipient'};
+ if(channel==='email'&&selectedEmailProvider(env)==='gmail'){
+  if(!validEmail(destination))return {status:'invalid_destination',detail:'Invalid recipient'};
+  try{return await sendGmail(destination,message,env,fetcher);}catch{return {status:'not_configured',detail:'Gmail connection is unavailable; contact the platform administrator'};}
+ }
  const cfg=deliveryProviderStatus(env);
  if(channel==='email'&&!cfg.emailConfigured)return {status:'not_configured',detail:'Resend email is not configured'};
  if(channel==='sms'&&!cfg.smsConfigured)return {status:'not_configured',detail:'Twilio SMS is not configured'};
  if(channel==='email'&&!validEmail(destination)||channel==='sms'&&!validE164(destination))return {status:'invalid_destination',detail:'Invalid recipient'};
  try{
   if(channel==='email'){
-   const result=await fetcher('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','User-Agent':'SelahFlow/1.3.10'},body:JSON.stringify({from:env.RESEND_FROM_EMAIL,to:[destination],subject:message.subject,text:message.text}),signal:AbortSignal.timeout(7500)});
-   if(!result.ok)return {status:'failed',detail:'Email provider rejected request (HTTP '+result.status+')'};
+   const result=await fetcher('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','User-Agent':'SelahFlow/1.3.87',...(message.idempotencyKey?{'Idempotency-Key':message.idempotencyKey}:{})},body:JSON.stringify({from:env.RESEND_FROM_EMAIL,to:[destination],subject:message.subject,text:message.text}),signal:AbortSignal.timeout(7500)});
+   if(!result.ok)return {status:message.trackAmbiguous&&result.status>=500?'unknown':'failed',detail:'Email provider rejected request (HTTP '+result.status+')'};
    return {status:'submitted',detail:'Accepted by email provider'};
   }
   const sid=env.TWILIO_ACCOUNT_SID,form=new URLSearchParams({From:env.TWILIO_FROM_NUMBER,To:destination,Body:message.sms});
   const result=await fetcher('https://api.twilio.com/2010-04-01/Accounts/'+encodeURIComponent(sid)+'/Messages.json',{method:'POST',headers:{Authorization:'Basic '+Buffer.from(sid+':'+env.TWILIO_AUTH_TOKEN).toString('base64'),'Content-Type':'application/x-www-form-urlencoded'},body:form.toString(),signal:AbortSignal.timeout(7500)});
-  if(!result.ok)return {status:'failed',detail:'SMS provider rejected request (HTTP '+result.status+')'};
+  if(!result.ok)return {status:message.trackAmbiguous&&result.status>=500?'unknown':'failed',detail:'SMS provider rejected request (HTTP '+result.status+')'};
   return {status:'submitted',detail:'Accepted by SMS provider'};
- }catch{return {status:'failed',detail:'Provider request failed or timed out'};}
+ }catch{return {status:message.trackAmbiguous?'unknown':'failed',detail:'Provider request failed or timed out'};}
 }
 /** @param {{requestId:string,origin:string}} input */
 export async function notifyBookingRequest({requestId,origin}){

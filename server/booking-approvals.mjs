@@ -1,4 +1,5 @@
 import {isBlocked} from './booking-blockouts.mjs';
+import {queueApprovedBooking} from './booking-client-notifications.mjs';
 
 import {getPool} from './database.mjs';
 import {appointmentData,bookedSessionCount,selectedSession,sessionsForDate} from './session-scheduling.mjs';
@@ -86,6 +87,7 @@ export async function confirmBooking(options){
   if(pendingId)await client.query(
    "UPDATE booking_requests SET status='accepted',appointment_id=$1,reviewed_by=$2,reviewed_at=now() WHERE id=$3",
    [id,data.reviewedBy||'owner',pendingId]);
+  if(pendingId&&options.notificationOrigin)await queueApprovedBooking(client,{bookingId:id,requestId:pendingId,origin:options.notificationOrigin});
   await client.query('COMMIT');
   return {id,duplicate:false,sessionId:session?.id||null};
  }catch(e){

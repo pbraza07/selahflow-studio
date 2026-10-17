@@ -120,7 +120,7 @@ test('protected admin endpoint audits email/credential changes and archive prese
  assert.match(route,/\bchange_owner_email\b/);
  assert.match(route,/\breset_password\b/);
  assert.match(route,/hashPassword\(tempPassword\)/);
- assert.match(route,/must_change_password=TRUE/);
+ assert.match(route,/resetOwnerCredentials\(client,target,tempPassword\)/);
  assert.doesNotMatch(route.slice(route.indexOf("if(action==='changeOwnerEmail')")),/DELETE FROM (businesses|appointments|business_client_profiles|customer_memberships)/);
  assert.match(archive,/status='archived'/);
  assert.match(archive,/archived_at=now\(\)/);

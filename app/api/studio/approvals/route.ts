@@ -3,10 +3,11 @@ import {randomBytes} from 'node:crypto';
 import {getPool} from '../../../../server/database.mjs';
 import {requireOwner} from '../../../../lib/auth';
 import {validOrigin,tokenHash,trustedOrigin} from '../../../../server/security.mjs';
-import {deliveryProviderStatus,notifyBookingRequest} from '../../../../server/notification-delivery.mjs';
+import {deliveryProviderStatusWithConnection,notifyBookingRequest} from '../../../../server/notification-delivery.mjs';
 import {reviewPendingRequest} from '../../../../lib/booking-review-actions';
 import {editPendingRequest} from '../../../../server/booking-review-edits.mjs';
 import {approvalFieldsForBusiness,sessionReviewSummary} from '../../../../server/booking-approval-display.mjs';
+import {listClientMessages,retryClientMessages} from '../../../../server/booking-client-notifications.mjs';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 const headers={'Cache-Control':'private, no-store'};
 async function context(req:Request){
@@ -26,9 +27,9 @@ export async function GET(req:Request){try{const {pool,owner,settings,business}=
  const confirmed=rows.length?(await pool.query("SELECT date,staff,start,duration,status,data FROM appointments WHERE owner=$1 AND date BETWEEN $2 AND $3 AND status NOT IN ('Cancelled','No-show') AND data LIKE '%sessionId%'",[owner,rows.reduce((d:string,r:{date:string})=>r.date<d?r.date:d,rows[0].date),rows.reduce((d:string,r:{date:string})=>r.date>d?r.date:d,rows[0].date)])).rows:[];
  const delivery:Record<string,Record<string,{status:string;destination:string;at:string}>>={};for(const a of attempts.rows){delivery[a.request_id]??={};delivery[a.request_id][a.channel]={status:a.status,destination:a.destination_masked,at:a.attempted_at};}
  return Response.json({enabled:settings.bookingApprovalEnabled===true,reviewer:settings.bookingApprovalReviewer||'owner',
- pending:rows.map((r:any)=>({...r,sessionInfo:sessionReviewSummary(settings,r,confirmed,rows)})),
+ pending:rows.map((r:any)=>({...r,sessionInfo:sessionReviewSummary(settings,r,confirmed,rows)})),clientMessages:await listClientMessages(pool,owner),
  approvalFields:approvalFieldsForBusiness(settings),
- customFields:customRegistrationFields(settings,'booking').map((f:{id:string;label:string;type:string;options?:string[];required:boolean})=>({id:f.id,label:f.label,type:f.type,options:f.options||[],required:f.required})),pendingCount:rows.length,businessId:business.id,providerStatus:deliveryProviderStatus(),accountEmail:account.rows[0]?.email||'',deliveryStatus:delivery},{headers});
+ customFields:customRegistrationFields(settings,'booking').map((f:{id:string;label:string;type:string;options?:string[];required:boolean})=>({id:f.id,label:f.label,type:f.type,options:f.options||[],required:f.required})),pendingCount:rows.length,businessId:business.id,providerStatus:await deliveryProviderStatusWithConnection(pool),accountEmail:account.rows[0]?.email||'',deliveryStatus:delivery},{headers});
  }catch(e){return err(e);}}
 export async function POST(req:Request){if(!validOrigin(req))return Response.json({error:'Invalid origin'},{status:403,headers});
  try{
@@ -37,8 +38,9 @@ export async function POST(req:Request){if(!validOrigin(req))return Response.jso
   const body=JSON.parse(raw);
   if(body.action==='editBooking')return Response.json(await editPendingRequest(owner,String(body.id),'owner',body.details),{headers});
   if(body.action==='review'&&typeof body.accept==='boolean'){
-   return Response.json(await reviewPendingRequest(owner,String(body.id), 'owner',body.accept),{headers});
+   return Response.json(await reviewPendingRequest(owner,String(body.id), 'owner',body.accept,trustedOrigin(req)),{headers});
   }
+  if(body.action==='retryClientMessages')return Response.json(await retryClientMessages(pool,owner,String(body.id||'')),{headers});
   if(body.action==='resendNotification'){
    const id=String(body.id||'');
    if(!/^[a-f0-9-]{36}$/i.test(id))throw Error('Invalid booking request.');

@@ -1,4 +1,5 @@
 import {createHmac,timingSafeEqual} from 'node:crypto';
+import {assertSandboxPayments,isStaging} from './staging-safety.mjs';
 export const paymentConfigured=()=>Boolean(process.env.STRIPE_SECRET_KEY&&process.env.STRIPE_CONNECT_WEBHOOK_SECRET);
 export const stripeConfigured=()=>Boolean(process.env.STRIPE_SECRET_KEY);
 export function validateMembershipPlan(data){
@@ -23,22 +24,30 @@ export function googleListingUrl(value){
  return url.toString();
 }
 export async function stripeApi(endpoint,options={}){
+ assertSandboxPayments();
  const secret=process.env.STRIPE_SECRET_KEY;
  if(!secret)throw Error('Stripe payments are not configured for SelahFlow.');
- const {account,params,method='POST',idempotencyKey}=options;
+ const {account,params,method='POST',idempotencyKey,namespace='v1'}=options;
+ if(!['v1','v2'].includes(namespace))throw Error('Invalid Stripe API namespace.');
  if(account&&(!/^acct_[A-Za-z0-9]+$/.test(account)))throw Error('Invalid connected payment account.');
  const headers={Authorization:'Bearer '+secret};
  if(account)headers['Stripe-Account']=account;
  if(idempotencyKey)headers['Idempotency-Key']=idempotencyKey;
+ if(namespace==='v2')headers['Stripe-Version']='2026-09-30.endive';
  let payload;
  if(params){
+  if(namespace==='v2'){
+   payload=JSON.stringify(params);
+   headers['Content-Type']='application/json';
+  }else{
   payload=new URLSearchParams();
   for(const [k,v] of Object.entries(params))if(v!==null&&v!==undefined)payload.append(k,String(v));
   headers['Content-Type']='application/x-www-form-urlencoded';
+  }
  }
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
  try{
-  const response=await fetch('https://api.stripe.com/v1/'+endpoint.replace(/^\/+/,''),{
+  const response=await fetch('https://api.stripe.com/'+namespace+'/'+endpoint.replace(/^\/+/,''),{
    method,headers,...(payload?{body:payload.toString()}:{}),signal:controller.signal,cache:'no-store'
   });
   const result=await response.json();
@@ -46,7 +55,21 @@ export async function stripeApi(endpoint,options={}){
   return result;
  }finally{clearTimeout(timer);}
 }
-export function verifyStripeWebhook(raw,signature,secret,now=Math.floor(Date.now()/1000)){
+// Managed Risk platforms cannot create legacy Express accounts with platform
+// loss liability. Full dashboard access supports Stripe-owned risk without a
+// preview API. v2 IDs remain compatible with v1 account links and direct charges.
+export async function createStripeMerchantAccount(business,email){
+ const created=await stripeApi('core/accounts',{namespace:'v2',params:{
+  display_name:business.name,...(email?{contact_email:email}:{}),
+  identity:{country:'US'},dashboard:'full',
+  defaults:{responsibilities:{fees_collector:'stripe',losses_collector:'stripe'}},
+  configuration:{merchant:{capabilities:{card_payments:{requested:true}}}},
+  metadata:{selahflow_business_id:business.id}
+ },idempotencyKey:'selahflow-connect-managed-v2-'+business.id});
+ if(!/^acct_[A-Za-z0-9]+$/.test(created.id||''))throw Error('Stripe returned an invalid connected account.');
+ return created;
+}
+export function verifyStripeWebhook(raw,signature,secret,now=Math.floor(Date.now()/1000),env=process.env){
  if(!signature||!secret)throw Error('Missing payment webhook signature.');
  const attrs=Object.fromEntries(signature.split(',').map(v=>v.trim().split('=').slice(0,2)));
  const timestamp=Number(attrs.t);
@@ -56,6 +79,7 @@ export function verifyStripeWebhook(raw,signature,secret,now=Math.floor(Date.now
  if(!signatures.some(v=>/^[\da-f]{64}$/i.test(v)&&timingSafeEqual(Buffer.from(v,'hex'),Buffer.from(mac,'hex'))))
   throw Error('Payment webhook signature invalid.');
  const event=JSON.parse(raw);
+ if(isStaging(env)&&event.livemode!==false)throw Error('Staging accepts only sandbox payment events.');
  if(!event.id||!event.type||!event.data?.object||!event.account)throw Error('Invalid connected-account payment event.');
  return event;
 }
@@ -69,5 +93,7 @@ export function invoicePaidThrough(invoice){
  return ends.length?new Date(Math.max(...ends)*1000).toISOString():null;
 }
 export function shouldActivateInvoice(invoice){
- return invoice?.paid===true && invoice?.status==='paid'&&Number(invoice?.amount_paid)>0;
+ // Current Stripe invoices omit the legacy paid boolean. Explicit false still
+ // rejects contradictory legacy payloads; status and collected amount are required.
+ return invoice?.paid!==false&&invoice?.status==='paid'&&Number.isSafeInteger(invoice?.amount_paid)&&invoice.amount_paid>0;
 }
