@@ -1,4 +1,5 @@
 'use client';
+import BusinessNavigation from '../../components/business-navigation';
 import RegistrationFields from '../../components/registration-fields';
 import MembershipBadge,{type MembershipBadgeDesign} from '../../components/membership-badge';
 import {membershipTabs,plansForMembershipTab} from '../../../server/membership-groups.mjs';
@@ -66,7 +67,7 @@ export default function MembershipEnrollment(){
  }
  const theme=data?themeStyles(data.theme,data.brandPrimary,data.brandBackground) as CSSProperties:undefined;
  return <div className="sf-membership-public" data-selah-theme="true" style={theme}>
-  <header className="sf-membership-public-header"><a href={'/'+slug}><img src="/brand/logo.svg" alt="SelahFlow" width={170} height={48}/></a><a href={'/book/'+slug}><CalendarDays size={16}/> Book an appointment</a></header>
+  <BusinessNavigation slug={slug} name={data?.name||"Memberships"}/>
   <main className="sf-membership-public-main">
    <section className="sf-membership-public-intro">
     <span className="sf-membership-kicker">MEMBERSHIPS & RECURRING SERVICES</span>

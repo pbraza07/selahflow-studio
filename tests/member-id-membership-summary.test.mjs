@@ -9,6 +9,7 @@ import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {postgresSQL} from '../server/database.mjs';
 import {memberIdMembershipSummary} from '../server/member-id-summary.mjs';
+import {registrationPaymentSummary} from '../server/registration-payment.mjs';
 test('ID-only status lookup returns current membership type and available credits within the requested business',async()=>{
  const pg=new PGlite();try{
   for(const file of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort())await pg.exec(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8'));
@@ -24,9 +25,9 @@ test('ID-only status lookup returns current membership type and available credit
   const section=source.split("if(b.action==='registration_latest_status'){")[1].split("if(b.action==='verify_registration'){")[0].trim().replace(/\}$/,'');
   const body=ts.transpileModule(section,{compilerOptions:{module:ts.ModuleKind.None,target:ts.ScriptTarget.ES2022}}).outputText;
   const db=()=>({prepare(sql){return {values:[],bind(...v){this.values=v;return this;},async all(){return {results:(await pg.query(postgresSQL(sql),this.values)).rows};}};}});
-  const lookup=new Function('b','owner','req','db','getPool','memberIdMembershipSummary','reply','takeLimit','tokenHash','return (async()=>{'+body+'})()');
+  const lookup=new Function('b','owner','req','db','getPool','memberIdMembershipSummary','reply','takeLimit','tokenHash','registrationPaymentSummary','return (async()=>{'+body+'})()');
   const req=new Request('https://example.com/api/booking?slug=club-one',{headers:{'x-forwarded-for':'198.51.100.5'}});
-  const call=(number,rate=async()=>true)=>lookup({memberNumber:number},'u1',req,db,()=>pg,memberIdMembershipSummary,(d,status=200)=>Response.json(d,{status}),rate,s=>s);
+  const call=(number,rate=async()=>true)=>lookup({memberNumber:number},'u1',req,db,()=>pg,memberIdMembershipSummary,(d,status=200)=>Response.json(d,{status}),rate,s=>s,registrationPaymentSummary);
   const result=await (await call(' ca0814 ')).json();
   assert.deepEqual(result.latest,{date:'2026-10-16',status:'No-show'});assert.deepEqual(result.membership,summary);
   assert.doesNotMatch(JSON.stringify(result),/client@example|Other Client|813555|2013-08-14|password_hash/);

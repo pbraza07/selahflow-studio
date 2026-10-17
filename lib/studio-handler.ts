@@ -2,6 +2,7 @@ import {issueMemberId} from '../server/member-id-policy.mjs';
 import {loadMembershipReportPayments,reportSaleEvents} from '../server/report-payments.mjs';
 import {validatePageContent} from '../server/page-content.mjs';
 import {memberIdMembershipSummary} from '../server/member-id-summary.mjs';
+import {registrationPaymentSummary} from '../server/registration-payment.mjs';
 import {themeIsValid,resolveTheme} from '../server/themes.mjs';
 import {validateBlockouts,isBlocked} from '../server/booking-blockouts.mjs';
 import {customRegistrationFields,validateRegistrationQuestions,validateStandardRegistration,publicRegistrationSettings} from '../server/registration-questions.mjs';
@@ -188,21 +189,23 @@ if(b.action==='registration_latest_status'){
  const requests=(await db().prepare('SELECT status,date,details,appointment_id FROM booking_requests WHERE owner_id=? ORDER BY created_at DESC LIMIT 500').bind(owner).all()).results as any[];
  const appointments=(await db().prepare('SELECT id,status,date,data FROM appointments WHERE owner=? ORDER BY date DESC LIMIT 500').bind(owner).all()).results as any[];
  const match=(d:any)=>String(d.memberNumber||'').trim().toUpperCase()===memberNumber;
- const results:{date:string;status:string}[]=[];
+ const results:{date:string;status:string;appointmentId?:string}[]=[];
  for(const r of requests){
   let d:any={};try{d=JSON.parse(r.details||'{}');}catch{}
   if(!match(d))continue;
   const a=appointments.find(x=>x.id===r.appointment_id);
-  results.push({date:a?.date||r.date,status:a?.status||({pending:'Awaiting approval',approved:'Confirmed',declined:'Declined',cancelled:'Cancelled'} as Record<string,string>)[r.status]||r.status});
+  results.push({date:a?.date||r.date,status:a?.status||({pending:'Awaiting approval',approved:'Confirmed',accepted:'Confirmed',declined:'Declined',cancelled:'Cancelled'} as Record<string,string>)[r.status]||r.status,appointmentId:a?.id});
  }
  for(const a of appointments){
   let d:any={};try{d=JSON.parse(a.data||'{}');}catch{}
   if(!match(d))continue;
-  if(!results.some(x=>x.date===a.date&&x.status===a.status))results.push({date:a.date,status:a.status});
+  if(!results.some(x=>x.appointmentId===a.id))results.push({date:a.date,status:a.status,appointmentId:a.id});
  }
  results.sort((a,b)=>b.date.localeCompare(a.date));
  const membership=await memberIdMembershipSummary(getPool(),owner,memberNumber);
- return reply({ok:true,latest:results[0]||null,membership});
+ const latest=results[0];
+ const payment=latest?(latest.appointmentId?await registrationPaymentSummary(getPool(),owner,latest.appointmentId):{state:latest.status==='Awaiting approval'?'awaiting_approval':'unavailable'}):null;
+ return reply({ok:true,latest:latest?{date:latest.date,status:latest.status}:null,membership,payment});
 }
 if(b.action==='verify_registration'){
  const reference=String(b.reference||'').trim(),email=String(b.email||'').trim().toLowerCase();

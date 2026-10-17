@@ -3,6 +3,7 @@ import {validOrigin,trustedOrigin,tokenHash} from '../../../../../server/securit
 import {stripeApi} from '../../../../../server/membership-payments.mjs';
 import {startBookingCheckout,applyBookingPayment,assertTestPayment} from '../../../../../server/stripe-checkout.mjs';
 import {bookingPaymentPreview} from '../../../../../server/booking-payment-preview.mjs';
+import {startRegistrationPayment} from '../../../../../server/registration-payment.mjs';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};
 export async function POST(req:Request){
@@ -14,6 +15,12 @@ export async function POST(req:Request){
   const limit=(await pool.query("INSERT INTO public_limits(key,count,window_start) VALUES($1,1,now()) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN 1 ELSE public_limits.count+1 END,window_start=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN now() ELSE public_limits.window_start END RETURNING count",['booking-checkout:'+tokenHash(ip)])).rows[0];
   if(limit.count>30)return Response.json({error:'Too many payment requests. Try again later.'},{status:429,headers});
   if(body.action==='preview')return Response.json(await bookingPaymentPreview(pool,body),{headers});
+  if(body.action==='registration'){
+   const key='registration-checkout:'+tokenHash(ip+':'+String(body.slug)+':'+String(body.memberNumber));
+   const tries=(await pool.query("INSERT INTO public_limits(key,count,window_start) VALUES($1,1,now()) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN 1 ELSE public_limits.count+1 END,window_start=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN now() ELSE public_limits.window_start END RETURNING count",[key])).rows[0];
+   if(tries.count>6)return Response.json({error:'Too many verification attempts. Try again later.'},{status:429,headers});
+   return Response.json(await startRegistrationPayment(pool,{...body,origin:trustedOrigin(req)}),{headers});
+  }
   return Response.json(await startBookingCheckout(getPool(),{...body,origin:trustedOrigin(req)}),{headers});
  }catch(e){return Response.json({error:(e as Error).message||'Unable to start payment.'},{status:400,headers});}
 }

@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Release source: v1.3.95 (2026-10-16 UTC), staging branch only.** A search-first homepage and clearer business discovery preserve SelahFlow forest, sage and cream. Shared mobile navigation separates customer and owner paths; URL-backed filters, accessible search feedback and direct booking cards use existing marketplace data. Production remains separate at v1.3.81.
+**Release source: v1.3.96 (2026-10-17 UTC), staging branch only.** Shared business navigation standardizes overview, booking and membership pages for every tenant while respecting their saved branding. Check My Registration retains membership and appointment details and adds payment status; approved payable bookings offer Make Payment with registration DOB verification before existing Stripe checkout. Production remains separate at v1.3.81.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 

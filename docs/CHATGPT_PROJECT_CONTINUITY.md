@@ -1,3 +1,9 @@
+# v1.3.96 release handoff — Consistent tenant navigation and status checkout (staging only)
+
+Shared BusinessNavigation now serves all business overview, booking and membership routes, with responsive customer actions and preserved per-tenant theme/name/header note. Check My Registration keeps existing membership and latest appointment fields and adds payment state. An approved, unpaid, non-covered booking for a ready Stripe merchant offers Make Payment. ID-only responses never contain private tokens, DOB or contacts; opening checkout requires the saved registration DOB and is throttled. Temporary checkout access is removed after the existing checkout helper returns; its approval, business, price, coverage and payment-idempotency checks remain authoritative. No migrations. Verify tests, exact Render LIVE commit and public UI before reporting deployed.
+
+Prior v1.3.95 verified LIVE: commit 68dda41faa9ffe4b806532c429a0b23238fb19d7, deploy dep-db98pgjncjis73d2obp0. Homepage Arcila search returned its business and clearing filters restored all five staging listings. Production remains v1.3.81; no promotion authorized.
+
 # v1.3.95 release handoff — Search-first public experience (staging only)
 
 The user's reference video inspired search-first navigation and distinct customer/owner paths, not copied branding. Homepage GET search and category links feed discovery URL filters. Shared responsive navigation, labeled inputs, result feedback, request cancellation, back/forward restoration, retry/clear actions and direct booking cards improve the existing marketplace. Retain SelahFlow forest/sage/cream and all tenant branding. No backend, database or payment changes. Verify checks and exact Render LIVE commit before reporting deployed.
