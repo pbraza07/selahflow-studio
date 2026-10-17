@@ -1,4 +1,6 @@
-# v1.3.98 release handoff — Customer and business pages (staging candidate)
+# v1.3.98 release handoff — Customer and business pages (staging LIVE)
+
+VERIFIED LIVE 2026-10-17 11:09:25 UTC: b623ed9f97083906b1347e2fc85cd4043c3fedd5, Render dep-db9ld08m7kps73dr3510. TypeScript, all 229 tests and build passed locally and on Render. Live desktop checks verified the neutral homepage, both audience pages, customer GET search returning Arcila Training, Professional benefit expansion and pricing navigation. Homepage screenshot reviewed; mobile layout/menu implemented but no new phone-device visual check. Production remains v1.3.97. This documentation-only handoff is not a new functional deployment.
 
 Homepage is a neutral entry point. /customers contains search and booking/registration help; /businesses contains benefits, shared plan catalog and revenue details. Desktop/mobile top navigation names both audiences, including discovery and pricing. New route slugs reserved. No migrations, billing, payment or provider changes. Verify checks and exact staging LIVE commit before reporting deployed. Production remains v1.3.97.
 

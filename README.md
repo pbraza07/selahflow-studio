@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Release source: v1.3.98 (2026-10-17 UTC), audience-specific public pages, staging candidate.** Homepage offers customer and business paths with explicit shared top links. Customers get search, booking and registration help; businesses get benefits, plans and revenue details. Production remains v1.3.97 until a separate promotion is verified.
+**Release source: v1.3.98 (2026-10-17 UTC), VERIFIED LIVE on staging.** Commit b623ed9f97083906b1347e2fc85cd4043c3fedd5, Render dep-db9ld08m7kps73dr3510, LIVE 11:09:25 UTC. Homepage offers customer and business paths with explicit shared top links. Customers get search, booking and registration help; businesses get benefits, plans and revenue details. TypeScript, 229 tests and production build passed; live audience links, customer search, business plan expansion and pricing navigation verified. Production remains v1.3.97.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 
