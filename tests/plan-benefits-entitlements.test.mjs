@@ -88,7 +88,7 @@ test('homepage no longer promotes one studio; both public pages use the same int
  assert.match(cards,/aria-expanded=\{opened\}/);
  assert.match(cards,/See all /);
  assert.match(cards,/plan\.included\.map/);
- assert.match(cards,/paid checkout not yet available/i);
+ assert.match(cards,/paid billing not active/i);
  assert.match(css,/\.planGrid\{/);
  assert.match(css,/@media\(max-width:650px\)/);
 });

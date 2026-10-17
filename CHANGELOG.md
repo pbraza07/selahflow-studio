@@ -1,3 +1,9 @@
+## v1.3.97 — Clear partner benefits and transparent revenue copy (staging only)
+
+- Homepage replaces redundant journey cards with three practical partner outcomes and expandable business examples. Existing search and client booking journeys are retained.
+- Plan cards use the unchanged entitlement catalog, with key limits visible and all benefits/limits expandable. Proposed paid billing remains clearly labeled.
+- Revenue section explains subscriptions, the proposed business-paid 10% first eligible completed/paid booking fee across all channels, repeat-visit exemption, a $100 example, future optional extras and separate processing costs. Explicitly states the commission is not being collected. Terms/refund/existing-client questions sit in optional details. No charging, entitlement, tenant or payment changes.
+
 ## v1.3.96 — Consistent business navigation and status payments (staging only)
 
 - One responsive business header connects overview, booking, memberships, registration status and owner sign-in across every existing and future business. Each tenant retains its name, branding and saved booking header note.
