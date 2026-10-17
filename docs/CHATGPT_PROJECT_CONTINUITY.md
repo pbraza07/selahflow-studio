@@ -1,3 +1,9 @@
+# v1.3.100 release handoff — Client booking receipts and attendance (staging candidate)
+
+All new client bookings queue a durable email in the same transaction as pending request or immediate appointment. Migration 041 adds booking_receipt_emails. Shared receipt builder includes ID, reference, date/time/team/service/price, active membership balance and tenant status/booking/membership links; shared instructions render on confirmation page. Paid approval/confirmation messages use this builder; free/covered approvals queue a no-payment-due receipt. Legacy Completed history remains; new owner API blocks it and only check-in/no-show debit credits. No production changes. Verify checks, delivery test boundaries and exact staging LIVE commit.
+
+Verified prior branding release v1.3.99: 52e1ed1844c0b4d2753ba8c7cfbf3c91cdaaea2e, Render dep-db9loe7avr4c73ei7k5g LIVE 2026-10-17 11:33:49 UTC. All 231 tests, TypeScript and build passed. Live homepage new logo/art loaded and screenshot reviewed. No real email/inbox verification performed.
+
 # v1.3.99 release handoff — Logo art and email identity (staging candidate)
 
 User supplied a logo sheet and circled old simplified mark. Image skill prepared transparent primary logo and compact app icon; optimized PNG/SVG compatibility assets share that identity. Headers, footers, home emblem, owner/admin/login/review/status pages and tenant powered-by signatures updated; business logos/themes retained. HTML renderer escapes client values and linkifies HTTPS only. Gmail multipart related/alternative embeds PNG; Resend adds HTML/CID attachment. Plain text, private payment fragments, provider authorization, recipient guards and delivery logic preserved. No messages or payments performed. Verify required checks and exact staging LIVE commit. Production remains v1.3.97.

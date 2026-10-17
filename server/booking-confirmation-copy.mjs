@@ -1,0 +1,3 @@
+export function bookingConfirmationInstructions(pending){return pending
+ ?'Your booking is a request only. The requested time is not held and your appointment is not confirmed until the business accepts it. Use Check registration on the booking page with your Membership ID to check approval. You can also select your session on the calendar and check the confirmed participant list, when available. Saving a calendar reminder does not approve a booking or reserve a seat.'
+ :'Your booking has been approved. Save your Membership ID and booking details. Use Check registration on the booking page to review your appointment, membership and payment status. Contact the business to change or cancel your visit.';}

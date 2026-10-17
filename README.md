@@ -1,6 +1,6 @@
 # SelahFlow — current production and project continuity
 
-**Release source: v1.3.99 (2026-10-17 UTC), brand artwork and email templates, staging candidate.** Supplied flowing S/gold-pause identity replaces simplified platform marks across shared headers, footers, app and notification icons. Branded HTML emails retain plain text and private links with inline PNG logos. Business branding, provider configuration and payment behavior preserved. Production remains v1.3.97.
+**Release source: v1.3.100 (2026-10-17 UTC), client booking receipts and owner attendance, staging candidate.** Submission emails are queued atomically with pending or immediate bookings. Approval/payment emails include booking IDs, active membership balances and business booking/membership links. Check in and No-show are the attendance actions; legacy Completed history is retained without new credit deductions. Migration 041 adds a durable email outbox. Branding v1.3.99 was verified LIVE on staging; production remains v1.3.97.
 
 **For all future ChatGPT conversations and software changes, start with [AGENTS.md](AGENTS.md) and [docs/CHATGPT_PROJECT_CONTINUITY.md](docs/CHATGPT_PROJECT_CONTINUITY.md).** Keep plan benefits, session rosters, booking capacity, recurring schedules, client histories, owner settings, admin security and business data intact. Feature changes apply to **all current and future businesses** unless specifically scoped by the user. Each new functional release increments the patch number, and `VERSION` must equal `package.json`.
 

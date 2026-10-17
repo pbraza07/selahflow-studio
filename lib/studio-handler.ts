@@ -1,3 +1,4 @@
+import {queueBookingReceipt} from '../server/booking-receipts.mjs';
 import {issueMemberId} from '../server/member-id-policy.mjs';
 import {loadMembershipReportPayments,reportSaleEvents} from '../server/report-payments.mjs';
 import {validatePageContent} from '../server/page-content.mjs';
@@ -352,19 +353,25 @@ const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.ran
   const business=await db().prepare("SELECT id FROM businesses WHERE owner_id=? AND status='active'").bind(owner).first<{id:string}>();
   if(!business)return reply({error:'Business is not active.'},403);
   const details={membershipCovered,membershipCreditAllowed,paymentLines:data.paymentLines,memberNumber:issuedMemberNumber,firstName:String(b.firstName||'').trim(),lastName:String(b.lastName||'').trim(),dateOfBirth:String(b.dateOfBirth||''),...bookingRequestDetail({services,staff:b.staff,date:b.date,start:b.start,duration,buffer:config.buffer,name:b.name,email:b.email,phone:String(b.phone||''),price:data.price,reviewer:approval.reviewer}),customAnswers,customFieldLabels:data.customFieldLabels,customFieldTypes:data.customFieldTypes,policyAccepted:true,policyAcceptedAt:data.policyAcceptedAt,sessionId:bookedSession?.id||null};
+  let bookingReceipt:any=null;
+  const submissionClient=await getPool().connect();
   try{
-   await db().prepare("INSERT INTO booking_requests(id,business_id,owner_id,date,staff_id,start_minute,duration,details,reviewer) VALUES(?,?,?,?,?,?,?,?,?)").bind(id,business.id,owner,b.date,b.staff,b.start,duration,JSON.stringify(details),approval.reviewer).first();
-  }catch(error){if((error as {code?:string}).code!=='23505')throw error;return reply({ok:true,id,pending:true});}
+   await submissionClient.query('BEGIN');
+   await submissionClient.query('INSERT INTO booking_requests(id,business_id,owner_id,date,staff_id,start_minute,duration,details,reviewer) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',[id,business.id,owner,b.date,b.staff,b.start,duration,JSON.stringify(details),approval.reviewer]);
+   bookingReceipt=await queueBookingReceipt(submissionClient,{owner,bookingId:id,date:b.date,start:b.start,duration,staff:b.staff,data,origin:trustedOrigin(req),pending:true});
+   await submissionClient.query('COMMIT');
+  }catch(error){await submissionClient.query('ROLLBACK');if((error as {code?:string}).code!=='23505')throw error;return reply({ok:true,id,pending:true});}finally{submissionClient.release();}
   try{await pushBookingRequest(id);}catch(e){console.error('Web Push dispatch failed for request',id);}
   let delivery:any={email:'not_requested',sms:'not_requested'};
   try{delivery=await notifyBookingRequest({requestId:id,origin:trustedOrigin(req)});}
   catch(error){console.error('Booking notification dispatch error for request',id);delivery={email:config.bookingNotifyEmail===true?'failed':'not_requested',sms:config.bookingNotifySms===true?'failed':'not_requested'};}
-  return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:true,status:'pending',chargedPrice:data.price,membershipCovered,notificationDelivery:delivery,message:'Booking request received, awaiting approval. The appointment is not confirmed until accepted.'});
+  return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:true,status:'pending',chargedPrice:data.price,membershipCovered,bookingReceipt,clientReceiptEmail:'queued',notificationDelivery:delivery,message:'Booking request received, awaiting approval. The appointment is not confirmed until accepted.'});
  }
- try{await confirmBooking({owner,services,staff:b.staff,date:b.date,start:b.start,duration,buffer:config.buffer,id,data});}
+ let bookingReceipt:any=null;
+ try{const confirmed=await confirmBooking({owner,services,staff:b.staff,date:b.date,start:b.start,duration,buffer:config.buffer,id,data,submissionOrigin:isPublic?trustedOrigin(req):null});bookingReceipt=(confirmed as any).bookingReceipt||null;}
  catch(error){return reply({error:(error as Error).message},(error as {status?:number}).status||409);}
  await db().batch([audit('booking',{appointment:id})]);
- return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:false,status:'confirmed',chargedPrice:data.price,membershipCovered});}
+ return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:false,status:'confirmed',chargedPrice:data.price,membershipCovered,bookingReceipt,clientReceiptEmail:bookingReceipt?'queued':null});}
 if(b.action==='deleteAppointments'){
  if(isPublic)return reply({error:'Not permitted.'},403);
  const ids=Array.isArray(b.ids)?b.ids:[];
@@ -387,7 +394,7 @@ if(b.action==='deleteAppointments'){
  }catch(error){await client.query('ROLLBACK');return reply({error:(error as Error).message},409);}finally{client.release();}
 }
 if(b.action==='status'){
- if(!['Checked in','Completed','Cancelled','No-show'].includes(b.status))throw Error('Invalid status');
+ if(!['Checked in','Cancelled','No-show'].includes(b.status))throw Error('Invalid status');
  if(typeof b.id!=='string'||!b.id)throw Error('Invalid appointment.');
  const client=await getPool().connect();
  try{

@@ -1,5 +1,6 @@
 import {isBlocked} from './booking-blockouts.mjs';
 import {queueApprovedBooking} from './booking-client-notifications.mjs';
+import {queueBookingReceipt} from './booking-receipts.mjs';
 
 import {getPool} from './database.mjs';
 import {appointmentData,bookedSessionCount,selectedSession,sessionsForDate} from './session-scheduling.mjs';
@@ -88,8 +89,9 @@ export async function confirmBooking(options){
    "UPDATE booking_requests SET status='accepted',appointment_id=$1,reviewed_by=$2,reviewed_at=now() WHERE id=$3",
    [id,data.reviewedBy||'owner',pendingId]);
   if(pendingId&&options.notificationOrigin)await queueApprovedBooking(client,{bookingId:id,requestId:pendingId,origin:options.notificationOrigin});
+  const bookingReceipt=options.submissionOrigin?await queueBookingReceipt(client,{owner,bookingId:id,date,start,duration,staff,data,origin:options.submissionOrigin,pending:false}):null;
   await client.query('COMMIT');
-  return {id,duplicate:false,sessionId:session?.id||null};
+  return {id,duplicate:false,sessionId:session?.id||null,bookingReceipt};
  }catch(e){
   await client.query('ROLLBACK');
   if(e.code==='23505')throw conflict('That time was booked by another customer. Choose another time.');

@@ -1,0 +1,6 @@
+import {bookingConfirmationInstructions} from '../../server/booking-confirmation-copy.mjs';
+export default function BookingReceiptDetails({receipt,pending}:{receipt:any;pending:boolean}){
+ if(!receipt)return null;
+ const membership=receipt.membership;
+ return <section className="sf-booking-receipt" aria-label="Booking receipt and next steps"><h3>{pending?'What happens next?':'Your visit, at a glance'}</h3><p>{bookingConfirmationInstructions(pending)}</p><p className="sf-receipt-email">Your confirmation email is queued for the email address you provided. Check your inbox and spam folder.</p>{membership&&<div className="sf-receipt-membership"><strong>{membership.name} · Active membership</strong><p>Membership type: {membership.type}</p><dl><div><dt>Sessions left</dt><dd>{membership.sessionsLeft}</dd></div><div><dt>Sessions taken / used</dt><dd>{membership.sessionsUsed}</dd></div></dl><small>Sessions used include check-ins and no-shows. Booking alone does not deduct a session. Balances shown at submission.</small></div>}<nav aria-label="Booking next steps"><a className="outline" href={receipt.links.status}>Check registration &amp; membership details</a><a className="outline" href={receipt.links.membership}>Explore memberships &amp; sign up</a><a className="outline" href={receipt.links.booking}>View booking calendar</a></nav></section>;
+}
