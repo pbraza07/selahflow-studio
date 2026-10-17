@@ -1,3 +1,9 @@
+## v1.3.102 — Client email rollout and legacy registration replacement (staging)
+
+- Explicit prospective client-email cutoff permits new booking, approval/payment-link and verified-payment confirmation emails to their submitted addresses. Historical queue jobs stay restricted unless an owner explicitly retries that booking; owner alerts and SMS retain existing restrictions.
+- Owner-confirmed replacement of legacy registration IDs issues six characters, updates current registration/membership references and retains the old reserved ID, historical bookings, payments and session ledgers. Returning registration prefers the new valid ID. Tenant identity and stale-record checks remain enforced.
+- No production changes. Verify exact staging deployment and provider acceptance separately from inbox delivery.
+
 ## v1.3.101 — Organized history tabs (staging)
 
 - Dedicated owner History view with All activity, Bookings, Sessions & attendance, Payments, Memberships and Email & SMS tabs; searchable clients/IDs, date range, stable pagination and collapsed details.

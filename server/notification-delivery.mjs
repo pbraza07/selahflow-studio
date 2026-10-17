@@ -34,8 +34,8 @@ export function notificationMessage({businessName,request,link}){
  const summary=`New booking request — ${safeValue(businessName)}\nCustomer: ${safeValue(d.customerName)}\nServices: ${(d.services||[]).map(safeValue).join(', ')}\nDate: ${safeValue(request.date)} at ${timeOf(request.start_minute)}\nDuration: ${request.duration} minutes\nCustomer email: ${safeValue(d.customerEmail)}\nCustomer phone: ${safeValue(d.customerPhone||'Not supplied')}\nQuoted price: $${Number(d.quotedPrice||0).toFixed(2)}\n\nReview request: ${link}\n\nOpening this link does not accept or decline automatically. Select an action and confirm on the review page. Link expires in 72 hours. If the time becomes unavailable, acceptance will be blocked.`;
  return {subject:`SelahFlow: Booking approval needed — ${safeValue(businessName)}`,text:summary,sms:`SelahFlow ${safeValue(businessName)}: ${safeValue(d.customerName)}, ${safeValue(request.date)} ${timeOf(request.start_minute)}, ${(d.services||[]).map(safeValue).join('+').slice(0,65)}. Review Accept/Decline: ${link}`};
 }
-export async function sendNotificationChannel(channel,destination,message,env=process.env,fetcher=fetch){
- if(!stagingNotificationAllowed(channel,destination,env))return {status:'not_configured',detail:'External staging notifications are disabled for this recipient'};
+export async function sendNotificationChannel(channel,destination,message,env=process.env,fetcher=fetch,context={}){
+ if(!stagingNotificationAllowed(channel,destination,env,context))return {status:'not_configured',detail:'External staging notifications are disabled for this recipient'};
  if(channel==='email'&&selectedEmailProvider(env)==='gmail'){
   if(!validEmail(destination))return {status:'invalid_destination',detail:'Invalid recipient'};
   try{return await sendGmail(destination,message,env,fetcher);}catch{return {status:'not_configured',detail:'Gmail connection is unavailable; contact the platform administrator'};}

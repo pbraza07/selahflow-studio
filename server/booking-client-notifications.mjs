@@ -60,7 +60,7 @@ export async function processClientMessages(pool=getPool(),{send=sendNotificatio
    if(!state||item.event_type==='payment_link'&&(state.appointment_status==='Cancelled'||state.payment_status==='paid'||new Date(state.expires_at)<=new Date()))result={status:'superseded',detail:'Booking cancelled, paid, or link expired'};
    else if(item.channel==='email'?!validEmail(item.destination):!validE164(item.destination))result={status:'invalid_destination',detail:item.channel==='sms'?'Registration phone missing or invalid; use +country code and number':'Registration email missing or invalid'};
    else if(item.event_type==='payment_link'&&(!paymentConfigured()||!state.charges_enabled||!state.onboarding_complete))result={status:'not_configured',detail:'Connect and enable Stripe payments for this business'};
-   else result=await send(item.channel,item.destination,{...dataOf(item.message),idempotencyKey:'client-message-'+item.id,trackAmbiguous:true});
+   else result=await send(item.channel,item.destination,{...dataOf(item.message),idempotencyKey:'client-message-'+item.id,trackAmbiguous:true},undefined,undefined,{kind:'transactional-client',queuedAt:item.client_delivery_authorized_at||item.created_at});
    await pool.query("UPDATE booking_client_messages SET status=$1,detail=$2,attempts=attempts+CASE WHEN $1='failed' THEN 1 ELSE 0 END,next_attempt_at=now()+interval '5 minutes',updated_at=now() WHERE id=$3 AND status='processing'",[result.status,result.detail,item.id]);
   }catch{
    await pool.query("UPDATE booking_client_messages SET status='unknown',detail='Delivery outcome unknown; check provider before resending',updated_at=now() WHERE id=$1 AND status='processing'",[item.id]);
@@ -74,8 +74,8 @@ export async function listClientMessages(pool,owner){
  return [...payments,...receipts].sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at)).slice(0,200);
 }
 export async function retryClientMessages(pool,owner,bookingId){
- const result=await pool.query("UPDATE booking_client_messages m SET status='queued',attempts=0,next_attempt_at=now(),updated_at=now() FROM booking_client_flows f JOIN businesses b ON b.id=f.business_id WHERE m.booking_id=f.booking_id AND b.owner_id=$1 AND b.status='active' AND f.booking_id=$2 AND m.status IN ('failed','not_configured') AND m.updated_at<now()-interval '1 minute' RETURNING m.id",[owner,bookingId]);
- const receipts=await pool.query("UPDATE booking_receipt_emails m SET status='queued',attempts=0,next_attempt_at=now(),updated_at=now() FROM businesses b WHERE m.business_id=b.id AND b.owner_id=$1 AND b.status='active' AND m.booking_key=$2 AND m.status IN ('failed','not_configured') AND m.updated_at<now()-interval '1 minute' RETURNING m.booking_key",[owner,bookingId]);
+ const result=await pool.query("UPDATE booking_client_messages m SET status='queued',attempts=0,next_attempt_at=now(),updated_at=now(),client_delivery_authorized_at=now() FROM booking_client_flows f JOIN businesses b ON b.id=f.business_id WHERE m.booking_id=f.booking_id AND b.owner_id=$1 AND b.status='active' AND f.booking_id=$2 AND m.status IN ('failed','not_configured') AND m.updated_at<now()-interval '1 minute' RETURNING m.id",[owner,bookingId]);
+ const receipts=await pool.query("UPDATE booking_receipt_emails m SET status='queued',attempts=0,next_attempt_at=now(),updated_at=now(),client_delivery_authorized_at=now() FROM businesses b WHERE m.business_id=b.id AND b.owner_id=$1 AND b.status='active' AND m.booking_key=$2 AND m.status IN ('failed','not_configured') AND m.updated_at<now()-interval '1 minute' RETURNING m.booking_key",[owner,bookingId]);
  return {ok:true,queued:result.rowCount+receipts.rowCount};
 }
 let started=false,busy=false;

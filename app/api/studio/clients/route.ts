@@ -1,4 +1,5 @@
 import {issueMemberId} from '../../../../server/member-id-policy.mjs';
+import {replaceLegacyMemberId} from '../../../../server/replace-legacy-member-id.mjs';
 import {randomUUID} from 'node:crypto';
 import {getPool} from '../../../../server/database.mjs';
 import {requireOwner} from '../../../../lib/auth';
@@ -104,7 +105,7 @@ export async function POST(req:Request){
   raw=await req.text();
   if(raw.length>5000)throw Error('Client request exceeds the allowed size.');
   const body=JSON.parse(raw);
-  if(!['create','update','archive','restore','deleteArchived'].includes(body?.action))throw Error('Invalid client action.');
+  if(!['create','update','archive','restore','deleteArchived','replaceLegacyId'].includes(body?.action))throw Error('Invalid client action.');
   const owner=await requireOwner(req),pool=getPool(),db=await pool.connect();
   try{
    await db.query('BEGIN');
@@ -118,7 +119,11 @@ export async function POST(req:Request){
    const profile=validId(id)?result.profiles.find(p=>p.id===id):null;
    const client=selected||archived;
    let responseId=id;
-   if(body.action==='create'||body.action==='update'){
+   if(body.action==='replaceLegacyId'){
+    if(!selected||body.oldMemberNumber!==selected.memberNumber)throw Error('This registration changed. Refresh before continuing.');
+    const replacement=await replaceLegacyMemberId(db,{owner,businessId:business.id,client:selected});
+    await db.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'member_id_replaced',$4)",[randomUUID(),owner,new Date().toISOString(),JSON.stringify(replacement)]);
+   }else if(body.action==='create'||body.action==='update'){
     if(body.action==='update'&&!selected)throw Error('This client was changed or no longer exists. Refresh your directory.');
     validateStandardRegistration(settings,'booking',body);
     const input=validateClientInput({...body,name:(String(body.firstName||'').trim()+' '+String(body.lastName||'').trim()).trim()});

@@ -44,7 +44,9 @@ export async function loadOwnerHistory(db,owner,filters={}){
  for(const m of receipts)addMessage(m,'receipt:'+m.booking_key+':'+m.event_type,bookings.get(m.booking_key));
  for(const m of attempts)addMessage(m,'attempt:'+m.id,bookings.get(m.request_id));
  const q=String(filters.q||'').trim().toLowerCase().slice(0,100),category=HISTORY_CATEGORIES.includes(filters.category)?filters.category:'all';
- const scoped=rows.filter(r=>(!filters.member||r.memberNumber===filters.member)&&(!filters.clientEmail||r.email.toLowerCase()===filters.clientEmail.toLowerCase())&&(!filters.clientName||r.client.toLowerCase()===filters.clientName.toLowerCase()));
+ const aliases=new Set([filters.member]);
+ if(filters.member)for(const r of (await db.query('SELECT member_number FROM business_member_ids WHERE business_id=$1 AND identity_key=(SELECT identity_key FROM business_member_ids WHERE business_id=$1 AND member_number=$2)',[business.id,filters.member])).rows)aliases.add(r.member_number);
+ const scoped=rows.filter(r=>(!filters.member||aliases.has(r.memberNumber))&&(!filters.clientEmail||r.email.toLowerCase()===filters.clientEmail.toLowerCase())&&(!filters.clientName||r.client.toLowerCase()===filters.clientName.toLowerCase()));
  const matching=scoped.filter(r=>(!filters.from||r.date>=filters.from)&&(!filters.to||r.date<=filters.to)&&(!q||[r.client,r.memberNumber,r.email,r.title,r.status,r.reference,...r.details].join(' ').toLowerCase().includes(q)));
  const counts=Object.fromEntries(HISTORY_CATEGORIES.map(c=>[c,matching.filter(r=>c==='all'||r.category===c||c==='sessions'&&r.session).length]));
  const filtered=matching.filter(r=>category==='all'||r.category===category||category==='sessions'&&r.session).sort((a,b)=>b.order.localeCompare(a.order)||a.id.localeCompare(b.id));

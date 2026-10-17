@@ -85,6 +85,12 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
  async function removeClient(client:Client){
   setRemoving(client);
  }
+ async function replaceLegacyId(client:Client){
+  if(!window.confirm('Replace this legacy registration ID with a new six-character ID? Current registration and membership will use the new ID. Historical bookings, payments and attendance remain unchanged; the old ID stays reserved.'))return;
+  setActionBusy(client.id);setActionError('');
+  try{await postClient('replaceLegacyId',{clientId:client.id,oldMemberNumber:client.memberNumber});await reload();}
+  catch(error){setActionError((error as Error).message);}finally{setActionBusy('');}
+ }
  async function confirmRemoveClient(){
   const client=removing;
   if(!client)return;
@@ -148,6 +154,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
      <button type="button" className="outline" onClick={()=>beginEdit(selected)}><Pencil size={16}/> Edit client</button><button type="button" className="outline" onClick={()=>onAddMembership({name:selected.name,email:selected.email,phone:selected.phone})}>Add membership</button>
      <a className="primary sf-clients-export" href={exported(selected.id)}><Download size={16}/> Export this client to Excel</a>
      <button type="button" className="outline sf-client-remove" disabled={!!actionBusy} onClick={()=>void removeClient(selected)}><Trash2 size={16}/> Remove client</button>
+     {selected.memberNumber&&!/^[A-Z]{2}[0-9]{4}$/.test(selected.memberNumber)&&<button type="button" className="outline" disabled={!!actionBusy} onClick={()=>void replaceLegacyId(selected)}>Replace legacy ID with six characters</button>}
     </div>
    </div>
    <div className="sf-client-profile-tabs" role="group" aria-label="Client profile sections">{['History','Details','Membership','Sessions'].map(tab=><button type="button" key={tab} className={profileTab===tab?'primary':'outline'} aria-pressed={profileTab===tab} onClick={()=>setProfileTab(tab)}>{tab}</button>)}</div>
