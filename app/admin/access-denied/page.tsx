@@ -9,7 +9,7 @@ export default function PlatformAccessDenied(){
  if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(d.error||'Could not sign out.');}
  window.location.assign('/login?next=%2Fadmin%2Fplatform');
  }catch(e){setError((e as Error).message);setBusy(false);}}
- return <main className={styles.shell}><header className={styles.top}><Link className={styles.brand} href="/"><img src="/brand/logo.svg" width="220" height="55" alt="SelahFlow"/></Link></header>
+ return <main className={styles.shell}><header className={styles.top}><Link className={styles.brand} href="/"><img src="/brand/logo.svg?v=1.3.99" width="220" height="55" alt="SelahFlow"/></Link></header>
  <section className={styles.hero}><h1>Platform administration requires an administrator account</h1>
  <p>The signed-in account does not have the platform administrator role. This is a protected page; business-owner accounts cannot access administrator information.</p></section>
  <section className={styles.card} style={{maxWidth:740}}>

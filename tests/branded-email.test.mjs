@@ -1,0 +1,33 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {brandedEmailHtml,emailLogo,resendBrand} from '../server/branded-email.mjs';
+import {gmailMime} from '../server/gmail-delivery.mjs';
+const link='https://staging.example/payment/test#booking_id=fixture&token=private-fixture';
+const message={subject:'Payment approved — <Business>',text:'Hello <script>alert(1)</script> & client\nPay securely: '+link+'\nDo not forward it.'};
+test('branded email escapes client text and retains private HTTPS payment fragments',()=>{
+ const html=brandedEmailHtml(message);
+ assert.ok(html.includes('cid:selahflow-logo'));
+ assert.ok(html.includes('Payment approved — &lt;Business&gt;'));
+ assert.ok(html.includes('&lt;script&gt;alert(1)&lt;/script&gt; &amp; client'));
+ assert.ok(html.includes('href="'+link.replaceAll('&','&amp;')+'"'));
+ assert.doesNotMatch(html,/<script>|javascript:|<img[^>]+src="https?:/);
+ assert.ok(brandedEmailHtml({text:'javascript:alert(1)'}).includes('javascript:alert(1)'));
+ assert.doesNotMatch(brandedEmailHtml({text:'javascript:alert(1)'}),/href="javascript:/);
+});
+test('Gmail contains original plain text, escaped HTML and a matching inline PNG logo',()=>{
+ const mime=Buffer.from(gmailMime('sender@gmail.com','client@example.test',message),'base64url').toString();
+ assert.match(mime,/Content-Type: multipart\/related/);
+ assert.match(mime,/Content-Type: multipart\/alternative/);
+ const parts=[...mime.matchAll(/Content-Type: (text\/plain|text\/html|image\/png)[^\r]*\r\n[\s\S]*?\r\n\r\n([A-Za-z0-9+/=\r\n]+?)\r\n--/g)];
+ assert.equal(parts.length,3);
+ assert.equal(Buffer.from(parts[0][2].replace(/\s/g,''),'base64').toString(),message.text);
+ assert.equal(Buffer.from(parts[1][2].replace(/\s/g,''),'base64').toString(),brandedEmailHtml(message));
+ assert.deepEqual(Buffer.from(parts[2][2].replace(/\s/g,''),'base64'),emailLogo());
+ assert.match(mime,/Content-ID: <selahflow-logo>/);
+ assert.match(mime,/Content-Disposition: inline;/);
+ assert.deepEqual([...emailLogo().subarray(0,8)],[137,80,78,71,13,10,26,10]);
+ const resend=resendBrand(message);
+ assert.equal(resend.html,brandedEmailHtml(message));
+ assert.equal(resend.attachments[0].content_id,'selahflow-logo');
+ assert.deepEqual(Buffer.from(resend.attachments[0].content,'base64'),emailLogo());
+});

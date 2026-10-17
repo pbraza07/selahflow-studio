@@ -1,0 +1,1 @@
+export default function PoweredBySelahFlow(){return <a className="sf-powered-by" href="/" aria-label="Powered by SelahFlow"><img src="/brand/app-icon.png?v=1.3.99" alt="" width="32" height="32"/><span>Powered by <strong>SelahFlow</strong></span></a>;}

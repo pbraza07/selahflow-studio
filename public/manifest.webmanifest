@@ -10,10 +10,10 @@
   "theme_color": "#123F3A",
   "icons": [
     {
-      "src": "/brand/app-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/brand/app-icon.png?v=1.3.99",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

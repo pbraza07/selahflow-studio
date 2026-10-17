@@ -1,4 +1,6 @@
 'use client';
+import PoweredBySelahFlow from '../../components/powered-by-selahflow';
+
 import {useEffect,useState} from 'react';
 import BookingPayment from '../../components/booking-payment';
 import BusinessNavigation from '../../components/business-navigation';
@@ -37,5 +39,5 @@ export default function PaymentReturn(){
   {['unavailable','pending','checking'].includes(status)&&<button className="outline" onClick={()=>{setStatus('checking');setRetry(v=>v+1);}}>Check payment status</button>}
   {['ready','cancelled','expired'].includes(status)&&access&&<BookingPayment slug={slug} id={access.bookingId} token={access.token}/>}
   <p><a href={'/book/'+slug+'#registration-status'}>Check registration &amp; membership</a></p><small>No card details are stored in SelahFlow.</small>
- </main></div>;
+ </main><PoweredBySelahFlow/></div>;
 }

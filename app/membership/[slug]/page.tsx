@@ -1,4 +1,6 @@
 'use client';
+import PoweredBySelahFlow from '../../components/powered-by-selahflow';
+
 import BusinessNavigation from '../../components/business-navigation';
 import RegistrationFields from '../../components/registration-fields';
 import MembershipBadge,{type MembershipBadgeDesign} from '../../components/membership-badge';
@@ -108,5 +110,6 @@ export default function MembershipEnrollment(){
     </>}
    </section>
   </main>
+  <PoweredBySelahFlow/>
  </div>;
 }

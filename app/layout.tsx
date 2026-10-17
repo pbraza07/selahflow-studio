@@ -9,8 +9,9 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'SelahFlow' },
   icons: {
-    icon: [{ url: "/brand/app-icon.svg?v=1.3.11", type: "image/svg+xml" }],
-    shortcut: "/brand/app-icon.svg?v=1.3.11",
+    icon: [{ url: "/brand/app-icon.svg?v=1.3.99", type: "image/svg+xml" }],
+    shortcut: "/brand/app-icon.png?v=1.3.99",
+    apple: [{url:"/brand/apple-touch-icon.png?v=1.3.99",sizes:"180x180",type:"image/png"}],
   },
 };
 

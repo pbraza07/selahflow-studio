@@ -4,6 +4,7 @@ import {getPool} from './database.mjs';
 import {tokenHash} from './security.mjs';
 import {isStaging,stagingNotificationAllowed} from './staging-safety.mjs';
 import {gmailStatus,sendGmail,selectedEmailProvider} from './gmail-delivery.mjs';
+import {resendBrand} from './branded-email.mjs';
 export const validEmail=x=>typeof x==='string'&&x.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x);
 export const validE164=x=>typeof x==='string'&&/^\+[1-9]\d{7,14}$/.test(x);
 export function deliveryProviderStatus(env=process.env){
@@ -45,7 +46,7 @@ export async function sendNotificationChannel(channel,destination,message,env=pr
  if(channel==='email'&&!validEmail(destination)||channel==='sms'&&!validE164(destination))return {status:'invalid_destination',detail:'Invalid recipient'};
  try{
   if(channel==='email'){
-   const result=await fetcher('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','User-Agent':'SelahFlow/1.3.87',...(message.idempotencyKey?{'Idempotency-Key':message.idempotencyKey}:{})},body:JSON.stringify({from:env.RESEND_FROM_EMAIL,to:[destination],subject:message.subject,text:message.text}),signal:AbortSignal.timeout(7500)});
+   const result=await fetcher('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','User-Agent':'SelahFlow/1.3.87',...(message.idempotencyKey?{'Idempotency-Key':message.idempotencyKey}:{})},body:JSON.stringify({from:env.RESEND_FROM_EMAIL,to:[destination],subject:message.subject,text:message.text,...resendBrand(message)}),signal:AbortSignal.timeout(7500)});
    if(!result.ok)return {status:message.trackAmbiguous&&result.status>=500?'unknown':'failed',detail:'Email provider rejected request (HTTP '+result.status+')'};
    return {status:'submitted',detail:'Accepted by email provider'};
   }

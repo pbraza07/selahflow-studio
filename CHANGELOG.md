@@ -1,3 +1,8 @@
+## v1.3.99 — SelahFlow logo artwork and branded email (staging)
+
+- Supplied flowing S, sage ribbon and gold pause identity replaces platform marks across shared headers, footers, homepage, owner/admin/login/review pages and app/push icons. Business-owned logos preserved.
+- Shared HTML email branding covers approval, membership, payment and verification messages. Plain text, private links, staging recipient restrictions and delivery state retained. Gmail MIME embeds PNG; Resend uses HTML and a CID attachment. No actual client messages or charges performed.
+
 ## v1.3.98 — Separate customer and business pages (staging)
 
 - Clear two-audience homepage. Customer search and registration help at /customers; partner benefits, plans and revenue at /businesses.
