@@ -1,3 +1,9 @@
+## v1.3.101 — Organized history tabs (staging)
+
+- Dedicated owner History view with All activity, Bookings, Sessions & attendance, Payments, Memberships and Email & SMS tabs; searchable clients/IDs, date range, stable pagination and collapsed details.
+- Client profiles separate History, Details, Membership and Sessions. Long message history no longer clutters Overview and Calendar; pending approvals remain there. Safe message retries remain in history details.
+- Owner-scoped retained source data separates quotes from verified/recorded payments, reconciles membership audit/ledger copies and masks message destinations. No fabricated delivery attempts, private email bodies, payment URLs or provider secrets returned. No data rewriting or billing changes.
+
 ## v1.3.100 — Booking lifecycle email and attendance choices (staging)
 
 - Remove Complete from owner calendars; owner status API accepts check-in, no-show and cancellation. Only check-in/no-show debit membership sessions, once per appointment; legacy history retained.

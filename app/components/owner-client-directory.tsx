@@ -1,4 +1,5 @@
 'use client';
+import OwnerHistory from './owner-history';
 import SortableTable from './sortable-table';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowLeft,CalendarDays,CheckCircle2,ChevronRight,Download,Upload,RefreshCw,Search,Users,UserPlus,Pencil,Trash2,RotateCcw,ArchiveRestore} from 'lucide-react';
@@ -36,6 +37,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
  const [registrationConfig,setRegistrationConfig]=useState<any>({});
  const [membershipLevel,setMembershipLevel]=useState(''),[filterField,setFilterField]=useState(''),[filterValue,setFilterValue]=useState('');
  const [attendedOnly,setAttendedOnly]=useState(false);
+ const [profileTab,setProfileTab]=useState('History');
  const [archived,setArchived]=useState<{id:string;name:string;email:string;phone:string}[]>([]);
  const [editing,setEditing]=useState<Client|'new'|null>(null),[saving,setSaving]=useState(false),[editError,setEditError]=useState('');
  const [removedSelection,setRemovedSelection]=useState<string[]>([]);
@@ -148,12 +150,13 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
      <button type="button" className="outline sf-client-remove" disabled={!!actionBusy} onClick={()=>void removeClient(selected)}><Trash2 size={16}/> Remove client</button>
     </div>
    </div>
+   <div className="sf-client-profile-tabs" role="group" aria-label="Client profile sections">{['History','Details','Membership','Sessions'].map(tab=><button type="button" key={tab} className={profileTab===tab?'primary':'outline'} aria-pressed={profileTab===tab} onClick={()=>setProfileTab(tab)}>{tab}</button>)}</div>
    <article className="sf-client-profile">
     <div className="sf-client-profile-heading"><span className="sf-client-avatar" aria-hidden="true">{selected.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span>
      <div><h3 style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>{selected.name}<MembershipBadge memberNumber={selected.memberNumber} membershipName={selected.membershipName} membershipStatus={selected.membershipStatus} sessionsIncluded={selected.membershipDetails?.sessionsIncluded} sessionsUsed={selected.membershipDetails?.sessionsUsed} badge={selected.membershipBadge}/></h3><p>{selected.email||'No email recorded'}{selected.phone?' · '+selected.phone:''}</p>
       <span className="sf-client-profile-note">Service history and attendance for this business only</span></div>
     </div>
-    <section className="sf-client-first-booking sf-client-registration-overview">
+    <section hidden={profileTab!=='Details'} className="sf-client-first-booking sf-client-registration-overview">
      <div className="sf-client-history-heading"><h3>Client information & registration</h3><small>Current client record, including original registration details when available</small></div>
      <div className="sf-client-first-details">
       <div><small>Full name</small><b>{selected.name}</b></div>
@@ -167,7 +170,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
       <div><small>Membership status</small><b>{membershipDisplayStatus({status:selected.membershipStatus,sessionsIncluded:selected.membershipDetails?.sessionsIncluded,sessionsUsed:selected.membershipDetails?.sessionsUsed}).replaceAll('_',' ')}</b></div>
      </div>
     </section>
-    {selected.membershipName&&<section className="sf-client-first-booking sf-client-membership-registration">
+    {selected.membershipName&&<section hidden={profileTab!=='Membership'} className="sf-client-first-booking sf-client-membership-registration">
      <div className="sf-client-history-heading"><h3>Membership registration</h3><small>Membership enrollment and the answers submitted when registering</small></div>
      <div className="sf-client-first-details">
       <div><small>Registered full name</small><b>{selected.membershipRegistration?.name||selected.name}</b></div>
@@ -192,7 +195,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
       <div className="sf-client-original-answers">{selected.membershipAnswers.map(answer=><div key={answer.id}><small>{answer.label}</small><b>{displayAnswer(answer.value)}</b></div>)}</div>:
       <p className="muted">No additional membership form answers were saved for this registration.</p>}
     </section>}
-    {selected.firstBooking&&<section className="sf-client-first-booking">
+    {selected.firstBooking&&<section hidden={profileTab!=='Details'} className="sf-client-first-booking">
      <div className="sf-client-history-heading"><h3>First booking information</h3><small>Copied from the original customer booking request</small></div>
      <div className="sf-client-first-details">
       <div><small>Customer name</small><b>{selected.firstBooking.originalSubmission?.customerName||selected.firstBooking.customerName||selected.name}</b></div>
@@ -215,16 +218,16 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
       {(selected.firstBooking.originalAnswers?.length?selected.firstBooking.originalAnswers:selected.firstBooking.answers||[]).map(answer=><div key={answer.id}><small>{answer.label}</small><b>{displayAnswer(answer.value)}</b></div>)}
      </div>}
     </section>}
-    <div className="sf-client-metrics">
+    <div hidden={profileTab!=='Sessions'} className="sf-client-metrics">
      <div><small>Sessions booked</small><strong>{selected.bookedSessions}</strong></div>
      <div><small>Sessions attended</small><strong>{selected.attendedSessions}</strong></div>
      <div><small>Days attended</small><strong>{selected.attendanceDays.length}</strong></div>
      <div><small>Service types used</small><strong>{selected.serviceTypes.length}</strong></div>
     </div>
-    <div className="sf-client-service-panel"><h4>Service types utilized</h4><div className="sf-client-tags">{selected.serviceTypes.length?selected.serviceTypes.map(type=><span key={type}>{type}</span>):<small>No current service type recorded</small>}</div>
+    <div hidden={profileTab!=='Sessions'} className="sf-client-service-panel"><h4>Service types utilized</h4><div className="sf-client-tags">{selected.serviceTypes.length?selected.serviceTypes.map(type=><span key={type}>{type}</span>):<small>No current service type recorded</small>}</div>
      <h4>Services utilized</h4><div className="sf-client-tags">{selected.serviceNames.length?selected.serviceNames.map(name=><span key={name}>{name}</span>):<small>No services recorded</small>}</div>
     </div>
-    {!!selected.history?.length&&<section className="sf-client-first-booking sf-client-last-answers">
+    {!!selected.history?.length&&<section hidden={profileTab!=='Details'} className="sf-client-first-booking sf-client-last-answers">
      <div className="sf-client-history-heading"><h3>Latest booking registration</h3><small>Latest recorded booking information and submitted answers</small></div>
      <div className="sf-client-first-details">
       <div><small>Customer name</small><b>{selected.history[0].customerName||selected.name}</b></div>
@@ -241,13 +244,15 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
      {!!selected.history[0].answers?.length&&<><h4>Booking form questions and answers</h4>
       <div className="sf-client-original-answers">{selected.history[0].answers.map(answer=><div key={answer.id}><small>{answer.label}</small><b>{displayAnswer(answer.value)}</b></div>)}</div></>}
     </section>}
-    {selected.importColumns&&Object.keys(selected.importColumns).length>0&&selected.notes!=='Membership registration'&&<section className="sf-client-first-booking"><h4>{selected.notes==='First online booking'?'Saved legacy booking fields':'Imported spreadsheet fields'}</h4><div className="sf-client-first-details">{Object.entries(selected.importColumns).map(([heading,value])=><div key={heading}><small>{heading}</small><b>{displayAnswer(value)}</b></div>)}</div></section>}
-    {selected.notes&&<div className="sf-client-private-notes"><h4>Private business notes</h4><p>{selected.notes}</p></div>}
-    <div className="sf-client-attendance"><h4>Days attended <span>({selected.attendanceDays.length})</span></h4>
+    {selected.importColumns&&Object.keys(selected.importColumns).length>0&&selected.notes!=='Membership registration'&&<section hidden={profileTab!=='Details'} className="sf-client-first-booking"><h4>{selected.notes==='First online booking'?'Saved legacy booking fields':'Imported spreadsheet fields'}</h4><div className="sf-client-first-details">{Object.entries(selected.importColumns).map(([heading,value])=><div key={heading}><small>{heading}</small><b>{displayAnswer(value)}</b></div>)}</div></section>}
+    {selected.notes&&<div hidden={profileTab!=='Details'} className="sf-client-private-notes"><h4>Private business notes</h4><p>{selected.notes}</p></div>}
+    <div hidden={profileTab!=='Sessions'} className="sf-client-attendance"><h4>Days attended <span>({selected.attendanceDays.length})</span></h4>
      {selected.attendanceDays.length?<div className="sf-client-day-tags">{selected.attendanceDays.map(day=><time dateTime={day} key={day}>{humanDate(day)}</time>)}</div>:<p>Attendance is recorded when an appointment is marked <strong>Checked in</strong> or <strong>Completed</strong>.</p>}
     </div>
    </article>
-   <section className="sf-client-history">
+   {profileTab==='Membership'&&!selected.membershipName&&<p className="notice">No membership package is recorded for this client.</p>}
+   {profileTab==='History'&&(selected.memberNumber||selected.email?<OwnerHistory key={selected.id} memberNumber={selected.memberNumber||''} clientEmail={selected.email} clientName={selected.name} compact/>:<p className="notice">This client has no stable membership ID or email for linking history. Use the business History tab to search retained records.</p>)}
+   <section hidden={profileTab!=='Sessions'} className="sf-client-history">
     <div className="sf-client-history-heading"><div><h3>Service & session history</h3><p>Each booking, its services and attendance status.</p></div>
      <label className="sf-client-history-filter"><input type="checkbox" checked={attendedOnly} onChange={e=>setAttendedOnly(e.target.checked)}/> Attended only</label>
     </div>
@@ -299,7 +304,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
     {!!c.latestBookingAnswers?.length&&<p className="sf-client-booking-answer-preview">{c.latestBookingAnswers.length} booking question{c.latestBookingAnswers.length===1?'':'s'} answered · See full details</p>}
     <div className="sf-client-summary-types"><small>Service types</small><strong>{c.serviceTypes.join(' · ')||'Not categorized'}</strong></div>
     <p className="sf-client-last-visit"><CalendarDays size={14}/> Latest appointment: {humanDate(c.latestDate)}</p>
-    <div className="sf-client-summary-actions"><button type="button" className="primary" onClick={()=>{setSelectedId(c.id);setAttendedOnly(false);}}><ChevronRight size={16}/> View history</button>
+    <div className="sf-client-summary-actions"><button type="button" className="primary" onClick={()=>{setSelectedId(c.id);setProfileTab('History');setAttendedOnly(false);}}><ChevronRight size={16}/> View history</button>
      <button type="button" className="outline" aria-label={'Edit '+c.name} onClick={()=>beginEdit(c)}><Pencil size={15}/> Edit</button>
      <a className="outline sf-clients-export" href={exported(c.id)} aria-label={'Export '+c.name+' to Excel'}><Download size={15}/> Excel</a>
      <button type="button" className="outline sf-client-remove" aria-label={'Remove '+c.name} disabled={!!actionBusy} onClick={()=>void removeClient(c)}><Trash2 size={15}/> Remove</button></div>
