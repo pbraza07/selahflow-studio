@@ -1,3 +1,9 @@
+## 1.3.106 — Sortable/selectable history and automatic session approval
+
+- Sort every History column across all filtered pages; select individual entries or a page for activity-view deletion.
+- Automatically reconcile eligible pending requests when catalog approval is unchecked, preserving atomic booking validation and payment-link email flow.
+- Recheck verified paid state before sending payment-confirmation emails.
+
 ## 1.3.105 — Catalog approval and direct payment
 
 - Unchecked service approval confirms new bookings immediately and exposes Stripe payment even when business approval notifications are enabled. Mixed bookings still require approval when any service is checked.

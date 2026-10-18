@@ -57,11 +57,12 @@ export async function processClientMessages(pool=getPool(),{send=sendNotificatio
   try{
    const state=(await pool.query("SELECT a.status AS appointment_status,f.expires_at,p.status AS payment_status,ma.charges_enabled,ma.onboarding_complete FROM booking_client_flows f JOIN businesses b ON b.id=f.business_id JOIN appointments a ON a.id=f.booking_id AND a.owner=b.owner_id LEFT JOIN booking_payments p ON p.booking_id=f.booking_id AND p.business_id=f.business_id LEFT JOIN merchant_accounts ma ON ma.business_id=f.business_id AND ma.provider='stripe' WHERE f.booking_id=$1 AND b.status='active'",[item.booking_id])).rows[0];
    let result;
-   if(!state||item.event_type==='payment_link'&&(state.appointment_status==='Cancelled'||state.payment_status==='paid'||new Date(state.expires_at)<=new Date()))result={status:'superseded',detail:'Booking cancelled, paid, or link expired'};
+   if(!state||item.event_type==='payment_confirmation'&&state.payment_status!=='paid'||item.event_type==='payment_link'&&(state.appointment_status==='Cancelled'||state.payment_status==='paid'||new Date(state.expires_at)<=new Date()))result={status:'superseded',detail:'Booking or payment is no longer eligible for this message'};
    else if(item.channel==='email'?!validEmail(item.destination):!validE164(item.destination))result={status:'invalid_destination',detail:item.channel==='sms'?'Registration phone missing or invalid; use +country code and number':'Registration email missing or invalid'};
    else if(item.event_type==='payment_link'&&(!paymentConfigured()||!state.charges_enabled||!state.onboarding_complete))result={status:'not_configured',detail:'Connect and enable Stripe payments for this business'};
    else result=await send(item.channel,item.destination,{...dataOf(item.message),idempotencyKey:'client-message-'+item.id,trackAmbiguous:true},undefined,undefined,{kind:'transactional-client',queuedAt:item.client_delivery_authorized_at||item.created_at});
    await pool.query("UPDATE booking_client_messages SET status=$1,detail=$2,attempts=attempts+CASE WHEN $1='failed' THEN 1 ELSE 0 END,next_attempt_at=now()+interval '5 minutes',updated_at=now() WHERE id=$3 AND status='processing'",[result.status,result.detail,item.id]);
+   if(item.channel==='email')console.log('Client transactional email:',JSON.stringify({event:item.event_type,status:result.status}));
   }catch{
    await pool.query("UPDATE booking_client_messages SET status='unknown',detail='Delivery outcome unknown; check provider before resending',updated_at=now() WHERE id=$1 AND status='processing'",[item.id]);
   }
@@ -78,9 +79,17 @@ export async function retryClientMessages(pool,owner,bookingId){
  const receipts=await pool.query("UPDATE booking_receipt_emails m SET status='queued',attempts=0,next_attempt_at=now(),updated_at=now(),client_delivery_authorized_at=now() FROM businesses b WHERE m.business_id=b.id AND b.owner_id=$1 AND b.status='active' AND m.booking_key=$2 AND m.status IN ('failed','not_configured') AND m.updated_at<now()-interval '1 minute' RETURNING m.booking_key",[owner,bookingId]);
  return {ok:true,queued:result.rowCount+receipts.rowCount};
 }
-let started=false,busy=false;
+let started=false,busy=false,approvalCursor='';
 export function startClientMessageWorker(){
  if(started)return;started=true;
- const tick=async()=>{if(busy)return;busy=true;try{await processClientMessages();await processBookingReceipts(getPool());}catch{console.error('Client message queue temporarily unavailable');}finally{busy=false;}};
+ const tick=async()=>{if(busy)return;busy=true;try{
+  const origin=process.env.APP_URL||process.env.RENDER_EXTERNAL_URL;
+  if(origin)try{
+   const {reconcileUncheckedBookings}=await import('./direct-booking-approval.mjs');
+   const result=await reconcileUncheckedBookings(getPool(),{origin,after:approvalCursor});approvalCursor=result.next;
+   if(result.confirmed)console.log('Unchecked booking reconciliation:',JSON.stringify({scanned:result.scanned,confirmed:result.confirmed,unavailable:result.unavailable}));
+  }catch{console.error('Unchecked booking reconciliation temporarily unavailable');}
+  await processClientMessages();await processBookingReceipts(getPool());
+ }catch{console.error('Client message queue temporarily unavailable');}finally{busy=false;}};
  setInterval(tick,15000).unref();void tick();
 }

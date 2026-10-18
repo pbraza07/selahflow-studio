@@ -7,7 +7,8 @@ import {requiresBookingApproval} from '../server/booking-review.mjs';
 import {bookingPaymentPreview} from '../server/booking-payment-preview.mjs';
 import {startBookingCheckout,applyBookingPayment} from '../server/stripe-checkout.mjs';
 import {tokenHash} from '../server/security.mjs';
-import {confirmDirectBookingForPayment} from '../server/direct-booking-approval.mjs';
+import {confirmDirectBookingForPayment,reconcileUncheckedBookings} from '../server/direct-booking-approval.mjs';
+import {processClientMessages} from '../server/booking-client-notifications.mjs';
 test('catalog checkbox controls approval, independently of business notification settings',()=>{
  assert.equal(requiresBookingApproval([{requiresApproval:false}]),false);
  assert.equal(requiresBookingApproval([{}]),false);
@@ -39,10 +40,25 @@ test('an authenticated old pending request can pay directly when catalog approva
   config.services[0].price=15;await save();await query("UPDATE booking_requests SET status='declined' WHERE id=$1",[checked]);await assert.rejects(startBookingCheckout(pool,{...args,bookingId:checked,token:tokenHash(checked)},api),/must approve/);
   const paid={...session,payment_status:'paid',currency:'usd',amount_total:1500,payment_intent:'pi_fixture',client_reference_id:id,metadata:{booking_id:id,selahflow_business_id:'b1'}};
   await query('BEGIN');assert.equal(await applyBookingPayment(db,'b1','acct_fixture',paid),true);await query('COMMIT');
-  const message=(await query("SELECT destination,message FROM booking_client_messages WHERE booking_id=$1 AND event_type='payment_confirmation' AND channel='email'",[id])).rows[0];assert.equal(message.destination,'client@example.test');assert.match(message.message.text,/Payment received/);
+  const message=(await query("SELECT id,destination,message FROM booking_client_messages WHERE booking_id=$1 AND event_type='payment_confirmation' AND channel='email'",[id])).rows[0];assert.equal(message.destination,'client@example.test');assert.match(message.message.text,/Payment received/);
+  let sends=0;
+  await processClientMessages(pool,{messageIds:[message.id],send:async(channel,to,body)=>{sends++;assert.equal(channel,'email');assert.equal(to,'client@example.test');assert.match(body.text,/Payment received/);assert.match(body.text,/CT0101/);return {status:'submitted',detail:'Fixture provider acceptance'};}});
+  assert.equal(sends,1);await processClientMessages(pool,{messageIds:[message.id],send:async()=>{throw Error('Never duplicate a submitted email');}});
+  assert.equal((await query('SELECT status FROM booking_client_messages WHERE id=$1',[message.id])).rows[0].status,'submitted');
   config.bookableSessions=[{id:'group',service:'s',staff:'coach',date:'2030-11-02',start:1200,capacity:1}];details.sessionId='group';await save();
   const groupOne=randomUUID(),groupTwo=randomUUID();await add(groupOne,1200,'2030-11-02');await add(groupTwo,1200,'2030-11-02');
   await confirmDirectBookingForPayment(pool,{...args,bookingId:groupOne,token:tokenHash(groupOne)});await assert.rejects(confirmDirectBookingForPayment(pool,{...args,bookingId:groupTwo,token:tokenHash(groupTwo)}),/full/);
   assert.equal((await query('SELECT status FROM booking_requests WHERE id=$1',[groupTwo])).rows[0].status,'pending','group capacity is never bypassed');
+  config.bookableSessions.push({id:'auto-group',service:'s',staff:'coach',date:'2030-11-03',start:600,capacity:2});details.sessionId='auto-group';const automatic=randomUUID(),manual=randomUUID();await add(automatic,600,'2030-11-03');delete details.sessionId;await add(manual,900,'2030-11-03');
+  config.services.push({...service,id:'manual',requiresApproval:true});await save();
+  await query('UPDATE booking_requests SET details=$1 WHERE id=$2',[JSON.stringify({...details,serviceIds:['manual']}),manual]);
+  let cursor='',confirmed=0;do{const result=await reconcileUncheckedBookings(pool,{origin:args.origin,after:cursor,limit:2});confirmed+=result.confirmed;cursor=result.next;}while(cursor);
+  assert.equal(confirmed,1,'background reconciliation confirms eligible requests without a payment click');
+  assert.equal((await query('SELECT status FROM booking_requests WHERE id=$1',[automatic])).rows[0].status,'accepted');
+  assert.equal((await query('SELECT status FROM booking_requests WHERE id=$1',[manual])).rows[0].status,'pending','checked approval is retained');
+  assert.equal((await query('SELECT status FROM booking_requests WHERE id=$1',[groupTwo])).rows[0].status,'pending','full sessions cannot auto-confirm');
+  assert.equal((await query("SELECT count(*)::int AS n FROM booking_client_messages WHERE booking_id=$1 AND event_type='payment_link' AND channel='email'",[automatic])).rows[0].n,1);
+  assert.equal((await query("SELECT count(*)::int AS n FROM booking_client_messages WHERE booking_id=$1 AND event_type='payment_confirmation'",[automatic])).rows[0].n,0,'auto-approval never claims payment');
+  assert.equal((await reconcileUncheckedBookings(pool,{origin:args.origin})).confirmed,0,'repeated reconciliation is idempotent');
  }finally{await pg.close();keys.forEach((k,i)=>old[i]===undefined?delete process.env[k]:process.env[k]=old[i]);}
 });

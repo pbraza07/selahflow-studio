@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
-import {loadOwnerHistory} from '../server/owner-history.mjs';
+import {loadOwnerHistory,compareHistoryRows,HISTORY_SORTS} from '../server/owner-history.mjs';
 test('history keeps retained activity scoped, reconciles payments, masks messages and paginates without changing records',async()=>{
  const pg=new PGlite();try{
   for(const f of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort())await pg.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8'));
@@ -23,10 +23,29 @@ test('history keeps retained activity scoped, reconciles payments, masks message
   const search=await loadOwnerHistory(pg,'u1',{q:'page test',category:'bookings'});assert.equal(search.total,35);assert.equal(search.counts.bookings,35);
   assert.deepEqual((await pg.query('SELECT sessions_used FROM customer_memberships ORDER BY id')).rows,before.rows);
   await assert.rejects(loadOwnerHistory(pg,'missing'),/FORBIDDEN/);
+  const retained=[...all.items,...second.items];
+  for(const sort of HISTORY_SORTS)for(const direction of ['asc','desc']){
+   const first=await loadOwnerHistory(pg,'u1',{sort,direction}),next=await loadOwnerHistory(pg,'u1',{sort,direction,page:2});
+   assert.equal(first.total,all.total);assert.equal(new Set([...first.items,...next.items].map(r=>r.id)).size,all.total,sort+' sorts before pagination');
+   if(sort==='amount'){const numeric=[...first.items,...next.items].map(r=>r.amountCents??r.quoteCents??r.sessionDelta).filter(n=>n!==undefined);assert.deepEqual(numeric,[...numeric].sort((a,b)=>direction==='asc'?a-b:b-a));}
+   if(sort==='client'){const names=[...first.items,...next.items].map(r=>r.client||'Not linked to a client');assert.deepEqual(names,[...names].sort((a,b)=>(direction==='asc'?1:-1)*a.localeCompare(b,'en',{numeric:true,sensitivity:'base'})));}
+  }
+  const chosen=retained.find(r=>r.id==='booking:a1'),foreignKey=foreign.items[0].selectionKey;
+  await pg.exec("UPDATE appointments SET status='Checked in' WHERE id='a1'");
+  assert.equal((await loadOwnerHistory(pg,'u1',{selected:[chosen.selectionKey,foreignKey,'f'.repeat(64)]})).cleared,0,'stale or foreign selections never hide current records');
+  const current=(await loadOwnerHistory(pg,'u1',{q:'a1'})).items.find(r=>r.id==='booking:a1');
+  assert.equal((await loadOwnerHistory(pg,'u1',{selected:[current.selectionKey,current.selectionKey]})).cleared,1);
+  assert.equal((await loadOwnerHistory(pg,'u1')).total,all.total-1);assert.equal((await loadOwnerHistory(pg,'u2')).total,foreign.total);
+  assert.equal((await pg.query("SELECT status FROM appointments WHERE id='a1'")).rows[0].status,'Checked in','selected deletion retains operational source');
   await loadOwnerHistory(pg,'u1',{clear:true});assert.equal((await loadOwnerHistory(pg,'u1')).total,0);assert.ok((await loadOwnerHistory(pg,'u2')).total>0);
-  await pg.exec("UPDATE appointments SET status='Checked in' WHERE id='a1'");assert.equal((await loadOwnerHistory(pg,'u1')).total,1,'new status appears after clearing existing history');
+  await pg.exec("UPDATE appointments SET status='No-show' WHERE id='a1'");assert.equal((await loadOwnerHistory(pg,'u1')).total,1,'new status appears after clearing existing history');
   assert.deepEqual((await pg.query('SELECT sessions_used FROM customer_memberships ORDER BY id')).rows,before.rows,'clearing tab preserves balances');
  }finally{await pg.close();}
+});
+test('each history sort uses displayed values, stable ties and empty values last',()=>{
+ const rows=[{id:'b',order:'2030-10-02',client:'Zoe',title:'Yoga',status:'paid',amountCents:10000,reference:'Z',details:['Zulu']},{id:'a',order:'2030-10-01',client:'Amy',title:'Archery',status:'accepted',amountCents:900,reference:'A',details:['Alpha']}];
+ for(const key of HISTORY_SORTS){assert.deepEqual([...rows].sort((a,b)=>compareHistoryRows(a,b,key,'asc')).map(r=>r.id),['a','b']);assert.deepEqual([...rows].sort((a,b)=>compareHistoryRows(a,b,key,'desc')).map(r=>r.id),['b','a']);}
+ for(const direction of ['asc','desc'])assert.ok(compareHistoryRows({...rows[0],amountCents:undefined},rows[1],'amount',direction)>0);
 });
 test('history API authenticates ownership and navigation keeps approval actions separate from history',async()=>{
  const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');const [route,dashboard,clients,history]=await Promise.all([read('app/api/studio/history/route.ts'),read('app/studio/owner-dashboard.tsx'),read('app/components/owner-client-directory.tsx'),read('app/components/owner-history.tsx')]);

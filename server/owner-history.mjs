@@ -6,6 +6,15 @@ const stamp=x=>x instanceof Date?x.toISOString():String(x||'');
 const identity=d=>({client:d.name||d.customerName||d.customer_name||'',email:d.email||d.customerEmail||d.customer_email||'',memberNumber:d.memberNumber||d.member_number||''});
 const labels={submission:'Booking submission email',approval:'Booking approval email',payment_link:'Payment link',payment_confirmation:'Payment confirmation',session_used:'Membership session used',session_credit:'Membership sessions credited',adjustment:'Membership adjustment'};
 export const HISTORY_CATEGORIES=['all','bookings','sessions','payments','memberships','messages'];
+export const HISTORY_SORTS=['date','client','activity','status','amount','details'];
+export function compareHistoryRows(a,b,key='date',direction='desc'){
+ const value=r=>key==='date'?r.order:key==='client'?(r.client||'Not linked to a client'):key==='activity'?r.title:key==='status'?String(r.status||'Recorded').replaceAll('_',' '):key==='details'?[r.reference,...r.details].join(' '):r.amountCents??r.quoteCents??r.sessionDelta;
+ const x=value(a),y=value(b);
+ // Missing amounts stay at the end in either direction; numeric values never sort as strings.
+ if(x===undefined||y===undefined)return x===y?a.id.localeCompare(b.id):x===undefined?1:-1;
+ const compared=typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y),'en',{numeric:true,sensitivity:'base'});
+ return compared*(direction==='asc'?1:-1)||a.id.localeCompare(b.id);
+}
 /** Read retained source records only. History never changes billing or attendance. */
 export async function loadOwnerHistory(db,owner,filters={}){
  const business=(await db.query("SELECT id FROM businesses WHERE owner_id=$1 AND status='active'",[owner])).rows[0];
@@ -52,11 +61,13 @@ export async function loadOwnerHistory(db,owner,filters={}){
  const scoped=rows.filter(r=>!hidden.has(historyKey(r))).filter(r=>(!filters.member||aliases.has(r.memberNumber))&&(!filters.clientEmail||r.email.toLowerCase()===filters.clientEmail.toLowerCase())&&(!filters.clientName||r.client.toLowerCase()===filters.clientName.toLowerCase()));
  const matching=scoped.filter(r=>(!filters.from||r.date>=filters.from)&&(!filters.to||r.date<=filters.to)&&(!q||[r.client,r.memberNumber,r.email,r.title,r.status,r.reference,...r.details].join(' ').toLowerCase().includes(q)));
  const counts=Object.fromEntries(HISTORY_CATEGORIES.map(c=>[c,matching.filter(r=>c==='all'||r.category===c||c==='sessions'&&r.session).length]));
- const filtered=matching.filter(r=>category==='all'||r.category===category||category==='sessions'&&r.session).sort((a,b)=>b.order.localeCompare(a.order)||a.id.localeCompare(b.id));
+ const sort=HISTORY_SORTS.includes(filters.sort)?filters.sort:'date',direction=filters.direction==='asc'?'asc':'desc';
+ const filtered=matching.filter(r=>category==='all'||r.category===category||category==='sessions'&&r.session).sort((a,b)=>compareHistoryRows(a,b,sort,direction));
  const pageSize=30,page=Math.min(Math.max(1,Math.floor(Number(filters.page)||1)),Math.max(1,Math.ceil(filtered.length/pageSize)));
- if(filters.clear===true){
-  for(const r of rows)await db.query('INSERT INTO owner_history_hidden(owner,history_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[owner,historyKey(r)]);
-  return {cleared:rows.length};
+ if(filters.clear===true||Array.isArray(filters.selected)){
+  const selected=new Set(filters.selected||[]),targets=rows.filter(r=>!hidden.has(historyKey(r))&&(filters.clear===true||selected.has(historyKey(r))));
+  for(const r of targets)await db.query('INSERT INTO owner_history_hidden(owner,history_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[owner,historyKey(r)]);
+  return {cleared:targets.length};
  }
- return {items:filtered.slice((page-1)*pageSize,page*pageSize).map(({email,order,...safe})=>safe),total:filtered.length,page,pageSize,counts};
+ return {items:filtered.slice((page-1)*pageSize,page*pageSize).map(({email,order,...safe})=>({...safe,selectionKey:historyKey(safe)})),total:filtered.length,page,pageSize,counts,sort,direction};
 }
