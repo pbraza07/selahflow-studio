@@ -15,14 +15,19 @@ export async function deleteClientPermanently(db,{owner,businessId,client}){
  const aliases=(await db.query('SELECT * FROM business_member_ids WHERE business_id=$1 AND identity_key=$2',[business.id,original.identity_key])).rows;
  const numbers=aliases.map(r=>r.member_number),numberSet=new Set(numbers);
  const historyIds=new Set((client.history||[]).map(r=>r.id));
- const matches=d=>numberSet.has(d.memberNumber||d.member_number)||identity(d.name||d.customerName||d.customer_name||[d.first_name,d.last_name].filter(Boolean).join(' '),d.dateOfBirth||d.date_of_birth)===original.identity_key;
+ const sameContact=d=>{
+  const email=String(d.email||d.customerEmail||d.customer_email||'').trim().toLowerCase(),phone=String(d.phone||d.customerPhone||d.customer_phone||'').replace(/[^+0-9]/g,'');
+  return Boolean(email&&email===String(client.email||'').trim().toLowerCase()||phone&&phone===String(client.phone||'').replace(/[^+0-9]/g,''));
+ };
+ const matches=d=>numberSet.has(d.memberNumber||d.member_number)||(identity(d.name||d.customerName||d.customer_name||[d.first_name,d.last_name].filter(Boolean).join(' '),d.dateOfBirth||d.date_of_birth)===original.identity_key&&(!original.identity_key.endsWith('|')||sameContact(d)));
+
  const read=async(table,where,args)=>(await db.query(`SELECT * FROM ${table} WHERE ${where}`,args)).rows;
   const members=(await read('customer_memberships','business_id=$1',[business.id])).filter(matches);
   if(members.some(m=>m.stripe_subscription_id&&!['canceled','expired'].includes(m.status)))throw Error('Cancel this registration active Stripe subscription before reset.');
   const memberIds=members.map(m=>m.id);
   let appointments=(await read('appointments','owner=$1',[business.owner_id])).filter(a=>historyIds.has(a.id)||matches(object(a.data)));
   let appointmentIds=appointments.map(a=>a.id);
-  const requests=(await read('booking_requests','business_id=$1',[business.id])).filter(r=>matches(object(r.details))||appointmentIds.includes(r.appointment_id));
+  const requests=(await read('booking_requests','business_id=$1',[business.id])).filter(r=>historyIds.has(r.id)||matches(object(r.details))||appointmentIds.includes(r.appointment_id));
   const requestIds=requests.map(r=>r.id),linkedAppointments=requests.map(r=>r.appointment_id).filter(Boolean);
   appointments=(await read('appointments','owner=$1',[business.owner_id])).filter(a=>appointmentIds.includes(a.id)||linkedAppointments.includes(a.id));appointmentIds=appointments.map(a=>a.id);
   const bookingKeys=[...new Set([...appointmentIds,...requestIds])];
@@ -49,7 +54,8 @@ export async function deleteClientPermanently(db,{owner,businessId,client}){
   add('appointments','owner=$1 AND id=ANY($2::text[])',[business.owner_id,appointmentIds],appointments);
   add('customer_memberships','business_id=$1 AND id=ANY($2::text[])',[business.id,memberIds],members);
   add('customer_booking_ids','business_id=$1 AND member_number=ANY($2::text[])',[business.id,numbers]);
-  add('business_client_profiles','owner=$1 AND (id=$2 OR member_number=ANY($3::text[]))',[business.owner_id,profile.id,numbers]);
+  const profileIds=(await read('business_client_profiles','owner=$1',[business.owner_id])).filter(p=>p.id===profile.id||matches(p)).map(p=>p.id);
+  add('business_client_profiles','owner=$1 AND id=ANY($2::text[])',[business.owner_id,profileIds]);
   const enrollments=(await read('service_enrollments','business_id=$1',[business.id])).filter(r=>r.client_name?.trim().toLowerCase()===String(client.name||'').trim().toLowerCase()&&r.client_email?.trim().toLowerCase()===String(client.email||'').trim().toLowerCase());
   add('service_enrollments','business_id=$1 AND id=ANY($2::text[])',[business.id,enrollments.map(r=>r.id)]);
   add('events','owner=$1 AND id=ANY($2::text[])',[business.owner_id,events.map(e=>e.id)],events);

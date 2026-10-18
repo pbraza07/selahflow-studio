@@ -38,5 +38,8 @@ test('permanent deletion purges linked registration and history without touching
   assert.equal((await resetStagingRegistration(pool,target,env)).alreadyApplied,true);
   await query('BEGIN');assert.equal(await issueMemberId(db,{businessId:'b1',name:'Legacy Client',dateOfBirth:'2010-12-29'}),'LC1229');await query('ROLLBACK');
   assert.equal((await loadOwnerHistory(db,'u1')).total,0);
+  await pg.exec("INSERT INTO business_client_profiles(id,owner,name,email) VALUES('guest-profile','u1','Guest',''); INSERT INTO appointments(id,owner,date,start,duration,staff,status,data) VALUES('guest-one','u1','2030-11-02',600,30,'coach','Confirmed','{\"name\":\"Guest\",\"email\":\"\"}'),('guest-two','u1','2030-11-03',600,30,'coach','Confirmed','{\"name\":\"Guest\",\"email\":\"\"}')");
+  await query('BEGIN');await deleteClientPermanently(db,{owner:'u1',businessId:'b1',client:{id:'guest-profile',name:'Guest',email:'',history:[{id:'guest-one'}]}});await query('COMMIT');
+  assert.deepEqual((await query('SELECT id FROM appointments')).rows,[{id:'guest-two'}],'blank identity never matches a different guest');
  }finally{await pg.close();}
 });

@@ -164,7 +164,11 @@ export async function POST(req:Request){
     if(!Array.isArray(ids)||ids.length<1||ids.length>2000||ids.some((value:unknown)=>!validId(value))||new Set(ids).size!==ids.length)throw Error('Select valid removed clients.');
     if(body.confirmPhrase!=='DELETE REMOVED CLIENTS')throw Error('Enter DELETE REMOVED CLIENTS to confirm.');
     if(ids.some((value:string)=>!result.archived.some((item:{id:string})=>item.id===value)))throw Error('One or more selected clients are not in the removed list.');
-    for(const value of ids)await deleteClientPermanently(db,{owner,businessId:business.id,client:{...result.archived.find((c:any)=>c.id===value),memberNumber:result.profiles.find((p:any)=>p.id===value)?.member_number,dateOfBirth:dateOnly(result.profiles.find((p:any)=>p.id===value)?.date_of_birth)}});
+    for(const value of ids){
+     const saved=result.profiles.find((p:any)=>p.id===value);
+     const history=result.derived.filter((c:any)=>c.id===saved?.source_key||c.history?.some((r:any)=>r.id===saved?.anchor_appointment_id)||saved?.member_number&&c.memberNumber===saved.member_number||sameClientContact(c,saved)).flatMap((c:any)=>c.history||[]);
+     await deleteClientPermanently(db,{owner,businessId:business.id,client:{...result.archived.find((c:any)=>c.id===value),memberNumber:saved?.member_number,dateOfBirth:dateOnly(saved?.date_of_birth),history}});
+    }
     responseId='deleted';
    }else if(body.action==='restore'){
     if(!profile||!profile.archived||!archived)throw Error('Removed client not found.');
