@@ -25,5 +25,8 @@ test('staging verification authorizes only one saved recipient, refreshes email 
   assert.ok(messages.every(m=>m.message.actions.length>=3&&m.client_delivery_authorized_at));
   assert.equal((await pg.query("SELECT status FROM booking_client_messages WHERE id='msg-other'")).rows[0].status,'not_configured');
   assert.equal((await verifyStagingClientEmails(pg,target,env,processors)).alreadyApplied,true);assert.equal(processed,3);
+  const receiptProof=await verifyStagingClientEmails(pg,{businessSlug:'one',recipient:'other@example.test',receiptOnly:true,ensureBookingReceipt:true},env,processors);
+  assert.equal(receiptProof.bookingReceipt,'submitted');assert.equal(processed,4);
+  assert.equal((await pg.query("SELECT status FROM booking_client_messages WHERE id='msg-other'")).rows[0].status,'not_configured','receipt proof does not release another payment email');
  }finally{await pg.close();}
 });

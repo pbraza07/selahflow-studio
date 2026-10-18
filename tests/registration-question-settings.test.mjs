@@ -30,7 +30,7 @@ test('standard edits/reorder consume no quota; membership-only and shared new qu
  assert.throws(()=>checkSubscriptionLimits({plan_code:'free',status:'active'},old,{bookingCustomFields:[...five,field('extra',['membership'])]}),/allows up to 5/);
 });
 test('invalid question order, ID collisions and invalid field types are rejected',()=>{
- for(const config of [{bookingQuestionOrder:['email','email']},{membershipQuestionOrder:['unknown']},{bookingCustomFields:[field('email')]},{bookingCustomFields:[field('bad',[])]},{bookingStandardFields:{email:{type:'text'}}}])assert.throws(()=>validateRegistrationQuestions(config));
+ for(const config of [{bookingQuestionOrder:['email','email']},{membershipQuestionOrder:['unknown']},{bookingCustomFields:[field('email')]},{bookingCustomFields:[field('bad',[])]},{bookingStandardFields:{email:{type:'text'}}},{membershipStandardFields:{memberNumber:{required:true}}},{membershipStandardFields:{email:{required:false}}}])assert.throws(()=>validateRegistrationQuestions(config));
  assert.throws(()=>validateStandardRegistration({bookingStandardFields:{phone:{required:true}}},'booking',{firstName:'A',lastName:'B',email:'a@b.com',dateOfBirth:'2000-01-01'}),/Phone is required/);
  assert.deepEqual(sanitizeBookingAnswers([{...field('date'),type:'date'}],{date:'2026-10-13'}),{date:'2026-10-13'});
 });

@@ -1,4 +1,6 @@
-**Release source: v1.3.103 (staging candidate).**: permanent client deletion, session required/time controls, direct payment emails and labeled email buttons. History clearing affects the activity tab, preserving operational source records. Deployment verification is recorded in docs/CHATGPT_PROJECT_CONTINUITY.md.
+**Release source: v1.3.104 (staging candidate).** Final deletion isolation for guest/archived clients and a scoped booking-receipt verification using a real saved appointment. Prior v1.3.103 is LIVE; reset and payment-link Gmail acceptance verified.
+
+**Prior staging release: v1.3.103.**: permanent client deletion, session required/time controls, direct payment emails and labeled email buttons. History clearing affects the activity tab, preserving operational source records. Deployment verification is recorded in docs/CHATGPT_PROJECT_CONTINUITY.md.
 
 # SelahFlow — current production and project continuity
 

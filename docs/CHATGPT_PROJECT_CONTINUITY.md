@@ -1,3 +1,9 @@
+# v1.3.104 release handoff — staging candidate
+
+Final deletion isolation covers missing identity fields and archived profile anchors. Regression verifies deleting one unidentified guest keeps another guest booking. Explicit receipt-only verification can queue an approval receipt for an existing confirmed appointment using its saved recipient and current booking/membership details; no new booking, fabricated payment, or unrelated payment email. Requires ensureBookingReceipt=true and receiptOnly=true in the staging verification target. Verify final checks and LIVE commit.
+
+Prior v1.3.103 VERIFIED LIVE 2026-10-18 03:54:51 UTC, commit 262a9ae2a63a33d106aaa777cbcfc95278d6be48, deploy dep-dba446e1egvs7399moeg. All 241 tests/typecheck/build passed. Startup reset removed old registration/source data and verified six-character allocation with a rolled-back probe; only anonymous retired ID reservation retained. Counts-only audit, no recovery copy. Gmail accepted one existing registered-client payment-link email. No eligible booking receipt or Stripe-paid confirmation email existed for that scoped proof, so neither was invented. Final receipt verification is pending. Exact private client target and recipient are configured on staging only, not in code/docs. Production untouched.
+
 # v1.3.103 release handoff — staging candidate — Permanent deletion and booking/payment controls
 
 User explicitly overrides archival preservation for member deletion. Shared deletion helper purges linked data by business and member identity, never shared email alone; blocks in-flight delivery/open Stripe billing to avoid ambiguous actions. Registry identity anonymized, old ID retired. Startup staging reset is an exact-target, guarded, one-shot operation with counts-only audit and a rolled-back new-ID allocation probe; no recovery snapshot. Existing staging import backups are scrubbed for the deleted registration. User will register again.

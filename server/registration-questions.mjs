@@ -14,7 +14,7 @@ export function customRegistrationFields(config={},form='booking',sessionId=unde
 /** @param {any} config @param {string} form @param {string|null|undefined} sessionId */
 export function registrationQuestions(config={},form='booking',sessionId=undefined){
  const edits=config[form+'StandardFields']||{};
- const fields=[...STANDARD_REGISTRATION_FIELDS.map(f=>({...f,...edits[f.id],id:f.id,type:f.type,required:edits[f.id]?.required??f.required,standard:true})),...customRegistrationFields(config,form,sessionId).map(f=>({...f,standard:false}))];
+ const fields=[...STANDARD_REGISTRATION_FIELDS.map(f=>({...f,...edits[f.id],id:f.id,type:f.type,required:form==='membership'?(f.required||edits[f.id]?.required===true):(edits[f.id]?.required??f.required),standard:true})),...customRegistrationFields(config,form,sessionId).map(f=>({...f,standard:false}))];
  const session=form==='booking'&&sessionId?(config.bookableSessions||[]).find(s=>s.id===String(sessionId).replace(/__\d{8}$/, '')):null;
  if(session?.questionRequired)for(const f of fields)if(typeof session.questionRequired[f.id]==='boolean')f.required=session.questionRequired[f.id];
  const order=config[form+'QuestionOrder']||[];
@@ -39,7 +39,7 @@ export function validateRegistrationQuestions(config){
     if(!standardIds.has(id)||!edit||typeof edit!=='object'||Array.isArray(edit))throw Error('Invalid standard question.');
     for(const key of Object.keys(edit))if(!['label','help','placeholder','required'].includes(key))throw Error('Standard field types and IDs cannot be changed.');
     for(const [key,max] of [['label',80],['help',300],['placeholder',100]])if(edit[key]!==undefined&&(typeof edit[key]!=='string'||edit[key].length>max||(key==='label'&&!edit[key].trim())))throw Error('Check standard question text.');
-    if(edit.required!==undefined&&(typeof edit.required!=='boolean'))throw Error('Invalid required question setting.');
+    if(edit.required!==undefined&&(typeof edit.required!=='boolean'||form==='membership'&&((id==='memberNumber'&&edit.required)||(STANDARD_REGISTRATION_FIELDS.find(f=>f.id===id).required&&!edit.required))))throw Error('Invalid required question setting.');
    }
   }
   const order=config[form+'QuestionOrder'];
