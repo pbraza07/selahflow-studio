@@ -3,6 +3,7 @@ import {stripeApi,paymentConfigured,invoiceSubscriptionId,invoicePaidThrough,sho
 import {isStaging} from './staging-safety.mjs';
 import {tokenHash} from './security.mjs';
 import {queueApprovedBooking,queueBookingPaid} from './booking-client-notifications.mjs';
+import {confirmDirectBookingForPayment} from './direct-booking-approval.mjs';
 
 export function assertTestPayment(object){
  if(isStaging()&&object?.livemode!==false)throw Error('Staging accepts only Stripe sandbox payments.');
@@ -25,6 +26,7 @@ export async function readyMerchant(db,businessId,api=stripeApi){
 // Server prices come from the saved booking, never the payment button's payload.
 export async function startBookingCheckout(pool,{slug,bookingId,token,origin},api=stripeApi){
  if(!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(slug||'')||!/^[-a-f0-9]{36}$/i.test(bookingId||'')||!/^[a-f0-9]{64}$/i.test(token||''))throw Error('Invalid booking payment reference.');
+ await confirmDirectBookingForPayment(pool,{slug,bookingId,token,origin});
  const db=await pool.connect();
  try{
   await db.query('BEGIN');

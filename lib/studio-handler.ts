@@ -26,7 +26,7 @@ import {paymentConfigured} from '../server/membership-payments.mjs';
 import {defaultSettings,today} from './defaults';
 import {validDuration,isCalendarUnit} from './service-terms';
 import {validSlotCapacity,serviceCapacityOpen,confirmBooking} from '../server/booking-approvals.mjs';
-import {approvalSettings,bookingRequestDetail} from '../server/booking-review.mjs';
+import {requiresBookingApproval,approvalSettings,bookingRequestDetail} from '../server/booking-review.mjs';
 import {hasUsableMembership} from '../server/member-badge-state.mjs';
 
 const reply=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
@@ -348,8 +348,8 @@ if(isPublic&&b.firstName&&b.lastName&&b.dateOfBirth){
 }
 const bookedSession=selectedSession(config,b.date,b.staff,services,b.start);const membershipCreditAllowed=bookedSession?bookedSession.membershipCreditAllowed!==false:services.every((service:any)=>service.membershipCreditAllowed!==false);const membershipCovered=!!verifiedMembership&&hasUsableMembership(verifiedMembership)&&membershipCreditAllowed;
 const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID();const data:any={name:b.name.trim()||'Guest',firstName:isPublic?String(b.firstName||'').trim():undefined,lastName:isPublic?String(b.lastName||'').trim():undefined,dateOfBirth:isPublic?String(b.dateOfBirth||''):undefined,email:b.email,phone:String(b.phone||'').slice(0,40),services:services.map((s:any)=>s.name),price:membershipCovered?0:services.reduce((a:number,s:any)=>a+s.price,0),membershipCovered,membershipCreditAllowed,channel:isPublic?'Online booking':b.channel==='Booking portal'?'Booking portal':'Front desk',created:new Date().toISOString()};data.paymentLines=services.map((s:any)=>({id:s.id,name:s.name,type:'service',price:s.price,qty:1}));data.serviceIds=services.map((s:any)=>s.id);data.customAnswers=customAnswers;data.memberNumber=isPublic?issuedMemberNumber:null;data.policyAccepted=isPublic?b.policyAccepted===true:null;data.policyAcceptedAt=isPublic?new Date().toISOString():null;data.customFieldLabels=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.label]));data.customFieldTypes=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.type]));if(bookedSession)data.sessionId=bookedSession.id;
- if(isPublic&&(approvalSettings(config).enabled||services.some((service:any)=>service.requiresApproval===true))){
-  const approval=services.some((service:any)=>service.requiresApproval===true)&&!approvalSettings(config).enabled?{reviewer:'owner'}:approvalSettings(config);
+ if(isPublic&&requiresBookingApproval(services)){
+  const approval=!approvalSettings(config).enabled?{reviewer:'owner'}:approvalSettings(config);
   const business=await db().prepare("SELECT id FROM businesses WHERE owner_id=? AND status='active'").bind(owner).first<{id:string}>();
   if(!business)return reply({error:'Business is not active.'},403);
   const details={membershipCovered,membershipCreditAllowed,paymentLines:data.paymentLines,memberNumber:issuedMemberNumber,firstName:String(b.firstName||'').trim(),lastName:String(b.lastName||'').trim(),dateOfBirth:String(b.dateOfBirth||''),...bookingRequestDetail({services,staff:b.staff,date:b.date,start:b.start,duration,buffer:config.buffer,name:b.name,email:b.email,phone:String(b.phone||''),price:data.price,reviewer:approval.reviewer}),customAnswers,customFieldLabels:data.customFieldLabels,customFieldTypes:data.customFieldTypes,policyAccepted:true,policyAcceptedAt:data.policyAcceptedAt,sessionId:bookedSession?.id||null};
