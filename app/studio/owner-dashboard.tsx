@@ -279,7 +279,7 @@ return <div className="app-shell" data-selah-theme="true" style={{...themeStyles
  <button type="button" className="outline sf-add-session" disabled={!!planBenefits&&(config.bookableSessions||[]).length>=planBenefits.limits.sessionSeries} title={planBenefits?'Your plan allows '+planBenefits.limits.sessionSeries+' scheduled session templates':''} onClick={()=>
   setConfig((c:Any)=>({...c,bookableSessions:[...(c.bookableSessions||[]),{
    id:crypto.randomUUID(),date,service:c.staff[0]?.services[0]||c.services[0]?.id||'',
-   staff:c.staff[0]?.id||'',start:Math.max(0,(c.open||9)*60),capacity:10,membershipCreditAllowed:true
+   staff:c.staff[0]?.id||'',start:Math.max(0,(c.open||9)*60),capacity:10,membershipCreditAllowed:true,onlyScheduledTime:true
   }]}))}><Plus size={16}/> Create session</button>
  {(config.bookableSessions||[]).length===0&&<p className="muted sf-session-empty">No sessions configured yet. Create a session to publish a one-time date or a repeating schedule.</p>}
  {(config.bookableSessions||[]).map((x:Any,i:number)=><div key={x.id} className="sf-session-editor sf-recurring-session-editor">
@@ -311,6 +311,7 @@ return <div className="app-shell" data-selah-theme="true" style={{...themeStyles
     const [hour,minute]=e.target.value.split(':').map(Number);
     if(Number.isFinite(hour)&&Number.isFinite(minute))updateSession(x.id,{start:hour*60+minute});
    }}/></label>
+   <label><input type="checkbox" checked={x.onlyScheduledTime!==false} onChange={e=>updateSession(x.id,{onlyScheduledTime:e.target.checked})}/> Only offer scheduled session start times for this service and team member</label>
    <label>Maximum customers per occurrence<input type="number" min={1} max={100} value={x.capacity} onChange={e=>updateSession(x.id,{capacity:Number(e.target.value)})}/></label>
    <label><input type="checkbox" checked={x.membershipCreditAllowed!==false} onChange={e=>updateSession(x.id,{membershipCreditAllowed:e.target.checked})}/> Membership session credit allowed</label>
   </div>

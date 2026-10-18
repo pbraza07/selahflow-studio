@@ -32,10 +32,10 @@ export async function queueApprovedBooking(db,{bookingId,requestId,origin}){
  if(host.protocol!=='https:'&&host.hostname!=='localhost')throw Error('A secure application URL is required.');
  const token=randomBytes(32).toString('hex'),expiry=new Date(Date.now()+30*86400000).toISOString();
  // A fragment keeps the private token out of server access logs and referrers.
- const link=host.origin+'/payment/'+encodeURIComponent(row.slug)+'#booking_id='+encodeURIComponent(requestId)+'&token='+token;
+ const link=host.origin+'/payment/'+encodeURIComponent(row.slug)+'#booking_id='+encodeURIComponent(requestId||bookingId)+'&token='+token;
  const inserted=await db.query('INSERT INTO booking_client_flows(booking_id,business_id,request_id,payment_url,expires_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING booking_id',[bookingId,row.business_id,requestId,link,expiry]);
  if(!inserted.rowCount)return;
- await db.query('INSERT INTO customer_booking_access(token_hash,owner_id,booking_id,expires_at) VALUES($1,$2,$3,$4)',[tokenHash(token),row.owner,requestId,expiry]);
+ await db.query('INSERT INTO customer_booking_access(token_hash,owner_id,booking_id,expires_at) VALUES($1,$2,$3,$4)',[tokenHash(token),row.owner,requestId||bookingId,expiry]);
  await enqueue(db,row,'payment_link',link,host.origin);
 }
 /** Called inside the verified financial receipt transaction. */
@@ -46,12 +46,12 @@ export async function queueBookingPaid(db,businessId,bookingId){
  await enqueue(db,{...row,data:{...dataOf(row.data),price:row.amount_cents/100}},'payment_confirmation','',new URL(row.payment_url).origin);
 }
 /** DB row claims serialize workers across instances. Network calls happen outside transactions. */
-export async function processClientMessages(pool=getPool(),{send=sendNotificationChannel,limit=10}={}){
+export async function processClientMessages(pool=getPool(),{send=sendNotificationChannel,limit=10,messageIds=null}={}){
  // A crashed/ambiguous send is never blindly retried, including across deployment.
  await pool.query("UPDATE booking_client_messages SET status='unknown',detail='Delivery outcome unknown; check provider before resending',updated_at=now() WHERE status='processing' AND updated_at<now()-interval '2 minutes'");
  let processed=0;
  for(let i=0;i<limit;i++){
-  const item=(await pool.query("UPDATE booking_client_messages SET status='processing',updated_at=now() WHERE id=(SELECT m.id FROM booking_client_messages m JOIN booking_client_flows f ON f.booking_id=m.booking_id JOIN businesses b ON b.id=f.business_id WHERE b.status='active' AND ((m.status IN ('queued','failed') AND m.attempts<3) OR m.status='not_configured') AND m.next_attempt_at<=now() ORDER BY m.next_attempt_at FOR UPDATE OF m SKIP LOCKED LIMIT 1) RETURNING *")).rows[0];
+  const item=(await pool.query("UPDATE booking_client_messages SET status='processing',updated_at=now() WHERE id=(SELECT m.id FROM booking_client_messages m JOIN booking_client_flows f ON f.booking_id=m.booking_id JOIN businesses b ON b.id=f.business_id WHERE b.status='active' AND ($1::text[] IS NULL OR m.id=ANY($1::text[])) AND ((m.status IN ('queued','failed') AND m.attempts<3) OR m.status='not_configured') AND m.next_attempt_at<=now() ORDER BY m.next_attempt_at FOR UPDATE OF m SKIP LOCKED LIMIT 1) RETURNING *",[messageIds])).rows[0];
   if(!item)break;
   processed++;
   try{

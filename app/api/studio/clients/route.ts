@@ -1,3 +1,4 @@
+import {deleteClientPermanently} from '../../../../server/delete-client.mjs';
 import {issueMemberId} from '../../../../server/member-id-policy.mjs';
 import {replaceLegacyMemberId} from '../../../../server/replace-legacy-member-id.mjs';
 import {randomUUID} from 'node:crypto';
@@ -70,7 +71,7 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
 function failure(error:unknown){
  const message=(error as Error).message||'Client operation could not be completed.';
  const status=message==='AUTH_REQUIRED'?401:message==='BUSINESS_UNAVAILABLE'?403:
-  /already exists|another client|restore this client|changed|no longer|not found/i.test(message)?409:
+  /already exists|another client|restore this client|changed|no longer|not found|cancel .*subscription|expire .*checkout|currently being sent|confirm permanent/i.test(message)?409:
   /enter |invalid |exceed|cannot |required|client name/i.test(message)?400:503;
  return Response.json({error:status===503?'Client operation could not be completed.':message==='AUTH_REQUIRED'?'Sign in to manage your clients.':message==='BUSINESS_UNAVAILABLE'?'Business workspace unavailable.':message},{status,headers:noStore});
 }
@@ -105,7 +106,7 @@ export async function POST(req:Request){
   raw=await req.text();
   if(raw.length>5000)throw Error('Client request exceeds the allowed size.');
   const body=JSON.parse(raw);
-  if(!['create','update','archive','restore','deleteArchived','replaceLegacyId'].includes(body?.action))throw Error('Invalid client action.');
+  if(!['create','update','archive','restore','deleteArchived','delete','replaceLegacyId'].includes(body?.action))throw Error('Invalid client action.');
   const owner=await requireOwner(req),pool=getPool(),db=await pool.connect();
   try{
    await db.query('BEGIN');
@@ -155,23 +156,15 @@ export async function POST(req:Request){
       'INSERT INTO business_client_profiles(id,owner,source_key,anchor_appointment_id,name,email,phone,notes,member_number,date_of_birth,registration_answers,registration_field_labels) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::date,$11::jsonb,$12::jsonb)',
       [responseId,owner,id,sourceAnchor,input.name,input.email,input.phone,input.notes,memberNumber||null,dateOfBirth,JSON.stringify(registrationAnswers),JSON.stringify(registrationFieldLabels)]);
     }
-   }else if(body.action==='archive'){
-    if(!selected)throw Error('Client not found or already removed.');
-    if(profile){
-     await db.query('UPDATE business_client_profiles SET archived=TRUE,updated_at=now() WHERE owner=$1 AND id=$2',[owner,id]);
-    }else{
-     responseId=randomUUID();
-     const sourceAnchor=selected.history?.[selected.history.length-1]?.id||null;
-     await db.query(
-      'INSERT INTO business_client_profiles(id,owner,source_key,anchor_appointment_id,name,email,phone,notes,member_number,date_of_birth,archived) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE)',
-      [responseId,owner,id,sourceAnchor,selected.name,selected.email,selected.phone,selected.notes||'',selected.memberNumber||null,selected.dateOfBirth||null]);
-    }
+   }else if(body.action==='archive'||body.action==='delete'){
+    if(!client||body.confirmPhrase!=='DELETE CLIENT')throw Error('Confirm permanent client deletion.');
+    await deleteClientPermanently(db,{owner,businessId:business.id,client});
    }else if(body.action==='deleteArchived'){
     const ids=body.clientIds;
     if(!Array.isArray(ids)||ids.length<1||ids.length>2000||ids.some((value:unknown)=>!validId(value))||new Set(ids).size!==ids.length)throw Error('Select valid removed clients.');
     if(body.confirmPhrase!=='DELETE REMOVED CLIENTS')throw Error('Enter DELETE REMOVED CLIENTS to confirm.');
     if(ids.some((value:string)=>!result.archived.some((item:{id:string})=>item.id===value)))throw Error('One or more selected clients are not in the removed list.');
-    await db.query("UPDATE business_client_profiles SET deleted_at=now(),name='Deleted client',email='',phone='',notes='',import_columns='{}'::jsonb,updated_at=now() WHERE owner=$1 AND id=ANY($2::text[]) AND archived=TRUE AND deleted_at IS NULL",[owner,ids]);
+    for(const value of ids)await deleteClientPermanently(db,{owner,businessId:business.id,client:{...result.archived.find((c:any)=>c.id===value),memberNumber:result.profiles.find((p:any)=>p.id===value)?.member_number,dateOfBirth:dateOnly(result.profiles.find((p:any)=>p.id===value)?.date_of_birth)}});
     responseId='deleted';
    }else if(body.action==='restore'){
     if(!profile||!profile.archived||!archived)throw Error('Removed client not found.');

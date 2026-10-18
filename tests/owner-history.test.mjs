@@ -23,6 +23,9 @@ test('history keeps retained activity scoped, reconciles payments, masks message
   const search=await loadOwnerHistory(pg,'u1',{q:'page test',category:'bookings'});assert.equal(search.total,35);assert.equal(search.counts.bookings,35);
   assert.deepEqual((await pg.query('SELECT sessions_used FROM customer_memberships ORDER BY id')).rows,before.rows);
   await assert.rejects(loadOwnerHistory(pg,'missing'),/FORBIDDEN/);
+  await loadOwnerHistory(pg,'u1',{clear:true});assert.equal((await loadOwnerHistory(pg,'u1')).total,0);assert.ok((await loadOwnerHistory(pg,'u2')).total>0);
+  await pg.exec("UPDATE appointments SET status='Checked in' WHERE id='a1'");assert.equal((await loadOwnerHistory(pg,'u1')).total,1,'new status appears after clearing existing history');
+  assert.deepEqual((await pg.query('SELECT sessions_used FROM customer_memberships ORDER BY id')).rows,before.rows,'clearing tab preserves balances');
  }finally{await pg.close();}
 });
 test('history API authenticates ownership and navigation keeps approval actions separate from history',async()=>{

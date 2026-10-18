@@ -101,7 +101,7 @@ test('migration allows per-owner profiles, enforces source uniqueness and archiv
   assert.ok((await db.query("SELECT column_name FROM information_schema.columns WHERE table_name='business_client_profiles' AND column_name IN ('registration_answers','registration_field_labels')")).rows.length===2);
  }finally{await db.close();}
 });
-test('client-management endpoints enforce owner scope and protect appointment history',async()=>{
+test('client-management endpoints enforce owner scope and require explicit permanent deletion',async()=>{
  const base=new URL('../',import.meta.url);
  const route=await readFile(new URL('app/api/studio/clients/route.ts',base),'utf8');
  const screen=await readFile(new URL('app/components/owner-client-directory.tsx',base),'utf8');
@@ -109,7 +109,7 @@ test('client-management endpoints enforce owner scope and protect appointment hi
  assert.match(route,/requireOwner\(req\)/);
  assert.match(route,/validOrigin\(req\)/);
  assert.match(route,/WHERE owner=\$1/);
- assert.match(route,/UPDATE business_client_profiles SET archived=TRUE/);
+ assert.match(route,/deleteClientPermanently/);assert.match(route,/DELETE CLIENT/);
  assert.match(route,/membershipClientId/);
  assert.match(route,/source_key===virtualId/);
  assert.doesNotMatch(route,/DELETE FROM appointments/i);
@@ -117,7 +117,7 @@ test('client-management endpoints enforce owner scope and protect appointment hi
  assert.match(screen,/Add client/);
  assert.match(screen,/registrationConfig/);
  assert.match(screen,/Edit client/);
- assert.match(screen,/Remove client/);
+ assert.match(screen,/Delete permanently/);
  assert.match(screen,/aria-modal="true"/);
  assert.match(screen,/Removed clients/);
  assert.match(screen,/Restore/);

@@ -3,9 +3,12 @@ const result=spawnSync(process.execPath,['--env-file-if-exists=.env.local','scri
 if(result.status!==0)process.exit(result.status||1);
 const snapshot=spawnSync(process.execPath,['--env-file-if-exists=.env.local','scripts/import-staging-snapshot.mjs'],{stdio:'inherit'});
 if(snapshot.status!==0)process.exit(snapshot.status||1);
+const reset=spawnSync(process.execPath,['--env-file-if-exists=.env.local','scripts/reset-staging-registration.mjs'],{stdio:'inherit'});
+if(reset.status!==0)process.exit(reset.status||1);
 const stripe=spawnSync(process.execPath,['--env-file-if-exists=.env.local','scripts/prepare-staging-stripe.mjs'],{stdio:'inherit'});
 if(stripe.status!==0)process.exit(stripe.status||1);
 spawnSync(process.execPath,['--env-file-if-exists=.env.local','scripts/report-staging-delivery.mjs'],{stdio:'inherit'});
+spawnSync(process.execPath,['--env-file-if-exists=.env.local','scripts/verify-staging-client-email.mjs'],{stdio:'inherit'});
 const server=spawn(process.execPath,['--env-file-if-exists=.env.local','node_modules/next/dist/bin/next','start','--hostname','0.0.0.0','--port',process.env.PORT||'3000'],{stdio:'inherit',env:{...process.env,SELAHFLOW_MESSAGE_WORKER:'true'}});
 for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>server.kill(signal));
 server.on('exit',code=>process.exit(code||0));

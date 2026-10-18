@@ -3,7 +3,7 @@ import {queueApprovedBooking} from './booking-client-notifications.mjs';
 import {queueBookingReceipt} from './booking-receipts.mjs';
 
 import {getPool} from './database.mjs';
-import {appointmentData,bookedSessionCount,selectedSession,sessionsForDate} from './session-scheduling.mjs';
+import {appointmentData,bookedSessionCount,selectedSession,sessionTimeRestricted,sessionsForDate} from './session-scheduling.mjs';
 export function slotCapacity(service){const n=service?.maxSlots??1;return Number.isInteger(n)&&n>=1&&n<=20?n:1;}
 export function validSlotCapacity(n){return Number.isInteger(n)&&n>=1&&n<=20;}
 export function overlaps(start,duration,otherStart,otherDuration){return start<otherStart+otherDuration&&otherStart<start+duration;}
@@ -70,6 +70,7 @@ export async function confirmBooking(options){
    if(bookedSessionCount(existing,session.id)>=session.capacity)
     throw conflict('This session is full. Please choose another time.');
   }else{
+   if(sessionTimeRestricted(config,staff,services))throw conflict('Choose a scheduled session start time.');
    const clashes=sessionsForDate(config,date,staff).some(s=>
     overlaps(start,duration+bufferMinutes,s.start,s.duration+bufferMinutes));
    if(clashes)throw conflict('This time is reserved for a scheduled session.');
@@ -90,6 +91,7 @@ export async function confirmBooking(options){
    [id,data.reviewedBy||'owner',pendingId]);
   if(pendingId&&options.notificationOrigin)await queueApprovedBooking(client,{bookingId:id,requestId:pendingId,origin:options.notificationOrigin});
   const bookingReceipt=options.submissionOrigin?await queueBookingReceipt(client,{owner,bookingId:id,date,start,duration,staff,data,origin:options.submissionOrigin,pending:false}):null;
+  if(options.submissionOrigin&&Number(data.price)>0&&!data.membershipCovered)await queueApprovedBooking(client,{bookingId:id,requestId:null,origin:options.submissionOrigin});
   await client.query('COMMIT');
   return {id,duplicate:false,sessionId:session?.id||null,bookingReceipt};
  }catch(e){

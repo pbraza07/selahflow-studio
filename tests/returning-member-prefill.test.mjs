@@ -50,7 +50,7 @@ test('booking defaults place member ID first while the shared form supports conf
  assert.equal(fields.filter(f=>f.id==='dateOfBirth'&&f.required).length,1);
  assert.match(form,/<RegistrationFields config=\{config\} form="booking"/);
  assert.match(form,/automatically fill your name, email, phone and previous registration answers/);
- assert.match(form,/Leave the ID blank; SelahFlow will create one when you book/);
+ assert.match(form,/Leave the ID blank; provide your first name, last name and birth date to receive a new ID when you book/);
  assert.doesNotMatch(form,/Not you\? Clear name.*?Load my saved details/s);
 });
 test('lookup requires birth-date verification, business identity and throttling before returning PII',async()=>{

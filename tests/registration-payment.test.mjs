@@ -18,7 +18,7 @@ test('registration payment stays tenant-scoped, verifies DOB, respects approval/
   const summary=await registrationPaymentSummary(pool,'u1',id);assert.deepEqual(summary,{state:'due',amountCents:2500,slug:'one',bookingId:request});assert.doesNotMatch(JSON.stringify(summary),/private@example|2000-01-01|token/);
   assert.equal((await registrationPaymentSummary(pool,'u2',id)).state,'unavailable');assert.equal((await registrationPaymentSummary(pool,'u1',null)).state,'awaiting_approval');
   const args={slug:'one',bookingId:request,memberNumber:'AB0101',dateOfBirth:'2000-01-01',origin:'https://staging.example'};
-  const accessCount=async()=>Number((await db.query('SELECT count(*) AS n FROM customer_booking_access')).rows[0].n);
+  const accessCount=async()=>Number((await db.query("SELECT count(*) AS n FROM customer_booking_access WHERE expires_at<now()+interval '1 day'")).rows[0].n);
   for(const mismatch of [{dateOfBirth:'2001-01-01'},{memberNumber:'CD0101'},{slug:'two'}])await assert.rejects(startRegistrationPayment(pool,{...args,...mismatch}),/do not match/);
   assert.equal(await accessCount(),0,'incorrect identity cannot mint payment access');
   let creates=0;const session={id:'cs_test_registration12345',livemode:false,status:'open',payment_status:'unpaid',url:'https://checkout.stripe.com/c/pay/test_fixture'};

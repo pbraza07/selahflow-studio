@@ -1,3 +1,5 @@
+import {createHash} from 'node:crypto';
+const historyKey=r=>createHash('sha256').update(JSON.stringify([r.id,r.at,r.status])).digest('hex');
 import {reconcileMembershipPayments} from './report-payments.mjs';
 const data=x=>{try{return typeof x==='string'?JSON.parse(x):x||{};}catch{return {};}};
 const stamp=x=>x instanceof Date?x.toISOString():String(x||'');
@@ -46,10 +48,15 @@ export async function loadOwnerHistory(db,owner,filters={}){
  const q=String(filters.q||'').trim().toLowerCase().slice(0,100),category=HISTORY_CATEGORIES.includes(filters.category)?filters.category:'all';
  const aliases=new Set([filters.member]);
  if(filters.member)for(const r of (await db.query('SELECT member_number FROM business_member_ids WHERE business_id=$1 AND identity_key=(SELECT identity_key FROM business_member_ids WHERE business_id=$1 AND member_number=$2)',[business.id,filters.member])).rows)aliases.add(r.member_number);
- const scoped=rows.filter(r=>(!filters.member||aliases.has(r.memberNumber))&&(!filters.clientEmail||r.email.toLowerCase()===filters.clientEmail.toLowerCase())&&(!filters.clientName||r.client.toLowerCase()===filters.clientName.toLowerCase()));
+ const hidden=new Set((await db.query('SELECT history_id FROM owner_history_hidden WHERE owner=$1',[owner])).rows.map(r=>r.history_id));
+ const scoped=rows.filter(r=>!hidden.has(historyKey(r))).filter(r=>(!filters.member||aliases.has(r.memberNumber))&&(!filters.clientEmail||r.email.toLowerCase()===filters.clientEmail.toLowerCase())&&(!filters.clientName||r.client.toLowerCase()===filters.clientName.toLowerCase()));
  const matching=scoped.filter(r=>(!filters.from||r.date>=filters.from)&&(!filters.to||r.date<=filters.to)&&(!q||[r.client,r.memberNumber,r.email,r.title,r.status,r.reference,...r.details].join(' ').toLowerCase().includes(q)));
  const counts=Object.fromEntries(HISTORY_CATEGORIES.map(c=>[c,matching.filter(r=>c==='all'||r.category===c||c==='sessions'&&r.session).length]));
  const filtered=matching.filter(r=>category==='all'||r.category===category||category==='sessions'&&r.session).sort((a,b)=>b.order.localeCompare(a.order)||a.id.localeCompare(b.id));
  const pageSize=30,page=Math.min(Math.max(1,Math.floor(Number(filters.page)||1)),Math.max(1,Math.ceil(filtered.length/pageSize)));
+ if(filters.clear===true){
+  for(const r of rows)await db.query('INSERT INTO owner_history_hidden(owner,history_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[owner,historyKey(r)]);
+  return {cleared:rows.length};
+ }
  return {items:filtered.slice((page-1)*pageSize,page*pageSize).map(({email,order,...safe})=>safe),total:filtered.length,page,pageSize,counts};
 }

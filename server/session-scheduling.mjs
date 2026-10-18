@@ -44,6 +44,10 @@ export function sessionsForDate(config, date, staffId) {
     .map(x => ({...x, duration:services.find(s => s.id === x.service)?.duration || 0}))
     .filter(x => x.duration > 0);
 }
+/** Existing sessions default to scheduled starts only. Explicitly uncheck to allow other times. */
+export function sessionTimeRestricted(config,staff,services){
+ return (config.bookableSessions||[]).some(s=>s.staff===staff&&services.some(service=>service.id===s.service)&&s.onlyScheduledTime!==false);
+}
 export function selectedSession(config, date, staffId, services, start) {
   if (services.length !== 1) return null;
   return sessionsForDate(config, date, staffId)
@@ -63,6 +67,7 @@ export function validateBookableSessions(config) {
         Number.isNaN(Date.parse(session.date + 'T12:00:00Z')) ||
         new Date(session.date + 'T12:00:00Z').toISOString().slice(0,10) !== session.date ||
         !Number.isInteger(session.start) || session.start % 15 !== 0 ||
+        (session.onlyScheduledTime !== undefined && typeof session.onlyScheduledTime !== 'boolean') ||
         (session.membershipCreditAllowed !== undefined && typeof session.membershipCreditAllowed !== 'boolean') ||
         !Number.isInteger(session.capacity) || session.capacity < 1 || session.capacity > 100 ||
         !service || !member || !member.services.includes(service.id) ||
@@ -200,6 +205,7 @@ export function computeDayAvailability({config, date, staff, services, appointme
       sessionAvailability[start] = {remaining,capacity:session.capacity,id:session.id};
       if (remaining > 0 && !occupied && !staffCollision) slots.push(start);
     } else {
+      if(sessionTimeRestricted(config,staff,services))continue;
       const reservedForSession = allSessions.some(s =>
         overlaps(start,duration+buffer,s.start,s.duration+buffer));
       const otherGroupBooking = groupAppointments.some(a => a.staff === staff &&

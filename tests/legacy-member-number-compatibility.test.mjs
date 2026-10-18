@@ -13,7 +13,7 @@ test('historical IDs survive registration/profile updates while new malformed ID
   await pg.exec("INSERT INTO business_client_profiles(id,owner,name,email,member_number,date_of_birth) VALUES('old','u1','Legacy Client','old@example.com','LC010200','2000-01-02'); ALTER TABLE business_client_profiles ADD CONSTRAINT business_client_profiles_member_number_six CHECK(member_number IS NULL OR member_number ~ '^[A-Z]{2}[0-9]{4}$') NOT VALID;");
   // This is the exact constraint error from staging's booking confirmation.
   await assert.rejects(pg.exec("UPDATE business_client_profiles SET archived=FALSE WHERE id='old'"),/business_client_profiles_member_number_six/);
-  await pg.exec(await read('040_legacy_member_number_compatibility.sql'));
+  for(const f of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')&&f>='040').sort())await pg.exec(await read(f));
   await pg.exec("UPDATE business_client_profiles SET archived=FALSE,phone='+14155550123' WHERE id='old'");
   assert.equal((await pg.query("SELECT member_number FROM business_client_profiles WHERE id='old'")).rows[0].member_number,'LC010200');
   assert.equal(await issueMemberId(pg,{businessId:'b1',name:'Legacy Client',dateOfBirth:'2000-01-02'}),'LC010200');

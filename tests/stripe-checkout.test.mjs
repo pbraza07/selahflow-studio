@@ -1,3 +1,4 @@
+import {bookingPaymentPreview} from '../server/booking-payment-preview.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
@@ -51,6 +52,9 @@ test('booking Checkout is server-priced, account-scoped, reusable, and recorded 
   assert.equal(await apply(paid),true);assert.equal(await apply(paid),true);
   assert.equal((await db.query('SELECT count(*)::int AS n FROM events')).rows[0].n,1);
   assert.equal((await db.query('SELECT status FROM booking_payments')).rows[0].status,'paid');
+  assert.equal((await db.query("SELECT count(*)::int AS n FROM booking_client_messages WHERE booking_id=$1 AND event_type='payment_confirmation' AND channel='email'",[bookingId])).rows[0].n,1,'direct payment queues confirmation');
+  const flow=(await db.query('SELECT payment_url FROM booking_client_flows WHERE booking_id=$1',[bookingId])).rows[0];const access=new URLSearchParams(new URL(flow.payment_url).hash.slice(1));
+  assert.equal((await bookingPaymentPreview(pool,{slug:'one',bookingId,token:access.get('token')})).status,'paid','direct email payment links can be opened');
   assert.equal(JSON.parse((await db.query('SELECT data FROM appointments')).rows[0].data).paymentStatus,'paid');
   assert.equal((await startBookingCheckout(pool,args,api)).paid,true);assert.equal(creates,1);
   // No charge for membership coverage or approval-pending requests.
