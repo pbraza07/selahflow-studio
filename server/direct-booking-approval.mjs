@@ -3,16 +3,16 @@ import {requiresBookingApproval} from './booking-review.mjs';
 import {confirmBooking} from './booking-approvals.mjs';
 const object=x=>typeof x==='string'?JSON.parse(x):x||{};
 /** Read-only: permission comes from the booking's private access token, never its ID alone. */
-export async function pendingDirectBooking(db,{slug,bookingId,token}){
+export async function pendingDirectBooking(db,{slug,bookingId,token},{allowApproval=false}={}){
  const row=(await db.query("SELECT r.*,b.name AS business_name,s.data AS settings FROM businesses b JOIN booking_requests r ON r.business_id=b.id AND r.owner_id=b.owner_id JOIN customer_booking_access c ON c.owner_id=b.owner_id AND c.booking_id=r.id AND c.token_hash=$3 AND c.expires_at>now() JOIN settings s ON s.owner=b.owner_id WHERE b.slug=$1 AND b.status='active' AND r.id=$2 AND r.status='pending'",[slug,bookingId,tokenHash(token)])).rows[0];
- return directContext(row);
+ return directContext(row,allowApproval);
 }
-function directContext(row){
+function directContext(row,allowApproval=false){
  if(!row)return null;
  const config=object(row.settings),details=object(row.details),ids=details.serviceIds;
  if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length)return null;
  const services=ids.map(id=>(config.services||[]).find(s=>s.id===id));
- if(services.some(s=>!s)||requiresBookingApproval(services))return null;
+ if(services.some(s=>!s)||!allowApproval&&requiresBookingApproval(services))return null;
  return {row,config,details,services};
 }
 /** Only an intentional checkout click confirms an old request; preview never reserves a seat. */

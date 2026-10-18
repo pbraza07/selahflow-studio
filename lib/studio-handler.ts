@@ -26,6 +26,7 @@ import {paymentConfigured} from '../server/membership-payments.mjs';
 import {defaultSettings,today} from './defaults';
 import {validDuration,isCalendarUnit} from './service-terms';
 import {validSlotCapacity,serviceCapacityOpen,confirmBooking} from '../server/booking-approvals.mjs';
+import {sessionIsFull,SESSION_FULL_MESSAGE} from '../server/session-capacity.mjs';
 import {requiresBookingApproval,approvalSettings,bookingRequestDetail} from '../server/booking-review.mjs';
 import {hasUsableMembership} from '../server/member-badge-state.mjs';
 
@@ -290,7 +291,7 @@ if(b.key){
   if(isPublic&&(String(saved.email).trim().toLowerCase()!==String(b.email).trim().toLowerCase()||saved.dateOfBirth!==b.dateOfBirth||saved.name!==String(b.name).trim()))throw Error('Booking reference does not match your details.');
   return reply({ok:true,id:prior?.id||pending?.id,pending:pending?.status==='pending',status:pending?.status||'confirmed',appointmentId:pending?.appointment_id,chargedPrice:saved.price,membershipCovered:saved.membershipCovered,memberNumber:saved.memberNumber,customerToken:await customerAccess(String(prior?.id||pending?.id))});
  }
-}if(b.expectedPrice!==services.reduce((a:number,s:any)=>a+s.price,0)||b.expectedDuration!==duration)return reply({error:'Service prices or durations changed. Refresh the studio and review your booking again.'},409);if(!available.includes(b.start))return reply({error:'That time is no longer available. Please choose another.'},409);if(typeof b.name!=='string'||typeof b.email!=='string'||b.name.length>100||b.email&&(!/^\S+@\S+\.\S+$/.test(b.email)||b.email.length>200))throw Error('Enter valid contact details.');if(!isPublic&&(!b.name.trim()||!b.email))throw Error('Enter a name and valid email.');let verifiedMembership:any=null;if(isPublic){
+}if(b.expectedPrice!==services.reduce((a:number,s:any)=>a+s.price,0)||b.expectedDuration!==duration)return reply({error:'Service prices or durations changed. Refresh the studio and review your booking again.'},409);if(!available.includes(b.start))return reply({error:(availability.sessionAvailability as Record<number,{remaining:number}>)[b.start]?.remaining===0?SESSION_FULL_MESSAGE:'That time is no longer available. Please choose another.'},409);if(typeof b.name!=='string'||typeof b.email!=='string'||b.name.length>100||b.email&&(!/^\S+@\S+\.\S+$/.test(b.email)||b.email.length>200))throw Error('Enter valid contact details.');if(!isPublic&&(!b.name.trim()||!b.email))throw Error('Enter a name and valid email.');let verifiedMembership:any=null;if(isPublic){
  if(b.notMember!==true){
   const number=String(b.memberNumber||'').trim().toUpperCase();
   if(!/^[A-Z]{2}[0-9]{4}$/.test(number))throw Error('Enter your six-character membership ID or choose N/A.');
@@ -357,6 +358,12 @@ const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.ran
   const submissionClient=await getPool().connect();
   try{
    await submissionClient.query('BEGIN');
+   await submissionClient.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
+   const latestSettings=(await submissionClient.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0];
+   const latestConfig=latestSettings?JSON.parse(latestSettings.data):config;
+   if(await sessionIsFull(submissionClient,{owner,config:latestConfig,date:b.date,staff:b.staff,services,start:b.start})){
+    await submissionClient.query('ROLLBACK');return reply({error:SESSION_FULL_MESSAGE},409);
+   }
    await submissionClient.query('INSERT INTO booking_requests(id,business_id,owner_id,date,staff_id,start_minute,duration,details,reviewer) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',[id,business.id,owner,b.date,b.staff,b.start,duration,JSON.stringify(details),approval.reviewer]);
    bookingReceipt=await queueBookingReceipt(submissionClient,{owner,bookingId:id,date:b.date,start:b.start,duration,staff:b.staff,data,origin:trustedOrigin(req),pending:true});
    await submissionClient.query('COMMIT');

@@ -1,3 +1,9 @@
+## 1.3.107 — Full-session booking and payment guards
+
+- Show “Session is now full” and disable full booking times and stale review actions.
+- Reject new approval requests and pending checkout for full sessions server-side; preserve payment for existing reserved attendees.
+- Refresh session availability and allow clients to retry when cancelled seats reopen.
+
 ## 1.3.106 — Sortable/selectable history and automatic session approval
 
 - Sort every History column across all filtered pages; select individual entries or a page for activity-view deletion.
@@ -515,4 +521,3 @@ Do not create an empty new version without actual changes.
 
 - Accepts the current paid-invoice schema without the removed paid boolean, while retaining explicit-false and amount checks.
 - Retrieves off-Stripe payment totals so manually marked invoices cannot activate online memberships. Existing provider receipts reconcile without charging again or duplicating credits.
-

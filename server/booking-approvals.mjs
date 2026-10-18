@@ -2,6 +2,7 @@ import {isBlocked} from './booking-blockouts.mjs';
 import {queueApprovedBooking} from './booking-client-notifications.mjs';
 import {queueBookingReceipt} from './booking-receipts.mjs';
 import {requiresBookingApproval} from './booking-review.mjs';
+import {SESSION_FULL_MESSAGE} from './session-capacity.mjs';
 
 import {getPool} from './database.mjs';
 import {appointmentData,bookedSessionCount,selectedSession,sessionTimeRestricted,sessionsForDate,easternClock} from './session-scheduling.mjs';
@@ -80,7 +81,7 @@ export async function confirmBooking(options){
    if(start+duration+bufferMinutes > config.close*60 || start < config.open*60)
     throw conflict('This session no longer fits the business opening hours.');
    if(bookedSessionCount(existing,session.id)>=session.capacity)
-    throw conflict('This session is full. Please choose another time.');
+    throw conflict(SESSION_FULL_MESSAGE);
   }else{
    if(sessionTimeRestricted(config,staff,services))throw conflict('Choose a scheduled session start time.');
    const clashes=sessionsForDate(config,date,staff).some(s=>

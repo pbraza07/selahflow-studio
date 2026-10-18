@@ -9,6 +9,8 @@ import {startBookingCheckout,applyBookingPayment} from '../server/stripe-checkou
 import {tokenHash} from '../server/security.mjs';
 import {confirmDirectBookingForPayment,reconcileUncheckedBookings} from '../server/direct-booking-approval.mjs';
 import {processClientMessages} from '../server/booking-client-notifications.mjs';
+import {sessionIsFull,SESSION_FULL_MESSAGE} from '../server/session-capacity.mjs';
+import {computeDayAvailability} from '../server/session-scheduling.mjs';
 test('catalog checkbox controls approval, independently of business notification settings',()=>{
  assert.equal(requiresBookingApproval([{requiresApproval:false}]),false);
  assert.equal(requiresBookingApproval([{}]),false);
@@ -49,6 +51,27 @@ test('an authenticated old pending request can pay directly when catalog approva
   const groupOne=randomUUID(),groupTwo=randomUUID();await add(groupOne,1200,'2030-11-02');await add(groupTwo,1200,'2030-11-02');
   await confirmDirectBookingForPayment(pool,{...args,bookingId:groupOne,token:tokenHash(groupOne)});await assert.rejects(confirmDirectBookingForPayment(pool,{...args,bookingId:groupTwo,token:tokenHash(groupTwo)}),/full/);
   assert.equal((await query('SELECT status FROM booking_requests WHERE id=$1',[groupTwo])).rows[0].status,'pending','group capacity is never bypassed');
+  const fullArgs={...args,bookingId:groupTwo,token:tokenHash(groupTwo)};
+  assert.equal((await bookingPaymentPreview(pool,fullArgs)).status,'full','old pending payment links do not offer checkout for full sessions');
+  assert.equal((await bookingPaymentPreview(pool,fullArgs)).message,SESSION_FULL_MESSAGE);
+  await assert.rejects(startBookingCheckout(pool,fullArgs,api),/Session is now full/);
+  await assert.rejects(bookingPaymentPreview(pool,{...fullArgs,token:'c'.repeat(64)}),/unavailable/);
+  config.services[0].requiresApproval=true;await save();
+  assert.equal((await bookingPaymentPreview(pool,fullArgs)).status,'full','approval-required requests are also blocked when full');
+  await assert.rejects(startBookingCheckout(pool,fullArgs,api),/Session is now full/);
+  config.services[0].requiresApproval=false;await save();
+  const capacityInput={owner:'u1',config,date:'2030-11-02',staff:'coach',services:[service],start:1200};
+  assert.equal(await sessionIsFull(pool,capacityInput),true);
+  assert.equal(await sessionIsFull(pool,{...capacityInput,owner:'u2'}),false,'another business cannot consume these seats');
+  const visits=(await query("SELECT staff,start,duration,status,data FROM appointments WHERE owner='u1' AND date='2030-11-02'")).rows;
+  const day=computeDayAvailability({config,date:'2030-11-02',staff:'coach',services:[service],appointments:visits,reservedSlots:[],today:'2030-01-01',nowMinutes:0,capacityOpen:()=>true});
+  assert.equal(day.sessionAvailability[1200].remaining,0);assert.equal(day.slots.includes(1200),false);
+  const reservedArgs={...args,bookingId:groupOne,token:tokenHash(groupOne)};
+  assert.equal((await bookingPaymentPreview(pool,reservedArgs)).status,'ready','existing confirmed clients retain their reserved seat payment');
+  assert.equal((await startBookingCheckout(pool,reservedArgs,async(path,o)=>{if(path==='checkout/sessions')return {...session,id:'cs_test_reserved_seat12345'};return api(path,o);})).checkoutUrl,session.url,'filling the last seat does not prevent that client paying');
+  await query("UPDATE appointments SET status='Cancelled' WHERE id=$1",[groupOne]);assert.equal(await sessionIsFull(pool,capacityInput),false);
+  assert.equal((await bookingPaymentPreview(pool,fullArgs)).status,'ready','cancelled seats become bookable again');
+  await query("UPDATE appointments SET status='Confirmed' WHERE id=$1",[groupOne]);
   config.bookableSessions.push({id:'auto-group',service:'s',staff:'coach',date:'2030-11-03',start:600,capacity:2});details.sessionId='auto-group';const automatic=randomUUID(),manual=randomUUID();await add(automatic,600,'2030-11-03');delete details.sessionId;await add(manual,900,'2030-11-03');
   config.services.push({...service,id:'manual',requiresApproval:true});await save();
   await query('UPDATE booking_requests SET details=$1 WHERE id=$2',[JSON.stringify({...details,serviceIds:['manual']}),manual]);
