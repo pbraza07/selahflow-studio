@@ -1,3 +1,9 @@
+## 1.3.108 — Report controls and membership payment receipts
+
+- Add selected-period detail dialogs to all Reports cards, including membership payments and email outcomes.
+- Add a typed-confirmation reset of reported paid revenue while retaining payment safeguards and membership balances.
+- Queue plan-specific durable email receipts for verified Stripe membership payments and owner-recorded purchases/renewals.
+
 ## 1.3.107 — Full-session booking and payment guards
 
 - Show “Session is now full” and disable full booking times and stale review actions.

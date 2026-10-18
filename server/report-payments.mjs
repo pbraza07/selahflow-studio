@@ -17,21 +17,26 @@ export function reconcileMembershipPayments(events, ledger) {
   }).sort((a,b)=>Math.abs(Date.parse(payments[a].created)-Date.parse(row.created))-Math.abs(Date.parse(payments[b].created)-Date.parse(row.created)));
   if(matches.length){unmatched.delete(matches[0]);continue;}
   payments.push({id:row.id,kind:'membership_payment',created:row.created,
-   membershipId:row.membership_id,amountCents:cents});
+   membershipId:row.membership_id,requestId:row.appointment_id,amountCents:cents});
  }
  return payments.filter(p=>Number.isSafeInteger(p.amountCents)&&p.amountCents>=0)
   .map(p=>({...p,total:p.amountCents/100}));
 }
 
-export async function loadMembershipReportPayments(db,owner){
- const [audit,ledger,members]=await Promise.all([
+export async function loadMembershipReportPayments(db,owner,{includeDeleted=false}={}){
+ const [audit,ledger,members,emails]=await Promise.all([
   db.query("SELECT id,created,kind,data FROM events WHERE owner=$1 AND kind='membership_payment' ORDER BY created,id",[owner]),
   db.query("SELECT l.id,l.created_at::text AS created,l.amount_cents,l.membership_id,l.appointment_id FROM membership_session_ledger l JOIN businesses b ON b.id=l.business_id WHERE b.owner_id=$1 AND l.event_type='payment_confirmed' ORDER BY l.created_at,l.id",[owner]),
-  db.query('SELECT m.id FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1',[owner])
+  db.query('SELECT m.id,m.customer_name,m.member_number,m.sessions_included,m.sessions_used,p.name AS plan_name FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1',[owner]),
+  db.query('SELECT e.payment_id,e.snapshot,e.status,l.membership_id,l.appointment_id FROM membership_payment_emails e JOIN businesses b ON b.id=e.business_id JOIN membership_session_ledger l ON l.id=e.payment_id AND l.business_id=b.id WHERE b.owner_id=$1',[owner])
  ]);
  const retained=new Set(members.rows.map(m=>m.id));
+ const memberMap=new Map(members.rows.map(m=>[m.id,m])),emailById=new Map(emails.rows.map(e=>[e.payment_id,e])),emailByReference=new Map(emails.rows.map(e=>[e.membership_id+'|'+e.appointment_id,e]));
  return reconcileMembershipPayments(audit.rows.map(r=>({...JSON.parse(r.data),id:r.id,created:r.created,kind:r.kind})),ledger.rows)
-  .filter(p=>retained.has(p.membershipId));
+  .filter(p=>includeDeleted||retained.has(p.membershipId)).map(p=>{
+   const member=memberMap.get(p.membershipId),receipt=emailById.get(p.id)||emailByReference.get(p.membershipId+'|'+p.requestId),snapshot=receipt?.snapshot||{};
+   return {...p,renewal:snapshot.renewal??p.renewal??false,client:member?.customer_name||'Removed member',memberNumber:p.memberNumber||member?.member_number||'',planName:snapshot.planName||p.planName||(member?.plan_name?member.plan_name+' (current plan)':'Membership'),sessionsAdded:snapshot.sessionsAdded??p.sessionsAdded,sessionsLeft:snapshot.sessionsLeft,sessionsUsed:snapshot.sessionsUsed,paymentMethod:snapshot.paymentMethod||'Recorded payment',confirmationEmail:receipt?.status||'not_recorded'};
+  });
 }
 
 // Only remove deleted service lines from a mixed sale; retain the original

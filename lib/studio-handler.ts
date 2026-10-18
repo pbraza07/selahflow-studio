@@ -1,6 +1,7 @@
 import {queueBookingReceipt} from '../server/booking-receipts.mjs';
 import {issueMemberId} from '../server/member-id-policy.mjs';
 import {loadMembershipReportPayments,reportSaleEvents} from '../server/report-payments.mjs';
+import {visibleReportPayments} from '../server/report-reset.mjs';
 import {validatePageContent} from '../server/page-content.mjs';
 import {memberIdMembershipSummary} from '../server/member-id-summary.mjs';
 import {registrationPaymentSummary} from '../server/registration-payment.mjs';
@@ -43,8 +44,8 @@ export async function ownerGet(req:Request){
   ]);
   const visits=a.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   return reply({
-   config,appointments:decorateOwnerAppointments(visits,roster),
-   events:[...reportSaleEvents(e.results.map((r:any)=>({...r,...JSON.parse(r.data)})),config.services),...membershipPayments]
+   config,reportBusinessName:(await getPool().query("SELECT name FROM businesses WHERE owner_id=$1 AND status='active'",[owner])).rows[0]?.name,appointments:decorateOwnerAppointments(visits,roster),
+   events:await visibleReportPayments(getPool(),owner,[...reportSaleEvents(e.results.map((r:any)=>({...r,...JSON.parse(r.data)})),config.services),...membershipPayments])
   });
  }catch(e){
   return reply({error:(e as Error).message==='AUTH_REQUIRED'?'Please sign in.':'Studio data is unavailable or this business is waiting for approval.'},(e as Error).message==='AUTH_REQUIRED'?401:503);

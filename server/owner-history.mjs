@@ -29,9 +29,10 @@ export async function loadOwnerHistory(db,owner,filters={}){
   db.query("SELECT m.id,m.booking_id,m.event_type,m.channel,m.destination_masked,m.status,m.detail,m.updated_at,m.message->>'subject' AS subject FROM booking_client_messages m JOIN booking_client_flows f ON f.booking_id=m.booking_id JOIN businesses b ON b.id=f.business_id WHERE b.owner_id=$1",[owner]),
   db.query("SELECT m.booking_key,m.event_type,m.destination_masked,m.status,m.detail,m.updated_at,m.message->>'subject' AS subject FROM booking_receipt_emails m JOIN businesses b ON b.id=m.business_id WHERE b.owner_id=$1",[owner]),
   db.query('SELECT n.id,n.request_id,n.channel,n.destination_masked,n.status,n.detail,n.attempted_at FROM booking_notification_attempts n JOIN booking_requests r ON r.id=n.request_id WHERE r.owner_id=$1',[owner]),
-  db.query('SELECT r.id,r.details,r.status,r.created_at,r.reviewed_at,p.name AS plan_name FROM membership_requests r JOIN businesses b ON b.id=r.business_id LEFT JOIN membership_plans p ON p.id=r.plan_id AND p.business_id=r.business_id WHERE b.owner_id=$1',[owner])
+  db.query('SELECT r.id,r.details,r.status,r.created_at,r.reviewed_at,p.name AS plan_name FROM membership_requests r JOIN businesses b ON b.id=r.business_id LEFT JOIN membership_plans p ON p.id=r.plan_id AND p.business_id=r.business_id WHERE b.owner_id=$1',[owner]),
+  db.query('SELECT e.payment_id,e.membership_id,e.destination_masked,e.status,e.detail,e.updated_at,e.snapshot FROM membership_payment_emails e JOIN businesses b ON b.id=e.business_id WHERE b.owner_id=$1',[owner])
  ]);
- const [appointments,requests,payments,members,ledger,audit,messages,receipts,attempts,membershipRequests]=results.map(r=>r.rows);
+ const [appointments,requests,payments,members,ledger,audit,messages,receipts,attempts,membershipRequests,membershipEmails]=results.map(r=>r.rows);
  const bookings=new Map(),memberMap=new Map(members.map(m=>[m.id,m]));
  for(const a of appointments)bookings.set(a.id,{...identity(data(a.data)),data:data(a.data),date:a.date});
  for(const r of requests){const context={...identity(data(r.details)),data:data(r.details),date:r.date};bookings.set(r.id,context);if(r.appointment_id&&!bookings.has(r.appointment_id))bookings.set(r.appointment_id,context);}
@@ -54,6 +55,7 @@ export async function loadOwnerHistory(db,owner,filters={}){
  for(const m of messages)addMessage(m,'message:'+m.id,bookings.get(m.booking_id));
  for(const m of receipts)addMessage(m,'receipt:'+m.booking_key+':'+m.event_type,bookings.get(m.booking_key));
  for(const m of attempts)addMessage(m,'attempt:'+m.id,bookings.get(m.request_id));
+ for(const m of membershipEmails)add({id:'membership-email:'+m.payment_id,category:'messages',at:stamp(m.updated_at),title:'Membership payment confirmation email',status:m.status,reference:m.payment_id,details:['email · '+m.destination_masked,data(m.snapshot).planName||'Membership',m.detail||'', 'Submitted means email provider acceptance, not inbox delivery.']},identity(memberMap.get(m.membership_id)||{}));
  const q=String(filters.q||'').trim().toLowerCase().slice(0,100),category=HISTORY_CATEGORIES.includes(filters.category)?filters.category:'all';
  const aliases=new Set([filters.member]);
  if(filters.member)for(const r of (await db.query('SELECT member_number FROM business_member_ids WHERE business_id=$1 AND identity_key=(SELECT identity_key FROM business_member_ids WHERE business_id=$1 AND member_number=$2)',[business.id,filters.member])).rows)aliases.add(r.member_number);

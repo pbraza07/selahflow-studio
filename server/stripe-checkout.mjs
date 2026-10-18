@@ -5,6 +5,7 @@ import {tokenHash} from './security.mjs';
 import {queueApprovedBooking,queueBookingPaid} from './booking-client-notifications.mjs';
 import {confirmDirectBookingForPayment,pendingDirectBooking} from './direct-booking-approval.mjs';
 import {sessionIsFull,SESSION_FULL_MESSAGE} from './session-capacity.mjs';
+import {queueMembershipPaymentEmail} from './membership-payment-emails.mjs';
 
 export function assertTestPayment(object){
  if(isStaging()&&object?.livemode!==false)throw Error('Staging accepts only Stripe sandbox payments.');
@@ -111,8 +112,10 @@ export async function applyMembershipInvoice(db,businessId,account,invoice,subsc
  if(!Number.isSafeInteger(credits)||credits<0)return false;
  const receipt=await db.query('INSERT INTO stripe_payment_receipts(stripe_account_id,provider_reference,business_id,membership_id,amount_cents) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING provider_reference',[account,invoice.id,businessId,member.id,invoice.amount_paid]);
  if(!receipt.rowCount)return true;
- await db.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[randomUUID(),businessId,member.id,'stripe:'+invoice.id,credits,invoice.amount_paid]);
+ const paymentId=randomUUID();
+ await db.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[paymentId,businessId,member.id,'stripe:'+invoice.id,credits,invoice.amount_paid]);
  await db.query("UPDATE customer_memberships SET sessions_included=sessions_included+$1,status=CASE WHEN $7='canceled' THEN 'canceled' WHEN GREATEST(paid_through,$2::timestamptz)>now() THEN 'active' ELSE 'expired' END,paid_through=GREATEST(paid_through,$2::timestamptz),last_paid_at=now(),stripe_subscription_id=$3,stripe_customer_id=$4,updated_at=now() WHERE id=$5 AND business_id=$6",[credits,paidThrough,subscriptionId,typeof invoice.customer==='string'?invoice.customer:null,member.id,businessId,subscription.status]);
  // Reports already reconcile the session payment ledger, so no duplicate audit sale.
+ await queueMembershipPaymentEmail(db,{businessId,paymentId,paymentMethod:isStaging()?'Stripe sandbox':'Stripe',renewal:invoice.billing_reason==='subscription_cycle'});
  return true;
 }

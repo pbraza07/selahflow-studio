@@ -4,6 +4,7 @@ import {tokenHash} from './security.mjs';
 import {paymentConfigured} from './membership-payments.mjs';
 import {validEmail,validE164,maskDestination,sendNotificationChannel} from './notification-delivery.mjs';
 import {bookingReceiptSnapshot,bookingReceiptMessage,queueBookingReceipt,processBookingReceipts} from './booking-receipts.mjs';
+import {processMembershipPaymentEmails} from './membership-payment-emails.mjs';
 
 const dataOf=x=>typeof x==='string'?JSON.parse(x):x||{};
 export const clientSmsPhone=x=>{
@@ -89,7 +90,7 @@ export function startClientMessageWorker(){
    const result=await reconcileUncheckedBookings(getPool(),{origin,after:approvalCursor});approvalCursor=result.next;
    if(result.confirmed)console.log('Unchecked booking reconciliation:',JSON.stringify({scanned:result.scanned,confirmed:result.confirmed,unavailable:result.unavailable}));
   }catch{console.error('Unchecked booking reconciliation temporarily unavailable');}
-  await processClientMessages();await processBookingReceipts(getPool());
+  await processClientMessages();await processBookingReceipts(getPool());await processMembershipPaymentEmails(getPool());
  }catch{console.error('Client message queue temporarily unavailable');}finally{busy=false;}};
  setInterval(tick,15000).unref();void tick();
 }

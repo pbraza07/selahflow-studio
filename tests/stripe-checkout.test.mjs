@@ -89,6 +89,8 @@ test('membership sandbox checkout reuses enrollment; paid invoices add credits/r
   assert.equal(await apply({...invoice,id:'in_renewal',billing_reason:'subscription_cycle'}),true);
   updated=(await db.query('SELECT * FROM customer_memberships')).rows[0];assert.equal(updated.sessions_included,6);assert.equal(updated.sessions_used,1);
   const ledger=(await db.query('SELECT * FROM membership_session_ledger')).rows;assert.equal(ledger.length,2);assert.equal(ledger.reduce((s,r)=>s+r.amount_cents,0),4000);
+  const emails=(await db.query('SELECT snapshot,destination FROM membership_payment_emails ORDER BY created_at')).rows;
+  assert.equal(emails.length,2,'one durable receipt for initial paid invoice and one for renewal, even after replay');assert.equal(emails[0].destination,'sandbox@example.com');assert.equal(emails[0].snapshot.planName,'Three Sessions');assert.equal(emails[1].snapshot.sessionsLeft,5);assert.equal(emails[1].snapshot.renewal,true);
   await assert.rejects(startMembershipCheckout(pool,body,'https://staging.example',api),/already/);assert.equal(creates,1);
  }finally{await pg.close();for(const [i,key]of ['STRIPE_SECRET_KEY','STRIPE_CONNECT_WEBHOOK_SECRET'].entries())if(old[i]===undefined)delete process.env[key];else process.env[key]=old[i];}
 });

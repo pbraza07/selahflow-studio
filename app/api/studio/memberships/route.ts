@@ -1,4 +1,5 @@
 import {issueMemberId,MEMBER_ID_POLICIES} from '../../../../server/member-id-policy.mjs';
+import {queueMembershipPaymentEmail} from '../../../../server/membership-payment-emails.mjs';
 import {customRegistrationFields,validateStandardRegistration} from '../../../../server/registration-questions.mjs';
 import {changeMembershipGroup,requireMembershipGroup} from '../../../../server/membership-groups.mjs';
 import {validateMembershipBadge} from '../../../../server/membership-badges.mjs';
@@ -150,11 +151,13 @@ export async function POST(req:Request){
     if(!Number.isInteger(credits)||credits<1)throw Error('Membership package must include at least one session.');
     const existing=(await client.query("SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='payment_confirmed'",[business.id,id,requestId])).rowCount;
     if(existing){await client.query('COMMIT');return Response.json({ok:true,credited:0,alreadyProcessed:true},{headers});}
-    await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[randomUUID(),business.id,id,requestId,credits,selectedPlan?selectedPlan.price_cents:member.price_cents]);
+    const paymentId=randomUUID();
+    await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[paymentId,business.id,id,requestId,credits,selectedPlan?selectedPlan.price_cents:member.price_cents]);
     await client.query("UPDATE customer_memberships SET sessions_included=sessions_included+$1,status='active',last_paid_at=now(),updated_at=now(),plan_id=COALESCE($4,plan_id),price_cents=COALESCE($5,price_cents) WHERE business_id=$2 AND id=$3",[credits,business.id,id,selectedPlan?.id||null,selectedPlan?.price_cents??null]);
     await client.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,'membership_payment',$4)",[randomUUID(),business.id,new Date().toISOString(),JSON.stringify({membershipId:id,memberNumber:member.member_number,requestId,amountCents:Number(selectedPlan?.price_cents??member.price_cents),renewal:input.action==='renewMembership'})]);
+    await queueMembershipPaymentEmail(client,{businessId:business.id,paymentId,origin:trustedOrigin(req),renewal:input.action==='renewMembership'});
     await client.query('COMMIT');
-    return Response.json({ok:true,credited:credits},{headers});
+    return Response.json({ok:true,credited:credits,confirmationEmail:'queued'},{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
   }
   if(input.action==='recordSession'){
@@ -186,6 +189,8 @@ export async function POST(req:Request){
     await client.query('BEGIN');
     const member=(await client.query('SELECT id,customer_name,member_number FROM customer_memberships WHERE business_id=$1 AND id=$2 FOR UPDATE',[business.id,id])).rows[0];
     if(!member)throw Error('Member not found.');
+    await client.query('LOCK TABLE membership_payment_emails IN SHARE ROW EXCLUSIVE MODE');
+    if((await client.query("SELECT 1 FROM membership_payment_emails WHERE business_id=$1 AND membership_id=$2 AND status='processing'",[business.id,id])).rows.length)throw Error('A membership email is being sent. Retry deleting after delivery finishes.');
     // Keep the original membership-request audit record, but remove its
     // foreign-key link before deleting the member. Approved requests are
     // otherwise the only remaining dependency that prevents a valid delete.
