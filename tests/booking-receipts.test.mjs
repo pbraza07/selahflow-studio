@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile,readdir} from 'node:fs/promises';
+import {PGlite} from '@electric-sql/pglite';
+import {bookingReceiptSnapshot,bookingReceiptMessage,queueBookingReceipt,processBookingReceipts} from '../server/booking-receipts.mjs';
+import {queueApprovedBooking} from '../server/booking-client-notifications.mjs';
+import {confirmBooking} from '../server/booking-approvals.mjs';
+import {bookingConfirmationInstructions} from '../server/booking-confirmation-copy.mjs';
+test('submission and covered approval emails are durable, scoped, idempotent and preserve membership balances',async()=>{
+ const pg=new PGlite();try{
+  for(const file of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort())await pg.exec(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8'));
+  const db={query:async(s,v)=>{const r=await pg.query(s,v);return {...r,rowCount:r.rows.length||r.affectedRows||0};},release(){}},pool={...db,connect:async()=>db};
+  await pg.exec("INSERT INTO users(id,email,password_hash) VALUES('u1','owner@example.test','hash'),('u2','other@example.test','hash'); INSERT INTO businesses(id,owner_id,slug,name,status) VALUES('b1','u1','club-one','Club One','active'),('b2','u2','club-two','Club Two','active'); INSERT INTO membership_plans(id,business_id,name,interval_unit,price_cents,sessions_included) VALUES('p1','b1','Training Pro','month',6000,8),('p2','b2','Foreign Package','month',10000,12); INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,date_of_birth,status,price_cents,sessions_included,sessions_used,member_number,stripe_account_id) VALUES('m1','b1','p1','Client One','client@example.test','2013-08-14','active',6000,8,3,'CA0814','manual'),('m2','b2','p2','Other Client','other-client@example.test','2013-08-14','active',10000,12,1,'CA0814','manual');");
+  const config={open:8,close:20,buffer:0,address:'123 Training Lane',phone:'8135550100',services:[{id:'s',name:'Training',price:25,duration:30,maxSlots:1}],staff:[{id:'coach',name:'Coach One',services:['s']}]};
+  await db.query("INSERT INTO settings(owner,data) VALUES('u1',$1)",[JSON.stringify(config)]);
+  const input={owner:'u1',bookingId:'request-one',date:'2030-11-01',start:600,duration:30,staff:'coach',data:{name:'Client One',email:'client@example.test',memberNumber:'CA0814',services:['Training'],serviceIds:['s'],price:0,membershipCovered:true},origin:'https://staging.example',pending:true};
+  await db.query('BEGIN');
+  await db.query("INSERT INTO booking_requests(id,business_id,owner_id,date,staff_id,start_minute,duration,details,reviewer) VALUES('request-one','b1','u1','2030-11-01','coach',600,30,'{}','owner')");
+  const receipt=await queueBookingReceipt(db,input);await db.query('COMMIT');
+  assert.equal(receipt.memberNumber,'CA0814');assert.equal(receipt.membership.sessionsLeft,5);assert.equal(receipt.membership.sessionsUsed,3);assert.equal(receipt.membership.name,'Training Pro');assert.ok(!('email'in receipt));
+  await queueBookingReceipt(db,input);assert.equal((await db.query('SELECT * FROM booking_receipt_emails')).rows.length,1);
+  const text=(await db.query('SELECT message FROM booking_receipt_emails')).rows[0].message.text;
+  for(const expected of ['CA0814','request-one','Coach One','Sessions left: 5','Sessions taken / used: 3',bookingConfirmationInstructions(true),'https://staging.example/membership/club-one','https://staging.example/book/club-one'])assert.ok(text.includes(expected),expected);
+  assert.doesNotMatch(text,/Foreign Package|other-client@example|2013-08-14|Pay securely with Stripe/);
+  assert.equal((await db.query("SELECT sessions_used FROM customer_memberships WHERE id='m1'")).rows[0].sessions_used,3);
+  const sent=[];const send=async(channel,destination,message)=>{sent.push({channel,destination,message});return {status:'submitted',detail:'Simulated provider acceptance'};};
+  await processBookingReceipts(pool,{send});await processBookingReceipts(pool,{send});assert.equal(sent.length,1);assert.equal(sent[0].channel,'email');assert.equal(sent[0].destination,'client@example.test');
+  await confirmBooking({pool,owner:'u1',services:config.services,staff:'coach',date:input.date,start:600,duration:30,buffer:0,id:'approved-one',data:{...input.data,bookingRequestId:input.bookingId},pendingId:input.bookingId,expectedReviewer:'owner',notificationOrigin:input.origin});
+  assert.equal((await db.query('SELECT * FROM booking_client_flows')).rows.length,0,'covered approval creates no payment link');
+  const approval=(await db.query("SELECT message FROM booking_receipt_emails WHERE event_type='approval'")).rows[0].message.text;
+  assert.match(approval,/Booking approved/);assert.match(approval,/No payment due — covered/);assert.match(approval,/Sessions left: 5/);assert.doesNotMatch(approval,/Pay securely/);
+  await processBookingReceipts(pool,{send});assert.equal(sent.length,2);
+  const direct=await confirmBooking({pool,owner:'u1',services:config.services,staff:'coach',date:'2030-11-02',start:600,duration:30,buffer:0,id:'direct-one',data:{...input.data,memberNumber:'',price:25},submissionOrigin:input.origin});
+  assert.equal(direct.bookingReceipt.pending,false);assert.equal((await db.query("SELECT * FROM booking_receipt_emails WHERE booking_key='direct-one'")).rows.length,1);
+  await db.query('BEGIN');await queueBookingReceipt(db,{...input,bookingId:'rolled-back'});await db.query('ROLLBACK');assert.equal((await db.query("SELECT * FROM booking_receipt_emails WHERE booking_key='rolled-back'")).rows.length,0);
+  await db.query("UPDATE booking_receipt_emails SET status='processing',updated_at=now()-interval '3 minutes' WHERE booking_key='direct-one'");await processBookingReceipts(pool,{send});assert.equal((await db.query("SELECT status FROM booking_receipt_emails WHERE booking_key='direct-one'")).rows[0].status,'unknown');assert.equal(sent.length,2,'ambiguous delivery never automatically repeats');
+  await db.query("UPDATE customer_memberships SET status='pending_payment' WHERE id='m1'");assert.equal((await bookingReceiptSnapshot(db,input)).membership,null);
+  const payment=bookingReceiptMessage({...receipt,pending:false,price:25},{event:'payment_link',paymentLink:'https://staging.example/payment/club-one#token=fixture'});assert.match(payment.text,/payment requested/);assert.match(payment.text,/#token=fixture/);assert.match(payment.text,/membership\/club-one/);
+  const paid=bookingReceiptMessage({...receipt,pending:false,price:25},{event:'payment_confirmation'});assert.match(paid.text,/Stripe payment has been verified/);assert.doesNotMatch(paid.text,/Pay securely with Stripe/);
+ }finally{await pg.close();}
+});

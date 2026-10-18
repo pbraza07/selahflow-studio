@@ -1,8 +1,11 @@
 import {isBlocked} from './booking-blockouts.mjs';
 import {queueApprovedBooking} from './booking-client-notifications.mjs';
+import {queueBookingReceipt} from './booking-receipts.mjs';
+import {requiresBookingApproval} from './booking-review.mjs';
+import {SESSION_FULL_MESSAGE} from './session-capacity.mjs';
 
 import {getPool} from './database.mjs';
-import {appointmentData,bookedSessionCount,selectedSession,sessionsForDate} from './session-scheduling.mjs';
+import {appointmentData,bookedSessionCount,selectedSession,sessionTimeRestricted,sessionsForDate,easternClock} from './session-scheduling.mjs';
 export function slotCapacity(service){const n=service?.maxSlots??1;return Number.isInteger(n)&&n>=1&&n<=20?n:1;}
 export function validSlotCapacity(n){return Number.isInteger(n)&&n>=1&&n<=20;}
 export function overlaps(start,duration,otherStart,otherDuration){return start<otherStart+otherDuration&&otherStart<start+duration;}
@@ -35,8 +38,10 @@ export async function confirmBooking(options){
   // Serializes all booking approvals and session-capacity edits for one business.
   await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
   await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':'+date]);
+  let pendingRequest=null;
   if(pendingId){
-   const pending=await client.query("SELECT id,status,owner_id,reviewer FROM booking_requests WHERE id=$1 FOR UPDATE",[pendingId]);
+   const pending=await client.query("SELECT * FROM booking_requests WHERE id=$1 FOR UPDATE",[pendingId]);
+   pendingRequest=pending.rows[0];
    if(!pending.rows[0]||pending.rows[0].owner_id!==owner||pending.rows[0].status!=='pending'||(expectedReviewer&&expectedReviewer!=='owner'&&pending.rows[0].reviewer!==expectedReviewer))
     throw conflict('This request has already been reviewed or is unavailable.');
   }
@@ -44,6 +49,15 @@ export async function confirmBooking(options){
   if(prior.rowCount){await client.query('COMMIT');return {id,duplicate:true};}
   const settingRow=await client.query('SELECT data FROM settings WHERE owner=$1',[owner]);
   const config=settingRow.rows[0] ? JSON.parse(settingRow.rows[0].data) : {};
+  if(options.autoConfirmRequest){
+   const saved=options.autoConfirmRequest;
+   if(!pendingRequest||pendingRequest.details!==saved.details||pendingRequest.date!==date||pendingRequest.staff_id!==staff||Number(pendingRequest.start_minute)!==start||Number(pendingRequest.duration)!==duration)throw conflict('Booking details changed. Check your registration before paying.');
+   const current=services.map(s=>(config.services||[]).find(v=>v.id===s.id));
+   if(!current.length||current.some(s=>!s)||requiresBookingApproval(current))throw conflict('The business must approve this booking before you can pay.');
+   const member=config.staff?.find(s=>s.id===staff),clock=easternClock();
+   if(!member||!current.every(s=>member.services.includes(s.id))||current.reduce((n,s)=>n+s.duration,0)!==duration||!data.membershipCovered&&Math.round(current.reduce((n,s)=>n+Number(s.price),0)*100)!==Math.round(Number(data.price)*100))throw conflict('Service details changed. Contact the business before paying.');
+   if(date<clock.date||date===clock.date&&start<=clock.minutes||start<config.open*60||start+duration+Number(buffer||0)>config.close*60)throw conflict('This booking time is no longer available. Choose another appointment.');
+  }
   if(isBlocked(config,date,staff,start,duration+(Number(buffer)||0)))throw conflict('This date and time is blocked by the business. Choose another time.');
   const session=selectedSession(config,date,staff,services,start);
   const sessionId=data?.sessionId || null;
@@ -67,8 +81,9 @@ export async function confirmBooking(options){
    if(start+duration+bufferMinutes > config.close*60 || start < config.open*60)
     throw conflict('This session no longer fits the business opening hours.');
    if(bookedSessionCount(existing,session.id)>=session.capacity)
-    throw conflict('This session is full. Please choose another time.');
+    throw conflict(SESSION_FULL_MESSAGE);
   }else{
+   if(sessionTimeRestricted(config,staff,services))throw conflict('Choose a scheduled session start time.');
    const clashes=sessionsForDate(config,date,staff).some(s=>
     overlaps(start,duration+bufferMinutes,s.start,s.duration+bufferMinutes));
    if(clashes)throw conflict('This time is reserved for a scheduled session.');
@@ -88,8 +103,10 @@ export async function confirmBooking(options){
    "UPDATE booking_requests SET status='accepted',appointment_id=$1,reviewed_by=$2,reviewed_at=now() WHERE id=$3",
    [id,data.reviewedBy||'owner',pendingId]);
   if(pendingId&&options.notificationOrigin)await queueApprovedBooking(client,{bookingId:id,requestId:pendingId,origin:options.notificationOrigin});
+  const bookingReceipt=options.submissionOrigin?await queueBookingReceipt(client,{owner,bookingId:id,date,start,duration,staff,data,origin:options.submissionOrigin,pending:false}):null;
+  if(options.submissionOrigin&&Number(data.price)>0&&!data.membershipCovered)await queueApprovedBooking(client,{bookingId:id,requestId:null,origin:options.submissionOrigin});
   await client.query('COMMIT');
-  return {id,duplicate:false,sessionId:session?.id||null};
+  return {id,duplicate:false,sessionId:session?.id||null,bookingReceipt};
  }catch(e){
   await client.query('ROLLBACK');
   if(e.code==='23505')throw conflict('That time was booked by another customer. Choose another time.');

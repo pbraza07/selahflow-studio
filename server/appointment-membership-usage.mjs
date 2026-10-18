@@ -3,13 +3,13 @@ import {loadOwnerMemberRoster,ownerAppointmentMember} from './owner-appointment-
 
 /**
  * Charge one prepaid membership session per appointment, regardless of whether
- * it was checked in, marked no-show, or completed later.
+ * it was checked in or marked no-show. Legacy completion never debits credits.
  *
  * Caller must hold an open transaction and the appointment's FOR UPDATE lock.
  * The member row lock and unique session_used ledger event make retries and
  * parallel requests idempotent.
  */
-export const CREDIT_CONSUMING_STATUSES=new Set(['Checked in','No-show','Completed']);
+export const CREDIT_CONSUMING_STATUSES=new Set(['Checked in','No-show']);
 
 export async function debitAppointmentMembershipSession(client,{owner,memberNumber,appointmentId,status,ledgerId,creditAllowed=true}){
  const number=String(memberNumber||'').trim().toUpperCase();

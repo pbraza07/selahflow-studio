@@ -1,3 +1,68 @@
+## 1.3.108 — Report controls and membership payment receipts
+
+- Add selected-period detail dialogs to all Reports cards, including membership payments and email outcomes.
+- Add a typed-confirmation reset of reported paid revenue while retaining payment safeguards and membership balances.
+- Queue plan-specific durable email receipts for verified Stripe membership payments and owner-recorded purchases/renewals.
+
+## 1.3.107 — Full-session booking and payment guards
+
+- Show “Session is now full” and disable full booking times and stale review actions.
+- Reject new approval requests and pending checkout for full sessions server-side; preserve payment for existing reserved attendees.
+- Refresh session availability and allow clients to retry when cancelled seats reopen.
+
+## 1.3.106 — Sortable/selectable history and automatic session approval
+
+- Sort every History column across all filtered pages; select individual entries or a page for activity-view deletion.
+- Automatically reconcile eligible pending requests when catalog approval is unchecked, preserving atomic booking validation and payment-link email flow.
+- Recheck verified paid state before sending payment-confirmation emails.
+
+## 1.3.105 — Catalog approval and direct payment
+
+- Unchecked service approval confirms new bookings immediately and exposes Stripe payment even when business approval notifications are enabled. Mixed bookings still require approval when any service is checked.
+- Existing pending requests for unchecked services can confirm on an authenticated payment click, with atomic capacity, current service/price/hours checks and idempotent Checkout reuse. Previews remain read-only and never reserve seats or charge.
+- Checked, declined, expired-access, cross-business and unavailable bookings cannot bypass review or availability safeguards. Verified Stripe payment queues the existing branded client confirmation email.
+
+## 1.3.104 — Final staging deletion isolation and email verification
+
+- Client deletion with missing birth dates uses exact booking history or matching name/contact, preventing same-name or unnamed guests from being deleted together. Archived profiles retain their original history anchors during permanent deletion.
+- Explicit staging receipt verification can queue a missing approval receipt for a real saved appointment and the exact registered recipient, without creating a booking or charge or releasing other payment emails.
+
+## 1.3.103 — Staging client reset, session controls and payment emails
+
+- Permanent tenant-scoped member deletion removes linked registration, booking, membership, payment and saved email records; IDs retain only anonymous retired reservations. Explicit staging reset is one-shot and stores counts only.
+- History can be cleared from its tab with confirmation; operational bookings, balances and billing/delivery source records remain saved. New activity appears normally.
+- All session questions have required/optional controls; existing/new sessions default to scheduled start times only, with an owner opt-out.
+- Direct bookings enter the private payment flow and queue confirmations only after verified Stripe payment. Shorter emails use labeled payment, membership and booking buttons.
+- Targeted staging email verification retries at most one saved email per event for one configured recipient. No bulk release, automatic charges or production deployment.
+
+## v1.3.102 — Client email rollout and legacy registration replacement (staging)
+
+- Explicit prospective client-email cutoff permits new booking, approval/payment-link and verified-payment confirmation emails to their submitted addresses. Historical queue jobs stay restricted unless an owner explicitly retries that booking; owner alerts and SMS retain existing restrictions.
+- Owner-confirmed replacement of legacy registration IDs issues six characters, updates current registration/membership references and retains the old reserved ID, historical bookings, payments and session ledgers. Returning registration prefers the new valid ID. Tenant identity and stale-record checks remain enforced.
+- No production changes. Verify exact staging deployment and provider acceptance separately from inbox delivery.
+
+## v1.3.101 — Organized history tabs (staging)
+
+- Dedicated owner History view with All activity, Bookings, Sessions & attendance, Payments, Memberships and Email & SMS tabs; searchable clients/IDs, date range, stable pagination and collapsed details.
+- Client profiles separate History, Details, Membership and Sessions. Long message history no longer clutters Overview and Calendar; pending approvals remain there. Safe message retries remain in history details.
+- Owner-scoped retained source data separates quotes from verified/recorded payments, reconciles membership audit/ledger copies and masks message destinations. No fabricated delivery attempts, private email bodies, payment URLs or provider secrets returned. No data rewriting or billing changes.
+
+## v1.3.100 — Booking lifecycle email and attendance choices (staging)
+
+- Remove Complete from owner calendars; owner status API accepts check-in, no-show and cancellation. Only check-in/no-show debit membership sessions, once per appointment; legacy history retained.
+- Durable submission email committed with pending and immediate client bookings. Friendly next steps match page copy, with stable Membership ID, booking details, active membership sessions left/used and tenant booking/membership links.
+- Approved paid bookings retain private payment links and verified-paid confirmations, enriched with the same booking/membership detail. Free and covered approvals receive their own no-payment-due email.
+
+## v1.3.99 — SelahFlow logo artwork and branded email (staging)
+
+- Supplied flowing S, sage ribbon and gold pause identity replaces platform marks across shared headers, footers, homepage, owner/admin/login/review pages and app/push icons. Business-owned logos preserved.
+- Shared HTML email branding covers approval, membership, payment and verification messages. Plain text, private links, staging recipient restrictions and delivery state retained. Gmail MIME embeds PNG; Resend uses HTML and a CID attachment. No actual client messages or charges performed.
+
+## v1.3.98 — Separate customer and business pages (staging)
+
+- Clear two-audience homepage. Customer search and registration help at /customers; partner benefits, plans and revenue at /businesses.
+- Shared desktop/mobile links across discovery and pricing. New route slugs reserved. No billing, tenant data or payment behavior changes.
+
 ## v1.3.97 — Clear partner benefits and transparent revenue copy (staging only)
 
 - Homepage replaces redundant journey cards with three practical partner outcomes and expandable business examples. Existing search and client booking journeys are retained.
@@ -462,4 +527,3 @@ Do not create an empty new version without actual changes.
 
 - Accepts the current paid-invoice schema without the removed paid boolean, while retaining explicit-false and amount checks.
 - Retrieves off-Stripe payment totals so manually marked invoices cannot activate online memberships. Existing provider receipts reconcile without charging again or duplicating credits.
-

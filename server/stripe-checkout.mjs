@@ -2,7 +2,10 @@ import {randomUUID} from 'node:crypto';
 import {stripeApi,paymentConfigured,invoiceSubscriptionId,invoicePaidThrough,shouldActivateInvoice} from './membership-payments.mjs';
 import {isStaging} from './staging-safety.mjs';
 import {tokenHash} from './security.mjs';
-import {queueBookingPaid} from './booking-client-notifications.mjs';
+import {queueApprovedBooking,queueBookingPaid} from './booking-client-notifications.mjs';
+import {confirmDirectBookingForPayment,pendingDirectBooking} from './direct-booking-approval.mjs';
+import {sessionIsFull,SESSION_FULL_MESSAGE} from './session-capacity.mjs';
+import {queueMembershipPaymentEmail} from './membership-payment-emails.mjs';
 
 export function assertTestPayment(object){
  if(isStaging()&&object?.livemode!==false)throw Error('Staging accepts only Stripe sandbox payments.');
@@ -25,6 +28,9 @@ export async function readyMerchant(db,businessId,api=stripeApi){
 // Server prices come from the saved booking, never the payment button's payload.
 export async function startBookingCheckout(pool,{slug,bookingId,token,origin},api=stripeApi){
  if(!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(slug||'')||!/^[-a-f0-9]{36}$/i.test(bookingId||'')||!/^[a-f0-9]{64}$/i.test(token||''))throw Error('Invalid booking payment reference.');
+ const pending=await pendingDirectBooking(pool,{slug,bookingId,token},{allowApproval:true});
+ if(pending&&await sessionIsFull(pool,{owner:pending.row.owner_id,config:pending.config,date:pending.row.date,staff:pending.row.staff_id,services:pending.services,start:pending.row.start_minute}))throw Error(SESSION_FULL_MESSAGE);
+ await confirmDirectBookingForPayment(pool,{slug,bookingId,token,origin});
  const db=await pool.connect();
  try{
   await db.query('BEGIN');
@@ -42,8 +48,9 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
   const cents=Math.round(Number(data.price)*100);
   if(data.membershipCovered===true||cents===0)throw Error('No payment is due for this booking.');
   if(!Number.isSafeInteger(cents)||cents<50||cents>100000000)throw Error('This booking has an invalid online payment amount.');
+  await queueApprovedBooking(db,{bookingId:actualId,requestId:request?bookingId:null,origin});
   let record=(await db.query('SELECT * FROM booking_payments WHERE booking_id=$1 AND business_id=$2 FOR UPDATE',[actualId,business.id])).rows[0];
-  if(record?.status==='paid'){await db.query('COMMIT');return {paid:true};}
+  if(record?.status==='paid'){await queueBookingPaid(db,business.id,actualId);await db.query('COMMIT');return {paid:true};}
   if(record&&record.amount_cents!==cents)throw Error('The booking price changed. Contact the business before paying.');
   const account=await readyMerchant(db,business.id,api);
   if(record&&record.stripe_account_id!==account)throw Error('The payment account changed. Contact the business before paying.');
@@ -62,7 +69,7 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
    record=(await db.query('INSERT INTO booking_payments(booking_id,business_id,stripe_account_id,amount_cents,lines) VALUES($1,$2,$3,$4,$5::jsonb) RETURNING *',[actualId,business.id,account,cents,JSON.stringify(lines)])).rows[0];
   }else if(record.amount_cents!==cents)throw Error('The booking price changed. Contact the business before paying.');
   const session=await api('checkout/sessions',{account,idempotencyKey:'booking-'+actualId+'-'+(record.stripe_checkout_session_id||'initial'),params:{
-   mode:'payment','allowed_payment_method_types[0]':'card',client_reference_id:actualId,customer_email:data.email,
+   mode:'payment','allowed_payment_method_types[0]':'card',client_reference_id:actualId,customer_email:data.email||undefined,
    'line_items[0][quantity]':'1','line_items[0][price_data][currency]':'usd',
    'line_items[0][price_data][unit_amount]':String(record.amount_cents),
    'line_items[0][price_data][product_data][name]':business.name+' · '+(data.services||['Appointment']).join(' + ').slice(0,150),
@@ -105,8 +112,10 @@ export async function applyMembershipInvoice(db,businessId,account,invoice,subsc
  if(!Number.isSafeInteger(credits)||credits<0)return false;
  const receipt=await db.query('INSERT INTO stripe_payment_receipts(stripe_account_id,provider_reference,business_id,membership_id,amount_cents) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING provider_reference',[account,invoice.id,businessId,member.id,invoice.amount_paid]);
  if(!receipt.rowCount)return true;
- await db.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[randomUUID(),businessId,member.id,'stripe:'+invoice.id,credits,invoice.amount_paid]);
+ const paymentId=randomUUID();
+ await db.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[paymentId,businessId,member.id,'stripe:'+invoice.id,credits,invoice.amount_paid]);
  await db.query("UPDATE customer_memberships SET sessions_included=sessions_included+$1,status=CASE WHEN $7='canceled' THEN 'canceled' WHEN GREATEST(paid_through,$2::timestamptz)>now() THEN 'active' ELSE 'expired' END,paid_through=GREATEST(paid_through,$2::timestamptz),last_paid_at=now(),stripe_subscription_id=$3,stripe_customer_id=$4,updated_at=now() WHERE id=$5 AND business_id=$6",[credits,paidThrough,subscriptionId,typeof invoice.customer==='string'?invoice.customer:null,member.id,businessId,subscription.status]);
  // Reports already reconcile the session payment ledger, so no duplicate audit sale.
+ await queueMembershipPaymentEmail(db,{businessId,paymentId,paymentMethod:isStaging()?'Stripe sandbox':'Stripe',renewal:invoice.billing_reason==='subscription_cycle'});
  return true;
 }

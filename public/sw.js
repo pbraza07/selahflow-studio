@@ -11,7 +11,7 @@ self.addEventListener('push',event=>{
  const safe=target.origin===self.location.origin&&(/^(\/studio\/[^/]+|\/booking\/respond\/[0-9a-f]{64}|\/customer\/booking)/.test(target.pathname));
  const url=safe?target.pathname+target.search+target.hash:'/';
  event.waitUntil(self.registration.showNotification(title,{
-  body,icon:'/brand/app-icon.svg',badge:'/brand/app-icon.svg',
+  body,icon:'/brand/app-icon.png?v=1.3.99',badge:'/brand/app-icon.png?v=1.3.99',
   tag:String(data.tag||'selah-booking').slice(0,140),renotify:true,
   data:{url},requireInteraction:false
  }));

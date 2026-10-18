@@ -33,8 +33,9 @@ test('approval commits private payment links; verified payment commits confirmat
   assert.equal((await db.query('SELECT count(*)::int AS n FROM booking_payments')).rows[0].n,0,'preview never creates checkout');
   assert.equal((await listClientMessages(pool,'u2')).length,0);
   assert.ok(!(await listClientMessages(pool,'u1')).some(x=>'payment_url'in x||'destination'in x||'message'in x));
-  const sends=[],send=async(channel,destination,message)=>{sends.push({channel,destination,message});return {status:'submitted',detail:'Accepted by test provider'};};
+  const sends=[],send=async(channel,destination,message,env,fetcher,context)=>{sends.push({channel,destination,message,context});return {status:'submitted',detail:'Accepted by test provider'};};
   await processClientMessages(pool,{send});await processClientMessages(pool,{send});
+  assert.equal(sends[0].context.kind,'transactional-client');assert.ok(sends[0].context.queuedAt);
   assert.equal(sends.length,2);assert.equal(sends.find(x=>x.channel==='email').destination,data.email);assert.equal(sends.find(x=>x.channel==='sms').destination,data.phone);assert.match(sends[0].message.text,/payment requested/);
   assert.equal((await retryClientMessages(pool,'u2',bookingId)).queued,0);assert.equal((await retryClientMessages(pool,'u1',bookingId)).queued,0);
   let creates=0;
@@ -69,6 +70,7 @@ test('approval commits private payment links; verified payment commits confirmat
   assert.equal(extra.find(x=>x.channel==='sms').status,'invalid_destination');assert.equal(extra.find(x=>x.channel==='email').status,'not_configured');
   await db.query("UPDATE booking_client_messages SET updated_at=now()-interval '2 minutes' WHERE booking_id=$1",[extraBooking]);
   assert.equal((await retryClientMessages(pool,'u2',extraBooking)).queued,0);assert.equal((await retryClientMessages(pool,'u1',extraBooking)).queued,1);
+  assert.ok((await db.query("SELECT client_delivery_authorized_at FROM booking_client_messages WHERE booking_id=$1 AND channel='email'",[extraBooking])).rows[0].client_delivery_authorized_at);
   await db.query("UPDATE appointments SET status='Cancelled' WHERE id=$1",[extraBooking]);
   await processClientMessages(pool,{send});assert.equal(sends.length,4,'cancelled booking never sends a payment request');
   extra=(await listClientMessages(pool,'u1')).filter(x=>x.booking_id===extraBooking);assert.equal(extra.find(x=>x.channel==='email').status,'superseded');

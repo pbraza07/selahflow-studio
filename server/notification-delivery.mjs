@@ -4,6 +4,7 @@ import {getPool} from './database.mjs';
 import {tokenHash} from './security.mjs';
 import {isStaging,stagingNotificationAllowed} from './staging-safety.mjs';
 import {gmailStatus,sendGmail,selectedEmailProvider} from './gmail-delivery.mjs';
+import {resendBrand} from './branded-email.mjs';
 export const validEmail=x=>typeof x==='string'&&x.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x);
 export const validE164=x=>typeof x==='string'&&/^\+[1-9]\d{7,14}$/.test(x);
 export function deliveryProviderStatus(env=process.env){
@@ -33,8 +34,8 @@ export function notificationMessage({businessName,request,link}){
  const summary=`New booking request — ${safeValue(businessName)}\nCustomer: ${safeValue(d.customerName)}\nServices: ${(d.services||[]).map(safeValue).join(', ')}\nDate: ${safeValue(request.date)} at ${timeOf(request.start_minute)}\nDuration: ${request.duration} minutes\nCustomer email: ${safeValue(d.customerEmail)}\nCustomer phone: ${safeValue(d.customerPhone||'Not supplied')}\nQuoted price: $${Number(d.quotedPrice||0).toFixed(2)}\n\nReview request: ${link}\n\nOpening this link does not accept or decline automatically. Select an action and confirm on the review page. Link expires in 72 hours. If the time becomes unavailable, acceptance will be blocked.`;
  return {subject:`SelahFlow: Booking approval needed — ${safeValue(businessName)}`,text:summary,sms:`SelahFlow ${safeValue(businessName)}: ${safeValue(d.customerName)}, ${safeValue(request.date)} ${timeOf(request.start_minute)}, ${(d.services||[]).map(safeValue).join('+').slice(0,65)}. Review Accept/Decline: ${link}`};
 }
-export async function sendNotificationChannel(channel,destination,message,env=process.env,fetcher=fetch){
- if(!stagingNotificationAllowed(channel,destination,env))return {status:'not_configured',detail:'External staging notifications are disabled for this recipient'};
+export async function sendNotificationChannel(channel,destination,message,env=process.env,fetcher=fetch,context={}){
+ if(!stagingNotificationAllowed(channel,destination,env,context))return {status:'not_configured',detail:'External staging notifications are disabled for this recipient'};
  if(channel==='email'&&selectedEmailProvider(env)==='gmail'){
   if(!validEmail(destination))return {status:'invalid_destination',detail:'Invalid recipient'};
   try{return await sendGmail(destination,message,env,fetcher);}catch{return {status:'not_configured',detail:'Gmail connection is unavailable; contact the platform administrator'};}
@@ -45,7 +46,7 @@ export async function sendNotificationChannel(channel,destination,message,env=pr
  if(channel==='email'&&!validEmail(destination)||channel==='sms'&&!validE164(destination))return {status:'invalid_destination',detail:'Invalid recipient'};
  try{
   if(channel==='email'){
-   const result=await fetcher('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','User-Agent':'SelahFlow/1.3.87',...(message.idempotencyKey?{'Idempotency-Key':message.idempotencyKey}:{})},body:JSON.stringify({from:env.RESEND_FROM_EMAIL,to:[destination],subject:message.subject,text:message.text}),signal:AbortSignal.timeout(7500)});
+   const result=await fetcher('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','User-Agent':'SelahFlow/1.3.87',...(message.idempotencyKey?{'Idempotency-Key':message.idempotencyKey}:{})},body:JSON.stringify({from:env.RESEND_FROM_EMAIL,to:[destination],subject:message.subject,text:message.text,...resendBrand(message)}),signal:AbortSignal.timeout(7500)});
    if(!result.ok)return {status:message.trackAmbiguous&&result.status>=500?'unknown':'failed',detail:'Email provider rejected request (HTTP '+result.status+')'};
    return {status:'submitted',detail:'Accepted by email provider'};
   }

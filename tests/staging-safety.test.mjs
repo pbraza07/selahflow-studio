@@ -32,6 +32,15 @@ test('staging push is disabled even if credentials are accidentally inherited',a
  assert.equal(configured(push),false);
  assert.equal((await sendWebPush({}, {}, push,()=>{throw Error('Must not send')})).status,'not_configured');
 });
+test('explicit prospective client email rollout never releases historical messages, owner notifications or SMS',()=>{
+ const cutoff=new Date(Date.now()-60000).toISOString(),queuedAt=new Date(Date.now()-1000).toISOString();
+ const enabled={APP_ENV:'staging',STAGING_NOTIFICATIONS_ENABLED:'true',STAGING_CLIENT_EMAIL_AFTER:cutoff};
+ assert.equal(stagingNotificationAllowed('email','client@example.test',enabled,{kind:'transactional-client',queuedAt}),true);
+ for(const context of [{},{kind:'owner',queuedAt},{kind:'transactional-client',queuedAt:'1970-01-01T00:00:00Z'},{kind:'transactional-client',queuedAt:new Date(Date.now()+60000).toISOString()}])assert.equal(stagingNotificationAllowed('email','client@example.test',enabled,context),false);
+ assert.equal(stagingNotificationAllowed('sms','+18135550100',enabled,{kind:'transactional-client',queuedAt}),false);
+ assert.equal(stagingNotificationAllowed('email','client@example.test',{...enabled,STAGING_NOTIFICATIONS_ENABLED:'false'},{kind:'transactional-client',queuedAt}),false);
+ assert.equal(stagingNotificationAllowed('email','client@example.test',{...enabled,STAGING_CLIENT_EMAIL_AFTER:'invalid'},{kind:'transactional-client',queuedAt}),false);
+});
 test('a correctly signed live Stripe event is rejected in staging, while a signed sandbox event passes',()=>{
  const now=1800000000,secret='whsec_synthetic_staging_test';
  for(const livemode of [true,false,undefined]){

@@ -1,3 +1,4 @@
+import {bookingPaymentPreview} from '../server/booking-payment-preview.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
@@ -51,6 +52,9 @@ test('booking Checkout is server-priced, account-scoped, reusable, and recorded 
   assert.equal(await apply(paid),true);assert.equal(await apply(paid),true);
   assert.equal((await db.query('SELECT count(*)::int AS n FROM events')).rows[0].n,1);
   assert.equal((await db.query('SELECT status FROM booking_payments')).rows[0].status,'paid');
+  assert.equal((await db.query("SELECT count(*)::int AS n FROM booking_client_messages WHERE booking_id=$1 AND event_type='payment_confirmation' AND channel='email'",[bookingId])).rows[0].n,1,'direct payment queues confirmation');
+  const flow=(await db.query('SELECT payment_url FROM booking_client_flows WHERE booking_id=$1',[bookingId])).rows[0];const access=new URLSearchParams(new URL(flow.payment_url).hash.slice(1));
+  assert.equal((await bookingPaymentPreview(pool,{slug:'one',bookingId,token:access.get('token')})).status,'paid','direct email payment links can be opened');
   assert.equal(JSON.parse((await db.query('SELECT data FROM appointments')).rows[0].data).paymentStatus,'paid');
   assert.equal((await startBookingCheckout(pool,args,api)).paid,true);assert.equal(creates,1);
   // No charge for membership coverage or approval-pending requests.
@@ -85,6 +89,8 @@ test('membership sandbox checkout reuses enrollment; paid invoices add credits/r
   assert.equal(await apply({...invoice,id:'in_renewal',billing_reason:'subscription_cycle'}),true);
   updated=(await db.query('SELECT * FROM customer_memberships')).rows[0];assert.equal(updated.sessions_included,6);assert.equal(updated.sessions_used,1);
   const ledger=(await db.query('SELECT * FROM membership_session_ledger')).rows;assert.equal(ledger.length,2);assert.equal(ledger.reduce((s,r)=>s+r.amount_cents,0),4000);
+  const emails=(await db.query('SELECT snapshot,destination FROM membership_payment_emails ORDER BY created_at')).rows;
+  assert.equal(emails.length,2,'one durable receipt for initial paid invoice and one for renewal, even after replay');assert.equal(emails[0].destination,'sandbox@example.com');assert.equal(emails[0].snapshot.planName,'Three Sessions');assert.equal(emails[1].snapshot.sessionsLeft,5);assert.equal(emails[1].snapshot.renewal,true);
   await assert.rejects(startMembershipCheckout(pool,body,'https://staging.example',api),/already/);assert.equal(creates,1);
  }finally{await pg.close();for(const [i,key]of ['STRIPE_SECRET_KEY','STRIPE_CONNECT_WEBHOOK_SECRET'].entries())if(old[i]===undefined)delete process.env[key];else process.env[key]=old[i];}
 });

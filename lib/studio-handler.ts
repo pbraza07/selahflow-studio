@@ -1,11 +1,13 @@
+import {queueBookingReceipt} from '../server/booking-receipts.mjs';
 import {issueMemberId} from '../server/member-id-policy.mjs';
 import {loadMembershipReportPayments,reportSaleEvents} from '../server/report-payments.mjs';
+import {visibleReportPayments} from '../server/report-reset.mjs';
 import {validatePageContent} from '../server/page-content.mjs';
 import {memberIdMembershipSummary} from '../server/member-id-summary.mjs';
 import {registrationPaymentSummary} from '../server/registration-payment.mjs';
 import {themeIsValid,resolveTheme} from '../server/themes.mjs';
 import {validateBlockouts,isBlocked} from '../server/booking-blockouts.mjs';
-import {customRegistrationFields,validateRegistrationQuestions,validateStandardRegistration,publicRegistrationSettings} from '../server/registration-questions.mjs';
+import {registrationQuestions,customRegistrationFields,validateRegistrationQuestions,validateStandardRegistration,publicRegistrationSettings} from '../server/registration-questions.mjs';
 import {randomInt,randomBytes} from 'node:crypto';
 import {db} from './database';
 import {getPool} from '../server/database.mjs';
@@ -25,7 +27,8 @@ import {paymentConfigured} from '../server/membership-payments.mjs';
 import {defaultSettings,today} from './defaults';
 import {validDuration,isCalendarUnit} from './service-terms';
 import {validSlotCapacity,serviceCapacityOpen,confirmBooking} from '../server/booking-approvals.mjs';
-import {approvalSettings,bookingRequestDetail} from '../server/booking-review.mjs';
+import {sessionIsFull,SESSION_FULL_MESSAGE} from '../server/session-capacity.mjs';
+import {requiresBookingApproval,approvalSettings,bookingRequestDetail} from '../server/booking-review.mjs';
 import {hasUsableMembership} from '../server/member-badge-state.mjs';
 
 const reply=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
@@ -41,8 +44,8 @@ export async function ownerGet(req:Request){
   ]);
   const visits=a.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   return reply({
-   config,appointments:decorateOwnerAppointments(visits,roster),
-   events:[...reportSaleEvents(e.results.map((r:any)=>({...r,...JSON.parse(r.data)})),config.services),...membershipPayments]
+   config,reportBusinessName:(await getPool().query("SELECT name FROM businesses WHERE owner_id=$1 AND status='active'",[owner])).rows[0]?.name,appointments:decorateOwnerAppointments(visits,roster),
+   events:await visibleReportPayments(getPool(),owner,[...reportSaleEvents(e.results.map((r:any)=>({...r,...JSON.parse(r.data)})),config.services),...membershipPayments])
   });
  }catch(e){
   return reply({error:(e as Error).message==='AUTH_REQUIRED'?'Please sign in.':'Studio data is unavailable or this business is waiting for approval.'},(e as Error).message==='AUTH_REQUIRED'?401:503);
@@ -289,7 +292,7 @@ if(b.key){
   if(isPublic&&(String(saved.email).trim().toLowerCase()!==String(b.email).trim().toLowerCase()||saved.dateOfBirth!==b.dateOfBirth||saved.name!==String(b.name).trim()))throw Error('Booking reference does not match your details.');
   return reply({ok:true,id:prior?.id||pending?.id,pending:pending?.status==='pending',status:pending?.status||'confirmed',appointmentId:pending?.appointment_id,chargedPrice:saved.price,membershipCovered:saved.membershipCovered,memberNumber:saved.memberNumber,customerToken:await customerAccess(String(prior?.id||pending?.id))});
  }
-}if(b.expectedPrice!==services.reduce((a:number,s:any)=>a+s.price,0)||b.expectedDuration!==duration)return reply({error:'Service prices or durations changed. Refresh the studio and review your booking again.'},409);if(!available.includes(b.start))return reply({error:'That time is no longer available. Please choose another.'},409);if(typeof b.name!=='string'||typeof b.email!=='string'||!b.name.trim()||b.name.length>100||!/^\S+@\S+\.\S+$/.test(b.email)||b.email.length>200)throw Error('Enter a name and valid email.');let verifiedMembership:any=null;if(isPublic){
+}if(b.expectedPrice!==services.reduce((a:number,s:any)=>a+s.price,0)||b.expectedDuration!==duration)return reply({error:'Service prices or durations changed. Refresh the studio and review your booking again.'},409);if(!available.includes(b.start))return reply({error:(availability.sessionAvailability as Record<number,{remaining:number}>)[b.start]?.remaining===0?SESSION_FULL_MESSAGE:'That time is no longer available. Please choose another.'},409);if(typeof b.name!=='string'||typeof b.email!=='string'||b.name.length>100||b.email&&(!/^\S+@\S+\.\S+$/.test(b.email)||b.email.length>200))throw Error('Enter valid contact details.');if(!isPublic&&(!b.name.trim()||!b.email))throw Error('Enter a name and valid email.');let verifiedMembership:any=null;if(isPublic){
  if(b.notMember!==true){
   const number=String(b.memberNumber||'').trim().toUpperCase();
   if(!/^[A-Z]{2}[0-9]{4}$/.test(number))throw Error('Enter your six-character membership ID or choose N/A.');
@@ -304,10 +307,10 @@ if(b.key){
  }
  if(b.notMember!==true&&b.notMember!==false)throw Error('Select N/A if you are not a member.');
 }
-if(isPublic)validateStandardRegistration(config,'booking',b);
-const customAnswers=sanitizeBookingAnswers(customRegistrationFields(config,'booking',selectedSession(config,b.date,b.staff,services,b.start)?.id||null),b.customAnswers);
+if(isPublic)validateStandardRegistration(config,'booking',b,selectedSession(config,b.date,b.staff,services,b.start)?.id||null);
+const customAnswers=sanitizeBookingAnswers(registrationQuestions(config,'booking',selectedSession(config,b.date,b.staff,services,b.start)?.id||null).filter((f:any)=>!f.standard),b.customAnswers);
 let issuedMemberNumber=String(b.memberNumber||'').trim().toUpperCase();
-if(isPublic){
+if(isPublic&&b.firstName&&b.lastName&&b.dateOfBirth){
  const dob=String(b.dateOfBirth||''),firstName=String(b.firstName||'').trim(),lastName=String(b.lastName||'').trim();
  if(!/^\d{4}-\d{2}-\d{2}$/.test(dob)||Number.isNaN(Date.parse(dob))||new Date(dob).toISOString().slice(0,10)!==dob||!firstName||!lastName)throw Error('First name, last name, and valid date of birth are required.');
  const pool=getPool(),client=await pool.connect();
@@ -346,25 +349,37 @@ if(isPublic){
  }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
 }
 const bookedSession=selectedSession(config,b.date,b.staff,services,b.start);const membershipCreditAllowed=bookedSession?bookedSession.membershipCreditAllowed!==false:services.every((service:any)=>service.membershipCreditAllowed!==false);const membershipCovered=!!verifiedMembership&&hasUsableMembership(verifiedMembership)&&membershipCreditAllowed;
-const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID();const data:any={name:b.name.trim(),firstName:isPublic?String(b.firstName||'').trim():undefined,lastName:isPublic?String(b.lastName||'').trim():undefined,dateOfBirth:isPublic?String(b.dateOfBirth||''):undefined,email:b.email,phone:String(b.phone||'').slice(0,40),services:services.map((s:any)=>s.name),price:membershipCovered?0:services.reduce((a:number,s:any)=>a+s.price,0),membershipCovered,membershipCreditAllowed,channel:isPublic?'Online booking':b.channel==='Booking portal'?'Booking portal':'Front desk',created:new Date().toISOString()};data.paymentLines=services.map((s:any)=>({id:s.id,name:s.name,type:'service',price:s.price,qty:1}));data.serviceIds=services.map((s:any)=>s.id);data.customAnswers=customAnswers;data.memberNumber=isPublic?issuedMemberNumber:null;data.policyAccepted=isPublic?b.policyAccepted===true:null;data.policyAcceptedAt=isPublic?new Date().toISOString():null;data.customFieldLabels=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.label]));data.customFieldTypes=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.type]));if(bookedSession)data.sessionId=bookedSession.id;
- if(isPublic&&(approvalSettings(config).enabled||services.some((service:any)=>service.requiresApproval===true))){
-  const approval=services.some((service:any)=>service.requiresApproval===true)&&!approvalSettings(config).enabled?{reviewer:'owner'}:approvalSettings(config);
+const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID();const data:any={name:b.name.trim()||'Guest',firstName:isPublic?String(b.firstName||'').trim():undefined,lastName:isPublic?String(b.lastName||'').trim():undefined,dateOfBirth:isPublic?String(b.dateOfBirth||''):undefined,email:b.email,phone:String(b.phone||'').slice(0,40),services:services.map((s:any)=>s.name),price:membershipCovered?0:services.reduce((a:number,s:any)=>a+s.price,0),membershipCovered,membershipCreditAllowed,channel:isPublic?'Online booking':b.channel==='Booking portal'?'Booking portal':'Front desk',created:new Date().toISOString()};data.paymentLines=services.map((s:any)=>({id:s.id,name:s.name,type:'service',price:s.price,qty:1}));data.serviceIds=services.map((s:any)=>s.id);data.customAnswers=customAnswers;data.memberNumber=isPublic?issuedMemberNumber:null;data.policyAccepted=isPublic?b.policyAccepted===true:null;data.policyAcceptedAt=isPublic?new Date().toISOString():null;data.customFieldLabels=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.label]));data.customFieldTypes=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.type]));if(bookedSession)data.sessionId=bookedSession.id;
+ if(isPublic&&requiresBookingApproval(services)){
+  const approval=!approvalSettings(config).enabled?{reviewer:'owner'}:approvalSettings(config);
   const business=await db().prepare("SELECT id FROM businesses WHERE owner_id=? AND status='active'").bind(owner).first<{id:string}>();
   if(!business)return reply({error:'Business is not active.'},403);
   const details={membershipCovered,membershipCreditAllowed,paymentLines:data.paymentLines,memberNumber:issuedMemberNumber,firstName:String(b.firstName||'').trim(),lastName:String(b.lastName||'').trim(),dateOfBirth:String(b.dateOfBirth||''),...bookingRequestDetail({services,staff:b.staff,date:b.date,start:b.start,duration,buffer:config.buffer,name:b.name,email:b.email,phone:String(b.phone||''),price:data.price,reviewer:approval.reviewer}),customAnswers,customFieldLabels:data.customFieldLabels,customFieldTypes:data.customFieldTypes,policyAccepted:true,policyAcceptedAt:data.policyAcceptedAt,sessionId:bookedSession?.id||null};
+  let bookingReceipt:any=null;
+  const submissionClient=await getPool().connect();
   try{
-   await db().prepare("INSERT INTO booking_requests(id,business_id,owner_id,date,staff_id,start_minute,duration,details,reviewer) VALUES(?,?,?,?,?,?,?,?,?)").bind(id,business.id,owner,b.date,b.staff,b.start,duration,JSON.stringify(details),approval.reviewer).first();
-  }catch(error){if((error as {code?:string}).code!=='23505')throw error;return reply({ok:true,id,pending:true});}
+   await submissionClient.query('BEGIN');
+   await submissionClient.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
+   const latestSettings=(await submissionClient.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0];
+   const latestConfig=latestSettings?JSON.parse(latestSettings.data):config;
+   if(await sessionIsFull(submissionClient,{owner,config:latestConfig,date:b.date,staff:b.staff,services,start:b.start})){
+    await submissionClient.query('ROLLBACK');return reply({error:SESSION_FULL_MESSAGE},409);
+   }
+   await submissionClient.query('INSERT INTO booking_requests(id,business_id,owner_id,date,staff_id,start_minute,duration,details,reviewer) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',[id,business.id,owner,b.date,b.staff,b.start,duration,JSON.stringify(details),approval.reviewer]);
+   bookingReceipt=await queueBookingReceipt(submissionClient,{owner,bookingId:id,date:b.date,start:b.start,duration,staff:b.staff,data,origin:trustedOrigin(req),pending:true});
+   await submissionClient.query('COMMIT');
+  }catch(error){await submissionClient.query('ROLLBACK');if((error as {code?:string}).code!=='23505')throw error;return reply({ok:true,id,pending:true});}finally{submissionClient.release();}
   try{await pushBookingRequest(id);}catch(e){console.error('Web Push dispatch failed for request',id);}
   let delivery:any={email:'not_requested',sms:'not_requested'};
   try{delivery=await notifyBookingRequest({requestId:id,origin:trustedOrigin(req)});}
   catch(error){console.error('Booking notification dispatch error for request',id);delivery={email:config.bookingNotifyEmail===true?'failed':'not_requested',sms:config.bookingNotifySms===true?'failed':'not_requested'};}
-  return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:true,status:'pending',chargedPrice:data.price,membershipCovered,notificationDelivery:delivery,message:'Booking request received, awaiting approval. The appointment is not confirmed until accepted.'});
+  return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:true,status:'pending',chargedPrice:data.price,membershipCovered,bookingReceipt,clientReceiptEmail:'queued',notificationDelivery:delivery,message:'Booking request received, awaiting approval. The appointment is not confirmed until accepted.'});
  }
- try{await confirmBooking({owner,services,staff:b.staff,date:b.date,start:b.start,duration,buffer:config.buffer,id,data});}
+ let bookingReceipt:any=null;
+ try{const confirmed=await confirmBooking({owner,services,staff:b.staff,date:b.date,start:b.start,duration,buffer:config.buffer,id,data,submissionOrigin:isPublic?trustedOrigin(req):null});bookingReceipt=(confirmed as any).bookingReceipt||null;}
  catch(error){return reply({error:(error as Error).message},(error as {status?:number}).status||409);}
  await db().batch([audit('booking',{appointment:id})]);
- return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:false,status:'confirmed',chargedPrice:data.price,membershipCovered});}
+ return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:false,status:'confirmed',chargedPrice:data.price,membershipCovered,bookingReceipt,clientReceiptEmail:bookingReceipt?'queued':null});}
 if(b.action==='deleteAppointments'){
  if(isPublic)return reply({error:'Not permitted.'},403);
  const ids=Array.isArray(b.ids)?b.ids:[];
@@ -387,7 +402,7 @@ if(b.action==='deleteAppointments'){
  }catch(error){await client.query('ROLLBACK');return reply({error:(error as Error).message},409);}finally{client.release();}
 }
 if(b.action==='status'){
- if(!['Checked in','Completed','Cancelled','No-show'].includes(b.status))throw Error('Invalid status');
+ if(!['Checked in','Cancelled','No-show'].includes(b.status))throw Error('Invalid status');
  if(typeof b.id!=='string'||!b.id)throw Error('Invalid appointment.');
  const client=await getPool().connect();
  try{

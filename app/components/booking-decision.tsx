@@ -12,7 +12,7 @@ export default function BookingDecision({token}:{token:string}){
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  const time=details?String(Math.floor(details.start/60)%12||12)+':'+String(details.start%60).padStart(2,'0')+(details.start<720?' AM':' PM')+' Eastern':'';
- return <main className="sf-team-review-page"><header><a href="/"><img src="/brand/logo.svg" width="220" height="55" alt="SelahFlow"/></a><span>Secure booking decision</span></header>
+ return <main className="sf-team-review-page"><header><a href="/"><img src="/brand/logo.svg?v=1.3.99" width="220" height="55" alt="SelahFlow"/></a><span>Secure booking decision</span></header>
  <section className="sf-team-review-body"><h1>Booking review</h1><p>Opening this link does not accept or decline. Use one of the buttons below to confirm your choice.</p>
  {error&&<p className="alert" role="alert">{error}</p>}{notice&&<p className="notice" role="status">{notice}</p>}
  {!details&&!error&&<p>Loading request…</p>}

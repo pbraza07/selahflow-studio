@@ -81,7 +81,7 @@ test('legacy appointment is linked permanently to same player on Check in and de
   assert.equal(JSON.parse(row.data).memberNumber,'LA1103');
   const second=await act(db,'appt1','Completed');
   assert.equal(second.membershipDeducted,false);
-  assert.equal(second.alreadyDeducted,true);
+  assert.equal(second.alreadyDeducted,false,'legacy completion is not a credit-consuming attendance action');
   assert.equal((await db.query("SELECT sessions_used FROM customer_memberships WHERE id='member1'")).rows[0].sessions_used,1);
   assert.equal((await db.query("SELECT COUNT(*)::int AS cnt FROM membership_session_ledger WHERE membership_id='member1' AND event_type='session_used'")).rows[0].cnt,1);
  }finally{await db.close();}

@@ -1,0 +1,45 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile,readdir} from 'node:fs/promises';
+import {PGlite} from '@electric-sql/pglite';
+import {deleteClientPermanently} from '../server/delete-client.mjs';
+import {resetStagingRegistration} from '../server/staging-registration-reset.mjs';
+import {issueMemberId} from '../server/member-id-policy.mjs';
+import {loadOwnerHistory} from '../server/owner-history.mjs';
+test('permanent deletion purges linked registration and history without touching family contacts or other businesses',async()=>{
+ const pg=new PGlite();try{
+  const files=(await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();
+  for(const f of files.filter(f=>f<'030'))await pg.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8'));
+  const profileId='11111111-1111-4111-8111-111111111111';
+  await pg.exec(`INSERT INTO users(id,email,password_hash) VALUES('u1','one@example.test','x'),('u2','two@example.test','x');
+   INSERT INTO businesses(id,owner_id,slug,name,status) VALUES('b1','u1','one','One','active'),('b2','u2','two','Two','active');
+   INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,date_of_birth,member_number) VALUES('b1','Legacy','Client','family@example.test','2010-12-29','LC122900'),('b1','Sibling','Client','family@example.test','2012-01-02','SC0102'),('b2','Legacy','Client','family@example.test','2010-12-29','LC122900');
+   INSERT INTO business_client_profiles(id,owner,name,email,member_number,date_of_birth) VALUES('${profileId}','u1','Legacy Client','family@example.test','LC122900','2010-12-29');`);
+  for(const f of files.filter(f=>f>='030'))await pg.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8'));
+  const query=async(s,v)=>{const r=await pg.query(s,v);return {...r,rowCount:r.rows.length||r.affectedRows||0};},db={query,release(){}},pool={...db,connect:async()=>db};
+  const data={name:'Legacy Client',email:'family@example.test',memberNumber:'LC122900',dateOfBirth:'2010-12-29',services:['Training'],price:25};
+  await query("INSERT INTO appointments(id,owner,date,start,duration,staff,status,data) VALUES('a1','u1','2030-11-01',600,30,'coach','Confirmed',$1)",[JSON.stringify(data)]);
+  await query("INSERT INTO booking_requests(id,business_id,owner_id,date,staff_id,start_minute,duration,details,reviewer,status,appointment_id) VALUES('r1','b1','u1','2030-11-01','coach',600,30,$1,'owner','accepted','a1')",[JSON.stringify(data)]);
+  await pg.exec("INSERT INTO booking_client_flows(booking_id,business_id,request_id,payment_url,expires_at) VALUES('a1','b1','r1','https://staging.example/payment/one#token=secret',now()+interval '1 day'); INSERT INTO booking_client_messages(id,booking_id,event_type,channel,destination,destination_masked,message) VALUES('msg','a1','payment_link','email','family@example.test','fa***@example.test','{}'); INSERT INTO booking_receipt_emails(booking_key,event_type,business_id,destination,destination_masked,message) VALUES('r1','submission','b1','family@example.test','fa***@example.test','{}'); INSERT INTO events(id,owner,created,kind,data) VALUES('event','u1','2030-11-01T15:00:00Z','booking','{\"appointment\":\"a1\"}');");
+  await pg.exec("INSERT INTO staging_snapshot_runs(id,source_commit,captured_at,summary) VALUES('snap','test',now(),'{}')");
+  const original=(await query("SELECT * FROM business_member_ids WHERE business_id='b1' AND member_number='LC122900'")).rows;
+  await query("INSERT INTO staging_snapshot_backups(run_id,table_name,records) VALUES('snap','business_member_ids',$1::jsonb)",[JSON.stringify(original)]);
+  await assert.rejects(deleteClientPermanently(db,{owner:'u2',businessId:'b1',client:{id:profileId}}),/not found/);
+  const env={APP_ENV:'staging',DATABASE_URL:'postgresql://selahflow_staging_user:fixture@db/selahflow_staging',STAGING_DATABASE_HOST:'db'};
+  const target={profileId,businessSlug:'one',originalMemberNumber:'LC122900'};
+  const result=await resetStagingRegistration(pool,target,env);
+  assert.equal(result.freshRegistrationVerified,true);assert.equal(result.removed.appointments,1);assert.equal(result.removed.booking_client_messages,1);
+  for(const table of ['business_client_profiles','appointments','booking_requests','booking_client_messages','booking_receipt_emails','events'])assert.equal((await query(`SELECT count(*)::int AS n FROM ${table}`)).rows[0].n,0,table);
+  assert.equal((await query('SELECT count(*)::int AS n FROM customer_booking_ids')).rows[0].n,2,'sibling and foreign registration survive');
+  const retired=(await query("SELECT * FROM business_member_ids WHERE business_id='b1' AND member_number='LC122900'")).rows[0];
+  assert.match(retired.identity_key,/^deleted:/);assert.ok(retired.retired_at);
+  assert.deepEqual((await query('SELECT records FROM staging_snapshot_backups')).rows[0].records,[]);
+  assert.doesNotMatch(JSON.stringify((await query('SELECT * FROM staging_registration_resets')).rows),/Legacy Client|family@example|2010-12-29/);
+  assert.equal((await resetStagingRegistration(pool,target,env)).alreadyApplied,true);
+  await query('BEGIN');assert.equal(await issueMemberId(db,{businessId:'b1',name:'Legacy Client',dateOfBirth:'2010-12-29'}),'LC1229');await query('ROLLBACK');
+  assert.equal((await loadOwnerHistory(db,'u1')).total,0);
+  await pg.exec("INSERT INTO business_client_profiles(id,owner,name,email) VALUES('guest-profile','u1','Guest',''); INSERT INTO appointments(id,owner,date,start,duration,staff,status,data) VALUES('guest-one','u1','2030-11-02',600,30,'coach','Confirmed','{\"name\":\"Guest\",\"email\":\"\"}'),('guest-two','u1','2030-11-03',600,30,'coach','Confirmed','{\"name\":\"Guest\",\"email\":\"\"}')");
+  await query('BEGIN');await deleteClientPermanently(db,{owner:'u1',businessId:'b1',client:{id:'guest-profile',name:'Guest',email:'',history:[{id:'guest-one'}]}});await query('COMMIT');
+  assert.deepEqual((await query('SELECT id FROM appointments')).rows,[{id:'guest-two'}],'blank identity never matches a different guest');
+ }finally{await pg.close();}
+});

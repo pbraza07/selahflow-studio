@@ -19,7 +19,7 @@ export default function TeamBookingReview({token}:{token:string}){
    setEditing(null);setNotice('Booking details updated. Verify the corrected answers before approval.');await load();
   }catch(e){setEditError((e as Error).message);}finally{setBusy('');}
  }
- return <main className="sf-team-review-page"><header><a href="/"><img src="/brand/logo.svg" alt="SelahFlow" width="220" height="55"/></a><span>Private team booking reviews</span><TeamPushBell token={token}/></header><section className="sf-team-review-body"><h1>{business||'Booking review inbox'}</h1><p>{name?'Hello, '+name+'. ':''}Review new appointment requests assigned to you. This private link expires and can be revoked by the business owner.</p>
+ return <main className="sf-team-review-page"><header><a href="/"><img src="/brand/logo.svg?v=1.3.99" alt="SelahFlow" width="220" height="55"/></a><span>Private team booking reviews</span><TeamPushBell token={token}/></header><section className="sf-team-review-body"><h1>{business||'Booking review inbox'}</h1><p>{name?'Hello, '+name+'. ':''}Review new appointment requests assigned to you. This private link expires and can be revoked by the business owner.</p>
  {notice&&<p role="status" className="notice">{notice}</p>}{error&&<p role="alert" className="alert">{error}</p>}
  {loaded&&!error&&!items.length?<p className="sf-empty-notifications">No booking requests awaiting review.</p>:null}
  <DevicePushControls teamToken={token}/><div id="team-review-inbox"><BookingRequestCards items={items} busy={busy} onReview={review} onEdit={item=>{setEditing(item);setEditError('');}} team={team} customFields={customFields} approvalFields={approvalFields}/></div>

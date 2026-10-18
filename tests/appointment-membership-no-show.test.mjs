@@ -62,7 +62,7 @@ test('check-in immediately consumes one active membership session, and completio
   assert.equal(await ledger(db),1);
   const completed=await apply(db,'a1','Completed');
   assert.equal(completed.membershipDeducted,false);
-  assert.equal(completed.alreadyDeducted,true);
+  assert.equal(completed.alreadyDeducted,false);
   assert.equal(await used(db),1);
   assert.equal(await ledger(db),1);
   const again=await apply(db,'a1','Completed');
@@ -152,25 +152,27 @@ test('no plan, pending plan, and other business memberships do not consume sessi
  }finally{await db.close();}
 });
 
-test('cancellations do not deduct credits; completing without check-in still charges once',async()=>{
+test('cancellations and legacy completion do not deduct credits',async()=>{
  const db=await fixture();
  try{
   const cancelled=await apply(db,'a1','Cancelled');
   assert.equal(cancelled.membershipDeducted,false);
   assert.equal(await used(db),0);
   const completed=await apply(db,'a2','Completed');
-  assert.equal(completed.membershipDeducted,true);
-  assert.equal(await used(db),1);
+  assert.equal(completed.membershipDeducted,false);
+  assert.equal(await used(db),0);
  }finally{await db.close();}
 });
 
-test('overview exposes Check in, Complete and No-show; status handler uses the atomic helper',async()=>{
- assert.deepEqual([...CREDIT_CONSUMING_STATUSES].sort(),['Checked in','Completed','No-show'].sort());
+test('overview uses Check in and No-show; status handler uses the atomic helper',async()=>{
+ assert.deepEqual([...CREDIT_CONSUMING_STATUSES].sort(),['Checked in','No-show'].sort());
  const [ui,api]=await Promise.all([
   readFile(new URL('../app/studio/owner-dashboard.tsx',import.meta.url),'utf8'),
   readFile(new URL('../lib/studio-handler.ts',import.meta.url),'utf8')
  ]);
  assert.match(ui,/<AttendanceActions/);
+ assert.doesNotMatch(ui,/status\(a,'Completed'\)/);
+ assert.match(api,/\['Checked in','Cancelled','No-show'\]\.includes\(b.status\)/);
  assert.match(ui,/as a no-show/);
  assert.match(ui,/1 membership session deducted/);
  assert.match(api,/await changeAppointmentStatus\(client/);

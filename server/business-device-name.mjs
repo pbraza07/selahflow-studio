@@ -19,6 +19,6 @@ export function businessManifest(slug,name,theme){
   display:'standalone',
   background_color:hex(colors.page,'#F7F4EC'),
   theme_color:hex(colors.header,'#123F3A'),
-  icons:[{src:'/brand/app-icon.svg',sizes:'any',type:'image/svg+xml',purpose:'any maskable'}]
+  icons:[{src:'/brand/app-icon.png?v=1.3.99',sizes:'512x512',type:'image/png',purpose:'any'}]
  };
 }
