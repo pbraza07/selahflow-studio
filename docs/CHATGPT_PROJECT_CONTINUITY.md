@@ -1,4 +1,6 @@
-# v1.3.105 release handoff — staging candidate
+# v1.3.105 release handoff — staging LIVE
+
+VERIFIED LIVE 2026-10-18 11:34:13 UTC: 17c97a3c5a9dbdfa4a6e3d3c85c8ec97456ede21, Render dep-dbaarfk9v7es73fqprcg. All 243 tests, typecheck and build passed locally/on Render. Startup migrations ready at 11:34:01 UTC; Next ready 11:34:09 UTC. Public /api/health returns status ok and version 1.3.105. No recent startup error logs observed. Automated tests cover new direct booking with global notifications enabled, old pending checkout, unchanged reference/idempotent checkout, authentication and tenant isolation, checked/declined rejection, changed-price rejection, ordinary/group capacity and verified-payment confirmation email. No real checkout or charge was created, no existing request manually accepted, no production mutation. Existing eligible pending requests are confirmed only when the client intentionally clicks Make Payment; availability still applies. Browser-authenticated UI was not manually re-tested.
 
 Service Catalog checkbox is authoritative. Removed business notification flag from both public booking approval decision and Make Payment visibility. The global flag retains reviewer/notification routing. New unchecked-service bookings confirm immediately; any checked service in a mixed booking still requires approval.
 
