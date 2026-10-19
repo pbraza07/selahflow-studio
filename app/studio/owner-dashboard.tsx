@@ -1,5 +1,6 @@
 'use client';
 import OwnerReports from '../components/owner-reports';
+import {unpaidAppointmentForecast} from '../../server/report-activity.mjs';
 import RegistrationFields from '../components/registration-fields';
 import {APP_VERSION} from '../../lib/app-version';
 import {selectedSession as findBookingSession} from '../../server/session-scheduling.mjs';
@@ -155,7 +156,6 @@ const sessionLabel=(session:Any)=>{const service=config.services.find((v:Any)=>v
 const studioDate=(d:string)=>d.includes('T')?new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d)):d;
 const inRange=(raw:string)=>{const d=studioDate(raw);return range==='All time'||(range==='Today'?d.slice(0,10)===date:d.slice(0,7)===date.slice(0,7));};
 const sales=events.filter(e=>e.kind==='cash_sale'&&inRange(e.created));const membershipPayments=events.filter(e=>e.kind==='membership_payment'&&inRange(e.created));const revenue=sales.reduce((n,e)=>n+Number(e.total||0),0)+membershipPayments.reduce((n,e)=>n+Number(e.total||0),0);const paidTransactions=[...sales,...membershipPayments].sort((a,b)=>Date.parse(b.created)-Date.parse(a.created));const reportAppointments=appointments.filter(a=>inRange(a.date));
-const projectedAppointments=reportAppointments.filter((a:Any)=>['Confirmed','Scheduled','Completed'].includes(a.status));
 const appointmentEstimate=(a:Any)=>{
  const dataPrice=Number(a.price);
  if(Number.isFinite(dataPrice)&&dataPrice>=0&&a.price!==null&&a.price!==undefined&&a.price!=='')return dataPrice;
@@ -164,6 +164,7 @@ const appointmentEstimate=(a:Any)=>{
  const names=Array.isArray(a.services)?a.services:[];
  return names.reduce((sum:number,name:string)=>sum+Number(config.services.find((svc:Any)=>svc.name===name)?.price||0),0);
 };
+const projectedAppointments=unpaidAppointmentForecast(reportAppointments,appointmentEstimate);
 const projectedTotal=projectedAppointments.reduce((sum:number,a:Any)=>sum+appointmentEstimate(a),0);
 const futureProjection=projectedAppointments.filter((a:Any)=>a.status!=='Completed'&&a.date>=today()).reduce((sum:number,a:Any)=>sum+appointmentEstimate(a),0);
 const selections=config.services.filter((s:Any)=>selected.includes(s.id));const duration=selections.reduce((n:number,s:Any)=>n+s.duration,0),price=selections.reduce((n:number,s:Any)=>n+s.price,0);
