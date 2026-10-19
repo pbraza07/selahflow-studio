@@ -94,7 +94,7 @@ test('new and existing service questions apply only to matching selected service
  assert.throws(()=>sanitizeBookingAnswers(multi,{emergency:'Parent',uniform:'S'}),/Player skill is required/);
  assert.deepEqual(sanitizeBookingAnswers(multi,{emergency:'Parent',uniform:'S',skill:'Advanced'}),{emergency:'Parent',uniform:'S',skill:'Advanced'});
  assert.throws(()=>validateRegistrationQuestions({...config,bookingCustomFields:[{...config.bookingCustomFields[0],serviceIds:['deleted-service']}]}),/Choose existing services/);
- assert.throws(()=>validateRegistrationQuestions({...config,services:[{id:'training',questionRequired:{fake:true}}]}),/Invalid service required/);
+ assert.throws(()=>validateRegistrationQuestions({...config,services:config.services.map(s=>s.id==='training'?{...s,questionRequired:{fake:true}}:s)}),/Invalid service required/);
 });
 test('service editor is available for both catalog and Services page, and membership UI displays the Unique ID',async()=>{
  const root=new URL('../',import.meta.url);
