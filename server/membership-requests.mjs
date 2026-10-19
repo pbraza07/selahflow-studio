@@ -1,4 +1,5 @@
 import {issueMemberId} from './member-id-policy.mjs';
+import {ensureMemberBookingIdentity} from './shared-member-identity.mjs';
 import {randomUUID} from 'node:crypto';
 import {customRegistrationFields,validateStandardRegistration} from './registration-questions.mjs';
 import {sanitizeBookingAnswers} from './booking-custom-fields.mjs';
@@ -24,7 +25,6 @@ export async function reviewMembershipRequest(client,{owner,id,approve}){
  const identity=request.business_id+'|'+normalizedName+'|'+d.dateOfBirth;
  await client.query('SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))',[request.business_id,identity]);
  const existing=(await client.query('SELECT id,member_number,customer_name,date_of_birth::text AS date_of_birth FROM customer_memberships WHERE business_id=$1 AND lower(customer_name)=lower($2) AND date_of_birth=$3::date FOR UPDATE',[request.business_id,d.name,d.dateOfBirth])).rows[0];
- const booking=(await client.query('SELECT member_number FROM customer_booking_ids WHERE business_id=$1 AND lower(first_name)=lower($2) AND lower(last_name)=lower($3) AND date_of_birth=$4::date',[request.business_id,d.firstName,d.lastName,d.dateOfBirth])).rows[0];
  const number=await issueMemberId(client,{businessId:request.business_id,name:d.name,dateOfBirth:d.dateOfBirth,requested:d.memberNumber});
  if(d.memberNumber&&d.memberNumber!==number)throw Error('The submitted member ID does not match this player. Review their registration details.');
  const collision=(await client.query('SELECT 1 FROM customer_memberships WHERE business_id=$1 AND member_number=$2 AND id<>$3',[request.business_id,number,existing?.id||''])).rowCount;
@@ -36,10 +36,11 @@ export async function reviewMembershipRequest(client,{owner,id,approve}){
   membershipId=randomUUID();
   await client.query("INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,customer_phone,date_of_birth,member_number,status,stripe_account_id,price_cents,sessions_included,sessions_used,registration_answers,registration_field_labels) VALUES($1,$2,$3,$4,$5,$6,$7::date,$8,'pending_payment','',$9,0,0,$10::jsonb,$11::jsonb)",[membershipId,request.business_id,request.plan_id,d.name,d.email,d.phone,d.dateOfBirth,number,request.price_cents,JSON.stringify(d.customAnswers),JSON.stringify(d.fieldLabels)]);
  }
- // Repeated registrations link to the original membership; no credits or history are reset.
- const profile=(await client.query('SELECT id FROM business_client_profiles WHERE owner=$1 AND deleted_at IS NULL AND (member_number=$2 OR (member_number IS NULL AND lower(name)=lower($3) AND lower(email)=lower($4) AND (date_of_birth IS NULL OR date_of_birth=$5::date))) FOR UPDATE',[owner,number,d.name,d.email,d.dateOfBirth])).rows[0];
- if(profile)await client.query('UPDATE business_client_profiles SET member_number=$1,date_of_birth=COALESCE(date_of_birth,$2::date),archived=false,updated_at=now() WHERE id=$3 AND owner=$4',[number,d.dateOfBirth,profile.id,owner]);
- if(!profile)await client.query("INSERT INTO business_client_profiles(id,owner,name,email,phone,notes,import_columns,member_number,date_of_birth) VALUES($1,$2,$3,$4,$5,'Approved membership request',$6::jsonb,$7,$8::date)",[randomUUID(),owner,d.name,d.email,d.phone,JSON.stringify(d.customAnswers),number,d.dateOfBirth]);
+ // Membership and first-time booking now create/reuse the SAME client identity.
+ // Previous membership credits, existing answers and history are never reset.
+ await ensureMemberBookingIdentity(client,{businessId:request.business_id,ownerId:owner,
+  firstName:d.firstName,lastName:d.lastName,email:d.email,dateOfBirth:d.dateOfBirth,
+  phone:d.phone,memberNumber:number,customAnswers:d.customAnswers,source:'Membership signup'});
  await client.query("UPDATE membership_requests SET status='approved',membership_id=$1,reviewed_at=now() WHERE id=$2",[membershipId,id]);
  await client.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'membership_request_approved',$4)",[randomUUID(),owner,new Date().toISOString(),JSON.stringify({requestId:id,membershipId,memberNumber:number,planId:request.plan_id})]);
  return {ok:true,membershipId,memberNumber:number,existingMember:!!existing};
