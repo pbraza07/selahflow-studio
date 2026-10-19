@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {issueMemberId} from './member-id-policy.mjs';
+import {ensureMemberBookingIdentity} from './shared-member-identity.mjs';
 import {membershipRequestDetails} from './membership-requests.mjs';
 import {stripeApi} from './membership-payments.mjs';
 import {readyMerchant,assertTestPayment,checkoutUrl} from './stripe-checkout.mjs';
@@ -9,7 +10,7 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
  const db=await pool.connect();
  try{
   await db.query('BEGIN');
-  const business=(await db.query("SELECT b.id,b.name,b.slug,s.data FROM businesses b LEFT JOIN settings s ON s.owner=b.owner_id WHERE b.slug=$1 AND b.status='active'",[body.slug])).rows[0];
+  const business=(await db.query("SELECT b.id,b.owner_id,b.name,b.slug,s.data FROM businesses b LEFT JOIN settings s ON s.owner=b.owner_id WHERE b.slug=$1 AND b.status='active'",[body.slug])).rows[0];
   if(!business)throw Error('Business unavailable.');
   const plan=(await db.query('SELECT * FROM membership_plans WHERE id=$1 AND business_id=$2 AND active=true',[body.planId,business.id])).rows[0];
   if(!plan)throw Error('Choose an available membership.');
@@ -37,14 +38,20 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
    await db.query("UPDATE customer_memberships SET stripe_account_id=$1,stripe_signup_fingerprint=$2,stripe_interval_unit=$3,stripe_sessions_per_period=$4,updated_at=now() WHERE id=$5 AND business_id=$6 AND status='pending_payment' AND stripe_account_id=''",[account,fingerprint,plan.interval_unit,plan.sessions_included,member.id,business.id]);
    member={...member,stripe_account_id:account,stripe_signup_fingerprint:fingerprint,stripe_interval_unit:plan.interval_unit,stripe_sessions_per_period:plan.sessions_included};
   }
+  if(!member){
+   const labels=details.fieldLabels||{};
+   member=(await db.query("INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,status,stripe_account_id,price_cents,date_of_birth,customer_phone,registration_answers,registration_field_labels,member_number,stripe_sessions_per_period,stripe_signup_fingerprint,stripe_interval_unit) VALUES($1,$2,$3,$4,$5,'pending_payment',$6,$7,$8::date,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15) RETURNING *",[body.requestId,business.id,plan.id,name,email,account,plan.price_cents,dob,details.phone,JSON.stringify(details.customAnswers||{}),JSON.stringify(labels),number,plan.sessions_included,fingerprint,plan.interval_unit])).rows[0];
+  }
+  // Direct Stripe signups get the same Unique ID and directory record as
+  // first-time booking and unpaid membership registration, before checkout.
+  await ensureMemberBookingIdentity(db,{businessId:business.id,ownerId:business.owner_id,
+   firstName:details.firstName,lastName:details.lastName,email,dateOfBirth:dob,
+   phone:details.phone,memberNumber:number,customAnswers:details.customAnswers,
+   source:'Membership signup · secure checkout'});
   if(member?.stripe_checkout_session_id){
    const previous=await api('checkout/sessions/'+member.stripe_checkout_session_id,{method:'GET',account});assertTestPayment(previous);
    if(previous.status==='open'){await db.query('COMMIT');return {checkoutUrl:checkoutUrl(previous)};}
    if(previous.status!=='expired'){await db.query('COMMIT');return {returnUrl:origin+'/membership/'+business.slug+'?checkout=success&session_id='+encodeURIComponent(previous.id)};}
-  }
-  if(!member){
-   const labels=details.fieldLabels||{};
-   member=(await db.query("INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,status,stripe_account_id,price_cents,date_of_birth,customer_phone,registration_answers,registration_field_labels,member_number,stripe_sessions_per_period,stripe_signup_fingerprint,stripe_interval_unit) VALUES($1,$2,$3,$4,$5,'pending_payment',$6,$7,$8::date,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15) RETURNING *",[body.requestId,business.id,plan.id,name,email,account,plan.price_cents,dob,details.phone,JSON.stringify(details.customAnswers||{}),JSON.stringify(labels),number,plan.sessions_included,fingerprint,plan.interval_unit])).rows[0];
   }
   const session=await api('checkout/sessions',{account,idempotencyKey:'membership-'+member.id+'-'+(member.stripe_checkout_session_id||'initial'),params:{
    mode:'subscription','allowed_payment_method_types[0]':'card','line_items[0][quantity]':'1',
