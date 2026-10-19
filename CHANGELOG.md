@@ -1,3 +1,10 @@
+## 1.3.109 — Membership signup, payment, editable questions and reporting
+- Customer enrollment requires no approval and saves a pending-payment membership with its unique ID, captured questions and no usable credits until payment.
+- Previously unpaid enrollments can continue through existing Stripe Connect checkout with strict plan, identity, price and merchant checks. Verified membership payments queue one descriptive email; the sender must be connected independently in each Render environment.
+- Settings shows Booking & membership questions and allows adding/editing/reordering them; Memberships has a shortcut. Removed the redundant Booking page content tab while retaining Page editor.
+- Reports include separate booked/scheduled, checked-in, paid appointment, completed, canceled and no-show detail views, avoid projecting already-paid/member-covered visits, and reconcile paid Stripe bookings without duplicate revenue.
+- Separate staging and production databases, keys, notification policies and connected Stripe accounts remain independent.
+
 ## 1.3.108 — Report controls and membership payment receipts
 
 - Add selected-period detail dialogs to all Reports cards, including membership payments and email outcomes.
