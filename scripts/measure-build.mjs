@@ -20,7 +20,12 @@ async function collect(dir,result=[]){
  }
  return result;
 }
-const manifest=await json('app-build-manifest.json');
+let manifest={pages:{}};let manifestSource='none';
+for(const name of ['app-build-manifest.json','build-manifest.json','server/app-build-manifest.json']){
+ try{manifest=await json(name);manifestSource=name;break;}catch(error){
+  if(error?.code!=='ENOENT')throw error;
+ }
+}
 const files=await collect(join(build,'static'));
 const stats=await Promise.all(files.map(async path=>({path,...await bytes(path)})));
 const totals={
@@ -42,5 +47,5 @@ for(const name of selected){
   js:sum(found.filter(x=>x.path.endsWith('.js'))),
   css:sum(found.filter(x=>x.path.endsWith('.css')))};
 }
-const output={method:'next-16-webpack-app-build-manifest-route-asset-byte-sums',version:(await json('../package.json').catch(()=>({version:'unknown'}))).version,totals,routes};
+const output={method:'next-16-webpack-static-asset-byte-sums',manifestSource,version:(await json('../package.json').catch(()=>({version:'unknown'}))).version,totals,routes};
 console.log('SELAHFLOW_STATIC_BUILD_METRICS '+JSON.stringify(output));
