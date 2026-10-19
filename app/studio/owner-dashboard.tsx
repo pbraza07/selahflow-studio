@@ -164,7 +164,7 @@ const appointmentEstimate=(a:Any)=>{
  const names=Array.isArray(a.services)?a.services:[];
  return names.reduce((sum:number,name:string)=>sum+Number(config.services.find((svc:Any)=>svc.name===name)?.price||0),0);
 };
-const projectedAppointments=unpaidAppointmentForecast(reportAppointments,appointmentEstimate);
+const projectedAppointments:Any[]=unpaidAppointmentForecast(reportAppointments,appointmentEstimate);
 const projectedTotal=projectedAppointments.reduce((sum:number,a:Any)=>sum+appointmentEstimate(a),0);
 const futureProjection=projectedAppointments.filter((a:Any)=>a.status!=='Completed'&&a.date>=today()).reduce((sum:number,a:Any)=>sum+appointmentEstimate(a),0);
 const selections=config.services.filter((s:Any)=>selected.includes(s.id));const duration=selections.reduce((n:number,s:Any)=>n+s.duration,0),price=selections.reduce((n:number,s:Any)=>n+s.price,0);
