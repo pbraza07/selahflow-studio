@@ -1,3 +1,8 @@
+## 1.3.112 — Preserve removal of the legacy Crawford business
+
+- Startup initializes administrator access without recreating or renaming a business, inserting tenant memberships, or creating tenant subscriptions. Existing administrator credentials and other tenants are preserved.
+- Migration 045 permanently removes only the verified archived Crawford business and its tenant records in each database; connected billing obligations stop the operation. Other tenants and administrator accounts are preserved.
+
 ## 1.3.111 — Phase 1 performance/architecture candidate (staging validation required)
 - Split 14 secondary owner-dashboard components into on-demand Next.js chunks without changing their screens, workflows, appearance, or server operations.
 - Skip full owner-dashboard data polling while hidden, refreshing on return to visible; preserve foreground 30-second cadence.
