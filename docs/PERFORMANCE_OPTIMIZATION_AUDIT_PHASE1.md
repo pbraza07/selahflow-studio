@@ -30,7 +30,7 @@ Repeatable build measurement script: `scripts/measure-build.mjs`, run after an u
 | GitHub Actions build step duration | 38 seconds | 38 seconds | no proven build-time gain |
 | Automated suite | 251 passing | 254 passing | three additional structural regressions |
 
-Comparison: CI baseline `feature/perf-baseline-110` run `39232201190`; optimized `feature/perf-wave1-110` run `39232264940`. Route-specific first-load size is **not yet established** from the available Next.js 16 build manifests. Lighthouse LCP, INP, CLS, p75 page timings and response-time savings are **not measured**. Render returned no usable HTTP latency/count series in the requested baseline window, so they must not be invented.
+Comparison: CI baseline `feature/perf-baseline-110` run `39232201190`; optimized `feature/perf-wave1-110` run `39232264940`. Webpack's server-side client-reference manifest shows the owner-dashboard root-component referenced chunk set decreased from 17,700 to 11,948 gzip bytes (32.5%, 5/6 versus 3/4 referenced entries found). This is an **incomplete build-level module/chunk proxy**, NOT an observed network request waterfall, first-load payload or Lighthouse result. Other reference proxies did not show meaningful differences.  Lighthouse LCP, INP, CLS, p75 page timings and response-time savings are **not measured**. Render returned no usable HTTP latency/count series in the requested baseline window, so they must not be invented.
 
 ## 3. Highest-priority architecture and performance risks
 
@@ -69,5 +69,7 @@ Production gate: **explicit owner approval AFTER the staging report**, confirmed
 - Add formatting/linting rules and explicit architectural boundaries, but avoid formatting the entire repository in a risky bulk change.
 - Review dependency vulnerabilities and upgrade one compatibility-tested dependency at a time.
 - Estimated infrastructure cost for this phase: **$0 additional** (existing GitHub Actions and Render services), subject to normal build-minute quotas.
+
+Staging candidate version: **v1.3.111**, prepared on isolated feature branch. No production deployment authorized. The current source release and accompanying documentation use v1.3.111; existing production service remains at v1.3.110.
 
 This audit is deliberately incremental. It is not a claim that all 391 files were exhaustively refactored or that all end-to-end production journeys have been verified.

@@ -1,3 +1,10 @@
+## 1.3.111 — Phase 1 performance/architecture candidate (staging validation required)
+- Split 14 secondary owner-dashboard components into on-demand Next.js chunks without changing their screens, workflows, appearance, or server operations.
+- Skip full owner-dashboard data polling while hidden, refreshing on return to visible; preserve foreground 30-second cadence.
+- Parallelize independent business-name query with owner activity/roster requests; preserve data contract and tenant isolation.
+- Add reproducible static asset measurement after CI build plus three regression tests; source assets increased globally while owner dashboard root referenced chunk bytes decreased.
+- No database/index migration or payment/membership behavior changes. Production must remain v1.3.110 pending explicit approval after staging validation and verified database recovery.
+
 ## 1.3.110 — Shared customer Unique ID and per-service questions
 - Both no-payment membership registrations and Stripe membership checkouts persist the same business-scoped 6-character customer ID and directory identity as first-time booking. Repeat registrations and return visits reuse the ID without granting unpaid credits.
 - Membership registration displays the new Unique ID like booking confirmation and supports secure returning ID+DOB lookup; Stripe status shows the assigned ID pending or paid.
