@@ -1,32 +1,36 @@
 'use client';
-import OwnerReports from '../components/owner-reports';
 import {unpaidAppointmentForecast} from '../../server/report-activity.mjs';
 import RegistrationFields from '../components/registration-fields';
 import {APP_VERSION} from '../../lib/app-version';
 import {selectedSession as findBookingSession} from '../../server/session-scheduling.mjs';
 import OwnerMembershipRequests from '../components/owner-membership-requests';
-import VisualPageEditor from '../components/visual-page-editor';
 import AttendanceActions from '../components/attendance-actions';
-import BookingBlockoutSettings from '../components/booking-blockout-settings';
 import SortableTable from '../components/sortable-table';
-import RegistrationQuestionSettings from '../components/registration-question-settings';
 import {useCallback,useEffect,useRef,useState} from 'react';
+import dynamic from 'next/dynamic';
+// Section-specific client bundles load on first visit to each workspace tab.
+// These components are not rendered on the default Overview view.
+const OwnerReports=dynamic(()=>import('../components/owner-reports'));
+const OwnerMemberships=dynamic(()=>import('../components/owner-memberships'));
+const OwnerHistory=dynamic(()=>import('../components/owner-history'));
+const OwnerClientDirectory=dynamic(()=>import('../components/owner-client-directory'));
+const VisualPageEditor=dynamic(()=>import('../components/visual-page-editor'));
+const OwnerBranding=dynamic(()=>import('../components/owner-branding'));
+const PasswordChange=dynamic(()=>import('../components/owner-password'));
+const RegistrationQuestionSettings=dynamic(()=>import('../components/registration-question-settings'));
+const BookingBlockoutSettings=dynamic(()=>import('../components/booking-blockout-settings'));
+const AddressAutocomplete=dynamic(()=>import('../components/address-autocomplete'));
+const OwnerExtraTeamSeatRequest=dynamic(()=>import('../components/owner-extra-team-seat-request'));
+const OwnerReviewInvite=dynamic(()=>import('../components/owner-review-invite'));
+const NotificationProviderStatus=dynamic(()=>import('../components/notification-provider-status'));
+const DevicePushControls=dynamic(()=>import('../components/device-push-controls'));
+
 import {Shapes,LayoutDashboard,CalendarDays,Users,ShoppingBag,Sparkles,Settings,Plus,ChevronLeft,ChevronRight,Search,ArrowUpRight,Clock,Check, X,MessageCircle,Send,CheckCircle2,BarChart3,ExternalLink,Download,Menu,CreditCard,Store,ClipboardList} from 'lucide-react';
 import {defaultSettings,today,timeLabel} from '../../lib/defaults';
-import OwnerBranding from '../components/owner-branding';
-import OwnerMemberships from '../components/owner-memberships';
 import MembershipBadge from '../components/membership-badge';
-import OwnerExtraTeamSeatRequest from '../components/owner-extra-team-seat-request';
-import AddressAutocomplete from '../components/address-autocomplete';
 import {googleMapsDirections,displayBusinessAddress} from '../../lib/maps';
-import PasswordChange from '../components/owner-password';
 import OwnerTermTracker from '../components/owner-term-tracker';
 import OwnerBookingApprovals from '../components/owner-booking-approvals';
-import OwnerHistory from '../components/owner-history';
-import OwnerClientDirectory from '../components/owner-client-directory';
-import OwnerReviewInvite from '../components/owner-review-invite';
-import NotificationProviderStatus from '../components/notification-provider-status';
-import DevicePushControls from '../components/device-push-controls';
 import OwnerNotificationBell from '../components/owner-notification-bell';
 import {durationLabel,isTermUnit,normalizedDuration,DURATION_UNITS} from '../../lib/service-terms';
 import {US_STATES,canonicalState} from '../../lib/business-options';
@@ -69,7 +73,20 @@ const refreshTeamAllowance=useCallback(async()=>{try{
  const r=await fetch('/api/business',{cache:'no-store'}),d=await r.json();
  if(r.ok&&d.business){setTeamLimit(d.business.teamLimit??1);setCurrentPlan(d.business.planBenefits?.code||'free');setPlanBenefits(d.business.planBenefits||null);}
  }catch{}},[]);
-useEffect(()=>{refresh();fetch('/api/business',{cache:'no-store'}).then(r=>r.json()).then(d=>(setPublicSlug(d.business?.slug||businessSlug),setTeamLimit(d.business?.teamLimit??1),setCurrentPlan(d.business?.planBenefits?.code||'free'),setPlanBenefits(d.business?.planBenefits||null),setBrandPrimary(d.business?.brand_primary||'#123F3A'),setBrandBackground(d.business?.brand_background||'#F7F4EC'),setHasLogo(!!d.business?.has_logo),setSavedTheme(d.business?.theme||null))).catch(()=>{});},[]);useEffect(()=>{const onSaved=()=>{fetch('/api/business',{cache:'no-store'}).then(r=>r.json()).then(d=>{if(d.business){setSavedTheme(d.business.theme||null);setBrandPrimary(d.business.brand_primary||'#123F3A');setBrandBackground(d.business.brand_background||'#F7F4EC');}}).catch(()=>{});};window.addEventListener('selahflow:theme-updated',onSaved);return()=>window.removeEventListener('selahflow:theme-updated',onSaved);},[]);useEffect(()=>{if(view==='Settings')return;const timer=setInterval(refresh,30000);return()=>clearInterval(timer);},[view]);useEffect(()=>{const listener=()=>refresh();window.addEventListener('selahflow:booking-reviewed',listener);window.addEventListener('selahflow:memberships-updated',listener);return()=>{window.removeEventListener('selahflow:booking-reviewed',listener);window.removeEventListener('selahflow:memberships-updated',listener);};},[]);useEffect(()=>{if(toast){const t=setTimeout(()=>setToast(''),4500);return()=>clearTimeout(t);}},[toast]);
+useEffect(()=>{refresh();fetch('/api/business',{cache:'no-store'}).then(r=>r.json()).then(d=>(setPublicSlug(d.business?.slug||businessSlug),setTeamLimit(d.business?.teamLimit??1),setCurrentPlan(d.business?.planBenefits?.code||'free'),setPlanBenefits(d.business?.planBenefits||null),setBrandPrimary(d.business?.brand_primary||'#123F3A'),setBrandBackground(d.business?.brand_background||'#F7F4EC'),setHasLogo(!!d.business?.has_logo),setSavedTheme(d.business?.theme||null))).catch(()=>{});},[]);useEffect(()=>{const onSaved=()=>{fetch('/api/business',{cache:'no-store'}).then(r=>r.json()).then(d=>{if(d.business){setSavedTheme(d.business.theme||null);setBrandPrimary(d.business.brand_primary||'#123F3A');setBrandBackground(d.business.brand_background||'#F7F4EC');}}).catch(()=>{});};window.addEventListener('selahflow:theme-updated',onSaved);return()=>window.removeEventListener('selahflow:theme-updated',onSaved);},[]);useEffect(()=>{
+ if(view==='Settings')return;
+ // Background tabs do not need full business/revenue refreshes. Resume once
+ // visible so existing 30-second foreground freshness is retained.
+ let wasHidden=document.visibilityState==='hidden';
+ const tick=()=>{if(document.visibilityState==='visible')void refresh();};
+ const resume=()=>{
+  if(document.visibilityState==='hidden'){wasHidden=true;return;}
+  if(wasHidden){wasHidden=false;void refresh();}
+ };
+ const timer=window.setInterval(tick,30000);
+ document.addEventListener('visibilitychange',resume);
+ return()=>{window.clearInterval(timer);document.removeEventListener('visibilitychange',resume);};
+},[view]);useEffect(()=>{const listener=()=>refresh();window.addEventListener('selahflow:booking-reviewed',listener);window.addEventListener('selahflow:memberships-updated',listener);return()=>{window.removeEventListener('selahflow:booking-reviewed',listener);window.removeEventListener('selahflow:memberships-updated',listener);};},[]);useEffect(()=>{if(toast){const t=setTimeout(()=>setToast(''),4500);return()=>clearTimeout(t);}},[toast]);
 async function action(data:Any){setBusy(true);try{const r=await fetch('/api/studio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,key:crypto.randomUUID()})});const d=await r.json() as Any;if(r.status===401){window.location.assign('/login');return;}if(!r.ok)throw Error(d.error);return d;}catch(e){setToast((e as Error).message);return null;}finally{setBusy(false);}}
 const slotRequest=useRef(0);
 const active=appointments.filter(a=>a.status!=='Cancelled'&&a.status!=='No-show');
