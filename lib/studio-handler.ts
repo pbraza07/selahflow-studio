@@ -36,17 +36,20 @@ async function context(req:Request,isPublic=false){const slug=isPublic?new URL(r
 export async function ownerGet(req:Request){
  try{
   const {owner,config}=await context(req);
-  const [a,e,roster,membershipPayments]=await Promise.all([
+  // Independent owner metadata is fetched alongside the roster and activity,
+  // not serially after those queries finish. Response shape remains unchanged.
+  const [a,e,roster,membershipPayments,businessDetails]=await Promise.all([
    db().prepare('SELECT * FROM appointments WHERE owner=? ORDER BY date,start').bind(owner).all(),
    db().prepare("SELECT * FROM events WHERE owner=? AND kind<>'membership_payment' ORDER BY created DESC").bind(owner).all(),
    loadOwnerMemberRoster(getPool(),owner),
-   loadMembershipReportPayments(getPool(),owner)
+   loadMembershipReportPayments(getPool(),owner),
+   getPool().query("SELECT name FROM businesses WHERE owner_id=$1 AND status='active'",[owner])
   ]);
   const visits=a.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   const activityEvents=e.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   const paidBookingFallback=await reconcileStripeBookingReceipts(getPool(),owner,activityEvents);
   return reply({
-   config,reportBusinessName:(await getPool().query("SELECT name FROM businesses WHERE owner_id=$1 AND status='active'",[owner])).rows[0]?.name,appointments:decorateOwnerAppointments(visits,roster),
+   config,reportBusinessName:businessDetails.rows[0]?.name,appointments:decorateOwnerAppointments(visits,roster),
    events:await visibleReportPayments(getPool(),owner,[...reportSaleEvents([...activityEvents,...paidBookingFallback],config.services),...membershipPayments])
   });
  }catch(e){
