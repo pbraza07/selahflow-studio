@@ -7,7 +7,7 @@ export const STANDARD_REGISTRATION_FIELDS=Object.freeze([
  {id:'email',label:'Email',type:'email',required:true},
  {id:'phone',label:'Phone',type:'tel',required:false},
 ]);
-/** @param {any} config @param {string} form @param {string|null|undefined} sessionId */
+/** @param {any} config @param {string} form @param {string|null|undefined} sessionId @param {string[]|undefined} serviceIds */
 export function customRegistrationFields(config={},form='booking',sessionId=undefined,serviceIds=undefined){
  const services=Array.isArray(serviceIds)?new Set(serviceIds):null;
  return (config.bookingCustomFields||[]).filter(f=>
@@ -15,7 +15,7 @@ export function customRegistrationFields(config={},form='booking',sessionId=unde
   (form!=='booking'||sessionId===undefined||!f.sessionIds?.length||f.sessionIds.includes(String(sessionId||'').replace(/__\d{8}$/, '')))&&
   (form!=='booking'||!f.serviceIds?.length||!services||f.serviceIds.some(id=>services.has(id))));
 }
-/** @param {any} config @param {string} form @param {string|null|undefined} sessionId */
+/** @param {any} config @param {string} form @param {string|null|undefined} sessionId @param {string[]|undefined} serviceIds */
 export function registrationQuestions(config={},form='booking',sessionId=undefined,serviceIds=undefined){
  const edits=config[form+'StandardFields']||{};
  const fields=[...STANDARD_REGISTRATION_FIELDS.map(f=>({...f,...edits[f.id],id:f.id,type:f.type,required:form==='membership'?(f.required||edits[f.id]?.required===true):(edits[f.id]?.required??f.required),standard:true})),...customRegistrationFields(config,form,sessionId,serviceIds).map(f=>({...f,standard:false}))];
@@ -63,6 +63,7 @@ export function validateRegistrationQuestions(config){
   if(order!==undefined&&(!Array.isArray(order)||new Set(order).size!==order.length||order.some(id=>!allowed.has(id))))throw Error('Invalid question display order.');
  }
 }
+/** @param {any} config @param {string} form @param {any} values @param {string|null|undefined} sessionId @param {string[]|undefined} serviceIds */
 export function validateStandardRegistration(config,form,values,sessionId=undefined,serviceIds=undefined){
  for(const f of registrationQuestions(config,form,sessionId,serviceIds).filter(f=>f.standard)){
   if(f.required&&!String(values[f.id]||'').trim())throw Error(f.label+' is required.');
