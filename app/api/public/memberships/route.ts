@@ -1,7 +1,5 @@
 import {startMembershipCheckout} from '../../../../server/membership-checkout.mjs';
-import {notifyMembershipRequest} from '../../../../server/notification-delivery.mjs';
-import {membershipRequestDetails} from '../../../../server/membership-requests.mjs';
-import {pushMembershipRequest} from '../../../../server/push-delivery.mjs';
+import {membershipRequestDetails,registerMembershipWithoutApproval} from '../../../../server/membership-requests.mjs';
 import {tokenHash} from '../../../../server/security.mjs';
 import {publicRegistrationSettings} from '../../../../server/registration-questions.mjs';
 import {getPool} from '../../../../server/database.mjs';
@@ -52,9 +50,8 @@ export async function POST(req:Request){
    const config=typeof business.data==='string'?JSON.parse(business.data):business.data||{};
    const details=membershipRequestDetails(config,body);
    if(!/^[a-f0-9-]{36}$/i.test(body.requestId||''))throw Error('Invalid request identifier. Refresh and try again.');
-   const inserted=await pool.query("INSERT INTO membership_requests(id,business_id,plan_id,details) VALUES($1,$2,$3,$4::jsonb) ON CONFLICT(id) DO NOTHING RETURNING id",[body.requestId,business.id,plan.id,JSON.stringify(details)]);
-   if(inserted.rowCount){await Promise.allSettled([pushMembershipRequest(body.requestId),notifyMembershipRequest({requestId:body.requestId,origin:trustedOrigin(req)})]);}
-   return Response.json({ok:true,requested:true,message:'Membership request submitted. The team will review your information.'},{headers:noStore});
+   const registered=await registerMembershipWithoutApproval(pool,{businessId:business.id,ownerId:business.owner_id,planId:plan.id,requestId:body.requestId,details});
+   return Response.json(registered,{headers:noStore});
   }
 
   throw Error('Choose a valid enrollment action.');
