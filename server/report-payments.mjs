@@ -51,3 +51,32 @@ export function reportSaleEvents(events,services){
   return [{...event,lines,total}];
  });
 }
+
+/**
+ * Stripe bookings are already written to cash_sale when payment is verified.
+ * Reconstruct only a missing audit record from the paid booking receipt;
+ * never count the receipt twice and never count pending checkout as revenue.
+ */
+export async function reconcileStripeBookingReceipts(db,owner,auditEvents){
+ const rows=(await db.query(`SELECT p.booking_id,p.amount_cents,p.lines,p.paid_at,p.stripe_account_id,p.stripe_payment_intent_id,a.data
+  FROM booking_payments p JOIN businesses b ON b.id=p.business_id
+  JOIN appointments a ON a.id=p.booking_id AND a.owner=b.owner_id
+  WHERE b.owner_id=$1 AND b.status='active' AND p.status='paid' AND p.stripe_payment_intent_id IS NOT NULL
+  ORDER BY p.paid_at,p.booking_id`,[owner])).rows;
+ const seenBookings=new Set(auditEvents.filter(e=>e.kind==='cash_sale'&&e.bookingId).map(e=>e.bookingId));
+ const seenPayments=new Set(auditEvents.filter(e=>e.kind==='cash_sale'&&e.providerReference).map(e=>e.providerReference));
+ const extras=[];
+ for(const row of rows){
+  if(seenBookings.has(row.booking_id)||seenPayments.has(row.stripe_payment_intent_id))continue;
+  const lines=typeof row.lines==='string'?JSON.parse(row.lines):row.lines;
+  if(!Array.isArray(lines)||!lines.length)continue;
+  const total=lines.reduce((sum,l)=>sum+Math.round(Number(l.price)*100)*Number(l.qty),0);
+  if(total!==Number(row.amount_cents))continue;
+  const data=typeof row.data==='string'?JSON.parse(row.data):row.data||{};
+  extras.push({id:'stripe-booking-'+row.stripe_account_id+'-'+row.stripe_payment_intent_id,
+   kind:'cash_sale',bookingId:row.booking_id,client:data.name||'',providerReference:row.stripe_payment_intent_id,
+   created:row.paid_at,payment:'Stripe',lines,total:total/100});
+  seenBookings.add(row.booking_id);seenPayments.add(row.stripe_payment_intent_id);
+ }
+ return extras;
+}

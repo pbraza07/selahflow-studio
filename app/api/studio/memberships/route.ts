@@ -1,5 +1,6 @@
 import {issueMemberId,MEMBER_ID_POLICIES} from '../../../../server/member-id-policy.mjs';
 import {queueMembershipPaymentEmail} from '../../../../server/membership-payment-emails.mjs';
+import {deliveryProviderStatusWithConnection} from '../../../../server/notification-delivery.mjs';
 import {customRegistrationFields,validateStandardRegistration} from '../../../../server/registration-questions.mjs';
 import {changeMembershipGroup,requireMembershipGroup} from '../../../../server/membership-groups.mjs';
 import {validateMembershipBadge} from '../../../../server/membership-badges.mjs';
@@ -40,7 +41,8 @@ export async function GET(req:Request){
   const individual=(await pool.query('SELECT limits FROM business_entitlement_overrides WHERE business_id=$1',[business.id])).rows[0]?.limits||{};
   const benefits=planEntitlements(business.plan_code,business.subscription_status);
   if(Number.isInteger(individual.membershipPlans))benefits.limits.membershipPlans=individual.membershipPlans;
-  return Response.json({businessName:business.name,memberIdPolicy:business.member_id_policy,plans:plans.rows,groups:groups.rows,members:members.rows.map((m:any)=>{const actual=Number(usageCounts.rows.find((u:any)=>u.membership_id===m.id)?.recorded_sessions||0);const plan=plans.rows.find((p:any)=>p.id===m.plan_id);return {...m,badge:plan?.badge||groups.rows.find((g:any)=>g.id===plan?.groupId)?.badge||null,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
+  const emailDelivery=await deliveryProviderStatusWithConnection(pool);
+  return Response.json({businessName:business.name,emailDelivery:{provider:emailDelivery.emailProvider,ready:emailDelivery.emailConfigured},memberIdPolicy:business.member_id_policy,plans:plans.rows,groups:groups.rows,members:members.rows.map((m:any)=>{const actual=Number(usageCounts.rows.find((u:any)=>u.membership_id===m.id)?.recorded_sessions||0);const plan=plans.rows.find((p:any)=>p.id===m.plan_id);return {...m,badge:plan?.badge||groups.rows.find((g:any)=>g.id===plan?.groupId)?.badge||null,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
    payments:{configured:paymentConfigured(),connected:!!account.external_account_id,
     ready:paymentConfigured()&&account.charges_enabled===true&&account.onboarding_complete===true}}, {headers});
  }catch(e){return error(e);}

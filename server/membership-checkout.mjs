@@ -21,10 +21,22 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
   // Serialize enrollment for the same identity, including retries with a fresh browser request ID.
   const number=await issueMemberId(db,{businessId:business.id,name,dateOfBirth:dob,requested:body.memberNumber});
   let member=(await db.query('SELECT * FROM customer_memberships WHERE business_id=$1 AND member_number=$2 FOR UPDATE',[business.id,number])).rows[0];
-  if(member&&(member.status!=='pending_payment'||member.stripe_signup_fingerprint!==fingerprint))throw Error('This client already has a membership or another enrollment. Contact the business to manage it.');
-  if(member&&(member.price_cents!==plan.price_cents||member.stripe_interval_unit!==plan.interval_unit||member.stripe_sessions_per_period!==plan.sessions_included))throw Error('This package changed after checkout started. Contact the business before paying.');
+  // A pending offline registration may transition into Stripe without approval.
+  // Only the matching member identity, selected plan and unchanged price qualify.
+  const unpaidRegistration=!!(member&&member.status==='pending_payment'&&!member.stripe_signup_fingerprint&&!member.stripe_checkout_session_id&&!member.stripe_account_id);
+  if(member&&(member.status!=='pending_payment'||!unpaidRegistration&&member.stripe_signup_fingerprint!==fingerprint))
+   throw Error('This client already has a membership or another enrollment. Contact the business to manage it.');
+  if(member&&(Number(member.price_cents)!==Number(plan.price_cents)||!unpaidRegistration&&(member.stripe_interval_unit!==plan.interval_unit||Number(member.stripe_sessions_per_period)!==Number(plan.sessions_included))))
+   throw Error('This package changed after registration. Contact the business before paying.');
+  if(unpaidRegistration&&(member.plan_id!==plan.id||String(member.customer_name).trim().toLowerCase()!==name.trim().toLowerCase()||
+    String(member.customer_email).trim().toLowerCase()!==email||new Date(member.date_of_birth).toISOString().slice(0,10)!==dob))
+   throw Error('Registration identity or package does not match. Contact the business.');
   const account=await readyMerchant(db,business.id,api);
-  if(member&&member.stripe_account_id!==account)throw Error('The payment account changed. Contact the business.');
+  if(member&&!unpaidRegistration&&member.stripe_account_id!==account)throw Error('The payment account changed. Contact the business.');
+  if(unpaidRegistration){
+   await db.query("UPDATE customer_memberships SET stripe_account_id=$1,stripe_signup_fingerprint=$2,stripe_interval_unit=$3,stripe_sessions_per_period=$4,updated_at=now() WHERE id=$5 AND business_id=$6 AND status='pending_payment' AND stripe_account_id=''",[account,fingerprint,plan.interval_unit,plan.sessions_included,member.id,business.id]);
+   member={...member,stripe_account_id:account,stripe_signup_fingerprint:fingerprint,stripe_interval_unit:plan.interval_unit,stripe_sessions_per_period:plan.sessions_included};
+  }
   if(member?.stripe_checkout_session_id){
    const previous=await api('checkout/sessions/'+member.stripe_checkout_session_id,{method:'GET',account});assertTestPayment(previous);
    if(previous.status==='open'){await db.query('COMMIT');return {checkoutUrl:checkoutUrl(previous)};}

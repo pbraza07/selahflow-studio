@@ -1,8 +1,8 @@
 'use client';
 import {useState} from 'react';
 import {registrationQuestions,STANDARD_REGISTRATION_FIELDS} from '../../server/registration-questions.mjs';
-export default function RegistrationQuestionSettings({config,setConfig,limit,sessionId}:{config:any;setConfig:any;limit:number;sessionId?:string}){
- const [form,setForm]=useState<'booking'|'membership'>('booking');
+export default function RegistrationQuestionSettings({config,setConfig,limit,sessionId,initialForm='booking'}:{config:any;setConfig:any;limit:number;sessionId?:string;initialForm?:'booking'|'membership'}){
+ const [form,setForm]=useState<'booking'|'membership'>(initialForm);
  const fields=config.bookingCustomFields||[];
  const update=(id:string,patch:any)=>setConfig((c:any)=>({...c,bookingCustomFields:(c.bookingCustomFields||[]).map((f:any)=>f.id===id?{...f,...patch}:f)}));
  const standard=(id:string,patch:any)=>setConfig((c:any)=>({...c,[form+'StandardFields']:{...c[form+'StandardFields'],[id]:{...c[form+'StandardFields']?.[id],...patch}}}));

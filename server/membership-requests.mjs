@@ -44,3 +44,28 @@ export async function reviewMembershipRequest(client,{owner,id,approve}){
  await client.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'membership_request_approved',$4)",[randomUUID(),owner,new Date().toISOString(),JSON.stringify({requestId:id,membershipId,memberNumber:number,planId:request.plan_id})]);
  return {ok:true,membershipId,memberNumber:number,existingMember:!!existing};
 }
+
+/**
+ * Public membership registration is immediate but has no payment/credits.
+ * Reuses the checked owner transaction and keeps historical requests auditable.
+ */
+export async function registerMembershipWithoutApproval(pool,{businessId,ownerId,planId,requestId,details}){
+ const db=await pool.connect();
+ try{
+  await db.query('BEGIN');
+  const prior=(await db.query('SELECT business_id,plan_id,details FROM membership_requests WHERE id=$1 FOR UPDATE',[requestId])).rows[0];
+  if(prior){
+   const saved=typeof prior.details==='string'?JSON.parse(prior.details):prior.details;
+   if(prior.business_id!==businessId||prior.plan_id!==planId||saved.email!==details.email||saved.name!==details.name||saved.dateOfBirth!==details.dateOfBirth)
+    throw Error('This registration reference belongs to another enrollment. Refresh and try again.');
+  }else{
+   await db.query('INSERT INTO membership_requests(id,business_id,plan_id,details) VALUES($1,$2,$3,$4::jsonb)',[requestId,businessId,planId,JSON.stringify(details)]);
+  }
+  const reviewed=await reviewMembershipRequest(db,{owner:ownerId,id:requestId,approve:true});
+  if(!reviewed.membershipId)throw Error('Membership registration could not be completed.');
+  const member=(await db.query('SELECT member_number,status FROM customer_memberships WHERE id=$1 AND business_id=$2',[reviewed.membershipId,businessId])).rows[0];
+  if(!member)throw Error('Membership registration was not found.');
+  await db.query('COMMIT');
+  return {ok:true,registered:true,membershipId:reviewed.membershipId,memberNumber:member.member_number,paymentPending:member.status==='pending_payment',status:member.status};
+ }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
+}
