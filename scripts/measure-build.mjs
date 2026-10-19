@@ -49,3 +49,38 @@ for(const name of selected){
 }
 const output={method:'next-16-webpack-static-asset-byte-sums',manifestSource,version:(await json('../package.json').catch(()=>({version:'unknown'}))).version,totals,routes};
 console.log('SELAHFLOW_STATIC_BUILD_METRICS '+JSON.stringify(output));
+
+
+/**
+ * Route reference-manifest bundles are not network traces. The root client
+ * component's chunk references are a more precise proxy for its eager chunk
+ * graph than summing all build chunks; actual first-load still needs browser
+ * instrumentation and caching-aware measurement.
+ */
+const routeSpecs=[
+ {route:'/studio/[slug]/page',component:'owner-dashboard.tsx'},
+ {route:'/admin/platform/page',component:'platform-dashboard.tsx'},
+ {route:'/discover/page',component:'/app/discover/page.tsx'},
+ {route:'/book/page',component:'/app/book/page.tsx'},
+ {route:'/membership/[slug]/page',component:'/app/membership/[slug]/page.tsx'}
+];
+const routeReferences={};
+for(const spec of routeSpecs){
+ const filepath=join(build,'server','app',spec.route+'_client-reference-manifest.js');
+ try{
+  const raw=await readFile(filepath,'utf8'),at=raw.indexOf(']={');
+  if(at<0)throw Error('Client-reference JSON marker not found');
+  const parsed=JSON.parse(raw.slice(at+2).trim().replace(/;\s*$/,''));
+  const modules=Object.entries(parsed.clientModules||{});
+  const primary=modules.filter(([name])=>name.includes(spec.component));
+  const assets=[...new Set(primary.flatMap(([,entry])=>Array.isArray(entry?.chunks)?entry.chunks.filter(x=>typeof x==='string'&&/\.(js|css)$/.test(x)):[]))];
+  const measured=[];
+  for(const asset of assets){
+   const assetPath=join(build,asset.replace(/^\/_next\//,''));
+   if(await exists(assetPath))measured.push({path:asset,...await bytes(assetPath)});
+  }
+  routeReferences[spec.route]={modules:modules.length,rootComponentMatchCount:primary.length,rootChunkCount:assets.length,rootChunksMeasured:measured.length,
+   rootComponentChunkBytes:sum(measured),moduleKeys:primary.map(([name])=>name.slice(-100)).slice(0,4)};
+ }catch(error){routeReferences[spec.route]={available:false,error:String(error.message).slice(0,110)};}
+}
+console.log('SELAHFLOW_ROUTE_REFERENCE_METRICS '+JSON.stringify(routeReferences));
