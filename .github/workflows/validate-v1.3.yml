@@ -20,3 +20,5 @@ jobs:
       - run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
+      - name: Measure static build asset sizes
+        run: node scripts/measure-build.mjs
