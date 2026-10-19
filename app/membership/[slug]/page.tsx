@@ -20,7 +20,7 @@ export default function MembershipEnrollment(){
  const [details,setDetails]=useState<Record<string,string>>({firstName:'',lastName:'',dateOfBirth:'',phone:''}),[answers,setAnswers]=useState<Record<string,string|boolean>>({});
  const [error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [result,setResult]=useState<{status:string;plan?:string;paidThrough?:string;memberNumber?:string;sessionsLeft?:number}|null>(null);
- const [requested,setRequested]=useState(false);
+ const [requested,setRequested]=useState(false),[registeredNumber,setRegisteredNumber]=useState('');
  const requestId=useRef('');
  const [checkoutId,setCheckoutId]=useState('');
  useEffect(()=>{
@@ -52,7 +52,7 @@ export default function MembershipEnrollment(){
  const plan=data?.plans.find(p=>p.id===planId);
  const tabs=data?membershipTabs(data.plans,data.groups):[];
  const visiblePlans=data?plansForMembershipTab(data.plans,groupTab):[];
- function chooseGroup(id:string){setGroupTab(id);if(data&&!plansForMembershipTab(data.plans,id).some((p:Plan)=>p.id===planId))setPlanId('');}
+ function chooseGroup(id:string){setGroupTab(id);if(data&&!plansForMembershipTab(data.plans,id).some((p:Plan)=>p.id===planId))setPlanId('');requestId.current='';}
  async function pay(e:React.FormEvent){
   e.preventDefault();
   if(!plan||!data)return;
@@ -64,7 +64,7 @@ export default function MembershipEnrollment(){
    const d=await response.json();
    if(!response.ok)throw Error(d.error||'Secure checkout is unavailable.');
    if(online){if(d.checkoutUrl&&/^https:\/\/checkout\.stripe\.com\//.test(d.checkoutUrl))window.location.assign(d.checkoutUrl);else if(d.returnUrl&&new URL(d.returnUrl).origin===window.location.origin)window.location.assign(d.returnUrl);else throw Error('Secure checkout link unavailable.');}
-   else setRequested(true);setBusy(false);
+   else {setRegisteredNumber(d.memberNumber||'');setRequested(true);}setBusy(false);
   }catch(e){setError((e as Error).message);setBusy(false);}
  }
  const theme=data?themeStyles(data.theme,data.brandPrimary,data.brandBackground) as CSSProperties:undefined;
@@ -74,38 +74,38 @@ export default function MembershipEnrollment(){
    <section className="sf-membership-public-intro">
     <span className="sf-membership-kicker">MEMBERSHIPS & RECURRING SERVICES</span>
     <h1>{data?.registrationConfig?.pageContent?.membershipTitle||(data?'Memberships at '+data.name:'Choose a membership')}</h1>
-    <p>{data?.registrationConfig?.pageContent?.membershipIntro||'Choose a membership and submit your registration for the team to review.'}</p>
+    <p>{data?.registrationConfig?.pageContent?.membershipIntro||'Choose a membership and pay securely. No membership approval is required; sessions activate after verified payment.'}</p>
     {slug&&<GoogleBusinessGallery slug={slug} compact/>}
    </section>
    <section className="sf-membership-join-panel">
-    {requested?<div role="status"><CheckCircle2 size={36}/><h2>Membership request submitted</h2><p>The {data?.name} team will process your request. Your membership will appear after approval. Payment and session credits are confirmed separately.</p><a className="primary" href={'/book/'+slug}>Return to booking</a></div>:checkoutId?<div className="sf-membership-finish">
+    {requested?<div role="status"><CheckCircle2 size={36}/><h2>Membership registered</h2><p>Your membership {registeredNumber&&<b>(ID {registeredNumber})</b>} is registered without approval. Payment is still pending; no session credits are active until payment is confirmed.</p>{data?.canPay&&<button type="button" className="primary" onClick={()=>{setRequested(false);setStep(2);}}>Make Payment <CreditCard size={17}/></button>}<a className="outline" href={'/book/'+slug}>Return to booking</a></div>:checkoutId?<div className="sf-membership-finish">
      <ShieldCheck size={36}/><h2>{result?.status==='active'?'Your membership is active!':'Checking your payment'}</h2>
      {result?.status==='active'?<><p>Payment has been verified for <b>{result.plan}</b>.</p><p><b>Your Membership ID: {result.memberNumber}</b><br/>{result.sessionsLeft} sessions left</p>{result.paidThrough&&<p>Current paid period ends {new Date(result.paidThrough).toLocaleDateString('en-US')}.</p>}</>:
       <p>{result?.status==='payment_failed'?'Your payment did not complete.': 'Stripe is processing your payment. A membership is not active until the payment is verified.'}</p>}
      <a className="primary" href={'/book/'+slug}>Return to appointment booking</a>
     </div>:<>
-    <div className="sf-membership-steps">{['Choose plan','Your details',data?.canPay?'Make Payment':'Submit request'].map((label,i)=><span key={label} className={step===i+1?'active':''}>{i+1}. {label}</span>)}</div>
+    <div className="sf-membership-steps">{['Choose plan','Your details',data?.canPay?'Make Payment':'Register · pay later'].map((label,i)=><span key={label} className={step===i+1?'active':''}>{i+1}. {label}</span>)}</div>
     {error&&<p className="sf-membership-error" role="alert">{error}</p>}
     {!data?<p>Loading available plans…</p>:step===1?<><h2>Choose your membership</h2>
      {tabs.length>0&&<div className="sf-membership-type-tabs" role="tablist" aria-label="Membership types">{tabs.map((tab:{id:string;name:string;badge?:MembershipBadgeDesign|null},i:number)=><button key={tab.id} type="button" id={'membership-type-'+tab.id} role="tab" aria-selected={groupTab===tab.id} aria-controls="membership-plan-options" tabIndex={groupTab===tab.id?0:-1} onClick={()=>chooseGroup(tab.id)} onKeyDown={e=>{let next=i;if(e.key==='ArrowRight')next=(i+1)%tabs.length;else if(e.key==='ArrowLeft')next=(i+tabs.length-1)%tabs.length;else if(e.key==='Home')next=0;else if(e.key==='End')next=tabs.length-1;else return;e.preventDefault();chooseGroup(tabs[next].id);document.getElementById('membership-type-'+tabs[next].id)?.focus();}}>{tab.badge?<MembershipBadge membershipName={tab.name} membershipStatus="active" sessionsIncluded={1} sessionsUsed={0} badge={tab.badge}/>:tab.name}</button>)}</div>}
      <div id="membership-plan-options" role={tabs.length?'tabpanel':undefined} aria-labelledby={tabs.length?'membership-type-'+groupTab:undefined}>
-     {data.plans.length?<div className="sf-membership-plans">{visiblePlans.map((p:Plan)=><button key={p.id} type="button" aria-pressed={planId===p.id} className={planId===p.id?'selected':''} onClick={()=>setPlanId(p.id)}>
+     {data.plans.length?<div className="sf-membership-plans">{visiblePlans.map((p:Plan)=><button key={p.id} type="button" aria-pressed={planId===p.id} className={planId===p.id?'selected':''} onClick={()=>setPlanId(p.id);requestId.current='';}>
       <span><b>{p.name}</b>{p.badge&&<span className="sf-membership-plan-badge"><MembershipBadge membershipName={p.name} membershipStatus="active" sessionsIncluded={1} sessionsUsed={0} badge={p.badge}/></span>}<small>{p.description||'Recurring business membership'}</small></span>
       <strong>{price(p.priceCents)} <small>/ {p.interval}</small></strong>
      </button>)}</div>:<p className="sf-membership-empty">No memberships are available yet. Contact the business for more information.</p>}
      </div>
-     {data.plans.length>0&&<p className="sf-membership-warning">{data.registrationConfig?.pageContent?.membershipRequestNote||('Choose your membership, fill out your information, and a '+data.name+' team member will process your request.')}</p>}
+     {data.plans.length>0&&<p className="sf-membership-warning">{data.registrationConfig?.pageContent?.membershipRequestNote||('Choose your membership and complete registration. No owner approval is required; benefits activate after payment is verified.')}</p>}
      <button type="button" className="primary sf-membership-next" disabled={!planId} onClick={()=>setStep(2)}>Continue <ArrowRight size={17}/></button>
     </>:<form onSubmit={pay}><button type="button" className="sf-membership-back" onClick={()=>setStep(1)}><ArrowLeft size={16}/> Choose another plan</button>
      <h2>{data.registrationConfig?.pageContent?.membershipDetailsTitle||"Review your membership"}</h2>{plan&&<div className="sf-membership-order"><b>{plan.name}</b><p>{plan.description}</p>
       <div><strong>{price(plan.priceCents)} / {plan.interval}</strong><span>{plan.interval} membership</span></div></div>}
      <RegistrationFields config={data.registrationConfig||{}} form="membership" values={{...details,email}} answers={answers} onValue={(id,value)=>{if(id==='email')setEmail(value);else setDetails(old=>{const next={...old,[id]:value};setName((next.firstName+' '+next.lastName).trim());return next;});}} onAnswer={(id,value)=>setAnswers(old=>({...old,[id]:value}))}/>
      <label className="sf-membership-agree"><input type="checkbox" required checked={accept} onChange={e=>setAccept(e.target.checked)}/>
-      <span>{data.canPay&&plan?`I confirm my details. If I choose Make Payment, I authorize recurring billing of ${price(plan.priceCents)} every ${plan.interval} until cancelled through the business. A request alone takes no payment. Membership does not reserve appointment times.`:'I confirm my registration details and request this membership. The business will contact me to process my request and payment. No online payment is taken by this form. Membership does not reserve appointment times.'}</span></label>
-     <button type="submit" value="online" className="primary sf-membership-next" disabled={!data.canPay||busy||!accept||!name.trim()||!email.trim()}><CreditCard size={17}/>{busy?'Opening secure checkout…':'Make Payment'}</button>{!data.canPay&&<p role="note">Online payment is unavailable until the business completes its Stripe connection. You can still submit a membership request.</p>}
+      <span>{data.canPay&&plan?`I confirm my details. If I choose Make Payment, I authorize recurring billing of ${price(plan.priceCents)} every ${plan.interval} until cancelled through the business. Registration without payment does not activate membership or reserve appointment times.`:'I confirm my details and understand that my membership remains pending payment. No owner approval is required, and registering does not reserve appointment times.'}</span></label>
+     <button type="submit" value="online" className="primary sf-membership-next" disabled={!data.canPay||busy||!accept||!name.trim()||!email.trim()}><CreditCard size={17}/>{busy?'Opening secure checkout…':'Make Payment'}</button>{!data.canPay&&<p role="note">Online payment requires this business to connect and verify Stripe. You may register without payment now; the owner can confirm an offline payment later.</p>}
      <button type="submit" value="request" className="outline sf-membership-next" disabled={busy||!accept||!name.trim()||!email.trim()}>
-      <CreditCard size={17}/>{busy?'Submitting request…':data.registrationConfig?.pageContent?.membershipSubmit||'Submit membership request'}</button>
-     <small>{data.canPay?'Make Payment opens Stripe secure checkout. Membership activates only after verified payment. You can also send a request without paying.':'Your request is reviewed by the business before membership approval.'}</small>
+      <CreditCard size={17}/>{busy?'Submitting request…':data.registrationConfig?.pageContent?.membershipSubmit||'Register without payment'}</button>
+     <small>{data.canPay?'Make Payment opens Stripe secure checkout without owner approval. Sessions activate only after verified payment. You can also register without paying.':'Registration requires no approval. Membership stays pending until the business confirms payment.'}</small>
     </form>}
     </>}
    </section>
