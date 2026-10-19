@@ -49,3 +49,10 @@ for(const name of selected){
 }
 const output={method:'next-16-webpack-static-asset-byte-sums',manifestSource,version:(await json('../package.json').catch(()=>({version:'unknown'}))).version,totals,routes};
 console.log('SELAHFLOW_STATIC_BUILD_METRICS '+JSON.stringify(output));
+
+try{
+ const refs=(await collect(join(build,'server','app'))).filter(x=>x.includes('client-reference-manifest'));
+ const targets=refs.filter(x=>/studio|admin|book|discover|membership/.test(x)).slice(0,12);
+ const inspections=await Promise.all(targets.map(async path=>({path,head:(await readFile(path,'utf8')).slice(0,260)})));
+ console.log('SELAHFLOW_ROUTE_MANIFEST_DISCOVERY '+JSON.stringify({count:refs.length,inspections}));
+}catch(error){console.log('SELAHFLOW_ROUTE_MANIFEST_DISCOVERY '+JSON.stringify({error:error.message}));}
