@@ -22,6 +22,6 @@ export async function GET(req:Request){
   const result=await pool.query("SELECT m.status,m.paid_through,m.member_number,m.sessions_included,m.sessions_used,p.name AS plan_name FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id WHERE b.slug=$1 AND b.status='active' AND m.stripe_checkout_session_id=$2 LIMIT 1",[slug,session]);
   if(!result.rows.length)return Response.json({status:'pending_payment'},{headers:{'Cache-Control':'no-store'}});
   const row=result.rows[0];
-  return Response.json({status:row.status,plan:row.plan_name,paidThrough:row.paid_through,...(row.status==='active'?{memberNumber:row.member_number,sessionsLeft:Math.max(0,row.sessions_included-row.sessions_used)}:{})},{headers:{'Cache-Control':'no-store'}});
+  return Response.json({status:row.status,plan:row.plan_name,paidThrough:row.paid_through,memberNumber:row.member_number,...(row.status==='active'?{sessionsLeft:Math.max(0,row.sessions_included-row.sessions_used)}:{})},{headers:{'Cache-Control':'no-store'}});
  }catch(e){console.error('Membership payment verification failed',(e as Error).message);return Response.json({status:'unavailable'},{status:503,headers:{'Cache-Control':'no-store'}});}
 }

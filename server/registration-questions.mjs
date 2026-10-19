@@ -7,14 +7,25 @@ export const STANDARD_REGISTRATION_FIELDS=Object.freeze([
  {id:'email',label:'Email',type:'email',required:true},
  {id:'phone',label:'Phone',type:'tel',required:false},
 ]);
-/** @param {any} config @param {string} form @param {string|null|undefined} sessionId */
-export function customRegistrationFields(config={},form='booking',sessionId=undefined){
- return (config.bookingCustomFields||[]).filter(f=>(!f.forms||f.forms.includes(form))&&(form!=='booking'||sessionId===undefined||!f.sessionIds?.length||f.sessionIds.includes(String(sessionId||'').replace(/__\d{8}$/, ''))));
+/** @param {any} config @param {string} form @param {string|null|undefined} sessionId @param {string[]|undefined} serviceIds */
+export function customRegistrationFields(config={},form='booking',sessionId=undefined,serviceIds=undefined){
+ const services=Array.isArray(serviceIds)?new Set(serviceIds):null;
+ return (config.bookingCustomFields||[]).filter(f=>
+  (!f.forms||f.forms.includes(form))&&
+  (form!=='booking'||sessionId===undefined||!f.sessionIds?.length||f.sessionIds.includes(String(sessionId||'').replace(/__\d{8}$/, '')))&&
+  (form!=='booking'||!f.serviceIds?.length||!services||f.serviceIds.some(id=>services.has(id))));
 }
-/** @param {any} config @param {string} form @param {string|null|undefined} sessionId */
-export function registrationQuestions(config={},form='booking',sessionId=undefined){
+/** @param {any} config @param {string} form @param {string|null|undefined} sessionId @param {string[]|undefined} serviceIds */
+export function registrationQuestions(config={},form='booking',sessionId=undefined,serviceIds=undefined){
  const edits=config[form+'StandardFields']||{};
- const fields=[...STANDARD_REGISTRATION_FIELDS.map(f=>({...f,...edits[f.id],id:f.id,type:f.type,required:form==='membership'?(f.required||edits[f.id]?.required===true):(edits[f.id]?.required??f.required),standard:true})),...customRegistrationFields(config,form,sessionId).map(f=>({...f,standard:false}))];
+ const fields=[...STANDARD_REGISTRATION_FIELDS.map(f=>({...f,...edits[f.id],id:f.id,type:f.type,required:form==='membership'?(f.required||edits[f.id]?.required===true):(edits[f.id]?.required??f.required),standard:true})),...customRegistrationFields(config,form,sessionId,serviceIds).map(f=>({...f,standard:false}))];
+ // A multi-service booking contains the union of applicable questions. A
+ // per-service required override only adds a requirement; it cannot turn off
+ // mandatory identity fields or requirements of another selected service.
+ if(form==='booking'&&Array.isArray(serviceIds))for(const service of config.services||[]){
+  if(!serviceIds.includes(service.id))continue;
+  for(const field of fields)if(service.questionRequired?.[field.id]===true)field.required=true;
+ }
  const session=form==='booking'&&sessionId?(config.bookableSessions||[]).find(s=>s.id===String(sessionId).replace(/__\d{8}$/, '')):null;
  if(session?.questionRequired)for(const f of fields)if(typeof session.questionRequired[f.id]==='boolean')f.required=session.questionRequired[f.id];
  const order=config[form+'QuestionOrder']||[];
@@ -25,8 +36,13 @@ export function validateRegistrationQuestions(config){
  const standardIds=new Set(STANDARD_REGISTRATION_FIELDS.map(f=>f.id));
  for(const f of config.bookingCustomFields||[]){
   if(f.sessionIds!==undefined&&(!Array.isArray(f.sessionIds)||new Set(f.sessionIds).size!==f.sessionIds.length||f.sessionIds.some(id=>typeof id!=='string'||!config.bookableSessions?.some(s=>s.id===id))))throw Error('Choose existing bookable sessions for each question.');
+  if(f.serviceIds!==undefined&&(!Array.isArray(f.serviceIds)||new Set(f.serviceIds).size!==f.serviceIds.length||f.serviceIds.some(id=>typeof id!=='string'||!config.services?.some(s=>s.id===id))))throw Error('Choose existing services for each question.');
+  if(f.serviceIds?.length&&f.forms&&!f.forms.includes('booking'))throw Error('Service-specific questions must apply to booking registration.');
   if(standardIds.has(f.id))throw Error('Custom question ID conflicts with a standard field.');
   if(f.forms!==undefined&&(!Array.isArray(f.forms)||!f.forms.length||new Set(f.forms).size!==f.forms.length||f.forms.some(x=>!['booking','membership'].includes(x))))throw Error('Choose booking, membership, or both for each question.');
+ }
+ for(const service of config.services||[]){
+  if(service.questionRequired!==undefined&&(!service.questionRequired||typeof service.questionRequired!=='object'||Array.isArray(service.questionRequired)||Object.entries(service.questionRequired).some(([id,value])=>typeof value!=='boolean'||!standardIds.has(id)&&!(config.bookingCustomFields||[]).some(f=>f.id===id))))throw Error('Invalid service required-question settings.');
  }
  for(const session of config.bookableSessions||[]){
   if(session.questionRequired!==undefined&&(!session.questionRequired||typeof session.questionRequired!=='object'||Array.isArray(session.questionRequired)||Object.entries(session.questionRequired).some(([id,value])=>typeof value!=='boolean'||!standardIds.has(id)&&!(config.bookingCustomFields||[]).some(f=>f.id===id))))throw Error('Invalid session required-question settings.');
@@ -47,8 +63,9 @@ export function validateRegistrationQuestions(config){
   if(order!==undefined&&(!Array.isArray(order)||new Set(order).size!==order.length||order.some(id=>!allowed.has(id))))throw Error('Invalid question display order.');
  }
 }
-export function validateStandardRegistration(config,form,values,sessionId=undefined){
- for(const f of registrationQuestions(config,form,sessionId).filter(f=>f.standard)){
+/** @param {any} config @param {string} form @param {any} values @param {string|null|undefined} sessionId @param {string[]|undefined} serviceIds */
+export function validateStandardRegistration(config,form,values,sessionId=undefined,serviceIds=undefined){
+ for(const f of registrationQuestions(config,form,sessionId,serviceIds).filter(f=>f.standard)){
   if(f.required&&!String(values[f.id]||'').trim())throw Error(f.label+' is required.');
  }
 }

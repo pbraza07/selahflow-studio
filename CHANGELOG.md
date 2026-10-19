@@ -1,3 +1,9 @@
+## 1.3.110 — Shared customer Unique ID and per-service questions
+- Both no-payment membership registrations and Stripe membership checkouts persist the same business-scoped 6-character customer ID and directory identity as first-time booking. Repeat registrations and return visits reuse the ID without granting unpaid credits.
+- Membership registration displays the new Unique ID like booking confirmation and supports secure returning ID+DOB lookup; Stripe status shows the assigned ID pending or paid.
+- Owners can create, edit and scope registration questions per existing or newly created service, as well as sessions and membership forms; select multiple services to show the union of applicable questions only once.
+- Service-specific required answers are checked on the server, including manual booking. Removing a service prunes its associated questions, preserving historical booking answers. Separate Render databases, Stripe/Gmail connections and credentials remain untouched.
+
 ## 1.3.109 — Membership signup, payment, editable questions and reporting
 - Customer enrollment requires no approval and saves a pending-payment membership with its unique ID, captured questions and no usable credits until payment.
 - Previously unpaid enrollments can continue through existing Stripe Connect checkout with strict plan, identity, price and merchant checks. Verified membership payments queue one descriptive email; the sender must be connected independently in each Render environment.
