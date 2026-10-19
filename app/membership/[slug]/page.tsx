@@ -21,6 +21,7 @@ export default function MembershipEnrollment(){
  const [error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [result,setResult]=useState<{status:string;plan?:string;paidThrough?:string;memberNumber?:string;sessionsLeft?:number}|null>(null);
  const [requested,setRequested]=useState(false),[registeredNumber,setRegisteredNumber]=useState('');
+ const [lookupBusy,setLookupBusy]=useState(false),[lookupMessage,setLookupMessage]=useState('');
  const requestId=useRef('');
  const [checkoutId,setCheckoutId]=useState('');
  useEffect(()=>{
@@ -67,6 +68,18 @@ export default function MembershipEnrollment(){
    else {setRegisteredNumber(d.memberNumber||'');setRequested(true);}setBusy(false);
   }catch(e){setError((e as Error).message);setBusy(false);}
  }
+ async function loadReturningMember(){
+  const id=String(details.memberNumber||'').trim().toUpperCase(),dateOfBirth=String(details.dateOfBirth||'');
+  if(!/^[A-Z]{2}[0-9]{4}$/.test(id)||!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)){setLookupMessage('Enter your six-character Unique ID and date of birth.');return;}
+  setLookupBusy(true);setLookupMessage('');
+  try{
+   const response=await fetch('/api/public/member-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug,memberNumber:id,dateOfBirth})});
+   const result=await response.json();if(!response.ok)throw Error(result.error||'Saved customer not found.');
+   setDetails(old=>({...old,memberNumber:id,dateOfBirth,firstName:result.firstName||'',lastName:result.lastName||'',phone:result.phone||''}));
+   setName((result.firstName+' '+result.lastName).trim());setEmail(result.email||'');
+   setAnswers(previous=>({...previous,...result.customAnswers}));setLookupMessage('Welcome back! Your saved Unique ID and contact details have been loaded.');
+  }catch(e){setLookupMessage((e as Error).message);}finally{setLookupBusy(false);}
+ }
  const theme=data?themeStyles(data.theme,data.brandPrimary,data.brandBackground) as CSSProperties:undefined;
  return <div className="sf-membership-public" data-selah-theme="true" style={theme}>
   <BusinessNavigation slug={slug} name={data?.name||"Memberships"}/>
@@ -78,10 +91,10 @@ export default function MembershipEnrollment(){
     {slug&&<GoogleBusinessGallery slug={slug} compact/>}
    </section>
    <section className="sf-membership-join-panel">
-    {requested?<div role="status"><CheckCircle2 size={36}/><h2>Membership registered</h2><p>Your membership {registeredNumber&&<b>(ID {registeredNumber})</b>} is registered without approval. Payment is still pending; no session credits are active until payment is confirmed.</p>{data?.canPay&&<button type="button" className="primary" onClick={()=>{setRequested(false);setStep(2);}}>Make Payment <CreditCard size={17}/></button>}<a className="outline" href={'/book/'+slug}>Return to booking</a></div>:checkoutId?<div className="sf-membership-finish">
+    {requested?<div role="status"><CheckCircle2 size={36}/><h2>Membership registered</h2><p>Your membership is registered without approval. Payment is still pending; no session credits are active until payment is confirmed.{registeredNumber&&<div role="status" style={{background:'#fff2a8',color:'#392b00',border:'2px solid #e0b000',padding:'14px 18px',borderRadius:12,margin:'16px 0',fontWeight:800,fontSize:20}}>Your Unique Membership ID: {registeredNumber}</div>}</p>{data?.canPay&&<button type="button" className="primary" onClick={()=>{setRequested(false);setStep(2);}}>Make Payment <CreditCard size={17}/></button>}<a className="outline" href={'/book/'+slug}>Return to booking</a></div>:checkoutId?<div className="sf-membership-finish">
      <ShieldCheck size={36}/><h2>{result?.status==='active'?'Your membership is active!':'Checking your payment'}</h2>
-     {result?.status==='active'?<><p>Payment has been verified for <b>{result.plan}</b>.</p><p><b>Your Membership ID: {result.memberNumber}</b><br/>{result.sessionsLeft} sessions left</p>{result.paidThrough&&<p>Current paid period ends {new Date(result.paidThrough).toLocaleDateString('en-US')}.</p>}</>:
-      <p>{result?.status==='payment_failed'?'Your payment did not complete.': 'Stripe is processing your payment. A membership is not active until the payment is verified.'}</p>}
+     {result?.status==='active'?<><p>Payment has been verified for <b>{result.plan}</b>.</p><p><b>Your Unique Membership ID: {result.memberNumber}</b><br/>{result.sessionsLeft} sessions left</p>{result.paidThrough&&<p>Current paid period ends {new Date(result.paidThrough).toLocaleDateString('en-US')}.</p>}</>:
+      <><p>{result?.status==='payment_failed'?'Your payment did not complete.': 'Stripe is processing your payment. A membership is not active until the payment is verified.'}</p>{result?.memberNumber&&<div role="status" style={{background:'#fff2a8',color:'#392b00',border:'2px solid #e0b000',padding:'14px 18px',borderRadius:12,fontWeight:800,fontSize:20}}>Your Unique Membership ID: {result.memberNumber}</div>}</>}
      <a className="primary" href={'/book/'+slug}>Return to appointment booking</a>
     </div>:<>
     <div className="sf-membership-steps">{['Choose plan','Your details',data?.canPay?'Make Payment':'Register · pay later'].map((label,i)=><span key={label} className={step===i+1?'active':''}>{i+1}. {label}</span>)}</div>
@@ -99,7 +112,7 @@ export default function MembershipEnrollment(){
     </>:<form onSubmit={pay}><button type="button" className="sf-membership-back" onClick={()=>setStep(1)}><ArrowLeft size={16}/> Choose another plan</button>
      <h2>{data.registrationConfig?.pageContent?.membershipDetailsTitle||"Review your membership"}</h2>{plan&&<div className="sf-membership-order"><b>{plan.name}</b><p>{plan.description}</p>
       <div><strong>{price(plan.priceCents)} / {plan.interval}</strong><span>{plan.interval} membership</span></div></div>}
-     <RegistrationFields config={data.registrationConfig||{}} form="membership" values={{...details,email}} answers={answers} onValue={(id,value)=>{if(id==='email')setEmail(value);else setDetails(old=>{const next={...old,[id]:value};setName((next.firstName+' '+next.lastName).trim());return next;});}} onAnswer={(id,value)=>setAnswers(old=>({...old,[id]:value}))}/>
+     <RegistrationFields config={data.registrationConfig||{}} form="membership" values={{...details,email}} answers={answers} onValue={(id,value)=>{if(id==='email')setEmail(value);else setDetails(old=>{const next={...old,[id]:value};setName((next.firstName+' '+next.lastName).trim());return next;});}} onAnswer={(id,value)=>setAnswers(old=>({...old,[id]:value}))} identityHelp={<><p><strong>First membership or first visit?</strong> Leave the ID blank. SelahFlow will assign your permanent business-specific six-character Unique ID when you register, using the same process as your first booking.</p>{details.memberNumber&&<><button type="button" className="outline" disabled={lookupBusy||!details.dateOfBirth} onClick={()=>void loadReturningMember()}>{lookupBusy?'Loading customer…':'Load existing customer'}</button>{lookupMessage&&<small role="status">{lookupMessage}</small>}</>}</>}/>
      <label className="sf-membership-agree"><input type="checkbox" required checked={accept} onChange={e=>setAccept(e.target.checked)}/>
       <span>{data.canPay&&plan?`I confirm my details. If I choose Make Payment, I authorize recurring billing of ${price(plan.priceCents)} every ${plan.interval} until cancelled through the business. Registration without payment does not activate membership or reserve appointment times.`:'I confirm my details and understand that my membership remains pending payment. No owner approval is required, and registering does not reserve appointment times.'}</span></label>
      <button type="submit" value="online" className="primary sf-membership-next" disabled={!data.canPay||busy||!accept||!name.trim()||!email.trim()}><CreditCard size={17}/>{busy?'Opening secure checkout…':'Make Payment'}</button>{!data.canPay&&<p role="note">Online payment requires this business to connect and verify Stripe. You may register without payment now; the owner can confirm an offline payment later.</p>}
