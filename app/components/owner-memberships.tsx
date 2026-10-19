@@ -132,6 +132,7 @@ export default function OwnerMemberships({slug,prefill,onEditQuestions}:{slug:st
     </div>
     <small>Each business uses its own connected account. Stripe's hosted Checkout processes payment details; customer membership status remains pending until a verified payment webhook confirms the charge.</small>
    </section>
+   <p className="sf-membership-plan-allowance" role="status"><strong>Membership payment emails:</strong> {data?.emailDelivery?.ready?`${data.emailDelivery.provider} sender connected — confirmations are queued after verified payment. Provider acceptance does not guarantee inbox delivery.`:"Email provider is not connected. Paid confirmations are queued but cannot be sent until Gmail or another email provider is configured."}</p>
    <p className="sf-membership-plan-allowance" role="status">
    <strong>{data?.planBenefits.name||'Free'} subscription:</strong> {(data?.plans||[]).filter(x=>x.active).length}/{data?.planBenefits.limits.membershipPlans||2} active membership offers. Existing members and plans remain preserved if your subscription changes. <a href="/pricing">Compare SelahFlow plans ↗</a>
   </p>
