@@ -63,8 +63,8 @@ export function validateRegistrationQuestions(config){
   if(order!==undefined&&(!Array.isArray(order)||new Set(order).size!==order.length||order.some(id=>!allowed.has(id))))throw Error('Invalid question display order.');
  }
 }
-export function validateStandardRegistration(config,form,values,sessionId=undefined){
- for(const f of registrationQuestions(config,form,sessionId).filter(f=>f.standard)){
+export function validateStandardRegistration(config,form,values,sessionId=undefined,serviceIds=undefined){
+ for(const f of registrationQuestions(config,form,sessionId,serviceIds).filter(f=>f.standard)){
   if(f.required&&!String(values[f.id]||'').trim())throw Error(f.label+' is required.');
  }
 }
