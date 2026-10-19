@@ -309,8 +309,8 @@ if(b.key){
  }
  if(b.notMember!==true&&b.notMember!==false)throw Error('Select N/A if you are not a member.');
 }
-if(isPublic)validateStandardRegistration(config,'booking',b,selectedSession(config,b.date,b.staff,services,b.start)?.id||null);
-const customAnswers=sanitizeBookingAnswers(registrationQuestions(config,'booking',selectedSession(config,b.date,b.staff,services,b.start)?.id||null).filter((f:any)=>!f.standard),b.customAnswers);
+if(isPublic)validateStandardRegistration(config,'booking',b,selectedSession(config,b.date,b.staff,services,b.start)?.id||null,services.map((s:any)=>s.id));
+const customAnswers=sanitizeBookingAnswers(registrationQuestions(config,'booking',selectedSession(config,b.date,b.staff,services,b.start)?.id||null,services.map((s:any)=>s.id)).filter((f:any)=>!f.standard),b.customAnswers);
 let issuedMemberNumber=String(b.memberNumber||'').trim().toUpperCase();
 if(isPublic&&b.firstName&&b.lastName&&b.dateOfBirth){
  const dob=String(b.dateOfBirth||''),firstName=String(b.firstName||'').trim(),lastName=String(b.lastName||'').trim();
