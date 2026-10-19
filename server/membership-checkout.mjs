@@ -29,7 +29,7 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
   if(member&&(Number(member.price_cents)!==Number(plan.price_cents)||!unpaidRegistration&&(member.stripe_interval_unit!==plan.interval_unit||Number(member.stripe_sessions_per_period)!==Number(plan.sessions_included))))
    throw Error('This package changed after registration. Contact the business before paying.');
   if(unpaidRegistration&&(member.plan_id!==plan.id||String(member.customer_name).trim().toLowerCase()!==name.trim().toLowerCase()||
-    String(member.customer_email).trim().toLowerCase()!==email||String(member.date_of_birth).slice(0,10)!==dob))
+    String(member.customer_email).trim().toLowerCase()!==email||new Date(member.date_of_birth).toISOString().slice(0,10)!==dob))
    throw Error('Registration identity or package does not match. Contact the business.');
   const account=await readyMerchant(db,business.id,api);
   if(member&&!unpaidRegistration&&member.stripe_account_id!==account)throw Error('The payment account changed. Contact the business.');
