@@ -133,7 +133,7 @@ export async function POST(req:Request){
     const requested=String(body.memberNumber||'').trim().toUpperCase();
     if(body.action==='update'&&selected?.memberNumber&&requested&&requested!==selected.memberNumber)throw Error('Existing membership IDs cannot be changed.');
     const memberNumber=body.action==='update'&&selected?.memberNumber?selected.memberNumber:await issueMemberId(db,{businessId:business.id,name:input.name,dateOfBirth,requested});
-    const fields=customRegistrationFields(settings,'booking',null);
+    const fields=customRegistrationFields(settings,'booking',null,[]);
     const registrationAnswers=sanitizeBookingAnswers(fields,body.customAnswers||{});
     const registrationFieldLabels=Object.fromEntries(fields.map((field:any)=>[field.id,field.label]));
     const duplicate=result.clients.find(c=>c.id!==id&&sameClientContact(c,input));
