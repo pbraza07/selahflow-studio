@@ -19,11 +19,11 @@ test('secondary owner dashboard sections split into lazy chunks without changing
 });
 test('owner background refresh pauses only in hidden tab and resumes when visible',async()=>{
  const code=await source('app/studio/owner-dashboard.tsx');
- assert.match(code,/document\\.visibilityState==='visible'/);
+ assert.match(code,/document\.visibilityState==='visible'/);
  assert.match(code,/visibilitychange/);
  assert.match(code,/if\(view==='Settings'\)return/,'Settings refresh should remain disabled while editing');
  assert.match(code,/setInterval\(tick,30000\)/,'Visible dashboard keeps original 30-second polling cadence');
- assert.match(code,/document\\.removeEventListener\('visibilitychange',resume\)/,'poll listener must clean up');
+ assert.match(code,/document\.removeEventListener\('visibilitychange',resume\)/,'poll listener must clean up');
 });
 test('owner API preserves payload and tenant context while loading business name in parallel',async()=>{
  const code=await source('lib/studio-handler.ts');
