@@ -6,7 +6,7 @@ test('owner page editor is reachable from every dashboard page and exposes suppo
  const dashboard=await readFile(new URL('../app/studio/owner-dashboard.tsx',import.meta.url),'utf8');
  const editor=await readFile(new URL('../app/components/visual-page-editor.tsx',import.meta.url),'utf8');
  const booking=await readFile(new URL('../app/book/page.tsx',import.meta.url),'utf8');
- assert.match(dashboard,/Edit this page/);
+ assert.match(dashboard,/Edit public pages/);
  assert.match(dashboard,/\['Page editor',ClipboardList\]/);
  assert.match(dashboard,/view==='Page editor'/);
  assert.match(editor,/contentEditable/);

@@ -1,3 +1,11 @@
+# v1.3.114 — Owner and booking usability
+
+- Group and search all owner workspace tools; add mobile menu close, backdrop, keyboard handling and focus restoration.
+- Protect unsaved Settings and public page drafts from navigation and polling; show saved state and discard controls.
+- Clarify public-page editing, booking progress, service summaries, registration lookup and approval-aware confirmation labels.
+- Improve mobile booking order, shared form autofill, required-field labels and public navigation.
+- No database migrations or changes to prices, payments, capacity, tenant data or account permissions.
+
 ## 1.3.113 — Financial stages and business-owner benefits
 
 - Reports account for submitted booking/membership requests, approved unpaid quotes, pending payments and paid transactions. Linked conversions and existing payment evidence prevent duplicate unpaid obligations; unknown amounts stay visible for review. Existing revenue resets remain respected.
