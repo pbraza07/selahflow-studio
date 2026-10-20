@@ -17,7 +17,7 @@ Status: requirements recovered; implementation, staging acceptance and productio
 
 Shell execution was attempted repeatedly and returned: "No usable execution environment is available. Wait for an environment to become available before using this tool." Connector orchestration works; this does not establish that Node, PostgreSQL tools, a local checkout or browser tests can run.
 
-Render returned no selected workspace and explicitly requires user confirmation before proceeding. The account lists Plinio's workspace (tea-da643qgu01pc73951gdg), matching the repository's AGENTS.md. Live deployment state and current database connections have NOT been reverified in this session.
+The user explicitly confirmed Plinio's workspace (tea-da643qgu01pc73951gdg), and the Render connector selected it successfully. The workspace-selection blocker is resolved. Local shell execution was retried and remains unavailable. See the verified Render observations below; full application/database and backup verification remains pending.
 
 ## Recovery and data safeguards
 
@@ -49,3 +49,18 @@ Implement all issue #46 requirements in shared tenant-scoped paths: versioned si
 6. Test the exact candidate in staging, including waiver version/guardian cases, all form flags, email deduplication and retries, six-character IDs, concurrent registration, tenant isolation, deletion/retention and financial reconciliation. Record limitations and avoid unintended customer notifications or charges.
 7. Promote only the verified application changes to production while retaining production configuration and data. Verify exact LIVE SHA/deploy ID, health, migrations and acceptance smoke checks.
 8. Record all evidence and leave issue #46 open until its acceptance criteria are actually met.
+
+
+## Render verification after workspace confirmation — 2026-10-20
+
+Read-only checks verified:
+- Production service srv-db3tokqd0e5s73f31hfg: Render status live, deploy dep-dbbkfpbm8hqs7391t2mg, exact commit e303c421bb42146bc4d217f87d82d10db28609e3; finished 2026-10-20T10:54:03Z. It tracks main with automatic deploys enabled.
+- Staging service srv-db8e9dajnfac73fa0vo0: Render status live, deploy dep-dbbphe7f3r2c73dunrs0, exact commit 533c8317ba71e9add535279f5b4e88dbb5869627; finished 2026-10-20T16:41:53Z. It tracks staging with automatic deploys disabled.
+- These are the v1.3.114 source commits identified above, not issue #46 releases. No deployment was triggered during these checks.
+- Staging logs for that existing deploy show 266 tests, 266 passed and 0 failed at 16:40:28Z, database migrations ready at 16:41:37Z and application ready at 16:41:45Z. These results cover the baseline only.
+- Staging startup reports a prior registration reset with alreadyApplied=true and freshRegistrationVerified=true. This is historical reset metadata, not evidence that a new deletion was performed in this session or that issue #46's ID-reuse/retention requirements pass. Review this startup path before future deployment.
+- Read-only pg_database query on amanda-realtor-db confirms separate amanda_realtor_db, selahflow_staging and selahflow_production databases. Both SelahFlow database owners are the administrative Amanda database user. A separate pg_stat_activity query observed staging connections as selahflow_staging_user; no production connection was present in that snapshot. Absence of a session does not establish production misconfiguration.
+- The connector's SQL tool selects the managed instance and does not expose a database-name override. No per-SelahFlow-table queries, restore tests, backup verification, or current production connection-string inspection were completed.
+- Public /api/health fetch attempts for both SelahFlow URLs were inaccessible through the available web tool. Render LIVE state is verified; fresh independent endpoint/application smoke verification is not.
+
+No application changes, environment changes, client deletions, migrations or new deployments were performed. The next step still requires a usable execution environment for implementation and validation, plus verified backup/recovery access before destructive work.
