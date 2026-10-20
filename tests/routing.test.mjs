@@ -23,9 +23,10 @@ test('owner dashboard requires session and enforces slug',async()=>{
  const login=await read('app/api/auth/login/route.ts');
  assert.match(login,/dashboardUrl:target/);
 });
-test('original Crawford migration remains unchanged',async()=>{
+test('startup preserves administrator initialization without recreating Crawford',async()=>{
  const source=await read('scripts/migrate.mjs');
- assert.match(source,/const slug='crawford'/);
+ assert.match(source,/ensurePlatformAdministrator/);
+ assert.doesNotMatch(source,/INSERT INTO businesses|UPDATE businesses SET slug/);
  const health=await read('app/api/health/route.ts');
  assert.match(health,/version:APP_VERSION/);
 });
