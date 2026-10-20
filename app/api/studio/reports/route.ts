@@ -1,9 +1,14 @@
 import {getPool} from '../../../../server/database.mjs';
 import {requireOwner} from '../../../../lib/auth';
 import {validOrigin} from '../../../../server/security.mjs';
+import {loadFinancialPipeline} from '../../../../server/financial-pipeline.mjs';
 import {resetPaidRevenue} from '../../../../server/report-reset.mjs';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 const headers={'Cache-Control':'private, no-store'};
+export async function GET(req:Request){
+ try{const owner=await requireOwner(req);return Response.json({rows:await loadFinancialPipeline(getPool(),owner)},{headers});}
+ catch(e){const auth=(e as Error).message==='AUTH_REQUIRED';return Response.json({error:auth?'Please sign in.':'Financial status report is unavailable. Retry to load current totals.'},{status:auth?401:503,headers});}
+}
 export async function POST(req:Request){
  if(!validOrigin(req))return Response.json({error:'Invalid origin.'},{status:403,headers});
  let db;

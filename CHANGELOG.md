@@ -1,3 +1,9 @@
+## 1.3.113 — Financial stages and business-owner benefits
+
+- Reports account for submitted booking/membership requests, approved unpaid quotes, pending payments and paid transactions. Linked conversions and existing payment evidence prevent duplicate unpaid obligations; unknown amounts stay visible for review. Existing revenue resets remain respected.
+- Cash sales can explicitly settle the matching full-price booking. Linked receipts and appointment state commit together, reject existing card checkouts and protect against repeat recording. Public payment pages recognize cash settlement.
+- The business landing page explains branding, page customization, booking rules, team rosters, memberships, financial reports, portable records and the proposed 10% first-visit fee (not currently collected).
+
 ## 1.3.112 — Preserve removal of the legacy Crawford business
 
 - Startup initializes administrator access without recreating or renaming a business, inserting tenant memberships, or creating tenant subscriptions. Existing administrator credentials and other tenants are preserved.

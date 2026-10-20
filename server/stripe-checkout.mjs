@@ -45,6 +45,7 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
   const appointment=(await db.query('SELECT id,data,status FROM appointments WHERE owner=$1 AND id=$2 FOR UPDATE',[business.owner_id,actualId])).rows[0];
   if(!appointment||!['Confirmed','Checked in','Checked-in','Completed','No-show'].includes(appointment.status))throw Error('This booking is not available for payment.');
   const data=typeof appointment.data==='string'?JSON.parse(appointment.data):appointment.data;
+  if(data.paymentStatus==='paid'){await db.query('COMMIT');return {paid:true};}
   const cents=Math.round(Number(data.price)*100);
   if(data.membershipCovered===true||cents===0)throw Error('No payment is due for this booking.');
   if(!Number.isSafeInteger(cents)||cents<50||cents>100000000)throw Error('This booking has an invalid online payment amount.');

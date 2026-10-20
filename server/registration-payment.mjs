@@ -16,6 +16,7 @@ export async function registrationPaymentSummary(pool,owner,appointmentId){
  if(row.payment_status==='paid')return {state:'paid'};
  if(!['Confirmed','Checked in','Checked-in','Completed','No-show'].includes(row.status)||row.request_id&&row.request_status!=='accepted')return {state:'unavailable'};
  const data=dataOf(row.data),amountCents=Math.round(Number(data.price)*100);
+ if(data.paymentStatus==='paid')return {state:'paid'};
  if(data.membershipCovered===true||amountCents===0)return {state:'covered'};
  if(!Number.isSafeInteger(amountCents)||amountCents<50||amountCents>100000000)return {state:'unavailable'};
  if(!paymentConfigured()||!row.charges_enabled||!row.onboarding_complete)return {state:'contact_business',amountCents};

@@ -16,5 +16,5 @@ export async function bookingPaymentPreview(pool,{slug,bookingId,token}){
  }
  if(!r||r.status==='Cancelled')throw Error('This payment link is unavailable or expired. Contact the business.');
  const d=typeof r.data==='string'?JSON.parse(r.data):r.data;
- return {business:r.name,date:r.date,start:r.start,amountCents:Math.round(Number(d.price)*100),status:r.payment_status==='paid'?'paid':'ready'};
+ return {business:r.name,date:r.date,start:r.start,amountCents:Math.round(Number(d.price)*100),status:r.payment_status==='paid'||d.paymentStatus==='paid'?'paid':'ready'};
 }
