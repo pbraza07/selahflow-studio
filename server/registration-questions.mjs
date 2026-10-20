@@ -18,7 +18,7 @@ export function customRegistrationFields(config={},form='booking',sessionId=unde
 /** @param {any} config @param {string} form @param {string|null|undefined} sessionId @param {string[]|undefined} serviceIds */
 export function registrationQuestions(config={},form='booking',sessionId=undefined,serviceIds=undefined){
  const edits=config[form+'StandardFields']||{};
- const fields=[...STANDARD_REGISTRATION_FIELDS.map(f=>({...f,...edits[f.id],id:f.id,type:f.type,required:form==='membership'?(f.required||edits[f.id]?.required===true):(edits[f.id]?.required??f.required),standard:true})),...customRegistrationFields(config,form,sessionId,serviceIds).map(f=>({...f,standard:false}))];
+ const fields=[...STANDARD_REGISTRATION_FIELDS.map(f=>({...f,...edits[f.id],id:f.id,type:f.type,required:edits[f.id]?.required??f.required,standard:true})),...customRegistrationFields(config,form,sessionId,serviceIds).map(f=>({...f,standard:false}))];
  // A multi-service booking contains the union of applicable questions. A
  // per-service required override only adds a requirement; it cannot turn off
  // mandatory identity fields or requirements of another selected service.
@@ -53,11 +53,14 @@ export function validateRegistrationQuestions(config){
    if(!edits||typeof edits!=='object'||Array.isArray(edits))throw Error('Invalid standard question settings.');
    for(const [id,edit] of Object.entries(edits)){
     if(!standardIds.has(id)||!edit||typeof edit!=='object'||Array.isArray(edit))throw Error('Invalid standard question.');
-    for(const key of Object.keys(edit))if(!['label','help','placeholder','required'].includes(key))throw Error('Standard field types and IDs cannot be changed.');
+    for(const key of Object.keys(edit))if(!['label','help','placeholder','required','showInNotification'].includes(key))throw Error('Standard field types and IDs cannot be changed.');
     for(const [key,max] of [['label',80],['help',300],['placeholder',100]])if(edit[key]!==undefined&&(typeof edit[key]!=='string'||edit[key].length>max||(key==='label'&&!edit[key].trim())))throw Error('Check standard question text.');
-    if(edit.required!==undefined&&(typeof edit.required!=='boolean'||form==='membership'&&((id==='memberNumber'&&edit.required)||(STANDARD_REGISTRATION_FIELDS.find(f=>f.id===id).required&&!edit.required))))throw Error('Invalid required question setting.');
+    if(edit.required!==undefined&&typeof edit.required!=='boolean')throw Error('Invalid required question setting.');
    }
   }
+  const notices=config[form+'QuestionNotifications'];
+  if(notices!==undefined&&(!notices||typeof notices!=='object'||Array.isArray(notices)||Object.entries(notices).some(([id,value])=>typeof value!=='boolean'||!standardIds.has(id)&&!customRegistrationFields(config,form).some(f=>f.id===id))))throw Error('Invalid question notification selection.');
+  if(Object.values(edits||{}).some(edit=>edit.showInNotification!==undefined&&typeof edit.showInNotification!=='boolean'))throw Error('Invalid question notification checkbox.');
   const order=config[form+'QuestionOrder'];
   const allowed=new Set([...standardIds,...customRegistrationFields(config,form).map(f=>f.id)]);
   if(order!==undefined&&(!Array.isArray(order)||new Set(order).size!==order.length||order.some(id=>!allowed.has(id))))throw Error('Invalid question display order.');
@@ -71,4 +74,18 @@ export function validateStandardRegistration(config,form,values,sessionId=undefi
 }
 export function publicRegistrationSettings(config={}){
  return Object.fromEntries(['bookableSessions','bookingStandardFields','membershipStandardFields','bookingQuestionOrder','membershipQuestionOrder','bookingCustomFields','pageContent'].map(key=>[key,config[key]]));
+}
+
+const notificationAliases={firstName:'customerName',lastName:'customerName',email:'customerEmail',phone:'customerPhone'};
+export function questionNotificationEnabled(config,form,field){
+ const chosen=config[form+'QuestionNotifications']?.[field.id];if(typeof chosen==='boolean')return chosen;
+ if(typeof field.showInNotification==='boolean'&&field.showInNotification)return true;
+ const old=config.bookingPushFields||['customerName','services','date'];
+ return old.includes(field.id)||old.includes(notificationAliases[field.id]);
+}
+export function registrationNotificationLines(config,form,values={},answers={}){
+ return registrationQuestions(config,form).filter(f=>questionNotificationEnabled(config,form,f)).flatMap(f=>{
+  const value=f.standard?values[f.id]:answers[f.id];
+  return value===undefined||value===''?[]:[f.label+': '+String(value).replace(/[<>\r\n]/g,' ').slice(0,500)];
+ });
 }

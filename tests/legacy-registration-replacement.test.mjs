@@ -23,8 +23,8 @@ test('legacy registration replacement preserves reservations and history, is ten
   assert.equal(result.memberNumber,'LC1229');
   assert.equal((await pg.query("SELECT member_number FROM business_client_profiles WHERE id='c1'")).rows[0].member_number,'LC1229');
   assert.equal((await pg.query("SELECT member_number FROM customer_booking_ids WHERE business_id='b2'")).rows[0].member_number,'LC122900');
-  assert.equal((await pg.query("SELECT data FROM appointments WHERE id='a1'")).rows[0].data.includes('LC122900'),true);
-  assert.equal((await pg.query("SELECT count(*)::int AS n FROM business_member_ids WHERE business_id='b1'")).rows[0].n,2);
+  const data=JSON.parse((await pg.query("SELECT data FROM appointments WHERE id='a1'")).rows[0].data);assert.equal(data.memberNumber,'LC1229');assert.equal(data.previousMemberNumber,'LC122900','Original ID remains audit evidence');
+  assert.equal((await pg.query("SELECT count(*)::int AS n FROM business_member_ids WHERE business_id='b1'")).rows[0].n,1);
   assert.equal((await pg.query("SELECT details::jsonb->>'memberNumber' AS n FROM booking_requests WHERE id='pending'")).rows[0].n,'LC1229');
   assert.equal((await pg.query("SELECT message->>'text' AS text FROM booking_receipt_emails WHERE booking_key='pending'")).rows[0].text,'Membership ID: LC1229');
   assert.ok((await loadOwnerHistory(pg,'u1',{member:'LC1229'})).items.some(r=>r.reference==='a1'),'old booking stays visible through same-identity reservation aliases');

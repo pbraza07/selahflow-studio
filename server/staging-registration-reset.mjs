@@ -1,3 +1,4 @@
+import {authorizeClientDeletion} from './deletion-authorization.mjs';
 import {createHash} from 'node:crypto';
 import {assertStagingDatabase,isStaging} from './staging-safety.mjs';
 import {deleteClientPermanently} from './delete-client.mjs';
@@ -24,6 +25,7 @@ export async function resetStagingRegistration(pool,target,env=process.env){
   const original=(await db.query('SELECT * FROM business_member_ids WHERE business_id=$1 AND member_number=$2',[business.id,target.originalMemberNumber])).rows[0];
   const current=profile&&(await db.query('SELECT identity_key FROM business_member_ids WHERE business_id=$1 AND member_number=$2',[business.id,profile.member_number])).rows[0];
   if(!profile||!original||current?.identity_key!==original.identity_key)throw Error('Exact reset registration identity could not be verified.');
+  await authorizeClientDeletion(db,{businessId:business.id,profileId:profile.id});
   const result=await deleteClientPermanently(db,{owner:business.owner_id,businessId:business.id,client:{id:profile.id,name:profile.name,dateOfBirth:day(profile.date_of_birth),memberNumber:profile.member_number}});
   await db.query('SAVEPOINT fresh_registration_probe');
   const split=original.identity_key.lastIndexOf('|'),name=original.identity_key.slice(0,split),dateOfBirth=original.identity_key.slice(split+1);

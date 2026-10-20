@@ -6,8 +6,9 @@ export async function issueMemberId(db,{businessId,name,dateOfBirth,requested=''
  const business=(await db.query('SELECT member_id_policy FROM businesses WHERE id=$1',[businessId])).rows[0];
  if(!business)throw Error('Business not found.');
  const identity=(await db.query('SELECT member_identity_key($1,$2::date) AS key',[name,dateOfBirth])).rows[0].key;
- const prior=(await db.query("SELECT member_number FROM business_member_ids WHERE business_id=$1 AND identity_key=$2 AND retired_at IS NULL AND ($3::boolean=FALSE OR member_number ~ '^[A-Z]{2}[0-9]{4}$') ORDER BY CASE WHEN member_number ~ '^[A-Z]{2}[0-9]{4}$' THEN 0 ELSE 1 END,created_at,member_number LIMIT 1",[businessId,identity,replaceLegacy])).rows[0];
+ const prior=(await db.query("SELECT member_number FROM business_member_ids WHERE business_id=$1 AND identity_key=$2 AND retired_at IS NULL AND member_number ~ '^[A-Z]{2}[0-9]{4}$' ORDER BY CASE WHEN member_number ~ '^[A-Z]{2}[0-9]{4}$' THEN 0 ELSE 1 END,created_at,member_number LIMIT 1",[businessId,identity])).rows[0];
  const supplied=String(requested||'').trim().toUpperCase();
+ if(supplied&&!/^[A-Z]{2}[0-9]{4}$/.test(supplied))throw Error('Legacy IDs are blocked. Use a six-character membership ID.');
  if(supplied&&(!prior||prior.member_number!==supplied))throw Error('The supplied membership ID does not belong to this client. Leave it blank for a new client.');
  if(prior)return prior.member_number;
  const words=name.trim().split(/\s+/),initials=((words[0]?.[0]||'X')+(words.at(-1)?.[0]||'X')).toUpperCase().replace(/[^A-Z]/g,'X');

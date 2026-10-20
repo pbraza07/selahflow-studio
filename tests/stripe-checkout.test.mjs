@@ -30,6 +30,7 @@ test('booking Checkout is server-priced, account-scoped, reusable, and recorded 
   const db={query:async(s,v)=>{const r=await pg.query(s,v);return {...r,rowCount:r.rows.length||r.affectedRows||0};},release(){}};
   const pool={...db,connect:async()=>db};
   await pg.exec("INSERT INTO users(id,email,password_hash) VALUES('u1','one@example.com','hash'),('u2','two@example.com','hash'); INSERT INTO businesses(id,owner_id,slug,name,status) VALUES('b1','u1','one','One','active'),('b2','u2','two','Two','active'); INSERT INTO merchant_accounts(business_id,provider,external_account_id,charges_enabled,onboarding_complete) VALUES('b1','stripe','acct_one',true,true),('b2','stripe','acct_two',true,true);");
+  await db.query('INSERT INTO settings(owner,data) VALUES($1,$2)',['u1',JSON.stringify({services:[{id:'s',name:'Service',price:25}]})]);
   const bookingId=randomUUID(),token='a'.repeat(64),lines=[{id:'s',name:'Service',type:'service',price:25,qty:1}];
   await db.query("INSERT INTO appointments(id,owner,date,staff,start,duration,status,data) VALUES($1,'u1','2026-11-01','coach',600,60,'Confirmed',$2)",[bookingId,JSON.stringify({price:25,services:['Service'],serviceIds:['s'],email:'synthetic@example.com',paymentLines:lines})]);
   await db.query("INSERT INTO customer_booking_access(token_hash,owner_id,booking_id) VALUES($1,'u1',$2)",[tokenHash(token),bookingId]);

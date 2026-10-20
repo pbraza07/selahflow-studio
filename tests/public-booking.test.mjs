@@ -1,3 +1,4 @@
+import {ensureParticipationWaiver,assertBookingWaiver,publicWaiverDocument} from '../server/participation-waivers.mjs';
 
 import {paymentConfigured} from '../server/membership-payments.mjs';
 import {issueMemberId} from '../server/member-id-policy.mjs';
@@ -20,8 +21,8 @@ test('public booking creates protected owner records; exposes catalog only; reje
  const customFields=await import('../server/booking-custom-fields.mjs');
  const scheduling=await import('../server/session-scheduling.mjs');
  const confirmBooking=async ({owner,services,staff,date,start,duration,buffer,id,data})=>{const stm=[db().prepare("INSERT INTO appointments(id,owner,date,staff,start,duration,data,status) VALUES(?,?,?,?,?,?,?,'Confirmed')").bind(id,owner,date,staff,start,duration,JSON.stringify(data))];for(let minute=start;minute<start+duration+buffer;minute+=15)stm.push(db().prepare('INSERT INTO slots(owner,date,staff,minute,appointment) VALUES(?,?,?,?,?)').bind(owner,date,staff,minute,id));await db().batch(stm);return {id};};
- globalThis.__bookingTest={paymentConfigured,issueMemberId,registrationQuestions,customRegistrationFields,validateStandardRegistration,publicRegistrationSettings,getPool:()=>pool,randomBytes,db,requireOwner:async()=>{throw Error('AUTH_REQUIRED');},validOrigin,tokenHash,trustedOrigin,...defaults,validDuration:terms.validDuration,isCalendarUnit:terms.isCalendarUnit,validSlotCapacity:helpers.validSlotCapacity,serviceCapacityOpen:helpers.serviceCapacityOpen,confirmBooking,requiresBookingApproval:review.requiresBookingApproval,approvalSettings:review.approvalSettings,bookingRequestDetail:review.bookingRequestDetail,...customFields,...scheduling};
- let source=await readFile(new URL('../lib/studio-handler.ts',import.meta.url),'utf8');source=source.replace(/^import .*;$/gm,'');source='const {paymentConfigured,issueMemberId,registrationQuestions,customRegistrationFields,validateStandardRegistration,publicRegistrationSettings,getPool,randomBytes,db,requireOwner,validOrigin,tokenHash,trustedOrigin,defaultSettings,today,validDuration,isCalendarUnit,validSlotCapacity,serviceCapacityOpen,confirmBooking,requiresBookingApproval,approvalSettings,bookingRequestDetail,validateBookingFields,sanitizeBookingAnswers,bookingDateRange,computeDayAvailability,selectedSession,easternClock}=globalThis.__bookingTest;\n'+source;
+ globalThis.__bookingTest={ensureParticipationWaiver,assertBookingWaiver,publicWaiverDocument,paymentConfigured,issueMemberId,registrationQuestions,customRegistrationFields,validateStandardRegistration,publicRegistrationSettings,getPool:()=>pool,randomBytes,db,requireOwner:async()=>{throw Error('AUTH_REQUIRED');},validOrigin,tokenHash,trustedOrigin,...defaults,validDuration:terms.validDuration,isCalendarUnit:terms.isCalendarUnit,validSlotCapacity:helpers.validSlotCapacity,serviceCapacityOpen:helpers.serviceCapacityOpen,confirmBooking,requiresBookingApproval:review.requiresBookingApproval,approvalSettings:review.approvalSettings,bookingRequestDetail:review.bookingRequestDetail,...customFields,...scheduling};
+ let source=await readFile(new URL('../lib/studio-handler.ts',import.meta.url),'utf8');source=source.replace(/^import .*;$/gm,'');source='const {ensureParticipationWaiver,assertBookingWaiver,publicWaiverDocument,paymentConfigured,issueMemberId,registrationQuestions,customRegistrationFields,validateStandardRegistration,publicRegistrationSettings,getPool,randomBytes,db,requireOwner,validOrigin,tokenHash,trustedOrigin,defaultSettings,today,validDuration,isCalendarUnit,validSlotCapacity,serviceCapacityOpen,confirmBooking,requiresBookingApproval,approvalSettings,bookingRequestDetail,validateBookingFields,sanitizeBookingAnswers,bookingDateRange,computeDayAvailability,selectedSession,easternClock}=globalThis.__bookingTest;\n'+source;
  const handler=await import(moduleURL(compile(source)));
  const req=body=>new Request('https://studio.example/api/booking',{method:'POST',headers:{origin:'https://studio.example','content-type':'application/json','x-forwarded-for':'198.51.100.25'},body:JSON.stringify(body)});
  const catalog=await (await handler.publicGet(new Request('https://studio.example/api/booking'))).json();
@@ -35,18 +36,34 @@ test('public booking creates protected owner records; exposes catalog only; reje
  const booking={action:'book',...selection,start:slots.slots[0],expectedPrice:35,expectedDuration:30,name:'Public Customer',firstName:'Public',lastName:'Customer',dateOfBirth:'2000-01-02',notMember:true,email:'client@example.com',key:crypto.randomUUID(),policyAccepted:true};
  // A client registering online can already have a copied, archived directory
  // record with an older ID. Reuse it without rewriting identity/history.
- await pg.exec("INSERT INTO legacy_business_member_numbers(business_id,member_number) VALUES('crawford-biz','PC010200'); INSERT INTO business_client_profiles(id,owner,name,email,date_of_birth,member_number,archived) VALUES('legacy-profile','owner','Public Customer','client@example.com','2000-01-02','PC010200',TRUE)");
+ await pg.exec("INSERT INTO legacy_business_member_numbers(business_id,member_number) VALUES('crawford-biz','PC0102'); INSERT INTO business_client_profiles(id,owner,name,email,date_of_birth,member_number,archived) VALUES('legacy-profile','owner','Public Customer','client@example.com','2000-01-02','PC0102',TRUE)");
  assert.equal((await handler.studioPost(req({...booking,policyAccepted:false}),true)).status,400);
  assert.equal((await handler.studioPost(req({...booking,expectedPrice:1}),true)).status,409);
  let response=await handler.studioPost(req(booking),true);assert.equal(response.status,200,response.status===200?undefined:await response.text());const first=await response.json();assert.ok(first.id);
- assert.equal(first.memberNumber,'PC010200');
+ assert.equal(first.memberNumber,'PC0102');
  assert.equal(first.pending,false,'unchecked catalog service confirms even when business notifications are enabled');
  const profile=(await pg.query("SELECT id,member_number,archived FROM business_client_profiles WHERE id='legacy-profile'")).rows[0];
- assert.deepEqual(profile,{id:'legacy-profile',member_number:'PC010200',archived:false});
+ assert.deepEqual(profile,{id:'legacy-profile',member_number:'PC0102',archived:false});
  response=await handler.studioPost(req(booking),true);assert.equal(response.status,200);assert.equal((await response.json()).id,first.id);
  response=await handler.studioPost(req({...booking,key:crypto.randomUUID(),email:'second@example.com'}),true);assert.equal(response.status,409);
  const rows=(await pg.query('SELECT * FROM appointments')).rows;assert.equal(rows.length,1);assert.equal(rows[0].owner,'owner');assert.equal(JSON.parse(rows[0].data).channel,'Online booking');
  const after=await (await handler.studioPost(req({action:'availability',...selection}),true)).json();assert.ok(!after.slots.includes(booking.start));
+ // Existing and new catalog services can require a waiver without changing approval or pricing.
+ const waivedConfig={...savedConfig,services:savedConfig.services.map(s=>s.id==='barber'?{...s,requiresWaiver:true}:s)};
+ await pg.query("UPDATE settings SET data=$1 WHERE owner='owner'",[JSON.stringify(waivedConfig)]);
+ const waived={...booking,start:after.slots[0],key:crypto.randomUUID(),email:'waiver@example.test',name:'Jane Doe',firstName:'Jane',lastName:'Doe',dateOfBirth:'1990-01-01'};
+ const missing=await handler.studioPost(req(waived),true);assert.equal(missing.status,400);assert.match((await missing.json()).error,/waiver/i);
+ assert.equal((await pg.query("SELECT * FROM customer_booking_ids WHERE first_name='Jane'")).rows.length,0,'Failed signing rolls back new identity and profile');
+ assert.equal((await handler.studioPost(req({action:'waiver_records'}),true)).status,403,'Public callers cannot read signed documents');
+ const doc=(await (await handler.publicGet(new Request('https://studio.example/api/booking'))).json()).config.waiver;
+ const signedInput={signature:'Jane Doe',role:'self',date:new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),accepted:true,version:doc.version,documentHash:doc.hash};
+ const signedResponse=await handler.studioPost(req({...waived,waiver:signedInput}),true);assert.equal(signedResponse.status,200,await signedResponse.clone().text());
+ const signedBooking=await signedResponse.json();assert.ok(signedBooking.memberNumber);
+ const check=await handler.studioPost(req({action:'waiver_status',firstName:'Jane',lastName:'Doe',dateOfBirth:'1990-01-01',memberNumber:signedBooking.memberNumber}),true);assert.equal((await check.json()).signed,true);
+ const wrong=await handler.studioPost(req({action:'waiver_status',firstName:'Jane',lastName:'Doe',dateOfBirth:'1991-01-01',memberNumber:signedBooking.memberNumber}),true);assert.equal((await wrong.json()).signed,false);
+ const nextSlots=(await (await handler.studioPost(req({action:'availability',...selection}),true)).json()).slots;
+ const repeat=await handler.studioPost(req({...waived,key:crypto.randomUUID(),start:nextSlots[0],memberNumber:signedBooking.memberNumber,notMember:false}),true);assert.equal(repeat.status,200,await repeat.clone().text());
+ assert.equal((await pg.query('SELECT * FROM participation_waivers')).rows.length,1,'Repeat booking requires no second signature');
  assert.equal((await handler.studioPost(new Request('https://studio.example/api/booking',{method:'POST',headers:{origin:'https://evil.example'},body:JSON.stringify(booking)}),true)).status,403);
  }finally{delete globalThis.__bookingTest;if(old===undefined)delete process.env.APP_URL;else process.env.APP_URL=old;await pg.close();}
 });

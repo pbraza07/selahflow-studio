@@ -1,3 +1,4 @@
+import {queueOwnerFormNotification} from './owner-form-notifications.mjs';
 import {issueMemberId} from './member-id-policy.mjs';
 import {ensureMemberBookingIdentity} from './shared-member-identity.mjs';
 import {randomUUID} from 'node:crypto';
@@ -66,6 +67,7 @@ export async function registerMembershipWithoutApproval(pool,{businessId,ownerId
   if(!reviewed.membershipId)throw Error('Membership registration could not be completed.');
   const member=(await db.query('SELECT member_number,status FROM customer_memberships WHERE id=$1 AND business_id=$2',[reviewed.membershipId,businessId])).rows[0];
   if(!member)throw Error('Membership registration was not found.');
+  await queueOwnerFormNotification(db,{businessId,sourceId:requestId,form:'membership',values:{...details,memberNumber:member.member_number},answers:details.customAnswers});
   await db.query('COMMIT');
   return {ok:true,registered:true,membershipId:reviewed.membershipId,memberNumber:member.member_number,paymentPending:member.status==='pending_payment',status:member.status};
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}

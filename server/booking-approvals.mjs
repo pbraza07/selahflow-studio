@@ -1,3 +1,5 @@
+import {queueOwnerFormNotification} from './owner-form-notifications.mjs';
+import {assertBookingWaiver} from './participation-waivers.mjs';
 import {isBlocked} from './booking-blockouts.mjs';
 import {queueApprovedBooking} from './booking-client-notifications.mjs';
 import {queueBookingReceipt} from './booking-receipts.mjs';
@@ -49,6 +51,7 @@ export async function confirmBooking(options){
   if(prior.rowCount){await client.query('COMMIT');return {id,duplicate:true};}
   const settingRow=await client.query('SELECT data FROM settings WHERE owner=$1',[owner]);
   const config=settingRow.rows[0] ? JSON.parse(settingRow.rows[0].data) : {};
+  await assertBookingWaiver(client,{owner,config,serviceIds:services.map(s=>s.id),memberNumber:data.memberNumber});
   if(options.autoConfirmRequest){
    const saved=options.autoConfirmRequest;
    if(!pendingRequest||pendingRequest.details!==saved.details||pendingRequest.date!==date||pendingRequest.staff_id!==staff||Number(pendingRequest.start_minute)!==start||Number(pendingRequest.duration)!==duration)throw conflict('Booking details changed. Check your registration before paying.');
@@ -103,6 +106,7 @@ export async function confirmBooking(options){
    "UPDATE booking_requests SET status='accepted',appointment_id=$1,reviewed_by=$2,reviewed_at=now() WHERE id=$3",
    [id,data.reviewedBy||'owner',pendingId]);
   if(pendingId&&options.notificationOrigin)await queueApprovedBooking(client,{bookingId:id,requestId:pendingId,origin:options.notificationOrigin});
+  if(options.submissionOrigin&&!pendingId){const business=(await client.query('SELECT id FROM businesses WHERE owner_id=$1',[owner])).rows[0];if(business)await queueOwnerFormNotification(client,{businessId:business.id,sourceId:id,form:'booking',values:data,answers:data.customAnswers});}
   const bookingReceipt=options.submissionOrigin?await queueBookingReceipt(client,{owner,bookingId:id,date,start,duration,staff,data,origin:options.submissionOrigin,pending:false}):null;
   if(options.submissionOrigin&&Number(data.price)>0&&!data.membershipCovered)await queueApprovedBooking(client,{bookingId:id,requestId:null,origin:options.submissionOrigin});
   await client.query('COMMIT');

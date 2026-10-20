@@ -59,6 +59,7 @@ export async function loadOwnerHistory(db,owner,filters={}){
  const q=String(filters.q||'').trim().toLowerCase().slice(0,100),category=HISTORY_CATEGORIES.includes(filters.category)?filters.category:'all';
  const aliases=new Set([filters.member]);
  if(filters.member)for(const r of (await db.query('SELECT member_number FROM business_member_ids WHERE business_id=$1 AND identity_key=(SELECT identity_key FROM business_member_ids WHERE business_id=$1 AND member_number=$2)',[business.id,filters.member])).rows)aliases.add(r.member_number);
+ if(filters.member)for(const r of (await db.query('SELECT previous_number FROM member_id_history_aliases WHERE business_id=$1 AND current_number=$2',[business.id,filters.member])).rows)aliases.add(r.previous_number);
  const hidden=new Set((await db.query('SELECT history_id FROM owner_history_hidden WHERE owner=$1',[owner])).rows.map(r=>r.history_id));
  const scoped=rows.filter(r=>!hidden.has(historyKey(r))).filter(r=>(!filters.member||aliases.has(r.memberNumber))&&(!filters.clientEmail||r.email.toLowerCase()===filters.clientEmail.toLowerCase())&&(!filters.clientName||r.client.toLowerCase()===filters.clientName.toLowerCase()));
  const matching=scoped.filter(r=>(!filters.from||r.date>=filters.from)&&(!filters.to||r.date<=filters.to)&&(!q||[r.client,r.memberNumber,r.email,r.title,r.status,r.reference,...r.details].join(' ').toLowerCase().includes(q)));
