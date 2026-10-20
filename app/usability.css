@@ -1,0 +1,81 @@
+/* Shared usability refinements; retain each business's saved theme and typography. */
+.app-shell .main-wrap>main{max-width:1680px;margin-inline:auto;min-width:0}
+.app-shell .page-heading{gap:18px;align-items:flex-start}
+.app-shell .page-heading h1{font-size:clamp(25px,2.6vw,34px);line-height:1.2;overflow-wrap:anywhere}
+.app-shell .page-heading p{max-width:680px;line-height:1.6}
+.app-shell .page-heading-actions{flex-shrink:0}
+.app-shell .sidebar{overscroll-behavior:contain;overflow-y:auto;overflow-x:hidden;padding-bottom:24px}
+.app-shell .sidebar nav section{margin-bottom:12px}
+.app-shell .sidebar h2.nav-label{font-size:10px;font-family:inherit;letter-spacing:.11em;margin:16px 10px 7px;padding:0}
+.app-shell .sidebar .nav-item{min-height:44px;padding-block:10px}
+.sf-workspace-search{position:relative;display:flex;align-items:center;margin:12px 0 2px}
+.sf-workspace-search>svg{position:absolute;left:11px;pointer-events:none;color:var(--sf-on-header,#fff)}
+.app-shell .sidebar .sf-workspace-search input{width:100%;min-width:0;min-height:44px;padding:10px 10px 10px 35px;background:transparent!important;color:var(--sf-on-header,#fff)!important;border:1px solid currentColor!important;border-radius:9px;font-size:12px}
+.app-shell .sidebar .sf-workspace-search input::placeholder{color:inherit;opacity:.8}
+.sf-workspace-links summary{padding:12px 0;cursor:pointer;min-height:44px;font-weight:650}
+.sf-nav-empty{font-size:12px;line-height:1.5;padding:12px}
+.sf-menu-close,.sf-menu-backdrop{display:none}
+.app-shell .sf-settings-save{align-items:center;gap:12px}
+.app-shell .sf-settings-save .muted{flex:1;line-height:1.5}
+.sf-editor-save-status{padding:12px 18px;margin:0;background:var(--sf-card,#fff);color:var(--sf-on-card,#18392d);border-bottom:1px solid var(--sf-border,#ccd5cd);font-size:13px;line-height:1.5}
+.sf-visual-editor-toolbar button,.sf-visual-editor-toolbar a{min-height:44px}
+.sf-visual-editable:focus-visible{outline:2px solid currentColor;outline-offset:4px}
+.app-shell :is(.two-col,.overview-grid,.checkout-grid,.client-grid,.service-grid)>*,.public-main>*,.sf-membership-public-main>*{min-width:0}
+.app-shell :is(.panel,.card) :is(h2,h3,p),.public-page :is(h1,h2,h3,p),.sf-registration-label{overflow-wrap:anywhere}
+.app-shell .button-row{flex-wrap:wrap}
+.public-page .sf-booking-context{padding:18px 24px;border-bottom:1px solid var(--sf-border,#ccd5cd);background:var(--sf-card,#fff);color:var(--sf-on-card,#18392d)}
+.sf-booking-context strong,.sf-booking-context small,.sf-booking-selection small{display:block}
+.sf-booking-context strong{font-size:16px;overflow-wrap:anywhere}
+.sf-booking-context small{font-size:12px;line-height:1.5;margin-top:5px}
+.public-booking .steps>div{flex:1;min-width:0;padding:0}
+.public-booking .steps>div>button{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:58px;padding:10px 5px;background:transparent!important;color:inherit!important;border:0;border-radius:0;font:inherit;white-space:normal}
+.public-booking .steps>div>button:disabled{opacity:.65;cursor:default}
+.public-booking .steps>div.current{box-shadow:inset 0 -3px 0 var(--sf-accent,#52796a)}
+.public-form-body{scroll-margin-top:20px}
+.public-form-body:focus{outline:none}
+.sf-booking-selection{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px;margin:16px 0;border:1px solid var(--sf-border,#ccd5cd);border-radius:10px;background:var(--sf-selected,#eef2ea);color:var(--sf-on-selected,#18392d)}
+.sf-booking-selection small{margin-top:5px;font-size:12px}
+.sf-booking-next-hint{padding:0 24px 16px;margin:0;font-size:12px;line-height:1.6;color:var(--sf-on-card,#18392d)}
+.public-booking #registration-status{margin-top:0!important;margin-bottom:24px!important;background:var(--sf-card,#fff);color:var(--sf-on-card,#18392d);border-color:var(--sf-border,#ccd5cd)!important}
+.sf-registration-summary{display:flex;align-items:center;gap:10px;cursor:pointer;min-height:44px;font-size:13px;font-weight:700;list-style:none;line-height:1.5}
+.sf-registration-summary::-webkit-details-marker{display:none}
+.sf-registration-summary:after{content:'+';margin-left:auto;font-size:22px}
+#registration-status[open]>.sf-registration-summary:after{content:'−'}
+#registration-status[open]>.sf-registration-summary{margin-bottom:12px}
+.sf-registration-fields label{line-height:1.5}
+.sf-field-optional{font-size:11px;font-weight:500;opacity:.85}
+.sf-registration-fields :is(input:not([type=checkbox]),select){min-height:46px}
+.sf-registration-fields input[type=checkbox]{flex-shrink:0;min-width:20px;min-height:20px}
+.sf-login-links{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:22px;padding-top:16px;border-top:1px solid var(--sf-border,#ccd5cd)}
+.sf-login-links a{display:inline-flex;align-items:center;min-height:44px;text-decoration:underline;font-size:13px}
+.sf-password-toggle{margin-top:9px;min-height:44px}
+@media(max-width:1100px){.app-shell .page-heading{flex-wrap:wrap}.app-shell .page-heading-actions{flex-shrink:1}}
+@media(max-width:650px){
+ .app-shell .sidebar{width:min(310px,88vw);z-index:110;position:fixed;inset:0 auto 0 0;height:100dvh}
+ .app-shell .sf-menu-close{display:flex;align-self:flex-end;gap:8px;align-items:center;justify-content:center;min-height:44px;margin-bottom:12px;background:transparent!important;color:var(--sf-on-header,#fff)!important;border:1px solid currentColor!important}
+ .sf-menu-backdrop{display:block;position:fixed;inset:0;z-index:105;width:100%;height:100dvh;border:0;border-radius:0;background:#0009}
+ .app-shell .page-heading-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ .app-shell .page-heading-actions button{min-height:46px;padding:10px;font-size:12px;justify-content:center}
+ .app-shell .sf-settings-save{position:sticky;bottom:8px;padding:12px;display:flex;flex-wrap:wrap}
+ .app-shell .sf-settings-save .muted{display:flex!important;flex:1 0 100%;min-width:0;font-size:12px}
+ .app-shell .sf-settings-save button{flex:1;min-width:125px;width:auto;min-height:44px;font-size:12px}
+ .public-page .public-main{gap:24px;padding:18px 12px}
+ .public-page .public-booking{order:0;min-width:0}
+ .public-page .public-intro{order:1}
+ .public-page .sf-booking-context{padding:16px 18px}
+ .public-booking .steps>div>button{gap:6px;font-size:11px;min-height:56px}
+ .public-booking .steps>div>button>span{width:24px;height:24px;flex-shrink:0;font-size:11px}
+ .sf-booking-next-hint{padding-inline:18px}
+ .public-booking .modal-footer{gap:14px;padding:16px 18px}
+ .public-booking .modal-footer .button-row{flex:1;gap:8px}
+ .public-booking .modal-footer button{min-height:46px}
+ .public-booking .booking-service{align-items:flex-start;gap:10px}
+ .public-booking .booking-service>div{min-width:0;flex:1}
+ .public-booking .booking-service>b{white-space:nowrap;font-size:13px}
+ .sf-registration-summary{font-size:12px}
+ .sf-visual-editor-toolbar>div{width:100%;justify-content:space-between}
+ .sf-visual-editor-title{font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){.app-shell *,.public-page *{scroll-behavior:auto!important}}
+
+.sf-booking-context small,.sf-booking-selection small{color:inherit}
