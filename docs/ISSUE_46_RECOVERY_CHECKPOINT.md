@@ -1,3 +1,13 @@
+# Latest checkpoint — 2026-10-20
+
+Implementation saved to GitHub: `1df6e1d9cfae79a446757c7b47f009d2424dfa5c` on `feature/issue-46-waiver-client-id-integrity`. Its tree `6268634e518cf96bb5b18d10cb98a5863dd4e8c4` exactly matches locally tested commit `1a6131b7f3870ec6d69088e19aea5233ac095afd` (preserved as local recovery/issue46-local-tested-1a6131b). Shell push lacked credentials; connected GitHub created the identical tree and fast-forwarded the feature ref with an expected-head check. Local branch is aligned to the GitHub commit.
+
+Typecheck, 279 tests and production build passed (all exit 0). Read `docs/ISSUE_46_ACCEPTANCE_EVIDENCE.md` for changes and open criteria. No staging/production deploy or live client deletion occurred. Optional membership identity fields are not yet fully supported despite editable Required controls. Backups/isolated restore, exact private target identification, legacy remediation, legal review and both-environment acceptance remain pending. Keep the issue open.
+
+Render Dashboard Google account selection completed through secure authentication, but browser capability became unavailable before positive sign-in verification. Authentication state is unknown. Resume via fresh visible evidence when browser access is available; never assume authentication succeeded. No secrets were collected in chat.
+
+---
+
 # Issue #46 recovery checkpoint — 2026-10-20
 
 Status: requirements recovered; implementation, staging acceptance and production deployment are pending. This document is not evidence that issue #46 is complete.
