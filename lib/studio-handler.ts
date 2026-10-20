@@ -1,3 +1,4 @@
+import {recordCashSale} from '../server/record-cash-sale.mjs';
 import {queueBookingReceipt} from '../server/booking-receipts.mjs';
 import {issueMemberId} from '../server/member-id-policy.mjs';
 import {loadMembershipReportPayments,reportSaleEvents,reconcileStripeBookingReceipts} from '../server/report-payments.mjs';
@@ -424,7 +425,7 @@ if(b.action==='status'){
  }catch(error){await client.query('ROLLBACK');throw error;}
  finally{client.release();}
 }
-if(b.action==='sale'){if(!Array.isArray(b.items)||!b.items.length)throw Error('Add items to checkout.');const lines=b.items.map((l:any)=>{const item=[...config.services.map((s:any)=>({...s,type:'service',cost:null})),...config.products.map((p:any)=>({...p,type:'product'}))].find((x:any)=>x.id===l.id);if(!item||!Number.isInteger(l.qty)||l.qty<1||l.qty>50)throw Error('Invalid checkout item.');return {...item,qty:l.qty};});const total=lines.reduce((n:number,l:any)=>n+l.qty*l.price,0);await db().batch([audit('cash_sale',{lines,total,tax:total*config.tax/100,payment:'Cash recorded manually'})]);return reply({ok:true});}
+if(b.action==='sale'){if(!Array.isArray(b.items)||!b.items.length)throw Error('Add items to checkout.');const lines=b.items.map((l:any)=>{const item=[...config.services.map((s:any)=>({...s,type:'service',cost:null})),...config.products.map((p:any)=>({...p,type:'product'}))].find((x:any)=>x.id===l.id);if(!item||!Number.isInteger(l.qty)||l.qty<1||l.qty>50)throw Error('Invalid checkout item.');return {...item,qty:l.qty};});if(b.bookingId!==undefined&&b.bookingId!==''&&(typeof b.bookingId!=='string'||!/^[-a-f0-9]{36}$/i.test(b.bookingId)))throw Error('Invalid booking reference.');return reply(await recordCashSale(getPool(),{owner,eventId:typeof b.key==='string'&&/^[0-9a-f-]{36}$/i.test(b.key)?b.key:crypto.randomUUID(),bookingId:b.bookingId||null,lines,taxRate:config.tax}));}
 if(b.action==='handoff'){if(!String(b.message||'').trim())throw Error('Enter a message');await db().batch([audit('handoff',{message:String(b.message).slice(0,2000),status:'Open'})]);return reply({ok:true});}return reply({error:'Unknown action'},400);
 }catch(e){return reply({error:(e as Error).message==='AUTH_REQUIRED'?'Please sign in.':((e as {code?:string}).code?'Unable to save right now. Please try again.':(e as Error).message)||'Unable to save. Please try again.'},(e as Error).message==='AUTH_REQUIRED'?401:400);}}
 

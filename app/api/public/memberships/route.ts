@@ -44,11 +44,11 @@ export async function POST(req:Request){
    const key='membership-request:'+business.id+':'+tokenHash(ip);
    const rate=(await pool.query("INSERT INTO public_limits(key,count,window_start) VALUES($1,1,now()) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN 1 ELSE public_limits.count+1 END,window_start=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN now() ELSE public_limits.window_start END RETURNING count",[key])).rows[0];
    if(rate.count>12)return Response.json({error:'Too many requests. Please try again later.'},{status:429,headers:noStore});
-   const plan=(await pool.query('SELECT id FROM membership_plans WHERE business_id=$1 AND id=$2 AND active=true',[business.id,body.planId])).rows[0];
+   const plan=(await pool.query('SELECT id,price_cents,name FROM membership_plans WHERE business_id=$1 AND id=$2 AND active=true',[business.id,body.planId])).rows[0];
    if(!plan)throw Error('Choose an available membership package.');
    if(body.termsAccepted!==true)throw Error('Please accept the membership request terms.');
    const config=typeof business.data==='string'?JSON.parse(business.data):business.data||{};
-   const details=membershipRequestDetails(config,body);
+   const details={...membershipRequestDetails(config,body),quotedPriceCents:Number(plan.price_cents),quotedPlanName:plan.name};
    if(!/^[a-f0-9-]{36}$/i.test(body.requestId||''))throw Error('Invalid request identifier. Refresh and try again.');
    const registered=await registerMembershipWithoutApproval(pool,{businessId:business.id,ownerId:business.owner_id,planId:plan.id,requestId:body.requestId,details});
    return Response.json(registered,{headers:noStore});
