@@ -2,6 +2,10 @@
 -- Metadata-only repair; no customer rows, databases, grants or unrelated sequences are removed.
 -- The legacy kairos_portal_backups_backup_id_seq is deliberately excluded.
 BEGIN;
+GRANT selahflow_production_user TO amanda_realtor_db_user
+  WITH INHERIT FALSE GRANTED BY amanda_realtor_db_user;
+GRANT selahflow_production_user TO amanda_realtor_db_user
+  WITH SET TRUE GRANTED BY amanda_realtor_db_user;
 SET LOCAL lock_timeout = '5s';
 SET LOCAL statement_timeout = '60s';
 DO $repair$
@@ -97,4 +101,6 @@ SELECT current_database() AS database,
  count(*) FILTER (WHERE pg_get_userbyid(c.relowner)<>'selahflow_production_user') AS other_owned_tables
 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
 WHERE n.nspname='public' AND c.relkind IN ('r','p');
+REVOKE selahflow_production_user FROM amanda_realtor_db_user
+  GRANTED BY amanda_realtor_db_user;
 COMMIT;
