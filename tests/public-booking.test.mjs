@@ -47,7 +47,7 @@ test('public booking creates protected owner records; exposes catalog only; reje
  assert.equal((await pg.query('SELECT * FROM appointments')).rows.length,0);
  const profile=(await pg.query("SELECT id,member_number,archived FROM business_client_profiles WHERE id='legacy-profile'")).rows[0];
  assert.deepEqual(profile,{id:'legacy-profile',member_number:'PC0102',archived:false});
- response=await handler.studioPost(req(booking),true);assert.equal(response.status,200);assert.equal((await response.json()).id,first.id);
+ response=await handler.studioPost(req(booking),true);assert.equal(response.status,200,await response.clone().text());assert.equal((await response.json()).id,first.id);
  await helpers.confirmBooking({pool,owner:'owner',services:savedConfig.services.filter(s=>s.id==='barber'),staff:'james',date,start:booking.start,duration:30,buffer:savedConfig.buffer,id:first.id,pendingId:first.id,expectedReviewer:'owner',data:{name:booking.name,email:booking.email,services:['Barber'],serviceIds:['barber'],price:35,memberNumber:first.memberNumber,channel:'Online booking',reviewedBy:'owner'}});
  response=await handler.studioPost(req({...booking,key:crypto.randomUUID(),email:'second@example.com'}),true);assert.equal(response.status,409);
  const rows=(await pg.query('SELECT * FROM appointments')).rows;assert.equal(rows.length,1);assert.equal(rows[0].owner,'owner');assert.equal(JSON.parse(rows[0].data).channel,'Online booking');

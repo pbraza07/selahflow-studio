@@ -8,10 +8,14 @@ export async function refreshMemberPeriod(db,member,at=new Date()){
  const now=new Date(at);
  if(member.paid_through&&new Date(member.paid_through)<=now){await db.query("UPDATE customer_memberships SET status='expired',updated_at=now() WHERE id=$1 AND business_id=$2 AND status='active'",[member.id,member.business_id]);return {...member,status:member.status==='active'?'expired':member.status};}
  if(member.status!=='active'||new Date(member.credit_period_end)>now)return member;
- const anchor=member.billing_start_override?new Date((member.billing_start_override instanceof Date?member.billing_start_override.toISOString():String(member.billing_start_override)).slice(0,10)+'T12:00:00Z'):member.initial_paid_at;
+ const anchor=membershipAnchor(member);
  const period=monthlyPeriod(anchor,now),credits=Number(member.monthly_sessions??member.stripe_sessions_per_period??0);
  await db.query('INSERT INTO membership_credit_periods(business_id,membership_id,period_start,period_end,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING',[member.business_id,member.id,member.credit_period_start,member.credit_period_end,member.sessions_included,member.sessions_used]);
  await db.query('UPDATE customer_memberships SET sessions_included=$1,sessions_used=0,credit_period_start=$2,credit_period_end=$3,updated_at=now() WHERE id=$4 AND business_id=$5',[credits,period.start.toISOString(),period.end.toISOString(),member.id,member.business_id]);
  return {...member,sessions_included:credits,sessions_used:0,credit_period_start:period.start,credit_period_end:period.end};
 }
 export async function refreshMembershipPeriods(pool,businessId=null){const db=await pool.connect();try{await db.query('BEGIN');const rows=(await db.query("SELECT * FROM customer_memberships WHERE ($1::text IS NULL OR business_id=$1) AND status='active' AND initial_paid_at IS NOT NULL AND (credit_period_end<=now() OR paid_through<=now()) FOR UPDATE SKIP LOCKED LIMIT 100",[businessId])).rows;for(const m of rows)await refreshMemberPeriod(db,m);await db.query('COMMIT');return rows.length;}catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}}
+
+export function businessDate(at=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(at));}
+export function membershipAnchor(member){const d=member.billing_start_override?(member.billing_start_override instanceof Date?member.billing_start_override.toISOString():String(member.billing_start_override)).slice(0,10):businessDate(member.initial_paid_at);return d+'T12:00:00Z';}
+export function nextBillingAnchor(anchor,at=new Date(),count=1){const a=new Date(anchor),p=monthlyPeriod(a,at);const n=(p.start.getUTCFullYear()-a.getUTCFullYear())*12+p.start.getUTCMonth()-a.getUTCMonth();return anniversary(a,n+count);}

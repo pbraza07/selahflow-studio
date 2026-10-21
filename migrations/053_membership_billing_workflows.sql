@@ -15,4 +15,4 @@ CREATE TABLE session_team_assignments(business_id TEXT NOT NULL REFERENCES busin
 ALTER TABLE participation_waivers ADD COLUMN media_consent BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE participation_waivers ADD COLUMN media_statement TEXT;
 
-UPDATE settings SET data=jsonb_set(data::jsonb,'{services}',COALESCE((SELECT jsonb_agg(s||'{"requiresApproval":true}'::jsonb) FROM jsonb_array_elements(settings.data::jsonb->'services') s),'[]'::jsonb))::text WHERE jsonb_typeof(data::jsonb->'services')='array';
+UPDATE settings SET data=jsonb_set(data::jsonb,'{services}',COALESCE((SELECT jsonb_agg(s||'{"requiresApproval":true}'::jsonb ORDER BY ord) FROM jsonb_array_elements(settings.data::jsonb->'services') WITH ORDINALITY AS src(s,ord)),'[]'::jsonb))::text WHERE jsonb_typeof(data::jsonb->'services')='array';

@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {stripeApi} from './membership-payments.mjs';
 import {assertTestPayment} from './stripe-checkout.mjs';
-import {monthlyPeriod,anniversary} from './membership-periods.mjs';
+import {monthlyPeriod,anniversary,nextBillingAnchor} from './membership-periods.mjs';
 import {queueMembershipInvitation} from './membership-invitations.mjs';
 export async function membershipBillingAction(db,{business,owner,input,origin,api=stripeApi}){
  if(input.action==='sendPayment')return queueMembershipInvitation(db,{businessId:business.id,membershipId:String(input.id||''),origin});
@@ -17,10 +17,11 @@ export async function membershipBillingAction(db,{business,owner,input,origin,ap
  const requestId=String(input.requestId||'');if(!/^[a-f0-9-]{36}$/i.test(requestId))throw Error('Invalid update request.');
  if(input.action==='setInitialDate'){
   const value=String(input.initialDate||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(value)||new Date(value+'T12:00:00Z').toISOString().slice(0,10)!==value||value>new Date().toISOString().slice(0,10))throw Error('Enter a valid initial date no later than today.');
-  const period=monthlyPeriod(value+'T12:00:00Z');
-  if(member.stripe_subscription_id){const subscription=await api('subscriptions/'+member.stripe_subscription_id,{method:'GET',account:member.stripe_account_id});assertTestPayment(subscription);if(subscription.metadata?.membership_id!==member.id||subscription.metadata?.selahflow_business_id!==business.id)throw Error('Stripe membership identity does not match.');await api('subscriptions/'+member.stripe_subscription_id,{account:member.stripe_account_id,idempotencyKey:'member-date-'+requestId,params:{trial_end:Math.floor(period.end.getTime()/1000),proration_behavior:'none','metadata[selahflow_initial_date]':value}});}
-  await db.query('UPDATE customer_memberships SET billing_start_override=$1,credit_period_start=CASE WHEN initial_paid_at IS NULL THEN credit_period_start ELSE $2 END,credit_period_end=CASE WHEN initial_paid_at IS NULL THEN credit_period_end ELSE $3 END,paid_through=CASE WHEN initial_paid_at IS NULL THEN paid_through ELSE $3 END,updated_at=now() WHERE id=$4 AND business_id=$5',[value,period.start.toISOString(),period.end.toISOString(),member.id,business.id]);
-  await db.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'membership_billing_date',$4)",[randomUUID(),owner,new Date().toISOString(),JSON.stringify({membershipId:member.id,initialDate:value,nextPayment:period.end.toISOString(),stripeSynchronized:!!member.stripe_subscription_id})]);return {ok:true,nextPayment:period.end.toISOString()};
+  const period=monthlyPeriod(value+'T12:00:00Z');const nextPayment=nextBillingAnchor(value+'T12:00:00Z',new Date(),member.stripe_interval_unit==='month'?Number(member.stripe_interval_count)||1:1);
+  if((member.stripe_interval_unit||member.interval_unit)!=='month')throw Error('Choose monthly recurring billing before overriding its monthly initial date.');
+  if(member.stripe_subscription_id){const subscription=await api('subscriptions/'+member.stripe_subscription_id,{method:'GET',account:member.stripe_account_id});assertTestPayment(subscription);if(subscription.metadata?.membership_id!==member.id||subscription.metadata?.selahflow_business_id!==business.id)throw Error('Stripe membership identity does not match.');await api('subscriptions/'+member.stripe_subscription_id,{account:member.stripe_account_id,idempotencyKey:'member-date-'+requestId,params:{trial_end:Math.floor(nextPayment.getTime()/1000),proration_behavior:'none','metadata[selahflow_initial_date]':value}});}
+  await db.query('UPDATE customer_memberships SET billing_start_override=$1,credit_period_start=CASE WHEN initial_paid_at IS NULL THEN credit_period_start ELSE $2 END,credit_period_end=CASE WHEN initial_paid_at IS NULL THEN credit_period_end ELSE $3 END,paid_through=CASE WHEN initial_paid_at IS NULL THEN paid_through ELSE $6 END,updated_at=now() WHERE id=$4 AND business_id=$5',[value,period.start.toISOString(),period.end.toISOString(),member.id,business.id,nextPayment.toISOString()]);
+  await db.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'membership_billing_date',$4)",[randomUUID(),owner,new Date().toISOString(),JSON.stringify({membershipId:member.id,initialDate:value,nextPayment:nextPayment.toISOString(),stripeSynchronized:!!member.stripe_subscription_id})]);return {ok:true,nextPayment:nextPayment.toISOString()};
  }
  if(input.action==='syncRecurrence'){
   if(!member.stripe_subscription_id)throw Error('The member must authorize recurring Stripe enrollment first. Send a payment invitation.');

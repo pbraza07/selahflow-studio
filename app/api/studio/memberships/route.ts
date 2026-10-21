@@ -1,3 +1,4 @@
+import {applyManualPeriod} from '../../../../server/manual-membership-period.mjs';
 import {membershipBillingAction} from '../../../../server/membership-billing-actions.mjs';
 import {monthlyPeriod,anniversary,refreshMembershipPeriods} from '../../../../server/membership-periods.mjs';
 import {membershipAllows,validateMembershipEligibility,membershipEligibilitySummary} from '../../../../server/membership-eligibility.mjs';
@@ -154,22 +155,23 @@ export async function POST(req:Request){
    const client=await pool.connect();
    try{
     await client.query('BEGIN');
-    const member=(await client.query("SELECT m.id,m.initial_paid_at,m.status,m.sessions_included,m.sessions_used,m.member_number,m.stripe_account_id,p.sessions_included AS plan_sessions,p.price_cents FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 AND m.id=$2 FOR UPDATE",[business.id,id])).rows[0];
+    const member=(await client.query("SELECT m.*,p.interval_unit,p.interval_count,p.sessions_included AS plan_sessions,p.price_cents FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 AND m.id=$2 FOR UPDATE",[business.id,id])).rows[0];
     if(!member)throw Error('Member not found.');
     if(member.stripe_account_id?.startsWith('acct_'))throw Error('Stripe manages this membership payment and renewal. Do not confirm it manually.');
     if(input.action==='renewMembership'&&String(input.memberNumber||'').trim().toUpperCase()!==String(member.member_number||'').toUpperCase())throw Error('Enter the player membership number to renew.');
     if(input.action==='renewMembership'&&member.status!=='active')throw Error('Confirm the initial payment before renewing this membership.');
     if(input.action==='confirmManualPayment'&&member.status==='active')throw Error('This membership is already active. Use Renew to add another package of sessions.');
     if(!member.member_number)throw Error('Assign a member number before confirming payment.');
-    const selectedPlan=input.action==='renewMembership'?(await client.query('SELECT id,sessions_included,price_cents FROM membership_plans WHERE business_id=$1 AND id=$2 AND active=true',[business.id,selectedPlanId])).rows[0]:null;
+    const selectedPlan=input.action==='renewMembership'?(await client.query('SELECT id,sessions_included,price_cents,interval_unit,interval_count FROM membership_plans WHERE business_id=$1 AND id=$2 AND active=true',[business.id,selectedPlanId])).rows[0]:null;
     if(input.action==='renewMembership'&&!selectedPlan)throw Error('Choose an available membership package to renew.');
     const credits=Number(selectedPlan?selectedPlan.sessions_included:member.plan_sessions);
     if(!Number.isInteger(credits)||credits<1)throw Error('Membership package must include at least one session.');
     const existing=(await client.query("SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='payment_confirmed'",[business.id,id,requestId])).rowCount;
     if(existing){await client.query('COMMIT');return Response.json({ok:true,credited:0,alreadyProcessed:true},{headers});}
+    const allocation=await applyManualPeriod(client,{member:{...member,business_id:business.id},credits,plan:selectedPlan||member});
     const paymentId=randomUUID();
-    await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[paymentId,business.id,id,requestId,credits,selectedPlan?selectedPlan.price_cents:member.price_cents]);
-    await client.query("UPDATE customer_memberships SET sessions_included=$1,sessions_used=0,initial_paid_at=COALESCE(initial_paid_at,now()),credit_period_start=now(),credit_period_end=now()+interval '1 month',monthly_sessions=$1,paid_through=now()+interval '1 month',status='active',last_paid_at=now(),updated_at=now(),plan_id=COALESCE($4,plan_id),price_cents=COALESCE($5,price_cents) WHERE business_id=$2 AND id=$3",[credits,business.id,id,selectedPlan?.id||null,selectedPlan?.price_cents??null]);
+    await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[paymentId,business.id,id,requestId,allocation.allocated,selectedPlan?selectedPlan.price_cents:member.price_cents]);
+    await client.query('UPDATE customer_memberships SET plan_id=COALESCE($1,plan_id),price_cents=COALESCE($2,price_cents) WHERE business_id=$3 AND id=$4',[selectedPlan?.id||null,selectedPlan?.price_cents??null,business.id,id]);
     await client.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,'membership_payment',$4)",[randomUUID(),business.id,new Date().toISOString(),JSON.stringify({membershipId:id,memberNumber:member.member_number,requestId,amountCents:Number(selectedPlan?.price_cents??member.price_cents),renewal:input.action==='renewMembership'})]);
     await queueMembershipPaymentEmail(client,{businessId:business.id,paymentId,origin:trustedOrigin(req),renewal:input.action==='renewMembership'});
     await client.query('COMMIT');

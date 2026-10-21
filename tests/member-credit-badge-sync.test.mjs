@@ -140,7 +140,7 @@ test('Overview, Clients and Members all render the same badge with live remainin
  assert.match(ui,/sessionsUsed=\{a\.membershipSessionsUsed\}/);
  assert.match(clients,/sessionsIncluded=\{selected\.membershipDetails\?\.sessionsIncluded\}/);
  assert.match(members,/sessionsIncluded=\{m\.sessions_included\}/);
- assert.match(api,/sessions_included=\$1,sessions_used=0/);
+ assert.match(api,/applyManualPeriod\(client/);
  assert.match(api,/COUNT\(\*\)::int AS recorded_sessions/);
  assert.match(helper,/if\(remaining<=0\)return \{deducted:false/);
 });

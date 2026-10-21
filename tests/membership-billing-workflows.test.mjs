@@ -1,3 +1,6 @@
+import {applyManualPeriod} from '../server/manual-membership-period.mjs';
+import {createRequire} from 'node:module';
+import ts from 'typescript';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
@@ -70,4 +73,47 @@ test('public payment cannot auto-approve requests and client booking timeline re
  assert.equal(JSON.parse(decorateBookingTimeline([row])[0].data).paymentTracking,'pending');
  const paid=JSON.parse(decorateBookingTimeline([row],[{id:'r',appointment_id:'a',status:'accepted',created_at:'2030-01-01',reviewed_at:'2030-01-02'}],[{booking_id:'a',status:'paid',paid_at:'2030-01-03'}])[0].data);
  assert.equal(paid.paymentTracking,'completed');assert.ok(paid.bookingTimeline.some(v=>v.status==='Accepted'));assert.ok(paid.bookingTimeline.some(v=>v.status==='Payment completed'));
+});
+
+test('early manual renewal extends paid time without rolling credits or moving the original monthly anniversary',async()=>{
+ const {pg,db}=await fixture();try{
+ const now=new Date('2028-01-31T18:00:00Z');let m=(await pg.query('SELECT * FROM customer_memberships')).rows[0];
+ await applyManualPeriod(db,{member:m,credits:8,plan:{interval_unit:'month',interval_count:1},now});
+ await pg.exec("UPDATE customer_memberships SET sessions_used=3");
+ m=(await pg.query('SELECT * FROM customer_memberships')).rows[0];
+ const first=m.initial_paid_at;
+ const renewal=await applyManualPeriod(db,{member:m,credits:8,plan:{interval_unit:'month',interval_count:1},now:new Date('2028-02-15T12:00:00Z')});assert.equal(renewal.allocated,0);
+ m=(await pg.query('SELECT * FROM customer_memberships')).rows[0];assert.equal(m.sessions_used,3);assert.equal(m.sessions_included,8);assert.deepEqual(m.initial_paid_at,first);
+ m=await refreshMemberPeriod(db,m,new Date('2028-02-29T13:00:00Z'));assert.equal(m.sessions_used,0);assert.equal(new Date(m.credit_period_end).toISOString(),'2028-03-31T12:00:00.000Z');
+ }finally{await pg.close();}
+});
+test('owner billing overrides and recurrence changes stay on the matching connected subscription and never create an immediate invoice',async()=>{
+ const {pg,db}=await fixture();try{
+ await pg.exec("UPDATE customer_memberships SET status='active',initial_paid_at='2026-01-31T12:00Z',stripe_account_id='acct_test',stripe_subscription_id='sub_test',stripe_interval_unit='month',sessions_included=8,sessions_used=2");
+ const calls=[],end=Math.floor(Date.now()/1000)+30*86400;
+ const api=async(path,o)=>{calls.push({path,o});assert.equal(o.account,'acct_test');if(o.method==='GET')return {id:'sub_test',livemode:false,metadata:{membership_id:'11111111-1111-4111-8111-111111111111',selahflow_business_id:'biz'},items:{data:[{id:'si_test',price:{id:'price_old',product:'prod_test'}}]}};if(path==='prices')return {id:'price_new'};if(path==='subscription_schedules')return {id:'sched_test',phases:[{start_date:end-30*86400,end_date:end}]};return {id:'sub_test',livemode:false};};
+ const input={action:'setInitialDate',id:'11111111-1111-4111-8111-111111111111',requestId:'22222222-2222-4222-8222-222222222222',initialDate:new Date().toISOString().slice(0,10)};
+ await assert.rejects(membershipBillingAction(db,{business:{id:'foreign'},owner:'other',input,origin:'https://example.test',api}),/Choose/);
+ const result=await membershipBillingAction(db,{business:{id:'biz'},owner:'owner',input,origin:'https://example.test',api});assert.ok(Date.parse(result.nextPayment)>Date.now());
+ let m=(await pg.query('SELECT * FROM customer_memberships')).rows[0];assert.equal(m.sessions_used,2);assert.equal(new Date(m.initial_paid_at).toISOString(),'2026-01-31T12:00:00.000Z');
+ await membershipBillingAction(db,{business:{id:'biz'},owner:'owner',input:{...input,action:'syncRecurrence',interval:'month',intervalCount:2},origin:'https://example.test',api});
+ assert.ok(calls.some(c=>c.path==='subscription_schedules/sched_test'&&c.o.params['phases[1][items][0][price]']==='price_new'));
+ assert.ok(!calls.some(c=>/invoices|payment_intents/.test(c.path)));
+ }finally{await pg.close();}
+});
+test('session team accountability API rejects unauthenticated, cross-business and cross-origin assignments',async()=>{
+ const {pg,pool}=await fixture();try{
+ const config={services:[{id:'training',name:'Training'}],staff:[{id:'coach',name:'Private Coach'}],bookableSessions:[{id:'series',service:'training',staff:'coach',date:'2030-01-01',start:600}]};
+ await pg.query("INSERT INTO settings(owner,data) VALUES('owner',$1),('other','{}')",[JSON.stringify(config)]);
+ const url=new URL('../app/api/studio/team-tracking/route.ts',import.meta.url),exports={},nativeRequire=createRequire(url);
+ const compiled=ts.transpileModule(await readFile(url,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
+ new Function('require','exports',compiled)(path=>path.endsWith('/server/database.mjs')?{getPool:()=>pool}:path.endsWith('/lib/auth')?{requireOwner:async req=>{const owner=req.headers.get('x-test-owner');if(!owner)throw Error('AUTH_REQUIRED');return owner;}}:nativeRequire(path),exports);
+ const origin=process.env.APP_URL||process.env.RENDER_EXTERNAL_URL||'https://example.test';
+ const post=(body,owner='owner',valid=true)=>exports.POST(new Request(new URL('/api/studio/team-tracking',origin),{method:'POST',headers:{'Content-Type':'application/json',...(owner?{'x-test-owner':owner}:{}),Origin:valid?new URL(origin).origin:'https://untrusted.invalid'},body:JSON.stringify(body)}));
+ const body={sessionId:'series',staffIds:['coach'],note:'Attendance accountability'};
+ assert.equal((await post(body,'')).status,401);assert.equal((await post(body,'other')).status,400);assert.equal((await post(body,'owner',false)).status,403);
+ assert.equal((await post(body)).status,200);assert.equal((await pg.query('SELECT staff_ids FROM session_team_assignments')).rows[0].staff_ids[0],'coach');
+ assert.equal((await post({action:'privacy',hideTeamNames:true})).status,200);
+ assert.equal(JSON.parse((await pg.query("SELECT data FROM settings WHERE owner='owner'")).rows[0].data).hideTeamNames,true);
+ }finally{await pg.close();}
 });

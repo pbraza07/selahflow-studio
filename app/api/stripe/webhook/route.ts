@@ -1,4 +1,4 @@
-import {monthlyPeriod} from '../../../../server/membership-periods.mjs';
+import {monthlyPeriod,membershipAnchor,nextBillingAnchor} from '../../../../server/membership-periods.mjs';
 import {getPool} from '../../../../server/database.mjs';
 import {verifyStripeWebhook,stripeApi,invoiceSubscriptionId,shouldActivateInvoice} from '../../../../server/membership-payments.mjs';
 import {applyBookingPayment,applyMembershipInvoice} from '../../../../server/stripe-checkout.mjs';
@@ -30,8 +30,8 @@ export async function POST(req:Request){
    if(!subscriptionId)return Response.json({received:true},{headers});
    subscription=await stripeApi('subscriptions/'+subscriptionId,{method:'GET',account});
    if(object.billing_reason==='subscription_create'&&subscription.metadata?.selahflow_business_id===merchant.business_id){
-    const m=(await pool.query('SELECT billing_start_override,initial_paid_at FROM customer_memberships WHERE id=$1 AND business_id=$2 AND stripe_account_id=$3 AND (stripe_subscription_id IS NULL OR stripe_subscription_id=$4)',[subscription.metadata?.membership_id,merchant.business_id,account,subscriptionId])).rows[0];
-    if(m?.billing_start_override&&!m.initial_paid_at){const date=m.billing_start_override instanceof Date?m.billing_start_override.toISOString().slice(0,10):String(m.billing_start_override).slice(0,10);const next=monthlyPeriod(date+'T12:00:00Z').end;await stripeApi('subscriptions/'+subscriptionId,{account,idempotencyKey:'member-anchor-'+event.id,params:{trial_end:Math.floor(next.getTime()/1000),proration_behavior:'none'}});}
+    const m=(await pool.query('SELECT * FROM customer_memberships WHERE id=$1 AND business_id=$2 AND stripe_account_id=$3 AND (stripe_subscription_id IS NULL OR stripe_subscription_id=$4)',[subscription.metadata?.membership_id,merchant.business_id,account,subscriptionId])).rows[0];
+    if(m&&!m.initial_paid_at&&m.stripe_interval_unit==='month'&&Number(object.amount_paid)>=Number(m.first_invoice_cents??m.price_cents)){const paidAt=object.status_transitions?.paid_at?new Date(object.status_transitions.paid_at*1000):new Date();const next=nextBillingAnchor(membershipAnchor({...m,initial_paid_at:paidAt}),paidAt,Number(m.stripe_interval_count)||1);await stripeApi('subscriptions/'+subscriptionId,{account,idempotencyKey:'member-anchor-'+event.id,params:{trial_end:Math.floor(next.getTime()/1000),proration_behavior:'none'}});}
    }
   }
   const db=await pool.connect();
