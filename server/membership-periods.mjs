@@ -18,4 +18,4 @@ export async function refreshMembershipPeriods(pool,businessId=null){const db=aw
 
 export function businessDate(at=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(at));}
 export function membershipAnchor(member){const d=member.billing_start_override?(member.billing_start_override instanceof Date?member.billing_start_override.toISOString():String(member.billing_start_override)).slice(0,10):businessDate(member.initial_paid_at);return d+'T12:00:00Z';}
-export function nextBillingAnchor(anchor,at=new Date(),count=1){const a=new Date(anchor),p=monthlyPeriod(a,at);const n=(p.start.getUTCFullYear()-a.getUTCFullYear())*12+p.start.getUTCMonth()-a.getUTCMonth();return anniversary(a,n+count);}
+export function nextBillingAnchor(anchor,at=new Date(),count=1){const a=new Date(anchor),p=monthlyPeriod(a,at);const n=(p.start.getUTCFullYear()-a.getUTCFullYear())*12+p.start.getUTCMonth()-a.getUTCMonth();return anniversary(a,(Math.floor(n/count)+1)*count);}

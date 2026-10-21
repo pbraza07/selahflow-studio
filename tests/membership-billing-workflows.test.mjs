@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
-import {monthlyPeriod,refreshMemberPeriod} from '../server/membership-periods.mjs';
+import {monthlyPeriod,refreshMemberPeriod,nextBillingAnchor} from '../server/membership-periods.mjs';
 import {couponTotal,checkoutCoupon} from '../server/business-coupons.mjs';
 import {queueMembershipInvitation,invitationDetails,processMembershipInvitations} from '../server/membership-invitations.mjs';
 import {membershipBillingAction} from '../server/membership-billing-actions.mjs';
@@ -129,3 +129,5 @@ test('optional media release is recorded with the exact waiver and does not impl
  assert.equal(await ensureParticipationWaiver(db,{businessId:'biz',memberNumber:'TP010190',config,services:config.services,input:null}),id);
  }finally{await pg.close();}
 });
+
+test('custom multi-month recurrence stays on the original billing cadence after a backdated override',()=>{assert.equal(nextBillingAnchor('2026-01-31T12:00:00Z',new Date('2026-02-21T12:00:00Z'),3).toISOString(),'2026-04-30T12:00:00.000Z');assert.equal(nextBillingAnchor('2026-01-31T12:00:00Z',new Date('2026-04-30T12:00:00Z'),3).toISOString(),'2026-07-31T12:00:00.000Z');});
