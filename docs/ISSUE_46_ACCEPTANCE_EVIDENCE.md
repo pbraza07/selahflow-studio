@@ -45,3 +45,9 @@ Render connector does not expose environment secrets/backup restore workflow; Da
 ## Local validation — 2026-10-20
 
 Final implementation checks: `npm run typecheck` exit 0; `npm test` exit 0 (279 passed, 0 failed, 43.75 seconds); `npm run build` exit 0. `git diff --check` exit 0. Tests use isolated synthetic PGlite databases, not customer databases. Coverage includes versioned consent/retention, unsigned checkout refusal before provider calls, exact deletion authorization, financial deduplication/provider-reference retention, tombstone replay/reuse, database preflight, and filtered/idempotent notification outbox. These automated results do not substitute for the live acceptance items above.
+
+## Dashboard verification — October 20, 2026 (America/New_York)
+
+Authenticated Render Dashboard access succeeded in Plinio's workspace. Read-only inspection verified DATABASE_URL targets on both services: staging uses selahflow_staging / selahflow_staging_user, production uses selahflow_production / selahflow_production_user, both on dpg-db3f1hegekts73egtus0-a. Passwords were not printed or changed. Table privileges remain to be checked.
+
+Recovery page reports a three-day point-in-time recovery window. Requested a fresh managed logical export; it was still generating at the last observation. This is not yet a verified usable backup. Prepared, but did not create, an isolated point-in-time recovery instance named selahflow-issue46-restore-check. Render quotes $6/month compute plus $1.50/month for 5 GB storage = $7.50/month, prorated by the second. Autoscaling and high availability are disabled. New paid-instance creation is awaiting the user's requested cost approval. No existing connections, data, deployment or database settings were changed.
