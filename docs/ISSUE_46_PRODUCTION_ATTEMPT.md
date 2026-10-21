@@ -15,3 +15,9 @@ Browser recovery succeeded using a fresh tab through the documented browser API.
 Production remains on the previous LIVE v1.3.114 deployment until a future successful rollout; main's version is ahead of LIVE. No data deletion occurred. The corrected staging deployment dep-dbc2e4lg1s2s73bjh4t0 must be checked to terminal status.
 
 Waiver enforcement is implemented for services whose requiresWaiver flag is enabled, including booking, approval and payment checks. Do not claim all Arcila sessions are active yet: the existing production service flags were not enabled, and no actual legal-review reference/date was supplied. Issue 46 requires legal review before production use. Do not fabricate that review, sign for a customer, or enable a configuration that blocks all bookings before the review is available.
+
+## Follow-up: credential approval received
+
+The user explicitly approved use of the credential for the scoped repair. The copy action was permitted, but the browser runtime then blocked clipboard retrieval with retained_data_restricted, including after its documented fresh-document recovery. No credential reached the local database client; no credential file was created. Do not treat this as missing user approval or attempt to bypass browser protection. Prepared scripts/repair-production-object-ownership.sql: transactionally changes ownership of the exact 56 known application tables and three identity functions, guarded by current database and administrator identity; excludes the unrelated legacy sequence. It has not been executed on production. An authorized administrator must execute it through an available database client, or the browser credential-transfer limitation must be resolved.
+
+Corrected staging deployment dep-dbc2e4lg1s2s73bjh4t0 became LIVE at 2026-10-21T02:49:20.220291Z on c5d7a9090c1318fe35b52d905229e7627f962862. Production HTTP health still returned status ok/version 1.3.114. Do not report production v1.3.116 success.
