@@ -130,4 +130,4 @@ test('optional media release is recorded with the exact waiver and does not impl
  }finally{await pg.close();}
 });
 
-test('custom multi-month recurrence stays on the original billing cadence after a backdated override',()=>{assert.equal(nextBillingAnchor('2026-01-31T12:00:00Z',new Date('2026-02-21T12:00:00Z'),3).toISOString(),'2026-04-30T12:00:00.000Z');assert.equal(nextBillingAnchor('2026-01-31T12:00:00Z',new Date('2026-04-30T12:00:00Z'),3).toISOString(),'2026-07-31T12:00:00.000Z');});
+test('custom multi-month recurrence stays on the original billing cadence after a backdated override',()=>{assert.equal(nextBillingAnchor('2026-01-31T12:00:00Z',new Date('2026-03-21T12:00:00Z'),3).toISOString(),'2026-04-30T12:00:00.000Z');assert.equal(nextBillingAnchor('2026-01-31T12:00:00Z',new Date('2026-04-30T12:00:00Z'),3).toISOString(),'2026-07-31T12:00:00.000Z');});
