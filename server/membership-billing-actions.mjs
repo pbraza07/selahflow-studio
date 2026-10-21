@@ -25,7 +25,7 @@ export async function membershipBillingAction(db,{business,owner,input,origin,ap
  }
  if(input.action==='syncRecurrence'){
   if(!member.stripe_subscription_id)throw Error('The member must authorize recurring Stripe enrollment first. Send a payment invitation.');
-  const unit=input.interval,count=Number(input.intervalCount);if(!['week','month','year'].includes(unit)||!Number.isInteger(count)||count<1||count>12)throw Error('Choose a valid recurrence.');
+  const unit=input.interval,count=Number(input.intervalCount);if(!['week','month','year'].includes(unit)||!Number.isInteger(count)||count<1||(count>12||unit==='year'&&count>3))throw Error('Choose recurrence every 1 to 12 periods, or 1 to 3 years.');
   const sub=await api('subscriptions/'+member.stripe_subscription_id,{method:'GET',account:member.stripe_account_id});assertTestPayment(sub);if(sub.metadata?.membership_id!==member.id||sub.metadata?.selahflow_business_id!==business.id||sub.items?.data?.length!==1)throw Error('Stripe subscription does not match this membership.');
   const item=sub.items.data[0],product=typeof item.price.product==='string'?item.price.product:item.price.product?.id;
   const price=await api('prices',{account:member.stripe_account_id,idempotencyKey:'member-price-'+requestId,params:{currency:'usd',unit_amount:member.price_cents,product,'recurring[interval]':unit,'recurring[interval_count]':count}});
@@ -34,7 +34,9 @@ export async function membershipBillingAction(db,{business,owner,input,origin,ap
   if(existingSchedule)throw Error('This subscription already has a schedule. Review it in Stripe before changing recurrence.');
   const schedule=await api('subscription_schedules',{account:member.stripe_account_id,idempotencyKey:'member-schedule-'+requestId,params:{from_subscription:sub.id}});
   const phase=schedule.phases?.[0];if(!phase?.end_date)throw Error('Stripe did not return the current billing boundary.');
-  await api('subscription_schedules/'+schedule.id,{account:member.stripe_account_id,idempotencyKey:'member-schedule-update-'+requestId,params:{end_behavior:'release','phases[0][start_date]':phase.start_date,'phases[0][end_date]':phase.end_date,'phases[0][items][0][price]':item.price.id,'phases[0][items][0][quantity]':1,'phases[1][items][0][price]':price.id,'phases[1][items][0][quantity]':1,'phases[1][proration_behavior]':'none','phases[1][duration][interval]':unit,'phases[1][duration][interval_count]':count}});
+  const preserveDiscounts={};const copyDiscounts=(list,phaseIndex)=>{for(const [index,d] of (list||[]).entries()){const field=typeof d==='string'?'discount':d.discount?'discount':d.coupon?'coupon':d.promotion_code?'promotion_code':null;const value=typeof d==='string'?d:field?d[field]:null;if(field&&typeof value==='string')preserveDiscounts['phases['+phaseIndex+'][discounts]['+index+']['+field+']']=value;}};
+  copyDiscounts(phase.discounts||sub.discounts,0);if(Number(member.renewal_invoice_cents)<Number(member.price_cents))copyDiscounts(phase.discounts||sub.discounts,1);
+  await api('subscription_schedules/'+schedule.id,{account:member.stripe_account_id,idempotencyKey:'member-schedule-update-'+requestId,params:{...preserveDiscounts,end_behavior:'release','phases[0][start_date]':phase.start_date,'phases[0][end_date]':phase.end_date,'phases[0][items][0][price]':item.price.id,'phases[0][items][0][quantity]':1,'phases[1][items][0][price]':price.id,'phases[1][items][0][quantity]':1,'phases[1][proration_behavior]':'none','phases[1][duration][interval]':unit,'phases[1][duration][interval_count]':count}});
   await db.query('UPDATE customer_memberships SET stripe_interval_unit=$1,stripe_interval_count=$2,updated_at=now() WHERE id=$3 AND business_id=$4',[unit,count,member.id,business.id]);return {ok:true,effectiveAt:new Date(phase.end_date*1000).toISOString()};
  }
  throw Error('Choose a valid membership billing action.');

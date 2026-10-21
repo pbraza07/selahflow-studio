@@ -103,7 +103,7 @@ export async function POST(req:Request){
      'SELECT COUNT(*)::int AS count FROM membership_plans WHERE business_id=$1 AND active=TRUE',
      [business.id])).rows[0]?.count||0);
     if(input.action==='save'){
-     const plan=validateMembershipPlan(input);const intervalCount=Number(input.intervalCount??1);if(!Number.isInteger(intervalCount)||intervalCount<1||intervalCount>12)throw Error('Choose recurrence every 1 to 12 periods.');
+     const plan=validateMembershipPlan(input);const intervalCount=Number(input.intervalCount??1);if(!Number.isInteger(intervalCount)||intervalCount<1||(intervalCount>12||plan.interval==='year'&&intervalCount>3))throw Error('Choose recurrence every 1 to 12 periods, or 1 to 3 years.');
      const settings=(await client.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0]?.data;
      const eligibility=validateMembershipEligibility(input.creditEligibility,typeof settings==='string'?JSON.parse(settings):settings||{});
      const groupId=await requireMembershipGroup(client,business.id,input.groupId);
