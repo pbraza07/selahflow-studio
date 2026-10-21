@@ -1,3 +1,7 @@
+# No-cost recovery update — 2026-10-21
+
+Render authentication succeeded. The user declined extra cost and the paid restore form was canceled without creating a resource. A fresh managed export completed; both SelahFlow databases passed isolated no-cost logical restores (56 tables each, production 400 rows, staging 652 rows), with matching content hashes and row counts for every table. Migrations 046–048 also passed on both copies without changing any original table content. See `docs/ISSUE_46_ACCEPTANCE_EVIDENCE.md` for exact hashes and limitations. Current live role privileges, exact deletion targets, optional membership identity fields, legal review, staging acceptance and production promotion remain pending. No live data was deleted or deployed. Later evidence supersedes historical status below.
+
 # Latest checkpoint — 2026-10-20
 
 Implementation saved to GitHub: `1df6e1d9cfae79a446757c7b47f009d2424dfa5c` on `feature/issue-46-waiver-client-id-integrity`. Its tree `6268634e518cf96bb5b18d10cb98a5863dd4e8c4` exactly matches locally tested commit `1a6131b7f3870ec6d69088e19aea5233ac095afd` (preserved as local recovery/issue46-local-tested-1a6131b). Shell push lacked credentials; connected GitHub created the identical tree and fast-forwarded the feature ref with an expected-head check. Local branch is aligned to the GitHub commit.

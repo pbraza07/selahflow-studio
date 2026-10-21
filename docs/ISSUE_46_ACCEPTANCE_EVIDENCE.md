@@ -12,7 +12,7 @@ On 2026-10-20, fetched origin and verified main and baseline/v1.3.114-before-iss
 - Production srv-db3tokqd0e5s73f31hfg: LIVE dep-dbbkfpbm8hqs7391t2mg, e303c421bb42146bc4d217f87d82d10db28609e3.
 - Staging srv-db8e9dajnfac73fa0vo0: LIVE dep-dbbphe7f3r2c73dunrs0, 533c8317ba71e9add535279f5b4e88dbb5869627. Public health returned ok/version 1.3.114. Production HTTP probe timed out; not evidence of failure or candidate readiness.
 - amanda-realtor-db instance contains distinct selahflow_staging and selahflow_production databases. Dedicated roles have CONNECT to their own database and not the other. Staging role had active sessions. No production session was observed in that snapshot. Current DATABASE_URL values and table ownership remain unverified.
-- No current backup or isolated restore has been verified. No exact client deletion target has been privately verified. Amanda and Kairos were not modified.
+- A current managed export and no-cost isolated logical restores are now verified; see the later evidence below. No exact client deletion target has been privately verified. Amanda and Kairos were not modified.
 
 ## Candidate changes
 
@@ -50,4 +50,20 @@ Final implementation checks: `npm run typecheck` exit 0; `npm test` exit 0 (279 
 
 Authenticated Render Dashboard access succeeded in Plinio's workspace. Read-only inspection verified DATABASE_URL targets on both services: staging uses selahflow_staging / selahflow_staging_user, production uses selahflow_production / selahflow_production_user, both on dpg-db3f1hegekts73egtus0-a. Passwords were not printed or changed. Table privileges remain to be checked.
 
-Recovery page reports a three-day point-in-time recovery window. Requested a fresh managed logical export; it was still generating at the last observation. This is not yet a verified usable backup. Prepared, but did not create, an isolated point-in-time recovery instance named selahflow-issue46-restore-check. Render quotes $6/month compute plus $1.50/month for 5 GB storage = $7.50/month, prorated by the second. Autoscaling and high availability are disabled. New paid-instance creation is awaiting the user's requested cost approval. No existing connections, data, deployment or database settings were changed.
+Recovery page reports a three-day point-in-time recovery window. Requested a fresh managed logical export; it was still generating at the last observation. This is not yet a verified usable backup. Prepared, but did not create, an isolated point-in-time recovery instance named selahflow-issue46-restore-check. Render quotes $6/month compute plus $1.50/month for 5 GB storage = $7.50/month, prorated by the second. Autoscaling and high availability are disabled. The user rejected added cost. The paid restore form was canceled; no new paid instance was created. No existing connections, data, deployment or database settings were changed.
+
+
+## No-cost isolated logical restore — October 21, 2026 (UTC)
+
+Managed export `2026-10-21T01:31Z.dir.tar.gz` completed and was downloaded from Render. SHA-256: `cf170855e724189ce2b8ec682df89b0d33ac233178d5bc2d62b1b11197223e85`. Render retains this export for at least seven days; the local working copy is restricted temporary storage, not the durable backup. Only the two SelahFlow archive directories were extracted; Amanda/Kairos were not restored or modified.
+
+No-cost restore tooling: PostgreSQL 18.0 `pg_restore` converted each directory archive to SQL with `--no-owner --no-privileges`. PGlite 0.5.10 / PostgreSQL 18.6 restored the schema, data, indexes and constraints using COPY through its documented blob API. The socket COPY attempt failed and is NOT counted as successful evidence. `scripts/verify-logical-backup.mjs` implements the successful direct path and compares sorted COPY content SHA-256 and row counts for every table. No app process, notification worker or provider integration ran against either copy.
+
+| Source | Tables | Rows | Restore evidence SHA-256 | Exit |
+| --- | ---: | ---: | --- | ---: |
+| selahflow_production | 56 | 400 | fd92c9acdcd76845a218bbcd11ad02a9d3e4d2ba9c9f81984c9bc8fa4b241b0f | 0 |
+| selahflow_staging | 56 | 652 | 481a446f98a62ef329162dd5380cec5b8987d87525a43d688c2797f8eb4d494a | 0 |
+
+Each restored database has 56 primary keys, 68 foreign keys, 65 check constraints, 360 NOT NULL constraints and 20 unique constraints. Every copied table's row count and content hash matched its dump. This is isolated logical recovery evidence, not a native Render/PITR recovery test; source role ownership and ACLs were intentionally omitted and current live privileges still require verification.
+
+Migrations 046–048 then passed separately on both restored copies (exit 0), adding eight tables while preserving content hashes of all 56 original tables. Migration rehearsal evidence SHA-256: production `58fdef6c83c0bf3d20fd46497590781b9a3d4ed1aef8fbf908b6de978e26b09e`; staging `3c6276981bab95eba34632203f5071a1c6ef2c782f19052aa683e05c1354746f`. No live migration, client deletion or deployment occurred. Backup freshness must be rechecked immediately before any approved live deletion.
