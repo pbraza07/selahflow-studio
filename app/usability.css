@@ -95,3 +95,8 @@
 #registration-status.card>form>label,
 #registration-status.card .sf-registration-payment :is(p,strong,label,small){color:#fff!important;-webkit-text-fill-color:#fff!important;opacity:1!important}
 #registration-status.card input{background:#fff!important;color:#17251d!important;-webkit-text-fill-color:#17251d!important}
+
+/* Keep waiver and appointment-policy consent controls on the same columns. */
+#public-confirm label.consent{display:grid;grid-template-columns:20px minmax(0,1fr);align-items:start;gap:10px;margin:18px 0 0;padding:0}
+#public-confirm label.consent>input[type=checkbox]{appearance:auto;box-sizing:border-box;display:block;width:20px;min-width:20px;max-width:20px;height:20px;min-height:20px;max-height:20px;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;accent-color:var(--sf-button,var(--purple));align-self:start}
+#public-confirm label.consent>span{min-width:0;line-height:1.6}

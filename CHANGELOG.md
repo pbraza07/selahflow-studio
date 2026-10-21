@@ -1,3 +1,7 @@
+## 1.3.121
+
+- Align booking waiver and appointment-policy checkboxes with equal 20px dimensions and shared text columns, including wrapped text on mobile. Consent requirements and stored signatures remain unchanged.
+
 ## 1.3.120
 
 - Per-plan membership credit eligibility: all eligible services/sessions or selected services and session series.

@@ -1,3 +1,7 @@
+# v1.3.121 release handoff — candidate, deployment pending
+
+Booking waiver and appointment-policy checkboxes share fixed 20px dimensions, zero native margins/padding and a common two-column label grid. Text wraps in the same column on mobile. CSS-only behavior change; consent validation, waiver storage, membership rules and customer records are unchanged. No database migration. Verify staging and production before declaring LIVE.
+
 # v1.3.120 release handoff — verified LIVE in staging and production
 
 Verified 2026-10-21: application commit 9ffb3202b13d2adc2c7d4b535cfe7341b5f641ea. Staging LIVE dep-dbca61oae00c7393rmi0 at 11:38:25Z; production LIVE dep-dbca8keq1p3s73bpnq90 at 11:40:35Z. All 293 tests passed locally and on Render staging; typecheck and builds passed. Migration 052 applied to each dedicated database, with correct database/role, schema CREATE and zero unowned tables. Both public health endpoints report ok / 1.3.120; eight public membership offers in each environment return credit coverage summaries; private owner membership GET returns 401 without authentication. Owner UI was not manually exercised and no real membership/booking/payment/credit mutations were performed for validation. Main/staging use the verified application commit; this feature-branch handoff is documentation only.
