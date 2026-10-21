@@ -1,4 +1,10 @@
-# v1.3.117 release handoff — candidate, deployment pending
+# v1.3.118 release handoff — candidate, deployment pending
+
+Owner-confirmed deletion uses authenticated business-scoped selection and an atomic transaction, without requiring a separate operator-maintenance authorization row. Operator scripts still require verified backup/restore authorization. Repeat deletion of a missing exact client succeeds only when its business-scoped deletion audit exists. Active subscriptions, open Stripe checkout and in-flight delivery still block deletion with actionable errors. Required financial and signed-waiver evidence remains retained; IDs release immediately and stale-record replay stays blocked. No real customer deletion was performed for testing. Verify staging then production LIVE before declaring completion.
+
+# v1.3.117 release handoff — verified LIVE in both environments
+
+Verified 2026-10-21: commit 95dbe39c37c5cb63cacf75dda62ef801ea5c13db; staging dep-dbc3alrncjis73874njg; production dep-dbc3db8u01pc73cr0vt0. Migration 050 applied in each isolated DB. Health and format validation passed both environments. All 287 local/staging tests, typecheck and both builds passed.
 
 New client IDs use first initial + last initial + MMDDYY (eight characters), with no sequence/random fallback. Identity fields are required across booking/membership registration; other question requirements and Notify remain independent. Duplicate IDs within a business stop registration for review, including identical birthday/initials and century collisions. All ID entry/lookup/payment boundaries accept eight characters and preserve compatibility with existing six-character IDs. Existing client IDs and historical records are not automatically rewritten. Explicit owner legacy-ID replacement now generates eight characters. Migration 050 changes validation and sets the issuance policy without deleting clients or changing financial/waiver records. Permanent deletion continues releasing IDs for the same or another client's fresh registration; stale source replay remains blocked and detached consent does not transfer. Verify exact staging and production LIVE commits before reporting deployment. Staging Arcila waiver settings remain a separate pending owner-session task.
 

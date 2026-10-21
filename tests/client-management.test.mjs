@@ -109,7 +109,7 @@ test('client-management endpoints enforce owner scope and require explicit perma
  assert.match(route,/requireOwner\(req\)/);
  assert.match(route,/validOrigin\(req\)/);
  assert.match(route,/WHERE owner=\$1/);
- assert.match(route,/deleteClientPermanently/);assert.match(route,/DELETE CLIENT/);
+ assert.match(route,/deleteOwnerClient/);assert.match(route,/DELETE CLIENT/);
  assert.match(route,/membershipClientId/);
  assert.match(route,/source_key===virtualId/);
  assert.doesNotMatch(route,/DELETE FROM appointments/i);

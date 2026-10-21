@@ -1,5 +1,4 @@
-import {authorizeClientDeletion} from '../../../../server/deletion-authorization.mjs';
-import {deleteClientPermanently} from '../../../../server/delete-client.mjs';
+import {deleteOwnerClient} from '../../../../server/owner-client-deletion.mjs';
 import {issueMemberId} from '../../../../server/member-id-policy.mjs';
 import {replaceLegacyMemberId} from '../../../../server/replace-legacy-member-id.mjs';
 import {randomUUID} from 'node:crypto';
@@ -72,8 +71,8 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
 function failure(error:unknown){
  const message=(error as Error).message||'Client operation could not be completed.';
  const status=message==='AUTH_REQUIRED'?401:message==='BUSINESS_UNAVAILABLE'?403:
-  /already exists|another client|restore this client|changed|no longer|not found|cancel .*subscription|expire .*checkout|currently being sent|confirm permanent/i.test(message)?409:
-  /enter |invalid |exceed|cannot |required|client name/i.test(message)?400:503;
+  /already exists|another client|restore this client|changed|no longer|not found|cancel .*subscription|expire .*checkout|currently being sent|confirm permanent|removed list/i.test(message)?409:
+  /enter |invalid |exceed|cannot |required|requires review|client name|identity unavailable/i.test(message)?400:503;
  return Response.json({error:status===503?'Client operation could not be completed.':message==='AUTH_REQUIRED'?'Sign in to manage your clients.':message==='BUSINESS_UNAVAILABLE'?'Business workspace unavailable.':message},{status,headers:noStore});
 }
 export async function GET(req:Request){
@@ -158,19 +157,17 @@ export async function POST(req:Request){
       [responseId,owner,id,sourceAnchor,input.name,input.email,input.phone,input.notes,memberNumber||null,dateOfBirth,JSON.stringify(registrationAnswers),JSON.stringify(registrationFieldLabels)]);
     }
    }else if(body.action==='archive'||body.action==='delete'){
-    if(!client||body.confirmPhrase!=='DELETE CLIENT')throw Error('Confirm permanent client deletion.');
-    await authorizeClientDeletion(db,{businessId:business.id,profileId:client.id});
-    await deleteClientPermanently(db,{owner,businessId:business.id,client});
+    await deleteOwnerClient(db,{owner,businessId:business.id,client,clientId:id,confirmPhrase:body.confirmPhrase});
    }else if(body.action==='deleteArchived'){
     const ids=body.clientIds;
     if(!Array.isArray(ids)||ids.length<1||ids.length>2000||ids.some((value:unknown)=>!validId(value))||new Set(ids).size!==ids.length)throw Error('Select valid removed clients.');
     if(body.confirmPhrase!=='DELETE REMOVED CLIENTS')throw Error('Enter DELETE REMOVED CLIENTS to confirm.');
-    if(ids.some((value:string)=>!result.archived.some((item:{id:string})=>item.id===value)))throw Error('One or more selected clients are not in the removed list.');
+    if(ids.some((value:string)=>result.clients.some((item:{id:string})=>item.id===value)))throw Error('One or more selected clients are not in the removed list.');
     for(const value of ids){
      const saved=result.profiles.find((p:any)=>p.id===value);
-     const history=result.derived.filter((c:any)=>c.id===saved?.source_key||c.history?.some((r:any)=>r.id===saved?.anchor_appointment_id)||saved?.member_number&&c.memberNumber===saved.member_number||sameClientContact(c,saved)).flatMap((c:any)=>c.history||[]);
-     await authorizeClientDeletion(db,{businessId:business.id,profileId:value});
-     await deleteClientPermanently(db,{owner,businessId:business.id,client:{...result.archived.find((c:any)=>c.id===value),memberNumber:saved?.member_number,dateOfBirth:dateOnly(saved?.date_of_birth),history}});
+     const history=result.derived.filter((c:any)=>saved&&(c.id===saved?.source_key||c.history?.some((r:any)=>r.id===saved?.anchor_appointment_id)||saved?.member_number&&c.memberNumber===saved.member_number||sameClientContact(c,saved))).flatMap((c:any)=>c.history||[]);
+     const removed=result.archived.find((c:any)=>c.id===value);
+     await deleteOwnerClient(db,{owner,businessId:business.id,clientId:value,confirmPhrase:'DELETE CLIENT',client:removed?{...removed,memberNumber:saved?.member_number,dateOfBirth:dateOnly(saved?.date_of_birth),history}:null});
     }
     responseId='deleted';
    }else if(body.action==='restore'){

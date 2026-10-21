@@ -1,3 +1,8 @@
+## 1.3.118
+
+- Confirmed owner client deletion no longer requires an operator-only maintenance authorization. Retain transactional deletion, owner scope, financial/waiver evidence and active-provider guards.
+- Retrying a completed deletion returns success; errors are visible inside the confirmation dialog.
+
 ## 1.3.117
 
 - Issue eight-character initials/MMDDYY IDs for new registrations and released-ID reuse.
