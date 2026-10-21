@@ -13,7 +13,7 @@ export function validateSnapshot(snapshot){
  if(!snapshot.tables.businesses.length||snapshot.tables.businesses.length>1000)throw Error('Invalid business count.');
  for(const t of snapshotTables)for(const r of snapshot.tables[t]){
   if(!r||typeof r!=='object'||Array.isArray(r))throw Error('Invalid snapshot record.');
-  if(r.member_number!=null&&!/^[A-Z]{2}[0-9]{4}$/.test(r.member_number))throw Error('Legacy membership IDs cannot be imported. Refresh the source after ID repair.');
+  if(r.member_number!=null&&!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(r.member_number))throw Error('Legacy membership IDs cannot be imported. Refresh the source after ID repair.');
   if(t==='users'&&Object.keys(r).some(k=>!['id','email','created_at'].includes(k)))throw Error('Production credentials cannot be imported.');
  }
  return snapshot;

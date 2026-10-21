@@ -82,7 +82,7 @@ export default function RegistrationQuestionSettings({config,setConfig,limit,ses
    <label>Question type<select value={f.type} onChange={e=>update(f.id,{type:e.target.value,options:e.target.value==='select'?(f.options?.length?f.options:['Option 1']):[]})}>{['text','number','date','select','checkbox'].map(t=><option key={t} value={t}>{t}</option>)}</select></label>
    {f.type==='select'&&<label>Choices (one per line)<textarea value={(f.options||[]).join('\n')} onChange={e=>update(f.id,{options:e.target.value.split('\n')})}/></label>}
    </>}
-  <label><input type="checkbox" checked={f.required} onChange={e=>required(f,e.target.checked)}/> {serviceId?'Required for this service':sessionId?'Required for this session':'Required'}</label>
+  <label><input type="checkbox" checked={f.required} disabled={['firstName','lastName','dateOfBirth'].includes(f.id)} onChange={e=>required(f,e.target.checked)}/> {serviceId?'Required for this service':sessionId?'Required for this session':'Required'}</label>
   <label><input type="checkbox" aria-label={'Include '+f.label+' in notifications'} checked={questionNotificationEnabled(config,editorForm,f)} onChange={e=>setConfig((c:any)=>({...c,[editorForm+'QuestionNotifications']:{...c[editorForm+'QuestionNotifications'],[f.id]:e.target.checked}}))}/> Include this answer in business email and push notifications</label>
   {!f.standard&&<>
    {serviceId?(f.serviceIds?.includes(serviceId)?<button type="button" className="outline" onClick={()=>removeFromService(f)}>Remove question from this service</button>:<small>Shared question. Edit its visibility in Settings → Booking & membership questions.</small>):<button type="button" className="outline" onClick={()=>remove(f.id)}>Remove question</button>}

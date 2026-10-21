@@ -14,9 +14,9 @@ test('owner approval creates one stable member and directory profile; retries an
  await db.query('INSERT INTO membership_requests(id,business_id,plan_id,details) VALUES($1,$2,$3,$4::jsonb)',['request1','biz1','plan1',JSON.stringify(details)]);
  async function review(owner,id,approve=true){await db.exec('BEGIN');try{const result=await reviewMembershipRequest(db,{owner,id,approve});await db.exec('COMMIT');return result;}catch(e){await db.exec('ROLLBACK');throw e;}}
  await assert.rejects(review('owner2','request1'),/not found/);
- const first=await review('owner1','request1');assert.equal(first.memberNumber,'LA1103');
+ const first=await review('owner1','request1');assert.equal(first.memberNumber,'LA110317');
  const member=(await db.query('SELECT * FROM customer_memberships')).rows[0];assert.equal(member.status,'pending_payment');assert.equal(member.sessions_included,0);assert.equal(member.sessions_used,0);assert.deepEqual(member.registration_answers,{goal:'Training'});
- const profile=(await db.query('SELECT * FROM business_client_profiles')).rows[0];assert.equal(profile.member_number,'LA1103');assert.equal(profile.owner,'owner1');
+ const profile=(await db.query('SELECT * FROM business_client_profiles')).rows[0];assert.equal(profile.member_number,'LA110317');assert.equal(profile.owner,'owner1');
  assert.equal((await review('owner1','request1')).alreadyReviewed,true);
  await db.query('INSERT INTO membership_requests(id,business_id,plan_id,details) VALUES($1,$2,$3,$4::jsonb)',['request2','biz1','plan1',JSON.stringify(details)]);
  const second=await review('owner1','request2');assert.equal(second.membershipId,first.membershipId);assert.equal(second.existingMember,true);

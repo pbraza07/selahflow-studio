@@ -133,7 +133,7 @@ export async function POST(req:Request){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)||!Number.isFinite(Date.parse(dateOfBirth))||dateOfBirth>new Date().toISOString().slice(0,10))throw Error('Enter a valid date of birth.');
     const requested=String(body.memberNumber||'').trim().toUpperCase();
     if(body.action==='update'&&selected?.memberNumber&&requested&&requested!==selected.memberNumber)throw Error('Existing membership IDs cannot be changed.');
-    const memberNumber=body.action==='update'&&selected?.memberNumber?selected.memberNumber:await issueMemberId(db,{businessId:business.id,name:input.name,dateOfBirth,requested});
+    const memberNumber=body.action==='update'&&selected?.memberNumber?selected.memberNumber:await issueMemberId(db,{businessId:business.id,name:input.name,firstName:body.firstName,lastName:body.lastName,dateOfBirth,requested});
     const fields=customRegistrationFields(settings,'booking',null,[]);
     const registrationAnswers=sanitizeBookingAnswers(fields,body.customAnswers||{});
     const registrationFieldLabels=Object.fromEntries(fields.map((field:any)=>[field.id,field.label]));

@@ -212,7 +212,7 @@ if(b.action==='registration_email_lookup'){
 }
 if(b.action==='registration_latest_status'){
  const memberNumber=String(b.memberNumber||'').trim().toUpperCase();
- if(!/^[A-Z]{2}[0-9]{4}$/.test(memberNumber))return reply({error:'Enter your six-character membership ID.'},400);
+ if(!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(memberNumber))return reply({error:'Enter your eight-character membership ID.'},400);
  const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();
  if(!await takeLimit('latest-status-ip:'+owner+':'+tokenHash(ip),8)||!await takeLimit('latest-status-member:'+owner+':'+tokenHash(memberNumber),8))return reply({error:'Too many searches. Try again later.'},429);
  const requests=(await db().prepare('SELECT status,date,details,appointment_id FROM booking_requests WHERE owner_id=? ORDER BY created_at DESC LIMIT 500').bind(owner).all()).results as any[];
@@ -321,7 +321,7 @@ if(b.key){
 }if(b.expectedPrice!==services.reduce((a:number,s:any)=>a+s.price,0)||b.expectedDuration!==duration)return reply({error:'Service prices or durations changed. Refresh the studio and review your booking again.'},409);if(!available.includes(b.start))return reply({error:(availability.sessionAvailability as Record<number,{remaining:number}>)[b.start]?.remaining===0?SESSION_FULL_MESSAGE:'That time is no longer available. Please choose another.'},409);if(typeof b.name!=='string'||typeof b.email!=='string'||b.name.length>100||b.email&&(!/^\S+@\S+\.\S+$/.test(b.email)||b.email.length>200))throw Error('Enter valid contact details.');if(!isPublic&&(!b.name.trim()||!b.email))throw Error('Enter a name and valid email.');let verifiedMembership:any=null;if(isPublic){
  if(b.notMember!==true){
   const number=String(b.memberNumber||'').trim().toUpperCase();
-  if(!/^[A-Z]{2}[0-9]{4}$/.test(number))throw Error('Enter your six-character membership ID or choose N/A.');
+  if(!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(number))throw Error('Enter your eight-character membership ID or choose N/A.');
   const member=await db().prepare("SELECT m.customer_name,m.date_of_birth,m.status,m.sessions_included,m.sessions_used FROM customer_memberships m JOIN businesses biz ON biz.id=m.business_id WHERE biz.owner_id=? AND m.member_number=?").bind(owner,number).first() as any;
   const customer=await db().prepare("SELECT c.first_name,c.last_name,c.date_of_birth FROM customer_booking_ids c JOIN businesses biz ON biz.id=c.business_id WHERE biz.owner_id=? AND c.member_number=?").bind(owner,number).first() as any;
   if(!member&&!customer)throw Error('Membership ID was not found for this business.');
@@ -346,12 +346,12 @@ if(isPublic&&b.firstName&&b.lastName&&b.dateOfBirth){
   if(!business)throw Error('Business not found.');
   await client.query('SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))',[business.id,(firstName+'|'+lastName+'|'+dob).toLowerCase()]);
   const existing=(await client.query("SELECT member_number FROM customer_booking_ids WHERE business_id=$1 AND lower(first_name)=lower($2) AND lower(last_name)=lower($3) AND date_of_birth=$4::date LIMIT 1",[business.id,firstName,lastName,dob])).rows[0];
-  if(existing){if(!/^[A-Z]{2}[0-9]{4}$/.test(existing.member_number))throw Error('This legacy ID requires business review before booking.');issuedMemberNumber=existing.member_number;}
+  if(existing){if(!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(existing.member_number))throw Error('This legacy ID requires business review before booking.');issuedMemberNumber=existing.member_number;}
   else{
    const member=(await client.query("SELECT member_number FROM customer_memberships WHERE business_id=$1 AND lower(customer_name)=lower($2) AND date_of_birth=$3::date LIMIT 1",[business.id,firstName+' '+lastName,dob])).rows[0];
-   if(member){if(!/^[A-Z]{2}[0-9]{4}$/.test(member.member_number))throw Error('This legacy ID requires business review before booking.');issuedMemberNumber=member.member_number;}
+   if(member){if(!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(member.member_number))throw Error('This legacy ID requires business review before booking.');issuedMemberNumber=member.member_number;}
    else{
-    issuedMemberNumber=await issueMemberId(client,{businessId:business.id,name:firstName+' '+lastName,dateOfBirth:dob});
+    issuedMemberNumber=await issueMemberId(client,{businessId:business.id,name:firstName+' '+lastName,firstName,lastName,dateOfBirth:dob});
    }
    await client.query("INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,date_of_birth,phone,member_number) VALUES($1,$2,$3,$4,$5::date,$6,$7)",[business.id,firstName,lastName,String(b.email).toLowerCase(),dob,String(b.phone||''),issuedMemberNumber]);
   }

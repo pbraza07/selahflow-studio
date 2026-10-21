@@ -3,7 +3,7 @@ import {issueMemberId} from './member-id-policy.mjs';
 export async function replaceLegacyMemberId(db,{owner,businessId,client}){
  if(!(await db.query("SELECT id FROM businesses WHERE id=$1 AND owner_id=$2",[businessId,owner])).rows.length)throw Error('Business workspace unavailable.');
  const old=client.memberNumber;
- if(!old||/^[A-Z]{2}[0-9]{4}$/.test(old))throw Error('This client already has a six-character ID.');
+ if(!old||/^[A-Z]{2}[0-9]{6}$/.test(old))throw Error('This client already has an eight-character ID.');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(client.dateOfBirth||''))throw Error('Enter the client date of birth before replacing this legacy ID.');
  const saved=(await db.query('SELECT identity_key=member_identity_key($3,$4::date) AS matches FROM business_member_ids WHERE business_id=$1 AND member_number=$2',[businessId,old,client.name,client.dateOfBirth])).rows[0];
  if(!saved?.matches)throw Error('This registration identity changed. Refresh and check its name and birth date.');

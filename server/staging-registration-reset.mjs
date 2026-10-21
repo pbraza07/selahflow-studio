@@ -30,9 +30,9 @@ export async function resetStagingRegistration(pool,target,env=process.env){
   await db.query('SAVEPOINT fresh_registration_probe');
   const split=original.identity_key.lastIndexOf('|'),name=original.identity_key.slice(0,split),dateOfBirth=original.identity_key.slice(split+1);
   const probe=await issueMemberId(db,{businessId:business.id,name,dateOfBirth});
-  result.freshRegistrationVerified=/^[A-Z]{2}[0-9]{4}$/.test(probe);
+  result.freshRegistrationVerified=/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(probe);
   await db.query('ROLLBACK TO SAVEPOINT fresh_registration_probe');
-  if(!result.freshRegistrationVerified)throw Error('Fresh six-character registration could not be verified.');
+  if(!result.freshRegistrationVerified)throw Error('Fresh eight-character registration could not be verified.');
   await db.query('INSERT INTO staging_registration_resets(operation_id,business_id,profile_id,result) VALUES($1,$2,$3,$4::jsonb)',[operationId,business.id,target.profileId,JSON.stringify(result)]);
   await db.query('COMMIT');return result;
  }catch(error){await db.query('ROLLBACK');throw error;}finally{db.release();}

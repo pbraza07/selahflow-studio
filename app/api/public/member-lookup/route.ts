@@ -17,16 +17,16 @@ export async function POST(req:Request){
   const memberNumber=String(body.memberNumber||'').trim().toUpperCase();
   const dob=String(body.dateOfBirth||'');
   if(!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(slug)
-   ||!/^[A-Z]{2}[0-9]{4}$/.test(memberNumber)
+   ||!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(memberNumber)
    ||!/^\d{4}-\d{2}-\d{2}$/.test(dob)
    ||Number.isNaN(Date.parse(dob))||new Date(dob).toISOString().slice(0,10)!==dob)
-   return Response.json({error:'Enter your six-character Membership ID and valid date of birth.'},{status:400,headers});
+   return Response.json({error:'Enter your eight-character Membership ID and valid date of birth.'},{status:400,headers});
 
   const db=getPool();
   const business=(await db.query("SELECT id,owner_id FROM businesses WHERE slug=$1 AND status='active' LIMIT 1",[slug])).rows[0];
   if(!business)return Response.json({error:'Business not found.'},{status:404,headers});
-  // A six-character initials + MMDD ID is guessable. A matching birth year is
-  // required, and lookup requests are limited per IP and per business/member.
+  // IDs are identifiers, not secrets. A full birth date must also match;
+  // lookup requests remain limited per IP and per business/member.
   const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim().slice(0,128);
   for(const [key,maximum] of [
    ['member-prefill-ip:'+business.id+':'+tokenHash(ip),15],

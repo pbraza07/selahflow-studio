@@ -3,14 +3,14 @@ import {randomUUID} from 'node:crypto';
 /**
  * Common booking/membership customer identity, called inside the existing
  * business-scoped registration transaction after issueMemberId().
- * A pending membership receives the SAME business-unique six-character ID and
+ * A pending membership receives the SAME business-unique eight-character ID and
  * customer profile that a first booking would create. No credits or charges.
  */
 export async function ensureMemberBookingIdentity(db,{businessId,ownerId,firstName,lastName,email,dateOfBirth,phone='',memberNumber,customAnswers={},source='Membership signup',registrationIdentity=null}){
  const given=String(firstName||'').trim(),family=String(lastName||'').trim();
  const name=(given+' '+family).trim(),contact=String(email||'').trim().toLowerCase(),mobile=String(phone||'').trim().slice(0,40);
  if(registrationIdentity){
-  if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(registrationIdentity)||!/^[A-Z]{2}[0-9]{4}$/.test(memberNumber||''))throw Error('Invalid registration identity.');
+  if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(registrationIdentity)||!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(memberNumber||''))throw Error('Invalid registration identity.');
   const business=(await db.query("SELECT 1 FROM businesses WHERE id=$1 AND owner_id=$2 AND status='active'",[businessId,ownerId])).rows[0];
   if(!business)throw Error('Business identity does not match this customer.');
   const existing=(await db.query('SELECT member_number FROM customer_booking_ids WHERE business_id=$1 AND registration_identity=$2::uuid FOR UPDATE',[businessId,registrationIdentity])).rows[0];
@@ -21,8 +21,8 @@ export async function ensureMemberBookingIdentity(db,{businessId,ownerId,firstNa
   if(!profile)await db.query('INSERT INTO business_client_profiles(id,owner,name,email,phone,notes,import_columns,member_number,date_of_birth,registration_identity) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9::date,$10::uuid)',[randomUUID(),ownerId,name,contact,mobile,source,JSON.stringify(customAnswers||{}),memberNumber,dateOfBirth||null,registrationIdentity]);
   return memberNumber;
  }
- if(!given||!family||!/^\d{4}-\d{2}-\d{2}$/.test(String(dateOfBirth||''))||!/^[A-Z]{2}[0-9]{4}$/.test(memberNumber||''))
-  throw Error('A valid name, birth date and six-character Unique ID are required.');
+ if(!given||!family||!/^\d{4}-\d{2}-\d{2}$/.test(String(dateOfBirth||''))||!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(memberNumber||''))
+  throw Error('A valid name, birth date and eight-character Unique ID are required.');
  const business=(await db.query("SELECT 1 FROM businesses WHERE id=$1 AND owner_id=$2 AND status='active'",[businessId,ownerId])).rows[0];
  if(!business)throw Error('Business identity does not match this customer.');
  const existing=(await db.query('SELECT id,member_number FROM customer_booking_ids WHERE business_id=$1 AND lower(first_name)=lower($2) AND lower(last_name)=lower($3) AND date_of_birth=$4::date FOR UPDATE',[businessId,given,family,dateOfBirth])).rows[0];

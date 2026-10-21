@@ -20,7 +20,7 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
   const name=details.name,email=details.email.toLowerCase(),dob=details.dateOfBirth;
   const fingerprint=createHash('sha256').update(JSON.stringify({plan:plan.id,name:name.toLowerCase().replace(/\s+/g,' '),email,dob,...(details.registrationIdentity?{registrationIdentity:details.registrationIdentity}:{})})).digest('hex');
   // Serialize enrollment for the same identity, including retries with a fresh browser request ID.
-  const number=await issueMemberId(db,{businessId:business.id,name,dateOfBirth:dob,requested:body.memberNumber,registrationIdentity:details.registrationIdentity||null});
+  const number=await issueMemberId(db,{businessId:business.id,name,firstName:details.firstName,lastName:details.lastName,dateOfBirth:dob,requested:body.memberNumber,registrationIdentity:details.registrationIdentity||null});
   let member=(await db.query('SELECT * FROM customer_memberships WHERE business_id=$1 AND member_number=$2 FOR UPDATE',[business.id,number])).rows[0];
   // A pending offline registration may transition into Stripe without approval.
   // Only the matching member identity, selected plan and unchanged price qualify.

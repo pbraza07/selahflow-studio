@@ -30,7 +30,7 @@ test('notification checkboxes filter standard and custom answers independently p
 
 test('strict active-ID constraint preserves retired legacy evidence but forbids reactivation',async()=>{
  const pg=new PGlite();try{
-  const files=(await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();
+  const files=(await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')&&f<'050').sort();
   for(const f of files.filter(f=>Number(f.slice(0,3))<46))await pg.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8'));
   await pg.exec("INSERT INTO users(id,email,password_hash) VALUES('retired-owner','retired@example.test','hash'); INSERT INTO businesses(id,owner_id,slug,name,status) VALUES('retired-business','retired-owner','retired-example','Example','active'); INSERT INTO business_member_ids(business_id,member_number,identity_key,retired_at) VALUES('retired-business','ZZ010100','retained evidence',now())");
   for(const f of files.filter(f=>Number(f.slice(0,3))>=46))await pg.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8'));

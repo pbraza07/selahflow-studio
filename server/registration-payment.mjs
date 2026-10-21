@@ -25,7 +25,7 @@ export async function registrationPaymentSummary(pool,owner,appointmentId){
 
 /** The ID-only lookup never exposes a private access token or registration contacts. */
 export async function startRegistrationPayment(pool,{slug,bookingId,memberNumber,dateOfBirth,origin},checkout=startBookingCheckout){
- if(typeof slug!=='string'||!/^[-a-f0-9]{36}$/i.test(bookingId||'')||!/^[A-Z]{2}[0-9]{4}$/.test(memberNumber||'')||!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth||''))throw Error('Enter your membership ID and registration date of birth.');
+ if(typeof slug!=='string'||!/^[-a-f0-9]{36}$/i.test(bookingId||'')||!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(memberNumber||'')||!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth||''))throw Error('Enter your membership ID and registration date of birth.');
  const row=(await pool.query(`SELECT b.owner_id,a.data FROM businesses b JOIN appointments a ON a.owner=b.owner_id
  LEFT JOIN booking_requests r ON r.business_id=b.id AND r.appointment_id=a.id
  WHERE b.slug=$1 AND b.status='active' AND (r.id=$2 OR a.id=$2)`,[slug,bookingId])).rows[0];

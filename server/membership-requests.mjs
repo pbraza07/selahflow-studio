@@ -11,7 +11,7 @@ export function membershipRequestDetails(config,input){
  if(dateOfBirth&&(!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)||!Number.isFinite(Date.parse(dateOfBirth))||new Date(dateOfBirth).toISOString().slice(0,10)!==dateOfBirth||dateOfBirth>new Date().toISOString().slice(0,10)))throw Error('Enter a valid birth date.');
  const incomplete=!firstName||!lastName||!dateOfBirth;
  if(incomplete&&!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(input.requestId||''))throw Error('Invalid registration reference. Refresh and try again.');
- const memberNumber=String(input.memberNumber||'').trim().toUpperCase();if(memberNumber&&!/^[A-Z]{2}[0-9]{4}$/.test(memberNumber))throw Error('Enter a valid membership ID.');
+ const memberNumber=String(input.memberNumber||'').trim().toUpperCase();if(memberNumber&&!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(memberNumber))throw Error('Enter a valid membership ID.');
  const fields=customRegistrationFields(config,'membership');
  return {firstName,lastName,name:(firstName+' '+lastName).trim(),email,dateOfBirth:dateOfBirth||null,registrationIdentity:incomplete?input.requestId.toLowerCase():null,memberNumber,phone:String(input.phone||'').trim().slice(0,40),customAnswers:sanitizeBookingAnswers(fields,input.customAnswers),fieldLabels:Object.fromEntries(fields.map(f=>[f.id,f.label]))};
 }
@@ -27,15 +27,15 @@ export async function reviewMembershipRequest(client,{owner,id,approve}){
  const normalizedName=d.name.normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
  const identity=request.business_id+'|'+normalizedName+'|'+d.dateOfBirth;
  await client.query('SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))',[request.business_id,identity]);
- const number=await issueMemberId(client,{businessId:request.business_id,name:d.name,dateOfBirth:d.dateOfBirth,requested:d.memberNumber,registrationIdentity:d.registrationIdentity||null});
+ const number=await issueMemberId(client,{businessId:request.business_id,name:d.name,firstName:d.firstName,lastName:d.lastName,dateOfBirth:d.dateOfBirth,requested:d.memberNumber,registrationIdentity:d.registrationIdentity||null});
  const existing=(await client.query('SELECT id,member_number,customer_name,date_of_birth::text AS date_of_birth FROM customer_memberships WHERE business_id=$1 AND member_number=$2 FOR UPDATE',[request.business_id,number])).rows[0];
  if(d.memberNumber&&d.memberNumber!==number)throw Error('The submitted member ID does not match this player. Review their registration details.');
  const collision=(await client.query('SELECT 1 FROM customer_memberships WHERE business_id=$1 AND member_number=$2 AND id<>$3',[request.business_id,number,existing?.id||''])).rowCount;
- if(collision)throw Error('This six-character ID belongs to another player. Resolve the ID before approving.');
+ if(collision)throw Error('This eight-character ID belongs to another player. Resolve the ID before approving.');
  let membershipId=existing?.id;
  if(!membershipId){
   const otherBooking=(await client.query('SELECT 1 FROM customer_booking_ids WHERE business_id=$1 AND member_number=$2 AND NOT(lower(first_name)=lower($3) AND lower(last_name)=lower($4) AND date_of_birth=$5::date)',[request.business_id,number,d.firstName,d.lastName,d.dateOfBirth])).rowCount;
-  if(otherBooking)throw Error('This six-character ID belongs to another player.');
+  if(otherBooking)throw Error('This eight-character ID belongs to another player.');
   membershipId=randomUUID();
   await client.query("INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,customer_phone,date_of_birth,member_number,status,stripe_account_id,price_cents,sessions_included,sessions_used,registration_answers,registration_field_labels,registration_identity) VALUES($1,$2,$3,$4,$5,$6,$7::date,$8,'pending_payment','',$9,0,0,$10::jsonb,$11::jsonb,$12::uuid)",[membershipId,request.business_id,request.plan_id,d.name,d.email,d.phone,d.dateOfBirth,number,request.price_cents,JSON.stringify(d.customAnswers),JSON.stringify(d.fieldLabels),d.registrationIdentity||null]);
  }

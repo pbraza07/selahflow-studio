@@ -15,7 +15,7 @@ export default function VerifyRegistration({api,onVerified}:{api:string;onVerifi
  <summary className="sf-registration-summary"><CalendarCheck size={20} aria-hidden="true"/><span>Already registered? Check membership &amp; appointment</span></summary>
  <p className="muted">Enter your unique membership ID to see your membership type, package, sessions left, and latest appointment status. Only your ID is needed for this check.</p>
  <form onSubmit={lookup} style={{display:'grid',gap:12}}>
- <label>Membership ID<input required disabled={busy} value={memberNumber} maxLength={6} pattern="[A-Za-z]{2}[0-9]{4}" placeholder="AB0315" autoComplete="off" onChange={e=>{setMemberNumber(e.target.value.toUpperCase());setSearched(false);}}/></label>
+ <label>Membership ID<input required disabled={busy} value={memberNumber} maxLength={8} pattern="[A-Za-z]{2}([0-9]{4}|[0-9]{6})" placeholder="AB031513" autoComplete="off" onChange={e=>{setMemberNumber(e.target.value.toUpperCase());setSearched(false);}}/></label>
  <button type="submit" className="primary" disabled={busy}>{busy?'Checking…':'Check membership & appointment'}</button>
  </form>
  {error&&<p role="alert" style={{color:'#b42318'}}>{error}</p>}

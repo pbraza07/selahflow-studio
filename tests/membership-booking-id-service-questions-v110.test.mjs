@@ -23,24 +23,23 @@ test('membership signup issues exactly the same Unique ID as a first booking, re
   const details=membershipRequestDetails({}, {firstName:'Caleb',lastName:'Alves',email:'caleb@example.com',dateOfBirth:'2013-08-14'});
   const submit=(requestId=randomUUID(),businessId='b1',ownerId='u1',planId='p1')=>registerMembershipWithoutApproval(pool,{businessId,ownerId,planId,requestId,details});
   const first=await submit();
-  assert.equal(first.memberNumber,'CA0814');
+  assert.equal(first.memberNumber,'CA081413');
   assert.equal(first.paymentPending,true);
-  assert.equal((await pg.query("SELECT member_number FROM customer_booking_ids WHERE business_id='b1'")).rows[0].member_number,'CA0814');
-  assert.equal((await pg.query("SELECT member_number FROM business_client_profiles WHERE owner='u1'")).rows[0].member_number,'CA0814');
+  assert.equal((await pg.query("SELECT member_number FROM customer_booking_ids WHERE business_id='b1'")).rows[0].member_number,'CA081413');
+  assert.equal((await pg.query("SELECT member_number FROM business_client_profiles WHERE owner='u1'")).rows[0].member_number,'CA081413');
   assert.equal((await pg.query("SELECT status,sessions_included FROM customer_memberships WHERE business_id='b1'")).rows[0].status,'pending_payment');
   assert.equal((await pg.query("SELECT sessions_included FROM customer_memberships WHERE business_id='b1'")).rows[0].sessions_included,0);
   const retry=await submit();
   assert.equal(retry.memberNumber,first.memberNumber);
   const allocated=await (async()=>{await pg.exec('BEGIN');try{const id=await issueMemberId(pg,{businessId:'b1',name:'Caleb Alves',dateOfBirth:'2013-08-14'});await pg.exec('COMMIT');return id;}catch(e){await pg.exec('ROLLBACK');throw e;}})();
-  assert.equal(allocated,'CA0814','first booking must find the same ID as membership signup');
+  assert.equal(allocated,'CA081413','first booking must find the same ID as membership signup');
   assert.equal((await pg.query('SELECT count(*)::int AS n FROM customer_booking_ids WHERE business_id=$1',['b1'])).rows[0].n,1);
   assert.equal((await pg.query("SELECT count(*)::int AS n FROM business_client_profiles WHERE owner='u1'")).rows[0].n,1);
   const otherBusiness=await submit(randomUUID(),'b2','u2','p2');
-  assert.equal(otherBusiness.memberNumber,'CA0814','different businesses may reuse the same six-character ID');
+  assert.equal(otherBusiness.memberNumber,'CA081413','different businesses may reuse the same eight-character ID');
   const collision=membershipRequestDetails({},{firstName:'Carlos',lastName:'Adams',email:'carlos@example.com',dateOfBirth:'2013-08-14'});
-  const another=await registerMembershipWithoutApproval(pool,{businessId:'b1',ownerId:'u1',planId:'p1',requestId:randomUUID(),details:collision});
-  assert.equal(another.memberNumber,'CA0001','same-business initials+date collision gets unique fallback');
-  assert.equal((await pg.query("SELECT COUNT(DISTINCT member_number)::int AS n FROM customer_booking_ids WHERE business_id='b1'")).rows[0].n,2);
+  await assert.rejects(registerMembershipWithoutApproval(pool,{businessId:'b1',ownerId:'u1',planId:'p1',requestId:randomUUID(),details:collision}),/already assigned/);
+  assert.equal((await pg.query("SELECT COUNT(DISTINCT member_number)::int AS n FROM customer_booking_ids WHERE business_id='b1'")).rows[0].n,1);
  }finally{await pg.close();}
 });
 test('first Stripe membership checkout creates the booking identity before payment without granting sessions',async()=>{
@@ -55,9 +54,9 @@ test('first Stripe membership checkout creates the booking identity before payme
   assert.equal(result.checkoutUrl,checkout.url);
   const booking=(await pg.query("SELECT member_number FROM customer_booking_ids WHERE business_id='b1'")).rows[0];
   const member=(await pg.query("SELECT member_number,status,sessions_included FROM customer_memberships WHERE business_id='b1'")).rows[0];
-  assert.equal(member.member_number,'NA0906');assert.equal(booking.member_number,'NA0906');
+  assert.equal(member.member_number,'NA090615');assert.equal(booking.member_number,'NA090615');
   assert.equal(member.status,'pending_payment');assert.equal(member.sessions_included,0);
-  assert.equal((await pg.query("SELECT member_number FROM business_client_profiles WHERE owner='u1'")).rows[0].member_number,'NA0906');
+  assert.equal((await pg.query("SELECT member_number FROM business_client_profiles WHERE owner='u1'")).rows[0].member_number,'NA090615');
   assert.equal((await pg.query("SELECT COUNT(*)::int AS n FROM membership_session_ledger WHERE business_id='b1'")).rows[0].n,0);
   assert.equal((await startMembershipCheckout(pool,{...body,requestId:randomUUID()},'https://staging.example',api)).checkoutUrl,checkout.url);
   assert.equal((await pg.query("SELECT COUNT(*)::int AS n FROM customer_booking_ids WHERE business_id='b1'")).rows[0].n,1);

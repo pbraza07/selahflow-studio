@@ -1,6 +1,6 @@
 /** Stable field IDs preserve membership identity and historical answers. */
 export const STANDARD_REGISTRATION_FIELDS=Object.freeze([
- {id:'memberNumber',label:'Membership ID (returning players)',type:'text',required:false,placeholder:'e.g. LA1103'},
+ {id:'memberNumber',label:'Membership ID (returning players)',type:'text',required:false,placeholder:'e.g. LA110313'},
  {id:'dateOfBirth',label:'Date of birth',type:'date',required:true},
  {id:'firstName',label:'First name',type:'text',required:true},
  {id:'lastName',label:'Last name',type:'text',required:true},
@@ -28,6 +28,8 @@ export function registrationQuestions(config={},form='booking',sessionId=undefin
  }
  const session=form==='booking'&&sessionId?(config.bookableSessions||[]).find(s=>s.id===String(sessionId).replace(/__\d{8}$/, '')):null;
  if(session?.questionRequired)for(const f of fields)if(typeof session.questionRequired[f.id]==='boolean')f.required=session.questionRequired[f.id];
+ // Identity answers are required to derive the eight-character ID.
+ for(const field of fields)if(['firstName','lastName','dateOfBirth'].includes(field.id))field.required=true;
  const order=config[form+'QuestionOrder']||[];
  const rank=id=>{const i=order.indexOf(id);return i<0?order.length+fields.findIndex(f=>f.id===id):i;};
  return fields.sort((a,b)=>rank(a.id)-rank(b.id));

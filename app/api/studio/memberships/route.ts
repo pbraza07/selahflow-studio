@@ -248,7 +248,7 @@ export async function POST(req:Request){
     }
    for(let attempt=0;attempt<1;attempt++){
     const requested=String(input.memberNumber||'').trim().toUpperCase();
-    const number=await issueMemberId(identityLock,{businessId:business.id,name,dateOfBirth:dob,requested});
+    const number=await issueMemberId(identityLock,{businessId:business.id,name,firstName:input.firstName,lastName:input.lastName,dateOfBirth:dob,requested});
     const result=await identityLock.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used,date_of_birth,customer_phone,registration_answers,registration_field_labels) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0,$9,$10,$11::jsonb,$12::jsonb) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0,dob,phone,JSON.stringify(customAnswers),JSON.stringify(fieldLabels)]);
     if(result.rows[0]){
      const matchingProfile=(await identityLock.query(

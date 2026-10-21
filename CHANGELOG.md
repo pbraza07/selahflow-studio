@@ -1,3 +1,8 @@
+## 1.3.117
+
+- Issue eight-character initials/MMDDYY IDs for new registrations and released-ID reuse.
+- Require identity inputs, reject active collisions and support eight-character IDs across booking, membership, owner tools and payment lookup. Preserve existing identifiers, financial history and consent evidence.
+
 # v1.3.116 — Optional membership identity fields (candidate)
 
 Respect Required on public enrollment and owner assignment. Incomplete identities use separate registration references, receive six-character IDs, and remain distinct across retries and deletions. No fabricated name, birth date or email. Waiver and birth-date lookup still require sufficient participant identity. Production waiver use requires legal review.

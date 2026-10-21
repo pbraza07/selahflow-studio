@@ -27,7 +27,7 @@ test('immediate membership registration requires no owner action, adds no credit
   const options={businessId:'b1',ownerId:'u1',planId:'p1',requestId:body.requestId,details};
   const direct=await registerMembershipWithoutApproval(pool,options);
   assert.equal(direct.registered,true);assert.equal(direct.paymentPending,true);
-  assert.equal(direct.memberNumber,'CO0403');
+  assert.equal(direct.memberNumber,'CO040300');
   assert.equal((await pg.query("SELECT status FROM membership_requests WHERE id=$1",[body.requestId])).rows[0].status,'approved','registration never appears in owner approval queue');
   const member=(await pg.query('SELECT * FROM customer_memberships WHERE id=$1',[direct.membershipId])).rows[0];
   assert.equal(member.status,'pending_payment');assert.equal(member.sessions_included,0);assert.equal(member.sessions_used,0);

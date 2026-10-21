@@ -28,18 +28,18 @@ async function fixture(){
  for(const owner of ['owner-a','owner-b']){
  await pg.query('INSERT INTO users(id,email,password_hash) VALUES($1,$2,$3)',[owner,owner+'@example.test','hash']);
  await pg.query("INSERT INTO businesses(id,owner_id,slug,name,status) VALUES($1,$1,$1,'Example','active')",[owner]);
- await pg.query("INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,date_of_birth,member_number) VALUES($1,'Jane','Doe','jane@example.test','1990-01-01','JD0101')",[owner]);
+ await pg.query("INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,date_of_birth,member_number) VALUES($1,'Jane','Doe','jane@example.test','1990-01-01','JD010190')",[owner]);
  }return pg;
 }
 test('signed waivers persist exact wording, are once per verified business identity, and cannot cross businesses',async()=>{
  const pg=await fixture();try{
- const args={businessId:'owner-a',memberNumber:'JD0101',config,services,input:signature(),audit:{ip:'192.0.2.1',userAgent:'test-browser'}};
+ const args={businessId:'owner-a',memberNumber:'JD010190',config,services,input:signature(),audit:{ip:'192.0.2.1',userAgent:'test-browser'}};
  await assert.rejects(()=>ensureParticipationWaiver(pg,{...args,input:null}),/sign/);
  await assert.rejects(()=>ensureParticipationWaiver(pg,{...args,input:signature({documentHash:'forged'})}),/changed/);
  const id=await ensureParticipationWaiver(pg,args);assert.ok(id);
  assert.equal(await ensureParticipationWaiver(pg,{...args,input:null}),id,'Existing signature requires no resubmission');
- await assertBookingWaiver(pg,{owner:'owner-a',config,serviceIds:['training'],memberNumber:'JD0101'});
- await assert.rejects(()=>assertBookingWaiver(pg,{owner:'owner-b',config,serviceIds:['training'],memberNumber:'JD0101'}),/required/);
+ await assertBookingWaiver(pg,{owner:'owner-a',config,serviceIds:['training'],memberNumber:'JD010190'});
+ await assert.rejects(()=>assertBookingWaiver(pg,{owner:'owner-b',config,serviceIds:['training'],memberNumber:'JD010190'}),/required/);
  await assert.rejects(()=>assertBookingWaiver(pg,{owner:'owner-a',config,serviceIds:['training'],memberNumber:'XX0101'}),/required/);
  assert.equal(await ensureParticipationWaiver(pg,{...args,services:[{}],input:null}),null);
  const row=(await pg.query('SELECT * FROM participation_waivers WHERE id=$1',[id])).rows[0];
@@ -47,7 +47,7 @@ test('signed waivers persist exact wording, are once per verified business ident
  assert.equal(row.document.businessName,'Arcila Training');assert.equal(row.document_hash.length,64);assert.equal(row.signer_name,'Jane Doe');
  assert.equal(await ensureParticipationWaiver(pg,{...args,config:{...config,name:'Renamed'},input:null}),id,'Later business name/theme changes do not require repeat signing');
  await pg.query("UPDATE participation_waivers SET document_version='prior-version' WHERE id=$1",[id]);
- await assert.rejects(()=>assertBookingWaiver(pg,{owner:'owner-a',config,serviceIds:['training'],memberNumber:'JD0101'}),/required/);
+ await assert.rejects(()=>assertBookingWaiver(pg,{owner:'owner-a',config,serviceIds:['training'],memberNumber:'JD010190'}),/required/);
  await assert.rejects(()=>ensureParticipationWaiver(pg,{...args,input:null}),/sign/);
  const next=await ensureParticipationWaiver(pg,args);assert.notEqual(next,id);
  await pg.query('DELETE FROM participation_waivers WHERE id=$1',[next]);
@@ -65,31 +65,47 @@ test('production requires explicit current-version legal review; staging remains
  assert.doesNotThrow(()=>assertWaiverLegalReview({waiverLegalReview:{version:'participation-1',reference:'review',reviewedAt:'2026-10-01'}},'participation-1',{NODE_ENV:'production'}));
 });
 
-test('deleted client can reclaim the same six-character ID without restoring records or inheriting detached consent',async()=>{
+test('deleted client can reclaim the same eight-character ID without restoring records or inheriting detached consent',async()=>{
  const pg=await fixture();try{
   const db={query:async(sql,args)=>{const result=await pg.query(sql,args);return {...result,rowCount:result.rows.length||result.affectedRows||0};}};
-  await pg.query("INSERT INTO business_client_profiles(id,owner,name,email,member_number,date_of_birth) VALUES('profile-a','owner-a','Jane Doe','jane@example.test','JD0101','1990-01-01')");
+  await pg.query("INSERT INTO business_client_profiles(id,owner,name,email,member_number,date_of_birth) VALUES('profile-a','owner-a','Jane Doe','jane@example.test','JD010190','1990-01-01')");
   const previous=(await pg.query("SELECT * FROM customer_booking_ids WHERE business_id='owner-a'")).rows[0];
-  const args={businessId:'owner-a',memberNumber:'JD0101',config,services,input:signature()};
+  const args={businessId:'owner-a',memberNumber:'JD010190',config,services,input:signature()};
   const signedId=await ensureParticipationWaiver(db,args);
   const nextService={...config,services:[{id:'soccer',requiresWaiver:true}]};
   assert.equal(await ensureParticipationWaiver(db,{...args,config:nextService,services:nextService.services,input:null}),signedId);
-  await assertBookingWaiver(db,{owner:'owner-a',config:nextService,serviceIds:['soccer'],memberNumber:'JD0101'});
+  await assertBookingWaiver(db,{owner:'owner-a',config:nextService,serviceIds:['soccer'],memberNumber:'JD010190'});
   await pg.query('BEGIN');
-  await deleteClientPermanently(db,{owner:'owner-a',businessId:'owner-a',client:{id:'profile-a',name:'Jane Doe',email:'jane@example.test',dateOfBirth:'1990-01-01',memberNumber:'JD0101'}});
+  await deleteClientPermanently(db,{owner:'owner-a',businessId:'owner-a',client:{id:'profile-a',name:'Jane Doe',email:'jane@example.test',dateOfBirth:'1990-01-01',memberNumber:'JD010190'}});
   await pg.query('COMMIT');
   const retained=(await pg.query('SELECT w.* FROM participation_waivers w JOIN businesses b ON b.id=w.business_id WHERE w.id=$1 AND b.owner_id=$2',[signedId,'owner-a'])).rows[0];
   assert.equal(retained.customer_id,null);assert.equal(retained.signer_name,'Jane Doe');assert.equal(retained.document.businessName,'Arcila Training');
   assert.equal((await pg.query('SELECT w.id FROM participation_waivers w JOIN businesses b ON b.id=w.business_id WHERE w.id=$1 AND b.owner_id=$2',[signedId,'owner-b'])).rows.length,0);
-  await assert.rejects(pg.query('INSERT INTO customer_booking_ids(id,business_id,first_name,last_name,email,date_of_birth,member_number) VALUES($1,$2,$3,$4,$5,$6,$7)',[previous.id,'owner-a','Jane','Doe','jane@example.test','1990-01-01','JD0101']),/cannot be restored/);
+  await assert.rejects(pg.query('INSERT INTO customer_booking_ids(id,business_id,first_name,last_name,email,date_of_birth,member_number) VALUES($1,$2,$3,$4,$5,$6,$7)',[previous.id,'owner-a','Jane','Doe','jane@example.test','1990-01-01','JD010190']),/cannot be restored/);
   await pg.query('BEGIN');
-  assert.equal(await issueMemberId(db,{businessId:'owner-a',name:'Jane Doe',dateOfBirth:'1990-01-01'}),'JD0101');
-  const fresh=(await pg.query("INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,date_of_birth,member_number) VALUES('owner-a','Jane','Doe','jane@example.test','1990-01-01','JD0101') RETURNING id")).rows[0];
+  assert.equal(await issueMemberId(db,{businessId:'owner-a',name:'Jane Doe',dateOfBirth:'1990-01-01'}),'JD010190');
+  const fresh=(await pg.query("INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,date_of_birth,member_number) VALUES('owner-a','Jane','Doe','jane@example.test','1990-01-01','JD010190') RETURNING id")).rows[0];
   await pg.query('COMMIT');assert.notEqual(fresh.id,previous.id);
   await assert.rejects(ensureParticipationWaiver(db,{...args,input:null}),/sign/);
   const freshSigned=await ensureParticipationWaiver(db,args);assert.notEqual(freshSigned,signedId);
   assert.equal(await ensureParticipationWaiver(db,{...args,input:null}),freshSigned);
   assert.equal((await pg.query("SELECT count(*)::int AS n FROM participation_waivers WHERE business_id='owner-a'")).rows[0].n,2);
   assert.equal((await pg.query("SELECT count(*)::int AS n FROM customer_booking_ids WHERE business_id='owner-b'")).rows[0].n,1);
+ }finally{await pg.close();}
+});
+
+test('released eight-character ID can be reassigned to another client without transferring signed consent',async()=>{
+ const pg=await fixture();try{
+  const db={query:async(sql,args)=>{const r=await pg.query(sql,args);return {...r,rowCount:r.rows.length||r.affectedRows||0};}};
+  await pg.query("INSERT INTO business_client_profiles(id,owner,name,email,member_number,date_of_birth) VALUES('profile-a','owner-a','Jane Doe','jane@example.test','JD010190','1990-01-01')");
+  const signedId=await ensureParticipationWaiver(db,{businessId:'owner-a',memberNumber:'JD010190',config,services,input:signature()});
+  await pg.query('BEGIN');
+  await deleteClientPermanently(db,{owner:'owner-a',businessId:'owner-a',client:{id:'profile-a',name:'Jane Doe',email:'jane@example.test',dateOfBirth:'1990-01-01',memberNumber:'JD010190'}});
+  assert.equal(await issueMemberId(db,{businessId:'owner-a',name:'Jack Davis',dateOfBirth:'1990-01-01'}),'JD010190');
+  await pg.query("INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,date_of_birth,member_number) VALUES('owner-a','Jack','Davis','jack@example.test','1990-01-01','JD010190')");
+  await pg.query('COMMIT');
+  await assert.rejects(assertBookingWaiver(db,{owner:'owner-a',config,serviceIds:['training'],memberNumber:'JD010190'}),/required/);
+  const row=(await pg.query('SELECT signer_name,customer_id FROM participation_waivers WHERE id=$1',[signedId])).rows[0];
+  assert.equal(row.signer_name,'Jane Doe');assert.equal(row.customer_id,null);
  }finally{await pg.close();}
 });
