@@ -4,6 +4,7 @@ import {sendNotificationChannel,validEmail} from './notification-delivery.mjs';
 export async function queueMembershipInvitation(db,{businessId,membershipId,origin}){
  const r=(await db.query("SELECT m.*,p.name AS plan_name,p.description,p.sessions_included AS plan_sessions,p.interval_unit,p.interval_count,b.name AS business_name FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id JOIN businesses b ON b.id=m.business_id WHERE m.id=$1 AND m.business_id=$2 AND b.status='active' FOR UPDATE OF m",[membershipId,businessId])).rows[0];
  if(!r||r.stripe_subscription_id||r.status==='active')throw Error('Choose a member awaiting an initial membership payment.');
+ const ready=(await db.query('SELECT 1 FROM merchant_accounts WHERE business_id=$1 AND charges_enabled=true AND onboarding_complete=true',[businessId])).rows.length>0;if(!ready)throw Error('Connect and verify Stripe before sending a membership payment invitation.');
  if(!validEmail(r.customer_email))throw Error('Enter the member’s valid payment email first.');
  const host=new URL(origin);if(host.protocol!=='https:'&&host.hostname!=='localhost')throw Error('A secure application URL is required.');
  const token=randomBytes(32).toString('hex'),url=host.origin+'/membership-pay/'+token;

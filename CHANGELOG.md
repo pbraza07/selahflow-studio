@@ -1,3 +1,12 @@
+## 1.3.122
+
+- Member-specific payment invitation emails and secure Stripe enrollment with recurring authorization.
+- Monthly credit periods anchored to the first paid or owner-overridden date; unused credits do not roll over. Owners can configure future plan recurrence and schedule member recurrence changes in Stripe.
+- Business membership coupons with description, fixed or percentage discounts and checkout previews.
+- Require owner approval before session checkout; payment instructions explain participation conditions.
+- Group booking status timelines and dynamic payment tracking in Clients; show monthly attended services under membership IDs.
+- Optional media permission stored separately with the signed waiver; private session team assignments and public staff-name privacy controls.
+
 ## 1.3.121
 
 - Align booking waiver and appointment-policy checkboxes with equal 20px dimensions and shared text columns, including wrapped text on mobile. Consent requirements and stored signatures remain unchanged.

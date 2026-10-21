@@ -1,3 +1,4 @@
+import {quoteCoupon} from '../../../../server/business-coupons.mjs';
 import {membershipEligibilitySummary} from '../../../../server/membership-eligibility.mjs';
 import {startMembershipCheckout} from '../../../../server/membership-checkout.mjs';
 import {membershipRequestDetails,registerMembershipWithoutApproval} from '../../../../server/membership-requests.mjs';
@@ -31,6 +32,7 @@ export async function POST(req:Request){
   const body=JSON.parse(raw);
   if(!slugOk(body.slug)||!/^[a-f0-9-]{36}$/i.test(body.planId||''))throw Error('Choose a valid membership.');
   if(body.website)throw Error('Enrollment request not accepted.');
+  if(body.action==='quoteCoupon'){const pool=getPool();const p=(await pool.query("SELECT p.business_id,p.price_cents FROM membership_plans p JOIN businesses b ON b.id=p.business_id WHERE b.slug=$1 AND b.status='active' AND p.id=$2 AND p.active=true",[body.slug,body.planId])).rows[0];if(!p)throw Error('Choose an available membership.');return Response.json(await quoteCoupon(pool,p.business_id,body.couponCode,Number(p.price_cents)),{headers:noStore});}
   if(body.action==='checkoutMembership'){
    const pool=getPool(),ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();
    const limit=(await pool.query("INSERT INTO public_limits(key,count,window_start) VALUES($1,1,now()) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN 1 ELSE public_limits.count+1 END,window_start=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN now() ELSE public_limits.window_start END RETURNING count",['membership-checkout:'+body.slug+':'+tokenHash(ip)])).rows[0];

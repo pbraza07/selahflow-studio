@@ -47,9 +47,9 @@ test('v1.3.9 migration preserves existing confirmed bookings and creates pending
  await assert.rejects(db.query("INSERT INTO booking_requests(id,business_id,owner_id,date,staff_id,start_minute,duration,details,reviewer,status) VALUES('x','business-id','owner','2026-11-01','sam',540,30,'{}','owner','unauthorized')"));
  }finally{await db.close();}
 });
-test('public booking is pending only when catalog approval is required; staff access is limited',async()=>{
+test('public booking always requires owner approval; staff access is limited',async()=>{
  const handler=await read('lib/studio-handler.ts');
- assert.match(handler,/isPublic&&requiresBookingApproval\(services\)/);
+ assert.match(handler,/if\(isPublic\)\{\s+const approval=\{reviewer:'owner'\}/);
  assert.match(handler,/INSERT INTO booking_requests/);
  assert.match(handler,/confirmBooking\(/);
  assert.match(handler,/capacityOpen:serviceCapacityOpen/);

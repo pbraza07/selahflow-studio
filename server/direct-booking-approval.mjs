@@ -4,6 +4,7 @@ import {confirmBooking} from './booking-approvals.mjs';
 const object=x=>typeof x==='string'?JSON.parse(x):x||{};
 /** Read-only: permission comes from the booking's private access token, never its ID alone. */
 export async function pendingDirectBooking(db,{slug,bookingId,token},{allowApproval=false}={}){
+ return null; // Pending requests never expose checkout before owner approval.
  const row=(await db.query("SELECT r.*,b.name AS business_name,s.data AS settings FROM businesses b JOIN booking_requests r ON r.business_id=b.id AND r.owner_id=b.owner_id JOIN customer_booking_access c ON c.owner_id=b.owner_id AND c.booking_id=r.id AND c.token_hash=$3 AND c.expires_at>now() JOIN settings s ON s.owner=b.owner_id WHERE b.slug=$1 AND b.status='active' AND r.id=$2 AND r.status='pending'",[slug,bookingId,tokenHash(token)])).rows[0];
  return directContext(row,allowApproval);
 }

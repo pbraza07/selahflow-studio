@@ -1,3 +1,7 @@
+# v1.3.122 release handoff — candidate, deployment pending
+
+All requested membership billing, monthly reset, coupon, approval, timeline, optional media and private team accountability changes are candidates. See docs/V1_3_122_WORK_IN_PROGRESS.md. Local filesystem and command runtime stalled; validation is being performed by GitHub Actions on draft PR #48. Do not promote until full tests, typecheck, build and isolated staging pass. No real charges, client emails or membership changes were performed for development.
+
 # v1.3.121 release handoff — verified LIVE in staging and production
 
 Verified 2026-10-21: application commit a1929fddc47f1bfb796a90d10314681cb0af8c79. Staging LIVE dep-dbcajr3rjlhs73bcar5g at 12:08:10Z; production LIVE dep-dbcamgu7bikc73frt4c0 at 12:10:07Z. All 293 tests passed locally and on Render staging, with typecheck and builds passed. Both health endpoints report ok / 1.3.121; served booking CSS contains the shared consent grid and fixed equal checkbox dimensions. Database preflights passed for the dedicated staging/production databases, with correct roles and zero unowned tables. No database migration or customer mutations; no error-level startup logs observed. Browser visual acceptance was not manually performed. Main/staging use the application commit; this feature-branch handoff is documentation only.

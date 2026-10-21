@@ -14,3 +14,5 @@ CREATE TABLE membership_payment_invitations(id UUID PRIMARY KEY DEFAULT gen_rand
 CREATE TABLE session_team_assignments(business_id TEXT NOT NULL REFERENCES businesses(id),session_id TEXT NOT NULL,staff_ids JSONB NOT NULL DEFAULT '[]',note TEXT NOT NULL DEFAULT '',updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),PRIMARY KEY(business_id,session_id));
 ALTER TABLE participation_waivers ADD COLUMN media_consent BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE participation_waivers ADD COLUMN media_statement TEXT;
+
+UPDATE settings SET data=jsonb_set(data::jsonb,'{services}',COALESCE((SELECT jsonb_agg(s||'{"requiresApproval":true}'::jsonb) FROM jsonb_array_elements(settings.data::jsonb->'services') s),'[]'::jsonb))::text WHERE jsonb_typeof(data::jsonb->'services')='array';

@@ -33,7 +33,7 @@ function error(err:unknown){
 export async function GET(req:Request){
  try{
   const {pool,business,owner}=await ctx(req);
-  await refreshMembershipPeriods(pool);
+  await refreshMembershipPeriods(pool,business.id);
   const [plans,members,merchant,usageCounts,ledger,groups]=await Promise.all([
    pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",group_id AS "groupId",badge,interval_count AS "intervalCount",credit_eligibility AS "creditEligibility",active FROM membership_plans WHERE business_id=$1 ORDER BY display_order,created_at DESC',[business.id]),
    pool.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.initial_paid_at,m.billing_start_override,m.credit_period_start,m.credit_period_end,m.stripe_subscription_id,m.stripe_interval_unit,m.stripe_interval_count,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
