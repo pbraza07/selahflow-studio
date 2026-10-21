@@ -1,3 +1,7 @@
+# v1.3.116 — Optional membership identity fields (candidate)
+
+Respect Required on public enrollment and owner assignment. Incomplete identities use separate registration references, receive six-character IDs, and remain distinct across retries and deletions. No fabricated name, birth date or email. Waiver and birth-date lookup still require sufficient participant identity. Production waiver use requires legal review.
+
 ## 1.3.115 — Issue 46 implementation checkpoint (not deployed)
 
 - Version-specific business participation signatures and audit evidence, retained after client removal; booking and checkout checks and a production legal-review gate.

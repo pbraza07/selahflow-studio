@@ -72,6 +72,7 @@ export async function deleteClientPermanently(db,{owner,businessId,client}){
   // Tombstones track only source record hashes, so stale imports/webhook IDs
   // cannot recreate deleted rows while a genuinely new registration is allowed.
   for(const spec of specs)if(['appointments','events','business_client_profiles','customer_booking_ids','customer_memberships','booking_requests','membership_requests'].includes(spec.table))for(const row of spec.rows)if(row.id)await db.query('INSERT INTO deleted_client_records(business_id,source_table,record_digest) VALUES($1,$2,md5($3)) ON CONFLICT DO NOTHING',[business.id,spec.table,String(row.id)]);
+  if(original.identity_key.startsWith('registration:'))await db.query('INSERT INTO deleted_client_records(business_id,source_table,record_digest) VALUES($1,$2,md5($3)) ON CONFLICT DO NOTHING',[business.id,'registration_identity',original.identity_key.slice('registration:'.length)]);
   for(const s of specs){
    if(s.table==='stripe_payment_receipts'){await db.query(`UPDATE stripe_payment_receipts SET booking_id=NULL,membership_id=NULL WHERE ${s.where}`,s.args);continue;}
    await db.query(`DELETE FROM ${s.table} WHERE ${s.where}`,s.args);

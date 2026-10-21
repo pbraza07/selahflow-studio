@@ -18,9 +18,9 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
   const config=typeof business.data==='string'?JSON.parse(business.data):business.data||{};
   const details=membershipRequestDetails(config,body);
   const name=details.name,email=details.email.toLowerCase(),dob=details.dateOfBirth;
-  const fingerprint=createHash('sha256').update(JSON.stringify({plan:plan.id,name:name.toLowerCase().replace(/\s+/g,' '),email,dob})).digest('hex');
+  const fingerprint=createHash('sha256').update(JSON.stringify({plan:plan.id,name:name.toLowerCase().replace(/\s+/g,' '),email,dob,...(details.registrationIdentity?{registrationIdentity:details.registrationIdentity}:{})})).digest('hex');
   // Serialize enrollment for the same identity, including retries with a fresh browser request ID.
-  const number=await issueMemberId(db,{businessId:business.id,name,dateOfBirth:dob,requested:body.memberNumber});
+  const number=await issueMemberId(db,{businessId:business.id,name,dateOfBirth:dob,requested:body.memberNumber,registrationIdentity:details.registrationIdentity||null});
   let member=(await db.query('SELECT * FROM customer_memberships WHERE business_id=$1 AND member_number=$2 FOR UPDATE',[business.id,number])).rows[0];
   // A pending offline registration may transition into Stripe without approval.
   // Only the matching member identity, selected plan and unchanged price qualify.
@@ -30,7 +30,7 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
   if(member&&(Number(member.price_cents)!==Number(plan.price_cents)||!unpaidRegistration&&(member.stripe_interval_unit!==plan.interval_unit||Number(member.stripe_sessions_per_period)!==Number(plan.sessions_included))))
    throw Error('This package changed after registration. Contact the business before paying.');
   if(unpaidRegistration&&(member.plan_id!==plan.id||String(member.customer_name).trim().toLowerCase()!==name.trim().toLowerCase()||
-    String(member.customer_email).trim().toLowerCase()!==email||new Date(member.date_of_birth).toISOString().slice(0,10)!==dob))
+    String(member.customer_email).trim().toLowerCase()!==email||(member.date_of_birth?new Date(member.date_of_birth).toISOString().slice(0,10):null)!==dob))
    throw Error('Registration identity or package does not match. Contact the business.');
   const account=await readyMerchant(db,business.id,api);
   if(member&&!unpaidRegistration&&member.stripe_account_id!==account)throw Error('The payment account changed. Contact the business.');
@@ -40,13 +40,13 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
   }
   if(!member){
    const labels=details.fieldLabels||{};
-   member=(await db.query("INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,status,stripe_account_id,price_cents,date_of_birth,customer_phone,registration_answers,registration_field_labels,member_number,stripe_sessions_per_period,stripe_signup_fingerprint,stripe_interval_unit) VALUES($1,$2,$3,$4,$5,'pending_payment',$6,$7,$8::date,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15) RETURNING *",[body.requestId,business.id,plan.id,name,email,account,plan.price_cents,dob,details.phone,JSON.stringify(details.customAnswers||{}),JSON.stringify(labels),number,plan.sessions_included,fingerprint,plan.interval_unit])).rows[0];
+   member=(await db.query("INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,status,stripe_account_id,price_cents,date_of_birth,customer_phone,registration_answers,registration_field_labels,member_number,stripe_sessions_per_period,stripe_signup_fingerprint,stripe_interval_unit,registration_identity) VALUES($1,$2,$3,$4,$5,'pending_payment',$6,$7,$8::date,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16::uuid) RETURNING *",[body.requestId,business.id,plan.id,name,email,account,plan.price_cents,dob,details.phone,JSON.stringify(details.customAnswers||{}),JSON.stringify(labels),number,plan.sessions_included,fingerprint,plan.interval_unit,details.registrationIdentity||null])).rows[0];
   }
   // Direct Stripe signups get the same Unique ID and directory record as
   // first-time booking and unpaid membership registration, before checkout.
   await ensureMemberBookingIdentity(db,{businessId:business.id,ownerId:business.owner_id,
    firstName:details.firstName,lastName:details.lastName,email,dateOfBirth:dob,
-   phone:details.phone,memberNumber:number,customAnswers:details.customAnswers,
+   phone:details.phone,registrationIdentity:details.registrationIdentity||null,memberNumber:number,customAnswers:details.customAnswers,
    source:'Membership signup · secure checkout'});
   if(member?.stripe_checkout_session_id){
    const previous=await api('checkout/sessions/'+member.stripe_checkout_session_id,{method:'GET',account});assertTestPayment(previous);
@@ -58,7 +58,7 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
    'line_items[0][price_data][currency]':'usd','line_items[0][price_data][unit_amount]':String(member.price_cents),
    'line_items[0][price_data][recurring][interval]':member.stripe_interval_unit,
    'line_items[0][price_data][product_data][name]':business.name+' · '+plan.name,
-   customer_email:email,client_reference_id:member.id,
+   ...(email?{customer_email:email}:{}),client_reference_id:member.id,
    'metadata[membership_id]':member.id,'metadata[selahflow_business_id]':business.id,
    'subscription_data[metadata][membership_id]':member.id,'subscription_data[metadata][selahflow_business_id]':business.id,
    'payment_method_collection':'always',success_url:origin+'/membership/'+business.slug+'?checkout=success&session_id={CHECKOUT_SESSION_ID}',
