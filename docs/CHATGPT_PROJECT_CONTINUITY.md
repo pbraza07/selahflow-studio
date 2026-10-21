@@ -1,4 +1,6 @@
-# v1.3.119 release handoff — candidate, deployment pending
+# v1.3.119 release handoff — verified LIVE in both environments
+
+Verified 2026-10-21: application commit 1efdaa394eba98056a35b52a574bba755ffa6a04. Staging LIVE dep-dbc3mmrbc2fs73b68u9g at 04:16:01Z; production LIVE dep-dbc3p9uq1p3s73bin370 at 04:18:09Z. All 290 tests passed locally and on Render staging, with typecheck and builds successful. Migration 051 applied in both dedicated databases; preflights confirmed correct roles, schema CREATE and zero unowned tables. Both public health endpoints report ok / 1.3.119, the white registration/payment CSS is served, and private waiver GET returns 401 without authentication. No error-level startup logs observed. Browser visual acceptance was blocked by credential protection; no real customer/waiver deletion was performed. Application branches main/staging remain on the verified application commit; this feature-branch handoff is documentation only.
 
 Owner waiver removal is authenticated, same-origin, business-scoped and repeat-safe. Migration 051 retains original evidence, marks removal and permits a new signature. Active consent checks exclude removed waivers; retained documents are viewable by the owner in Deleted waivers. White text fixes the dark registration lookup/payment panel without whitening light-card results or inputs. No real client or waiver deletion performed during validation.
 
