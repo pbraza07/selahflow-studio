@@ -86,3 +86,12 @@
 .sf-booking-waiver input:not([type=checkbox]),.sf-booking-waiver select{min-height:46px;width:100%}
 .sf-booking-waiver .consent input{flex-shrink:0;min-width:20px;min-height:20px}
 @media(max-width:500px){.sf-booking-waiver .form-grid{grid-template-columns:minmax(0,1fr)}.sf-booking-waiver input,.sf-booking-waiver select{font-size:16px}}
+
+/* Registration lookup is a dark panel; keep light result cards and inputs independent. */
+#registration-status.card{background:#000!important;color:#fff!important}
+#registration-status.card>.sf-registration-summary,
+#registration-status.card>.sf-registration-summary span,
+#registration-status.card>p,
+#registration-status.card>form>label,
+#registration-status.card .sf-registration-payment :is(p,strong,label,small){color:#fff!important;-webkit-text-fill-color:#fff!important;opacity:1!important}
+#registration-status.card input{background:#fff!important;color:#17251d!important;-webkit-text-fill-color:#17251d!important}

@@ -64,12 +64,12 @@ if(b.action==='waiver_status'){
  if(!first||!last||first.length>100||last.length>100||!/^\d{4}-\d{2}-\d{2}$/.test(dob)||Number.isNaN(Date.parse(dob)))return reply({signed:false});
  const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();
  if(!await takeLimit('waiver-lookup:'+owner+':'+tokenHash(ip),30))return reply({error:'Too many waiver checks. Please try again later.'},429);
- const signed=await getPool().query("SELECT w.id FROM participation_waivers w JOIN businesses biz ON biz.id=w.business_id JOIN customer_booking_ids c ON c.id=w.customer_id AND c.business_id=biz.id WHERE biz.owner_id=$1 AND lower(c.first_name)=lower($2) AND lower(c.last_name)=lower($3) AND c.date_of_birth=$4::date AND ($5='' OR c.member_number=$5) AND w.document_version=$6 LIMIT 1",[owner,first,last,dob,number,publicWaiverDocument(config).version]);
+ const signed=await getPool().query("SELECT w.id FROM participation_waivers w JOIN businesses biz ON biz.id=w.business_id JOIN customer_booking_ids c ON c.id=w.customer_id AND c.business_id=biz.id WHERE biz.owner_id=$1 AND lower(c.first_name)=lower($2) AND lower(c.last_name)=lower($3) AND c.date_of_birth=$4::date AND ($5='' OR c.member_number=$5) AND w.document_version=$6 AND w.deleted_at IS NULL LIMIT 1",[owner,first,last,dob,number,publicWaiverDocument(config).version]);
  return reply({signed:!!signed.rows[0]});
 }
 if(b.action==='waiver_records'){
  if(isPublic)return reply({error:'Not permitted.'},403);
- const records=await getPool().query('SELECT w.* FROM participation_waivers w JOIN businesses biz ON biz.id=w.business_id WHERE biz.owner_id=$1 ORDER BY w.signed_at DESC LIMIT 2000',[owner]);
+ const records=await getPool().query('SELECT w.* FROM participation_waivers w JOIN businesses biz ON biz.id=w.business_id WHERE biz.owner_id=$1 AND (w.deleted_at IS NOT NULL)=$2 ORDER BY w.signed_at DESC LIMIT 2000',[owner,b.deleted===true]);
  return reply({waivers:records.rows});
 }
 if(b.action==='settings'){const c=b.config;

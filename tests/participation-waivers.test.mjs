@@ -109,3 +109,36 @@ test('released eight-character ID can be reassigned to another client without tr
   assert.equal(row.signer_name,'Jane Doe');assert.equal(row.customer_id,null);
  }finally{await pg.close();}
 });
+
+test('owner waiver deletion is private, repeat-safe, retains evidence and requires fresh consent',async()=>{
+ const pg=await fixture();try{
+ const {createRequire}=await import('node:module'),{default:ts}=await import('typescript');
+ const url=new URL('../app/api/studio/waivers/[id]/route.ts',import.meta.url),nativeRequire=createRequire(url),exports={};
+ const compiled=ts.transpileModule(await readFile(url,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
+ const db={query:(s,p)=>pg.query(s,p),release(){}},pool={...db,connect:async()=>db};
+ new Function('require','exports',compiled)(path=>path.endsWith('/server/database.mjs')?{getPool:()=>pool}:path.endsWith('/lib/auth')?{requireOwner:async req=>{const owner=req.headers.get('x-test-owner');if(!owner)throw Error('AUTH_REQUIRED');return owner;}}:nativeRequire(path),exports);
+ const args={businessId:'owner-a',memberNumber:'JD010190',config,services,input:signature()},id=await ensureParticipationWaiver(pg,args);
+ const original=(await pg.query('SELECT * FROM participation_waivers WHERE id=$1',[id])).rows[0];
+ const origin=process.env.APP_URL||process.env.RENDER_EXTERNAL_URL||'https://example.test';
+ const remove=(owner='owner-a',phrase='DELETE WAIVER',valid=true)=>exports.DELETE(new Request(new URL('/api/studio/waivers/'+id,origin),{method:'DELETE',headers:{'Content-Type':'application/json',...(owner?{'x-test-owner':owner}:{}),Origin:valid?new URL(origin).origin:'https://untrusted.invalid'},body:JSON.stringify({confirmPhrase:phrase})}),{params:Promise.resolve({id})});
+ assert.equal((await remove('')).status,401);
+ assert.equal((await remove('owner-b')).status,404);
+ assert.equal((await remove('owner-a','')).status,400);
+ assert.equal((await remove('owner-a','DELETE WAIVER',false)).status,403);
+ assert.equal(await ensureParticipationWaiver(pg,{...args,input:null}),id);
+ assert.equal((await remove()).status,200);
+ assert.equal((await remove()).status,200);
+ const retained=(await pg.query('SELECT * FROM participation_waivers WHERE id=$1',[id])).rows[0];
+ assert.ok(retained.deleted_at);assert.equal(retained.deleted_by,'owner-a');
+ for(const field of ['document','document_hash','signer_name','signed_at','audit_id','retention_status'])assert.deepEqual(retained[field],original[field]);
+ await assert.rejects(assertBookingWaiver(pg,{owner:'owner-a',config,serviceIds:['training'],memberNumber:'JD010190'}),/required/);
+ await assert.rejects(ensureParticipationWaiver(pg,{...args,input:null}),/sign/);
+ const next=await ensureParticipationWaiver(pg,args);assert.notEqual(next,id);
+ await assertBookingWaiver(pg,{owner:'owner-a',config,serviceIds:['training'],memberNumber:'JD010190'});
+ assert.equal((await remove()).status,200,'old deletion retry does not revoke the new signature');
+ assert.equal(await ensureParticipationWaiver(pg,{...args,input:null}),next);
+ const get=owner=>exports.GET(new Request(new URL('/api/studio/waivers/'+id,origin),{headers:{'x-test-owner':owner}}),{params:Promise.resolve({id})});
+ assert.equal((await get('owner-a')).status,200);assert.equal((await get('owner-b')).status,404);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM participation_waivers WHERE deleted_at IS NULL')).rows[0].n,1);
+ }finally{await pg.close();}
+});

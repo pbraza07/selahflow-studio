@@ -1,6 +1,12 @@
-# v1.3.118 release handoff — candidate, deployment pending
+# v1.3.119 release handoff — candidate, deployment pending
 
-Owner-confirmed deletion uses authenticated business-scoped selection and an atomic transaction, without requiring a separate operator-maintenance authorization row. Operator scripts still require verified backup/restore authorization. Repeat deletion of a missing exact client succeeds only when its business-scoped deletion audit exists. Active subscriptions, open Stripe checkout and in-flight delivery still block deletion with actionable errors. Required financial and signed-waiver evidence remains retained; IDs release immediately and stale-record replay stays blocked. No real customer deletion was performed for testing. Verify staging then production LIVE before declaring completion.
+Owner waiver removal is authenticated, same-origin, business-scoped and repeat-safe. Migration 051 retains original evidence, marks removal and permits a new signature. Active consent checks exclude removed waivers; retained documents are viewable by the owner in Deleted waivers. White text fixes the dark registration lookup/payment panel without whitening light-card results or inputs. No real client or waiver deletion performed during validation.
+
+# v1.3.118 release handoff — verified LIVE in both environments
+
+Verified commit b249bc79f489bc41e4af4e614b287a0b63ff623a. Staging dep-dbc3ge6q1p3s73c5qeag; production dep-dbc3j2ek1f9s73bnkdu0. All 289 tests passed locally and on staging, typecheck/build passed. Health 1.3.118 and private API unauthenticated GET 401 verified both. Separate database preflights passed. No live customer deletion tests.
+
+Owner-confirmed deletion uses authenticated business-scoped selection and an atomic transaction, without requiring a separate operator-maintenance authorization row. Operator scripts still require verified backup/restore authorization. Repeat deletion of a missing exact client succeeds only when its business-scoped deletion audit exists. Active subscriptions, open Stripe checkout and in-flight delivery still block deletion with actionable errors. Required financial and signed-waiver evidence remains retained; IDs release immediately and stale-record replay stays blocked. No real customer deletion was performed for testing. Both deployments verified LIVE.
 
 # v1.3.117 release handoff — verified LIVE in both environments
 

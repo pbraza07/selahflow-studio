@@ -1,3 +1,8 @@
+## 1.3.119
+
+- White registration lookup and payment text on the black panel, with readable inputs and result cards.
+- Owners can delete active waivers from Service catalog; signed evidence stays retrievable in Deleted waivers, and fresh consent is required for future waiver-required bookings. Owner/origin checks and repeat-safe deletion are enforced server-side.
+
 ## 1.3.118
 
 - Confirmed owner client deletion no longer requires an operator-only maintenance authorization. Retain transactional deletion, owner scope, financial/waiver evidence and active-provider guards.

@@ -1,3 +1,5 @@
+**Release source: v1.3.119 — deployment pending verification.** White registration-status text and owner-managed waiver removal with retained evidence. New client IDs use initials + MMDDYY; existing IDs remain valid. See continuity for verified deployments; older release notes below are historical.
+
 **Release source: v1.3.118 - Participation waivers.** Optional service waivers with business-only branding, electronic signatures, guardian consent, once-per-client identity storage, and private owner viewing/printing. Verify deployments independently.
 
 **Release source: v1.3.118 — candidate, not yet verified LIVE.** Membership registration and secure checkout now create the same business-unique six-character Unique ID, booking identity and client-directory profile as a first-time booking; returning customers retain their IDs. Memberships remain payment-pending with zero sessions until paid. Owners can add, edit, require and scope custom questions by existing or new service, including mixed-service bookings and recurring sessions. Both environments use the same code but separate databases and provider configurations.

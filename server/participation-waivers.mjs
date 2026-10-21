@@ -10,7 +10,7 @@ export async function ensureParticipationWaiver(db,{businessId,memberNumber,conf
  if(!identity)throw Error('Verify your client identity before signing the waiver.');
  const document=waiverDocument(config,primary,background);
  assertWaiverLegalReview(config,document.version);
- const prior=(await db.query('SELECT id FROM participation_waivers WHERE business_id=$1 AND customer_id=$2 AND document_version=$3',[businessId,identity.id,document.version])).rows[0];
+ const prior=(await db.query('SELECT id FROM participation_waivers WHERE business_id=$1 AND customer_id=$2 AND document_version=$3 AND deleted_at IS NULL',[businessId,identity.id,document.version])).rows[0];
  if(prior)return prior.id;
  const participantName=[identity.first_name,identity.last_name].join(' ');
  const signed=validateWaiverSignature(input,{dateOfBirth:identity.dob,participantName,version:document.version});
@@ -26,7 +26,7 @@ export async function assertBookingWaiver(db,{owner,config,serviceIds,memberNumb
  if(!requiresWaiver(current))return;
  const version=waiverDocument(config).version;
  assertWaiverLegalReview(config,version);
- const signed=(await db.query('SELECT w.id FROM participation_waivers w JOIN businesses b ON b.id=w.business_id JOIN customer_booking_ids c ON c.id=w.customer_id AND c.business_id=b.id WHERE b.owner_id=$1 AND c.member_number=$2 AND w.document_version=$3',[owner,memberNumber,version])).rows[0];
+ const signed=(await db.query('SELECT w.id FROM participation_waivers w JOIN businesses b ON b.id=w.business_id JOIN customer_booking_ids c ON c.id=w.customer_id AND c.business_id=b.id WHERE b.owner_id=$1 AND c.member_number=$2 AND w.document_version=$3 AND w.deleted_at IS NULL',[owner,memberNumber,version])).rows[0];
  if(!signed)throw Error('A signed participation waiver is required. Refresh and complete the waiver before booking.');
 }
 
