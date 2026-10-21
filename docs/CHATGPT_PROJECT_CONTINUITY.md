@@ -1,6 +1,8 @@
-# v1.3.121 release handoff — candidate, deployment pending
+# v1.3.121 release handoff — verified LIVE in staging and production
 
-Booking waiver and appointment-policy checkboxes share fixed 20px dimensions, zero native margins/padding and a common two-column label grid. Text wraps in the same column on mobile. CSS-only behavior change; consent validation, waiver storage, membership rules and customer records are unchanged. No database migration. Verify staging and production before declaring LIVE.
+Verified 2026-10-21: application commit a1929fddc47f1bfb796a90d10314681cb0af8c79. Staging LIVE dep-dbcajr3rjlhs73bcar5g at 12:08:10Z; production LIVE dep-dbcamgu7bikc73frt4c0 at 12:10:07Z. All 293 tests passed locally and on Render staging, with typecheck and builds passed. Both health endpoints report ok / 1.3.121; served booking CSS contains the shared consent grid and fixed equal checkbox dimensions. Database preflights passed for the dedicated staging/production databases, with correct roles and zero unowned tables. No database migration or customer mutations; no error-level startup logs observed. Browser visual acceptance was not manually performed. Main/staging use the application commit; this feature-branch handoff is documentation only.
+
+Booking waiver and appointment-policy checkboxes share fixed 20px dimensions, zero native margins/padding and a common two-column label grid. Text wraps in the same column on mobile. CSS-only behavior change; consent validation, waiver storage, membership rules and customer records are unchanged. No database migration. Both deployments are verified LIVE.
 
 # v1.3.120 release handoff — verified LIVE in staging and production
 

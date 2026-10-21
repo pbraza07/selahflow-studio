@@ -1,4 +1,4 @@
-**Release source: v1.3.121 — verification pending.** Matching checkbox sizes and alignment for booking waiver and appointment-policy consent.
+**Release source: v1.3.121 — verified LIVE in staging and production.** Matching checkbox sizes and alignment for booking waiver and appointment-policy consent.
 
 **Release source: v1.3.120 — verified LIVE in staging and production.** Owners can restrict each membership plan’s credits to selected services and session series.
 
