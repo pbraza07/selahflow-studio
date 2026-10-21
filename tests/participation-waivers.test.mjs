@@ -4,6 +4,8 @@ import {readFile,readdir} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
 import {waiverDocument,waiverMinor,waiverToday,validateWaiverSignature,requiresWaiver} from '../server/waiver-content.mjs';
 import {ensureParticipationWaiver,assertBookingWaiver,publicWaiverDocument,assertWaiverLegalReview} from '../server/participation-waivers.mjs';
+import {deleteClientPermanently} from '../server/delete-client.mjs';
+import {issueMemberId} from '../server/member-id-policy.mjs';
 const config={name:'Arcila Training',services:[{id:'training',requiresWaiver:true}]},services=config.services;
 const signature=(options={})=>({signature:'Jane Doe',role:'self',date:waiverToday(),accepted:true,version:'participation-1',documentHash:publicWaiverDocument(config).hash,...options});
 test('waiver branding uses only the business identity and readable palette',()=>{
@@ -61,4 +63,33 @@ test('production requires explicit current-version legal review; staging remains
  assert.throws(()=>assertWaiverLegalReview({waiverLegalReview:{version:'old',reference:'review',reviewedAt:'2026-10-01'}},'participation-1',{NODE_ENV:'production'}),/legal review/);
  assert.doesNotThrow(()=>assertWaiverLegalReview({},'participation-1',{NODE_ENV:'production',APP_ENV:'staging'}));
  assert.doesNotThrow(()=>assertWaiverLegalReview({waiverLegalReview:{version:'participation-1',reference:'review',reviewedAt:'2026-10-01'}},'participation-1',{NODE_ENV:'production'}));
+});
+
+test('deleted client can reclaim the same six-character ID without restoring records or inheriting detached consent',async()=>{
+ const pg=await fixture();try{
+  const db={query:async(sql,args)=>{const result=await pg.query(sql,args);return {...result,rowCount:result.rows.length||result.affectedRows||0};}};
+  await pg.query("INSERT INTO business_client_profiles(id,owner,name,email,member_number,date_of_birth) VALUES('profile-a','owner-a','Jane Doe','jane@example.test','JD0101','1990-01-01')");
+  const previous=(await pg.query("SELECT * FROM customer_booking_ids WHERE business_id='owner-a'")).rows[0];
+  const args={businessId:'owner-a',memberNumber:'JD0101',config,services,input:signature()};
+  const signedId=await ensureParticipationWaiver(db,args);
+  const nextService={...config,services:[{id:'soccer',requiresWaiver:true}]};
+  assert.equal(await ensureParticipationWaiver(db,{...args,config:nextService,services:nextService.services,input:null}),signedId);
+  await assertBookingWaiver(db,{owner:'owner-a',config:nextService,serviceIds:['soccer'],memberNumber:'JD0101'});
+  await pg.query('BEGIN');
+  await deleteClientPermanently(db,{owner:'owner-a',businessId:'owner-a',client:{id:'profile-a',name:'Jane Doe',email:'jane@example.test',dateOfBirth:'1990-01-01',memberNumber:'JD0101'}});
+  await pg.query('COMMIT');
+  const retained=(await pg.query('SELECT w.* FROM participation_waivers w JOIN businesses b ON b.id=w.business_id WHERE w.id=$1 AND b.owner_id=$2',[signedId,'owner-a'])).rows[0];
+  assert.equal(retained.customer_id,null);assert.equal(retained.signer_name,'Jane Doe');assert.equal(retained.document.businessName,'Arcila Training');
+  assert.equal((await pg.query('SELECT w.id FROM participation_waivers w JOIN businesses b ON b.id=w.business_id WHERE w.id=$1 AND b.owner_id=$2',[signedId,'owner-b'])).rows.length,0);
+  await assert.rejects(pg.query('INSERT INTO customer_booking_ids(id,business_id,first_name,last_name,email,date_of_birth,member_number) VALUES($1,$2,$3,$4,$5,$6,$7)',[previous.id,'owner-a','Jane','Doe','jane@example.test','1990-01-01','JD0101']),/cannot be restored/);
+  await pg.query('BEGIN');
+  assert.equal(await issueMemberId(db,{businessId:'owner-a',name:'Jane Doe',dateOfBirth:'1990-01-01'}),'JD0101');
+  const fresh=(await pg.query("INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,date_of_birth,member_number) VALUES('owner-a','Jane','Doe','jane@example.test','1990-01-01','JD0101') RETURNING id")).rows[0];
+  await pg.query('COMMIT');assert.notEqual(fresh.id,previous.id);
+  await assert.rejects(ensureParticipationWaiver(db,{...args,input:null}),/sign/);
+  const freshSigned=await ensureParticipationWaiver(db,args);assert.notEqual(freshSigned,signedId);
+  assert.equal(await ensureParticipationWaiver(db,{...args,input:null}),freshSigned);
+  assert.equal((await pg.query("SELECT count(*)::int AS n FROM participation_waivers WHERE business_id='owner-a'")).rows[0].n,2);
+  assert.equal((await pg.query("SELECT count(*)::int AS n FROM customer_booking_ids WHERE business_id='owner-b'")).rows[0].n,1);
+ }finally{await pg.close();}
 });
