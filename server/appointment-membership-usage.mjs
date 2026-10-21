@@ -1,3 +1,4 @@
+import {membershipAllows} from './membership-eligibility.mjs';
 import {selectedSession,bookedSessionCount,overlaps,appointmentData as storedAppointmentData} from './session-scheduling.mjs';
 import {loadOwnerMemberRoster,ownerAppointmentMember} from './owner-appointment-members.mjs';
 
@@ -17,7 +18,7 @@ export async function debitAppointmentMembershipSession(client,{owner,memberNumb
   return {deducted:false,alreadyDeducted:false,memberFound:false,remaining:null};
  }
  const result=await client.query(
-  "SELECT m.id,m.status,m.sessions_included,m.sessions_used,b.id AS business_id FROM customer_memberships m JOIN businesses b ON b.id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2 FOR UPDATE OF m",
+  "SELECT m.id,m.status,m.sessions_included,m.sessions_used,b.id AS business_id,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2 FOR UPDATE OF m",
   [owner,number]
  );
  const member=result.rows[0];
@@ -29,6 +30,12 @@ export async function debitAppointmentMembershipSession(client,{owner,memberNumb
   [member.business_id,member.id,appointmentId]
  );
  if(prior.rowCount)return {deducted:false,alreadyDeducted:true,memberFound:true,active:true,remaining:Math.max(0,remaining)};
+ const visit=(await client.query('SELECT data FROM appointments WHERE owner=$1 AND id=$2',[owner,appointmentId])).rows[0];
+ const details=storedAppointmentData(visit);
+ if(!membershipAllows(member.credit_eligibility,{serviceIds:details.serviceIds||[],sessionId:details.sessionId})){
+  if(details.membershipCovered===true)throw Error('Membership no longer covers this appointment. Review its membership plan eligibility before recording attendance.');
+  return {deducted:false,alreadyDeducted:false,memberFound:true,remaining:null,ineligible:true};
+ }
  if(remaining<=0)return {deducted:false,alreadyDeducted:false,memberFound:true,active:false,exhausted:true,remaining:0};
  const inserted=await client.query(
   "INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta) VALUES($1,$2,$3,$4,'session_used',-1) ON CONFLICT DO NOTHING RETURNING id",

@@ -202,7 +202,7 @@ export function computeDayAvailability({config, date, staff, services, appointme
     const occupied = [...minutes].some(t => t >= start && t < start + duration + buffer);
     if (session) {
       const remaining = sessionRemaining(session,active);
-      sessionAvailability[start] = {remaining,capacity:session.capacity,id:session.id};
+      sessionAvailability[start] = {remaining,capacity:session.capacity,id:session.id,membershipCreditAllowed:session.membershipCreditAllowed!==false};
       if (remaining > 0 && !occupied && !staffCollision) slots.push(start);
     } else {
       if(sessionTimeRestricted(config,staff,services))continue;

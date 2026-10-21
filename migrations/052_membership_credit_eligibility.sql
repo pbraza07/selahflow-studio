@@ -1,0 +1,2 @@
+ALTER TABLE membership_plans ADD COLUMN credit_eligibility JSONB NOT NULL DEFAULT '{"mode":"all","serviceIds":[],"sessionIds":[]}';
+ALTER TABLE membership_plans ADD CONSTRAINT membership_credit_eligibility_shape CHECK (jsonb_typeof(credit_eligibility)='object' AND credit_eligibility->>'mode' IN ('all','selected') AND jsonb_typeof(credit_eligibility->'serviceIds')='array' AND jsonb_typeof(credit_eligibility->'sessionIds')='array');

@@ -1,3 +1,9 @@
+## 1.3.120
+
+- Per-plan membership credit eligibility: all eligible services/sessions or selected services and session series.
+- Enforce scope in booking quotes, confirmation, attendance deductions and manual session recording; display coverage during enrollment.
+- Existing plans default to all eligible services and sessions. Financial records and past deductions are preserved.
+
 ## 1.3.119
 
 - White registration lookup and payment text on the black panel, with readable inputs and result cards.

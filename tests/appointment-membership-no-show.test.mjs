@@ -8,9 +8,11 @@ async function fixture(){
  const db=new PGlite();
  await db.exec(`
   CREATE TABLE businesses(id TEXT PRIMARY KEY,owner_id TEXT NOT NULL);
+  CREATE TABLE membership_plans(id TEXT PRIMARY KEY,business_id TEXT,credit_eligibility JSONB);
+  INSERT INTO membership_plans VALUES('p1','b1',NULL),('p2','b2',NULL);
   CREATE TABLE customer_memberships(
    id TEXT PRIMARY KEY,business_id TEXT NOT NULL REFERENCES businesses(id),
-   member_number TEXT,status TEXT NOT NULL,sessions_included INTEGER NOT NULL DEFAULT 0,
+   plan_id TEXT,member_number TEXT,status TEXT NOT NULL,sessions_included INTEGER NOT NULL DEFAULT 0,
    sessions_used INTEGER NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
   CREATE TABLE appointments(id TEXT PRIMARY KEY,owner TEXT NOT NULL,date TEXT NOT NULL,status TEXT NOT NULL,data TEXT NOT NULL);
@@ -21,6 +23,7 @@ async function fixture(){
  await db.exec(await readFile(new URL('../migrations/024_membership_session_ledger.sql',import.meta.url),'utf8'));
  await db.query("INSERT INTO businesses(id,owner_id) VALUES('b1','owner1'),('b2','owner2')");
  await db.query("INSERT INTO customer_memberships(id,business_id,member_number,status,sessions_included,sessions_used) VALUES('m1','b1','TA0315','active',2,0),('m2','b2','TA0315','active',2,0),('m3','b1','IN0101','pending_payment',2,0)");
+ await db.exec("UPDATE customer_memberships SET plan_id=CASE WHEN business_id='b1' THEN 'p1' ELSE 'p2' END");
  const visits=[
   ['a1','owner1','TA0315'],['a2','owner1','TA0315'],['a3','owner1','TA0315'],
   ['a4','owner1',''],['a5','owner1','IN0101'],['foreign','owner2','TA0315'],
@@ -193,5 +196,20 @@ test('correcting a no-show restores ordinary capacity and rejects a rebooked tim
   await assert.rejects(apply(db,'a2','Checked in'),/rebooked/);
   assert.equal((await db.query("SELECT status FROM appointments WHERE id='a2'")).rows[0].status,'No-show');
   assert.equal(await ledger(db),1);
+ }finally{await db.close();}
+});
+
+test('restricted plans never debit out-of-scope services; covered bookings require review if eligibility changes',async()=>{
+ const db=await fixture();try{
+ await db.query("UPDATE membership_plans SET credit_eligibility=$1 WHERE id='p1'",[JSON.stringify({mode:'selected',serviceIds:['training'],sessionIds:['series']})]);
+ await db.query("UPDATE appointments SET data=$1 WHERE id='a1'",[JSON.stringify({memberNumber:'TA0315',serviceIds:['party'],membershipCreditAllowed:true})]);
+ assert.equal((await apply(db,'a1','Checked in')).membershipDeducted,false);assert.equal(await used(db),0);
+ await db.query("UPDATE appointments SET data=$1 WHERE id='a2'",[JSON.stringify({memberNumber:'TA0315',serviceIds:['training'],membershipCovered:true})]);
+ assert.equal((await apply(db,'a2','No-show')).membershipDeducted,true);assert.equal(await used(db),1);
+ await db.query("UPDATE appointments SET data=$1 WHERE id='a3'",[JSON.stringify({memberNumber:'TA0315',serviceIds:['party'],membershipCovered:true})]);
+ await assert.rejects(apply(db,'a3','Checked in'),/no longer covers/);assert.equal(await used(db),1);
+ await db.query("UPDATE appointments SET data=$1 WHERE id='a3'",[JSON.stringify({memberNumber:'TA0315',serviceIds:['party'],sessionId:'series__20300102',membershipCovered:true})]);
+ assert.equal((await apply(db,'a3','Checked in')).membershipDeducted,true);assert.equal(await used(db),2);
+ assert.equal(await used(db,'m2'),0);
  }finally{await db.close();}
 });

@@ -10,9 +10,10 @@ import {customRegistrationFields} from '../../server/registration-questions.mjs'
 import {useCallback,useEffect,useState,useRef} from 'react';
 import {CalendarClock,CheckCircle2,CreditCard,ExternalLink,Plus,RefreshCw,ShieldCheck} from 'lucide-react';
 import MembershipBadge from './membership-badge';
-type Plan={id:string;name:string;description:string;interval:'week'|'month'|'year';priceCents:number;sessionsIncluded:number;active:boolean;groupId:string|null;badge:MembershipBadgeDesign|null};
+type CreditEligibility={mode:'all'|'selected';serviceIds:string[];sessionIds:string[]};
+type Plan={creditEligibility:CreditEligibility;creditSummary?:string;id:string;name:string;description:string;interval:'week'|'month'|'year';priceCents:number;sessionsIncluded:number;active:boolean;groupId:string|null;badge:MembershipBadgeDesign|null};
 type Member={badge:MembershipBadgeDesign|null;id:string;customer_name:string;customer_email:string;member_number:string|null;plan_id:string;sessions_included:number;sessions_used:number;recorded_sessions:number;history:{appointment_id:string;event_type:string;session_delta:number;created_at:string;appointment_status?:string|null}[];plan_name:string;interval_unit:string;status:string;paid_through:string|null};
-type Payload={memberIdPolicy:string;businessName:string;plans:Plan[];groups:{id:string;name:string;badge:MembershipBadgeDesign|null}[];members:Member[];planBenefits:{name:string;limits:{membershipPlans:number}};payments:{connected:boolean;configured:boolean;ready:boolean};emailDelivery?:{provider:string;ready:boolean}};
+type Payload={creditOptions:{services:{id:string;name:string}[];sessions:{id:string;name:string}[]};memberIdPolicy:string;businessName:string;plans:Plan[];groups:{id:string;name:string;badge:MembershipBadgeDesign|null}[];members:Member[];planBenefits:{name:string;limits:{membershipPlans:number}};payments:{connected:boolean;configured:boolean;ready:boolean};emailDelivery?:{provider:string;ready:boolean}};
 const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
 export default function OwnerMemberships({slug,prefill,onEditQuestions}:{slug:string;prefill?:{name:string;email:string;phone:string}|null;onEditQuestions?:()=>void}){
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
@@ -20,6 +21,8 @@ export default function OwnerMemberships({slug,prefill,onEditQuestions}:{slug:st
  useEffect(()=>{if(!prefill)return;const parts=prefill.name.trim().split(/\s+/);setMemberFirst(parts[0]||'');setMemberLast(parts.slice(1).join(' '));setNewMemberEmail(prefill.email||'');setMemberPhone(prefill.phone||'');setModal('assign');},[prefill]);
  const [planBadge,setPlanBadge]=useState<MembershipBadgeDesign|null>(null),[newGroupBadge,setNewGroupBadge]=useState<MembershipBadgeDesign|null>(null),[groupBadges,setGroupBadges]=useState<Record<string,MembershipBadgeDesign|null>>({});
  const assignmentReference=useRef('');
+ const [creditEligibility,setCreditEligibility]=useState<CreditEligibility>({mode:'all',serviceIds:[],sessionIds:[]});
+ function toggleCredit(kind:'serviceIds'|'sessionIds',id:string){setCreditEligibility(old=>({...old,[kind]:old[kind].includes(id)?old[kind].filter(v=>v!==id):[...old[kind],id]}));}
  const [manualMemberNumber,setManualMemberNumber]=useState('');
  const [memberDob,setMemberDob]=useState('');
  const [memberFirst,setMemberFirst]=useState(''),[memberLast,setMemberLast]=useState(''),[memberPhone,setMemberPhone]=useState(''),[memberAnswers,setMemberAnswers]=useState<Record<string,string|boolean>>({}),[bookingFields,setBookingFields]=useState<any[]>([]),[registrationConfig,setRegistrationConfig]=useState<any>({});
@@ -45,7 +48,7 @@ export default function OwnerMemberships({slug,prefill,onEditQuestions}:{slug:st
   try{
    if(!/^\d{1,7}(?:\.\d{1,2})?$/.test(amount))throw Error('Enter a valid membership price in USD.');
    const priceCents=Math.round(Number(amount)*100);
-   await post('save',{...(edit?{id:edit}:{}),name,description,interval,priceCents,sessionsIncluded,groupId,badge:planBadge,active:edit?data?.plans.find(p=>p.id===edit)?.active!==false:true});
+   await post('save',{...(edit?{id:edit}:{}),name,description,interval,priceCents,sessionsIncluded,creditEligibility,groupId,badge:planBadge,active:edit?data?.plans.find(p=>p.id===edit)?.active!==false:true});
    setModal(null);clear();setMessage('Membership plan saved. Available plans now appear on your customer membership page.');await load(true);
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
@@ -110,8 +113,8 @@ export default function OwnerMemberships({slug,prefill,onEditQuestions}:{slug:st
   setBusy(true);setError('');try{const r=await post('verify');await load();setMessage(r.ready?'Stripe is connected and ready to collect membership payments.':'Stripe is connected but still needs additional account verification.');}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
- const planForEdit=(plan:Plan)=>{setEdit(plan.id);setName(plan.name);setDescription(plan.description);setIntervalValue(plan.interval);setAmount((plan.priceCents/100).toFixed(2));setSessionsIncluded(plan.sessionsIncluded||0);setGroupId(plan.groupId||'');setPlanBadge(plan.badge||null);setError('');setMessage('');setModal('plan');};
- const clear=()=>{setEdit(null);setName('');setDescription('');setIntervalValue('month');setAmount('49.00');setSessionsIncluded(0);setGroupId('');setPlanBadge(null);};
+ const planForEdit=(plan:Plan)=>{setCreditEligibility(plan.creditEligibility||{mode:'all',serviceIds:[],sessionIds:[]});setEdit(plan.id);setName(plan.name);setDescription(plan.description);setIntervalValue(plan.interval);setAmount((plan.priceCents/100).toFixed(2));setSessionsIncluded(plan.sessionsIncluded||0);setGroupId(plan.groupId||'');setPlanBadge(plan.badge||null);setError('');setMessage('');setModal('plan');};
+ const clear=()=>{setCreditEligibility({mode:'all',serviceIds:[],sessionIds:[]});setEdit(null);setName('');setDescription('');setIntervalValue('month');setAmount('49.00');setSessionsIncluded(0);setGroupId('');setPlanBadge(null);};
  return <section className="sf-owner-memberships">
   <header className="sf-owner-memberships-head"><div><span className="sf-membership-kicker">SELAHFLOW · OWNER WORKSPACE</span><h2>Membership plans & payments</h2>
    <p>Sell weekly, monthly and yearly recurring memberships for your business. New memberships require no owner approval and activate only after payment is verified.</p></div>
@@ -140,7 +143,7 @@ export default function OwnerMemberships({slug,prefill,onEditQuestions}:{slug:st
   <div className="sf-owner-membership-layout sf-owner-membership-layout-clean">
     <section className="sf-owner-membership-plans"><div className="sf-owner-memberships-title"><h3>Available membership plans</h3><span>{data?.groups.length||0} membership types · Edit a plan to choose its type</span></div>
      {data?.plans.length?<div className="sf-owner-plan-list">{data.plans.map((p,i)=><article key={p.id}>
-      <div><strong>{p.name}</strong><div className="sf-membership-plan-badge"><MembershipBadge membershipName={p.name} membershipStatus="active" sessionsIncluded={1} sessionsUsed={0} badge={p.badge||data.groups.find(g=>g.id===p.groupId)?.badge}/></div><p>{p.description||'Recurring membership'}</p>
+      <div><strong>{p.name}</strong><div className="sf-membership-plan-badge"><MembershipBadge membershipName={p.name} membershipStatus="active" sessionsIncluded={1} sessionsUsed={0} badge={p.badge||data.groups.find(g=>g.id===p.groupId)?.badge}/></div><p>{p.description||'Recurring membership'}</p><p>{p.creditSummary}</p>
        <span className="sf-plan-status">{data.groups.find(g=>g.id===p.groupId)?.name||'No type assigned'} · {p.active?'Available to new customers':'Unavailable for new signups'}</span></div>
       <b>{money(p.priceCents)} / {p.interval}</b>
       <div className="sf-plan-actions"><button type="button" className="outline" disabled={busy||i===0} onClick={()=>void reorderPlan(p.id,-1)}>Move up</button><button type="button" className="outline" disabled={busy||i===data.plans.length-1} onClick={()=>void reorderPlan(p.id,1)}>Move down</button><button type="button" className="outline" disabled={busy} onClick={()=>planForEdit(p)}>Edit</button>
@@ -164,6 +167,7 @@ export default function OwnerMemberships({slug,prefill,onEditQuestions}:{slug:st
        <option value="week">Weekly</option><option value="month">Monthly</option><option value="year">Yearly</option></select></label>
        <label>Price in USD<input type="number" min="1" step="0.01" required value={amount} onChange={e=>setAmount(e.target.value)}/></label></div>
       <MembershipBadgeSettings value={planBadge} onChange={setPlanBadge} name={name} inherited={data?.groups.find(g=>g.id===groupId)?.badge} disabled={busy}/><label>Sessions included per membership<input type="number" min={0} max={100000} value={sessionsIncluded} onChange={e=>setSessionsIncluded(Number(e.target.value))}/></label><p>Package price: <b>{/^\d+(?:\.\d+)?$/.test(amount)?money(Math.round(Number(amount)*100)):'the set price'}</b> per {interval}. Public registrations require no approval; credits activate after verified online payment or owner-recorded offline payment.</p>
+      <fieldset><legend>Where can this membership use credits?</legend><label>Credit eligibility<select value={creditEligibility.mode} onChange={e=>setCreditEligibility(old=>({...old,mode:e.target.value as CreditEligibility['mode']}))}><option value="all">All eligible services and sessions</option><option value="selected">Selected services and sessions only</option></select></label><p>Services and sessions must also allow membership credits. Selecting a service includes its sessions; selecting a session limits access to that session or recurring series. Other bookings are charged separately.</p>{creditEligibility.mode==='selected'&&<><h4>Services</h4>{data?.creditOptions.services.map(s=><label key={s.id} style={{display:'flex',alignItems:'center',gap:8}}><input type="checkbox" style={{width:20,minHeight:20}} checked={creditEligibility.serviceIds.includes(s.id)} onChange={()=>toggleCredit('serviceIds',s.id)}/>{s.name}</label>)}<h4>Sessions / recurring series</h4>{data?.creditOptions.sessions.map(s=><label key={s.id} style={{display:'flex',alignItems:'center',gap:8}}><input type="checkbox" style={{width:20,minHeight:20}} checked={creditEligibility.sessionIds.includes(s.id)} onChange={()=>toggleCredit('sessionIds',s.id)}/>{s.name}</label>)}{!data?.creditOptions.sessions.length&&<p>No scheduled sessions yet. Create them in the calendar.</p>}</>}<p>Changes apply to this plan’s members. Recorded payments and past credit deductions remain unchanged.</p></fieldset>
       <button type="submit" className="primary" disabled={busy||!name.trim()}>{busy?'Saving…':edit?'Save membership changes':'Create membership plan'}</button>
       <button type="button" className="outline" disabled={busy} onClick={()=>setModal(null)}>Cancel</button>
      </form>

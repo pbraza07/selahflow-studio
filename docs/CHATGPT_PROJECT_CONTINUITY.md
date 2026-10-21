@@ -1,3 +1,7 @@
+# v1.3.120 release handoff — candidate, deployment pending
+
+Membership plans support all or selected services/session series. Selected services include their sessions; selected session series include recurring occurrences. Global service/session credit flags still apply. Existing plans retain all coverage by default. Enforced at server booking/approval and credit deduction, including manual session recording. Existing financial records are not rewritten. Migration 052 adds the plan policy. No real memberships, bookings, payments or credits changed for testing.
+
 # v1.3.119 release handoff — verified LIVE in both environments
 
 Verified 2026-10-21: application commit 1efdaa394eba98056a35b52a574bba755ffa6a04. Staging LIVE dep-dbc3mmrbc2fs73b68u9g at 04:16:01Z; production LIVE dep-dbc3p9uq1p3s73bin370 at 04:18:09Z. All 290 tests passed locally and on Render staging, with typecheck and builds successful. Migration 051 applied in both dedicated databases; preflights confirmed correct roles, schema CREATE and zero unowned tables. Both public health endpoints report ok / 1.3.119, the white registration/payment CSS is served, and private waiver GET returns 401 without authentication. No error-level startup logs observed. Browser visual acceptance was blocked by credential protection; no real customer/waiver deletion was performed. Application branches main/staging remain on the verified application commit; this feature-branch handoff is documentation only.

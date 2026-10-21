@@ -1,4 +1,5 @@
 'use client';
+import {membershipAllows} from '../../server/membership-eligibility.mjs';
 import ParticipationWaiver,{type WaiverSignature} from '../components/participation-waiver';
 import {requiresWaiver,waiverToday} from '../../server/waiver-content.mjs';
 import {requiresBookingApproval} from '../../server/booking-review.mjs';
@@ -28,12 +29,12 @@ export default function Booking(){
  const [issuedId,setIssuedId]=useState('');
  const [bookingReceipt,setBookingReceipt]=useState<any>(null);
  const [confirmedPrice,setConfirmedPrice]=useState<number|null>(null);
- const [memberNumber,setMemberNumber]=useState(''),[verifiedIdentity,setVerifiedIdentity]=useState(''),[memberHasCredits,setMemberHasCredits]=useState(false);
+ const [memberNumber,setMemberNumber]=useState(''),[verifiedIdentity,setVerifiedIdentity]=useState(''),[memberHasCredits,setMemberHasCredits]=useState(false),[creditEligibility,setCreditEligibility]=useState<any>(null);
  const [bookingDob,setBookingDob]=useState('');
  const [lookupBusy,setLookupBusy]=useState(false),[lookupMessage,setLookupMessage]=useState('');
  const [customerToken,setCustomerToken]=useState('');
  const [allSessions,setAllSessions]=useState<{date:string;sessions:{id:string;start:number;service:string;staff:string;name:string;staffName:string;capacity:number;remaining:number}[]}[]>([]),[sessionsLoading,setSessionsLoading]=useState(false);
- const [config,setConfig]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[step,setStep]=useState(1),[selected,setSelected]=useState<string[]>([]),[staff,setStaff]=useState(''),[date,setDate]=useState(today()),[times,setTimes]=useState<number[]>([]),[sessionAvailability,setSessionAvailability]=useState<Record<number,{remaining:number;capacity:number;id?:string}>>({}),[calendarView,setCalendarView]=useState<'day'|'week'|'month'>('week'),[calendarAnchor,setCalendarAnchor]=useState(today()),[calendarDays,setCalendarDays]=useState<PublicCalendarDay[]>([]),[calendarBusy,setCalendarBusy]=useState(false),[checked,setChecked]=useState(false),[earliestStart,setEarliestStart]=useState<number|null>(null),[firstAvailable,setFirstAvailable]=useState<number|null>(null),[time,setTime]=useState<number|null>(null),[done,setDone]=useState(''),[pendingApproval,setPendingApproval]=useState(false),[name,setName]=useState(''),[rememberedName,setRememberedName]=useState(false),[email,setEmail]=useState(''),[phone,setPhone]=useState(''),[accepted,setAccepted]=useState(false),[website,setWebsite]=useState(''),[customAnswers,setCustomAnswers]=useState<Record<string,string|boolean>>({});
+ const [config,setConfig]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[step,setStep]=useState(1),[selected,setSelected]=useState<string[]>([]),[staff,setStaff]=useState(''),[date,setDate]=useState(today()),[times,setTimes]=useState<number[]>([]),[sessionAvailability,setSessionAvailability]=useState<Record<number,{remaining:number;capacity:number;id?:string;membershipCreditAllowed?:boolean}>>({}),[calendarView,setCalendarView]=useState<'day'|'week'|'month'>('week'),[calendarAnchor,setCalendarAnchor]=useState(today()),[calendarDays,setCalendarDays]=useState<PublicCalendarDay[]>([]),[calendarBusy,setCalendarBusy]=useState(false),[checked,setChecked]=useState(false),[earliestStart,setEarliestStart]=useState<number|null>(null),[firstAvailable,setFirstAvailable]=useState<number|null>(null),[time,setTime]=useState<number|null>(null),[done,setDone]=useState(''),[pendingApproval,setPendingApproval]=useState(false),[name,setName]=useState(''),[rememberedName,setRememberedName]=useState(false),[email,setEmail]=useState(''),[phone,setPhone]=useState(''),[accepted,setAccepted]=useState(false),[website,setWebsite]=useState(''),[customAnswers,setCustomAnswers]=useState<Record<string,string|boolean>>({});
  const [waiver,setWaiver]=useState<WaiverSignature>({signature:'',role:'',date:waiverToday(),accepted:false,version:'',documentHash:''});
  const [waiverSigned,setWaiverSigned]=useState(false),[waiverChecking,setWaiverChecking]=useState(false),[waiverError,setWaiverError]=useState(''),[waiverRetry,setWaiverRetry]=useState(0);
  const key=useRef('');const requestNumber=useRef(0);
@@ -57,9 +58,9 @@ export default function Booking(){
  const services=config?.services.filter((s:any)=>selected.includes(s.id))||[];
  const regularPrice=services.reduce((n:number,s:any)=>n+s.price,0),duration=services.reduce((n:number,s:any)=>n+s.duration,0);
  const selectedSessionId=time===null?null:sessionAvailability[time]?.id||null;
- const selectedSession=config?.bookableSessions?.find((s:any)=>s.id===selectedSessionId);
+ const selectedSession=time===null?null:sessionAvailability[time];
  const membershipCreditAllowed=selectedSession?selectedSession.membershipCreditAllowed!==false:services.every((s:any)=>s.membershipCreditAllowed!==false);
- const membershipCovered=memberHasCredits&&membershipCreditAllowed;
+ const membershipCovered=memberHasCredits&&membershipCreditAllowed&&membershipAllows(creditEligibility,{serviceIds:selected,sessionId:selectedSessionId});
  const price=membershipCovered?0:regularPrice;
  const eligible=config?.staff.filter((s:any)=>selected.every(id=>s.services.includes(id)))||[];
  async function post(body:any){const r=await fetch(bookingApi(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error||'Unable to process your request.');return d;}
@@ -116,7 +117,7 @@ useEffect(()=>{
    setName([d.firstName,d.lastName].filter(Boolean).join(' '));
    setEmail(d.email||'');setPhone(d.phone||'');
    setCustomAnswers(d.customAnswers&&typeof d.customAnswers==='object'&&!Array.isArray(d.customAnswers)?d.customAnswers:{});
-   setMemberHasCredits(d.membershipCovered===true);
+   setMemberHasCredits(d.membershipCovered===true);setCreditEligibility(d.membership?.creditEligibility||null);
    setRememberedName(false);
    setVerifiedIdentity(id+'|'+dob);
    setLookupMessage('Membership ID verified! Name, contact details, and saved booking answers have been filled in. Review them before confirming.');

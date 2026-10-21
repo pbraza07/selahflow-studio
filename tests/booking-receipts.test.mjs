@@ -30,7 +30,7 @@ test('submission and covered approval emails are durable, scoped, idempotent and
   const approval=(await db.query("SELECT message FROM booking_receipt_emails WHERE event_type='approval'")).rows[0].message.text;
   assert.match(approval,/Booking approved/);assert.match(approval,/No payment due — covered/);assert.match(approval,/Sessions left: 5/);assert.doesNotMatch(approval,/Pay securely/);
   await processBookingReceipts(pool,{send});assert.equal(sent.length,2);
-  const direct=await confirmBooking({pool,owner:'u1',services:config.services,staff:'coach',date:'2030-11-02',start:600,duration:30,buffer:0,id:'direct-one',data:{...input.data,memberNumber:'',price:25},submissionOrigin:input.origin});
+  const direct=await confirmBooking({pool,owner:'u1',services:config.services,staff:'coach',date:'2030-11-02',start:600,duration:30,buffer:0,id:'direct-one',data:{...input.data,memberNumber:'',membershipCovered:false,price:25},submissionOrigin:input.origin});
   assert.equal(direct.bookingReceipt.pending,false);assert.equal((await db.query("SELECT * FROM booking_receipt_emails WHERE booking_key='direct-one'")).rows.length,1);
   await db.query('BEGIN');await queueBookingReceipt(db,{...input,bookingId:'rolled-back'});await db.query('ROLLBACK');assert.equal((await db.query("SELECT * FROM booking_receipt_emails WHERE booking_key='rolled-back'")).rows.length,0);
   await db.query("UPDATE booking_receipt_emails SET status='processing',updated_at=now()-interval '3 minutes' WHERE booking_key='direct-one'");await processBookingReceipts(pool,{send});assert.equal((await db.query("SELECT status FROM booking_receipt_emails WHERE booking_key='direct-one'")).rows[0].status,'unknown');assert.equal(sent.length,2,'ambiguous delivery never automatically repeats');

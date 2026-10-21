@@ -11,7 +11,7 @@ async function fixture(){
  await db.exec(`
  CREATE TABLE businesses(id TEXT PRIMARY KEY,owner_id TEXT NOT NULL);
  CREATE TABLE membership_groups(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,badge JSONB);
- CREATE TABLE membership_plans(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,name TEXT,group_id TEXT,badge JSONB);
+ CREATE TABLE membership_plans(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,name TEXT,group_id TEXT,badge JSONB,credit_eligibility JSONB);
  CREATE TABLE customer_memberships(id TEXT PRIMARY KEY,business_id TEXT NOT NULL REFERENCES businesses(id),plan_id TEXT NOT NULL REFERENCES membership_plans(id),
  member_number TEXT NOT NULL,customer_name TEXT,customer_email TEXT,date_of_birth DATE,status TEXT NOT NULL,
  sessions_included INTEGER NOT NULL,sessions_used INTEGER NOT NULL,updated_at TIMESTAMPTZ DEFAULT now());
