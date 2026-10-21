@@ -67,3 +67,21 @@ No-cost restore tooling: PostgreSQL 18.0 `pg_restore` converted each directory a
 Each restored database has 56 primary keys, 68 foreign keys, 65 check constraints, 360 NOT NULL constraints and 20 unique constraints. Every copied table's row count and content hash matched its dump. This is isolated logical recovery evidence, not a native Render/PITR recovery test; source role ownership and ACLs were intentionally omitted and current live privileges still require verification.
 
 Migrations 046–048 then passed separately on both restored copies (exit 0), adding eight tables while preserving content hashes of all 56 original tables. Migration rehearsal evidence SHA-256: production `58fdef6c83c0bf3d20fd46497590781b9a3d4ed1aef8fbf908b6de978e26b09e`; staging `3c6276981bab95eba34632203f5071a1c6ef2c782f19052aa683e05c1354746f`. No live migration, client deletion or deployment occurred. Backup freshness must be rechecked immediately before any approved live deletion.
+
+
+## Follow-up corrections and private target inspection — 2026-10-21
+
+An explicit `showInNotification: false` now takes precedence over legacy notification preferences for both forms. Added regression coverage verifies Notify off independently of Required and of form-specific notification overrides. The current-release handoff heading was corrected after the full test suite caught missing v1.3.115 release metadata.
+
+Read-only inspection of the restored data found no matching active profile, booking identity or membership for the authorized target in either environment. Each snapshot retains one retired legacy-ID reservation; staging also retains three historical receipt rows (two submitted, one superseded). Exact private review manifests remain outside Git. This backup observation does not prove current live state and does not authorize deleting a reservation or receipt independently of reviewed retention rules.
+
+Migration 047 now permits a malformed historical reservation only while retired. It still rejects new malformed active IDs and reactivation of malformed retired IDs, verified by a regression test. No historical reservation is deleted to make validation pass. Fresh restores and rehearsals of revised 046–048 passed again with all 56 original table contents unchanged:
+
+| Environment | Fresh restore evidence SHA-256 | Revised migration rehearsal SHA-256 |
+| --- | --- | --- |
+| Production copy | 64901aeb24fa207acf8dbc1fc6ad9b9bc686cd43034f497b15edca03021d6a8d | 786bee5b2fe8a07e473a338d30c6d590d2d9e62d2e0f0215cd892bc2504d8783 |
+| Staging copy | 3fa584983aa59dea9268581bd8614f2840022c75fa0472a1a37210cd60e03ea9 | 409fd06615781c9c28e865ead9ee580d65e296b233ec48861df47eb4d46da925 |
+
+No-cost recovery evidence and reproducible restore checker were saved at `ff5d5ba989d3dc3f32a51e85b53591279a7129e4`. No production/staging deployment or live data mutation has occurred.
+
+Final candidate validation after the follow-up fixes: `npm run typecheck` exit 0; `npm test` exit 0 (281 passed, 0 failed, 51.13 seconds); `npm run build` exit 0; `git diff --check` exit 0. On each isolated restored copy, all four six-character constraints validated successfully: business_client_profiles_member_number_six, business_member_ids_six, customer_booking_ids_member_number_six and customer_memberships_member_number_six. No live constraint validation is asserted.

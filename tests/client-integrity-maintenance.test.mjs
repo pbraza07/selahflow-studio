@@ -26,3 +26,17 @@ test('notification checkboxes filter standard and custom answers independently p
  const receipt=bookingReceiptMessage({business:'Arcila Training',name:'Client',memberNumber:'CA0101',reference:'booking',date:'2030-01-01',start:600,duration:30,services:['Training'],staff:'Coach',price:15,answers:[{label:'Level',value:'Academy'}],links:{status:'https://example.test/status',membership:'https://example.test/membership',booking:'https://example.test/book'}},{event:'payment_link',paymentLink:'https://example.test/payment#private'});
  for(const value of ['Training','Coach','2030-01-01','30 minutes','CA0101','Level: Academy','https://example.test/payment#private'])assert.ok(receipt.text.includes(value));
 });
+
+
+test('strict active-ID constraint preserves retired legacy evidence but forbids reactivation',async()=>{
+ const pg=new PGlite();try{
+  const files=(await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();
+  for(const f of files.filter(f=>Number(f.slice(0,3))<46))await pg.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8'));
+  await pg.exec("INSERT INTO users(id,email,password_hash) VALUES('retired-owner','retired@example.test','hash'); INSERT INTO businesses(id,owner_id,slug,name,status) VALUES('retired-business','retired-owner','retired-example','Example','active'); INSERT INTO business_member_ids(business_id,member_number,identity_key,retired_at) VALUES('retired-business','ZZ010100','retained evidence',now())");
+  for(const f of files.filter(f=>Number(f.slice(0,3))>=46))await pg.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8'));
+  await pg.exec('ALTER TABLE business_member_ids VALIDATE CONSTRAINT business_member_ids_six');
+  assert.equal((await pg.query("SELECT count(*)::int AS n FROM business_member_ids WHERE member_number='ZZ010100' AND retired_at IS NOT NULL")).rows[0].n,1);
+  await assert.rejects(pg.exec("UPDATE business_member_ids SET retired_at=NULL WHERE member_number='ZZ010100'"),/business_member_ids_six/);
+  await assert.rejects(pg.exec("INSERT INTO business_member_ids(business_id,member_number,identity_key) VALUES('retired-business','ZZ020200','new invalid identity')"),/business_member_ids_six/);
+ }finally{await pg.close();}
+});

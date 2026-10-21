@@ -1,6 +1,6 @@
 -- No new writes may use historical eight-character membership numbers.
 CREATE OR REPLACE FUNCTION persisted_member_number_allowed(scope TEXT,n TEXT,owner_scope BOOLEAN DEFAULT FALSE) RETURNS BOOLEAN LANGUAGE sql IMMUTABLE AS $$ SELECT n IS NULL OR n ~ '^[A-Z]{2}[0-9]{4}$' $$;
-ALTER TABLE business_member_ids ADD CONSTRAINT business_member_ids_six CHECK(member_number ~ '^[A-Z]{2}[0-9]{4}$') NOT VALID;
+ALTER TABLE business_member_ids ADD CONSTRAINT business_member_ids_six CHECK(retired_at IS NOT NULL OR member_number ~ '^[A-Z]{2}[0-9]{4}$') NOT VALID;
 CREATE TABLE client_financial_retention (
  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
  business_id TEXT NOT NULL REFERENCES businesses(id),

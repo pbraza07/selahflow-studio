@@ -1,6 +1,6 @@
-# Issue 46 recovery checkpoint — 2026-10-20, NOT deployed
+# v1.3.115 release handoff — issue 46 recovery checkpoint, NOT deployed
 
-Read docs/ISSUE_46_ACCEPTANCE_EVIDENCE.md and docs/ISSUE_46_RECOVERY_CHECKPOINT.md first. Original uncommitted work was recovered without modifying the source checkout. Feature implementation is v1.3.115; baseline production remains e303c421bb42146bc4d217f87d82d10db28609e3. No client records were deleted. Consent is retained and detached on deletion, never cascaded; signatures apply per current document version and actual identity. Production use requires recorded legal review. Optional membership identity fields, live legacy remediation, backups/isolated restore and both-environment acceptance remain pending. This checkpoint is not a production-ready declaration.
+Read docs/ISSUE_46_ACCEPTANCE_EVIDENCE.md and docs/ISSUE_46_RECOVERY_CHECKPOINT.md first. Original uncommitted work was recovered without modifying the source checkout. Feature implementation is v1.3.115; baseline production remains e303c421bb42146bc4d217f87d82d10db28609e3. No client records were deleted. Consent is retained and detached on deletion, never cascaded; signatures apply per current document version and actual identity. Production use requires recorded legal review. No-cost isolated logical backup restores and migration rehearsals are verified in the acceptance evidence. Optional membership identity fields, live legacy remediation, live privileges, legal review and both-environment acceptance remain pending. This checkpoint is not a production-ready declaration.
 
 # v1.3.111 release handoff — optimization candidate, NOT verified production LIVE
 

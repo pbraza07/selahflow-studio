@@ -79,7 +79,7 @@ export function publicRegistrationSettings(config={}){
 const notificationAliases={firstName:'customerName',lastName:'customerName',email:'customerEmail',phone:'customerPhone'};
 export function questionNotificationEnabled(config,form,field){
  const chosen=config[form+'QuestionNotifications']?.[field.id];if(typeof chosen==='boolean')return chosen;
- if(typeof field.showInNotification==='boolean'&&field.showInNotification)return true;
+ if(typeof field.showInNotification==='boolean')return field.showInNotification;
  const old=config.bookingPushFields||['customerName','services','date'];
  return old.includes(field.id)||old.includes(notificationAliases[field.id]);
 }
