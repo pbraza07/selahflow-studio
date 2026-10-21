@@ -1,4 +1,4 @@
-**Release source: v1.3.120 — verification pending.** Owners can restrict each membership plan’s credits to selected services and session series.
+**Release source: v1.3.120 — verified LIVE in staging and production.** Owners can restrict each membership plan’s credits to selected services and session series.
 
 **Release source: v1.3.119 — verified LIVE in staging and production.** White registration-status text and owner-managed waiver removal with retained evidence. New client IDs use initials + MMDDYY; existing IDs remain valid. See continuity for verified deployments; older release notes below are historical.
 

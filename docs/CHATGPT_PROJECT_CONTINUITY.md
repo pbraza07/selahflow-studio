@@ -1,4 +1,6 @@
-# v1.3.120 release handoff — candidate, deployment pending
+# v1.3.120 release handoff — verified LIVE in staging and production
+
+Verified 2026-10-21: application commit 9ffb3202b13d2adc2c7d4b535cfe7341b5f641ea. Staging LIVE dep-dbca61oae00c7393rmi0 at 11:38:25Z; production LIVE dep-dbca8keq1p3s73bpnq90 at 11:40:35Z. All 293 tests passed locally and on Render staging; typecheck and builds passed. Migration 052 applied to each dedicated database, with correct database/role, schema CREATE and zero unowned tables. Both public health endpoints report ok / 1.3.120; eight public membership offers in each environment return credit coverage summaries; private owner membership GET returns 401 without authentication. Owner UI was not manually exercised and no real membership/booking/payment/credit mutations were performed for validation. Main/staging use the verified application commit; this feature-branch handoff is documentation only.
 
 Membership plans support all or selected services/session series. Selected services include their sessions; selected session series include recurring occurrences. Global service/session credit flags still apply. Existing plans retain all coverage by default. Enforced at server booking/approval and credit deduction, including manual session recording. Existing financial records are not rewritten. Migration 052 adds the plan policy. No real memberships, bookings, payments or credits changed for testing.
 
