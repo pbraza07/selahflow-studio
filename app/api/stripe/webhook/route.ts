@@ -1,3 +1,4 @@
+import {monthlyPeriod} from '../../../../server/membership-periods.mjs';
 import {getPool} from '../../../../server/database.mjs';
 import {verifyStripeWebhook,stripeApi,invoiceSubscriptionId,shouldActivateInvoice} from '../../../../server/membership-payments.mjs';
 import {applyBookingPayment,applyMembershipInvoice} from '../../../../server/stripe-checkout.mjs';
@@ -23,11 +24,15 @@ export async function POST(req:Request){
    // A dashboard manual mark-as-paid must never issue online membership credits.
    if(!/^in_[A-Za-z0-9]+$/.test(object.id||''))return Response.json({received:true},{headers});
    object=await stripeApi('invoices/'+object.id+'?expand[]=amount_paid_off_stripe',{method:'GET',account});
-   if(!shouldActivateInvoice(object)||object.paid_out_of_band===true||object.currency!=='usd')
+   if(!shouldActivateInvoice(object,true)||object.paid_out_of_band===true||object.currency!=='usd')
     return Response.json({received:true},{headers});
    subscriptionId=invoiceSubscriptionId(object);
    if(!subscriptionId)return Response.json({received:true},{headers});
    subscription=await stripeApi('subscriptions/'+subscriptionId,{method:'GET',account});
+   if(object.billing_reason==='subscription_create'&&subscription.metadata?.selahflow_business_id===merchant.business_id){
+    const m=(await pool.query('SELECT billing_start_override,initial_paid_at FROM customer_memberships WHERE id=$1 AND business_id=$2 AND stripe_account_id=$3 AND (stripe_subscription_id IS NULL OR stripe_subscription_id=$4)',[subscription.metadata?.membership_id,merchant.business_id,account,subscriptionId])).rows[0];
+    if(m?.billing_start_override&&!m.initial_paid_at){const date=m.billing_start_override instanceof Date?m.billing_start_override.toISOString().slice(0,10):String(m.billing_start_override).slice(0,10);const next=monthlyPeriod(date+'T12:00:00Z').end;await stripeApi('subscriptions/'+subscriptionId,{account,idempotencyKey:'member-anchor-'+event.id,params:{trial_end:Math.floor(next.getTime()/1000),proration_behavior:'none'}});}
+   }
   }
   const db=await pool.connect();
   try{
@@ -54,6 +59,8 @@ export async function POST(req:Request){
     if(sub)await db.query(
      "UPDATE customer_memberships SET status='past_due',updated_at=now() WHERE stripe_subscription_id=$1 AND stripe_account_id=$2 AND business_id=$3 AND (paid_through IS NULL OR paid_through<=now())",
      [sub,account,merchant.business_id]);
+   }else if(event.type==='customer.subscription.updated'){
+    await db.query("UPDATE customer_memberships SET status=CASE WHEN $1 IN ('past_due','unpaid') THEN 'past_due' WHEN $1='canceled' THEN 'canceled' ELSE status END,updated_at=now() WHERE stripe_subscription_id=$2 AND stripe_account_id=$3 AND business_id=$4",[object.status,object.id,account,merchant.business_id]);
    }else if(event.type==='customer.subscription.deleted'){
     await db.query("UPDATE customer_memberships SET status='canceled',updated_at=now() WHERE stripe_subscription_id=$1 AND stripe_account_id=$2 AND business_id=$3",
      [object.id,account,merchant.business_id]);

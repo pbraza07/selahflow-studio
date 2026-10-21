@@ -14,7 +14,7 @@ type Answer={id:string;label:string;value:string|boolean;type?:string};
 type MembershipDetails={registeredAt?:string|null;paidThrough?:string|null;lastPaidAt?:string|null;interval?:string;priceCents?:number;sessionsIncluded?:number;sessionsUsed?:number};
 type FormField={id:string;label:string;type:string;options?:string[]};
 type Visit={
- id:string;date:string;time:number;duration:number;serviceNames:string[];serviceTypes:string[];
+ paymentTracking?:string;bookingTimeline?:{status:string;at:string|null}[];id:string;date:string;time:number;duration:number;serviceNames:string[];serviceTypes:string[];
  staff:string;status:string;attended:boolean;sessionType:string;quotedPrice:number;
  answers?:Answer[];originalAnswers?:Answer[];customerName?:string;customerEmail?:string;customerPhone?:string;customerMemberNumber?:string;dateOfBirth?:string;firstName?:string;lastName?:string;
  originalSubmission?:{customerName:string;customerEmail:string;customerPhone:string;customAnswers?:Record<string,string|boolean>}|null;submittedAt?:string|null;policyAccepted?:boolean;policyAcceptedAt?:string|null;
@@ -43,8 +43,8 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
  const [removedSelection,setRemovedSelection]=useState<string[]>([]);
  const [showRemoved,setShowRemoved]=useState(false),[actionBusy,setActionBusy]=useState(''),[actionError,setActionError]=useState('');
  const [removing,setRemoving]=useState<Client|null>(null);
- const reload=useCallback(async()=>{
-  setBusy(true);
+ const reload=useCallback(async(background=false)=>{
+  if(!background)setBusy(true);
   try{
    const r=await fetch('/api/studio/clients',{cache:'no-store'});
    const result=await r.json();
@@ -52,6 +52,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    setClients(result.clients||[]);setArchived(result.archived||[]);setFormFields(result.formFields||[]);setRegistrationConfig(result.registrationConfig||{});setError('');
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  },[]);
+ useEffect(()=>{const timer=window.setInterval(()=>{if(!document.hidden)void reload(true);},15000);const focus=()=>void reload(true);window.addEventListener('focus',focus);return()=>{clearInterval(timer);window.removeEventListener('focus',focus);};},[reload]);
  useEffect(()=>{void reload();const changed=()=>void reload();window.addEventListener('selahflow:booking-reviewed',changed);window.addEventListener('selahflow:memberships-updated',changed);
   return ()=>{window.removeEventListener('selahflow:booking-reviewed',changed);window.removeEventListener('selahflow:memberships-updated',changed);};},[reload]);
  const registrationFields=useMemo(()=>registrationFieldCatalog(clients,formFields) as {key:string;label:string;type:string;options:string[]}[],[clients,formFields]);
@@ -264,7 +265,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
      <label className="sf-client-history-filter"><input type="checkbox" checked={attendedOnly} onChange={e=>setAttendedOnly(e.target.checked)}/> Attended only</label>
     </div>
     {visited.length?<div className="sf-client-history-scroll"><SortableTable className="sf-client-history-table">
-     <thead><tr><th>Activity date / time</th><th>Service used</th><th>Service type</th><th>Session</th><th>Team</th><th>Status</th><th>Quote</th></tr></thead>
+     <thead><tr><th>Activity date / time</th><th>Service used</th><th>Service type</th><th>Session</th><th>Team</th><th>Status / booking timeline</th><th>Payment</th><th>Quote</th></tr></thead>
      <tbody>{visited.map(v=><tr key={v.id}>
       <td><b>{humanDate(v.date)}</b><small>{timeLabel(v.time)} Eastern</small></td>
       <td>{v.serviceNames.join(', ')||'Unspecified'}{!!v.answers?.length&&<details className="sf-client-visit-answers"><summary>Booking answers ({v.answers.length})</summary>
@@ -273,7 +274,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
        {v.originalAnswers.map(a=><div key={a.id}><strong>{a.label}:</strong> {displayAnswer(a.value)}</div>)}
       </details>}</td><td>{v.serviceTypes.join(', ')||'Not categorized'}</td>
       <td>{v.sessionType}</td><td>{v.staff||'—'}</td>
-      <td><span className={'sf-client-visit-status '+(v.attended?'attended':v.status==='No-show'||v.status==='Cancelled'?'missed':'scheduled')}>{v.status}{v.attended?' · Attended':''}</span></td>
+      <td><span className={'sf-client-visit-status '+(v.attended?'attended':v.status==='No-show'||v.status==='Cancelled'?'missed':'scheduled')}>{v.status}{v.attended?' · Attended':''}</span><details><summary>+ Booking timeline</summary>{v.bookingTimeline?.map((entry,i)=><p key={i}>{entry.status}{entry.at?' · '+new Date(entry.at).toLocaleString():''}</p>)}</details></td><td><span style={{color:v.paymentTracking==='completed'?'#167347':'#b42318',fontWeight:700}}>{v.paymentTracking==='completed'?'Completed':'Pending'}</span></td>
       <td>{money(v.quotedPrice)}</td>
      </tr>)}</tbody></SortableTable></div>:<p className="sf-client-empty">No {attendedOnly?'attended':'recorded'} sessions to show.</p>}
    </section>

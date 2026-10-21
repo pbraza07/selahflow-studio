@@ -1,3 +1,5 @@
+import {checkoutCoupon} from './business-coupons.mjs';
+import {anniversary} from './membership-periods.mjs';
 import {createHash} from 'node:crypto';
 import {issueMemberId} from './member-id-policy.mjs';
 import {ensureMemberBookingIdentity} from './shared-member-identity.mjs';
@@ -18,7 +20,8 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
   const config=typeof business.data==='string'?JSON.parse(business.data):business.data||{};
   const details=membershipRequestDetails(config,body);
   const name=details.name,email=details.email.toLowerCase(),dob=details.dateOfBirth;
-  const fingerprint=createHash('sha256').update(JSON.stringify({plan:plan.id,name:name.toLowerCase().replace(/\s+/g,' '),email,dob,...(details.registrationIdentity?{registrationIdentity:details.registrationIdentity}:{})})).digest('hex');
+  const couponCode=String(body.couponCode||'').trim().toUpperCase();
+  const fingerprint=createHash('sha256').update(JSON.stringify({plan:plan.id,couponCode,name:name.toLowerCase().replace(/\s+/g,' '),email,dob,...(details.registrationIdentity?{registrationIdentity:details.registrationIdentity}:{})})).digest('hex');
   // Serialize enrollment for the same identity, including retries with a fresh browser request ID.
   const number=await issueMemberId(db,{businessId:business.id,name,firstName:details.firstName,lastName:details.lastName,dateOfBirth:dob,requested:body.memberNumber,registrationIdentity:details.registrationIdentity||null});
   let member=(await db.query('SELECT * FROM customer_memberships WHERE business_id=$1 AND member_number=$2 FOR UPDATE',[business.id,number])).rows[0];
@@ -53,10 +56,15 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
    if(previous.status==='open'){await db.query('COMMIT');return {checkoutUrl:checkoutUrl(previous)};}
    if(previous.status!=='expired'){await db.query('COMMIT');return {returnUrl:origin+'/membership/'+business.slug+'?checkout=success&session_id='+encodeURIComponent(previous.id)};}
   }
+  const coupon=await checkoutCoupon(db,business.id,couponCode,Number(member.price_cents),account,api);
+  const count=Number(plan.interval_count)||1;
+  let anchor=null;if(member.billing_start_override){const start=new Date((member.billing_start_override instanceof Date?member.billing_start_override.toISOString():String(member.billing_start_override)).slice(0,10)+'T12:00:00Z');let n=1;while(anniversary(start,n)<=new Date())n++;anchor=Math.floor(anniversary(start,n).getTime()/1000);}
   const session=await api('checkout/sessions',{account,idempotencyKey:'membership-'+member.id+'-'+(member.stripe_checkout_session_id||'initial'),params:{
    mode:'subscription','allowed_payment_method_types[0]':'card','line_items[0][quantity]':'1',
    'line_items[0][price_data][currency]':'usd','line_items[0][price_data][unit_amount]':String(member.price_cents),
-   'line_items[0][price_data][recurring][interval]':member.stripe_interval_unit,
+   'line_items[0][price_data][recurring][interval]':member.stripe_interval_unit,'line_items[0][price_data][recurring][interval_count]':String(count),
+   ...(coupon?{'discounts[0][coupon]':coupon.stripe_coupon_id}:{}),
+   
    'line_items[0][price_data][product_data][name]':business.name+' · '+plan.name,
    ...(email?{customer_email:email}:{}),client_reference_id:member.id,
    'metadata[membership_id]':member.id,'metadata[selahflow_business_id]':business.id,
@@ -65,7 +73,7 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
    cancel_url:origin+'/membership/'+business.slug+'?checkout=cancelled'
   }});
   assertTestPayment(session);const url=checkoutUrl(session);
-  await db.query('UPDATE customer_memberships SET stripe_checkout_session_id=$1,updated_at=now() WHERE id=$2 AND business_id=$3',[session.id,member.id,business.id]);
+  await db.query('UPDATE customer_memberships SET stripe_checkout_session_id=$1,stripe_interval_count=$4,first_invoice_cents=$5,renewal_invoice_cents=$6,updated_at=now() WHERE id=$2 AND business_id=$3',[session.id,member.id,business.id,count,coupon?coupon.total:member.price_cents,coupon?.duration==='forever'?coupon.total:member.price_cents]);
   await db.query('COMMIT');return {checkoutUrl:url};
  }catch(error){await db.query('ROLLBACK');throw error;}finally{db.release();}
 }

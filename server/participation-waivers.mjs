@@ -17,7 +17,7 @@ export async function ensureParticipationWaiver(db,{businessId,memberNumber,conf
  // The text/version comes from the server. The exact display palette is retained.
  const hash=createHash('sha256').update(JSON.stringify(document)).digest('hex');
  if(input.documentHash!==hash)throw Error('The waiver has changed. Refresh the booking page and read it before signing.');
- const row=(await db.query('INSERT INTO participation_waivers(business_id,customer_id,member_number,participant_name,date_of_birth,signer_name,signer_role,signed_date,document_version,document_hash,document,request_ip,user_agent) VALUES($1,$2,$3,$4,$5::date,$6,$7,$8::date,$9,$10,$11::jsonb,$12::inet,$13) RETURNING id',[businessId,identity.id,memberNumber,participantName,identity.dob,signed.signerName,signed.signerRole,signed.signedDate,document.version,hash,JSON.stringify(document),isIP(String(audit.ip||''))?audit.ip:null,String(audit.userAgent||'').slice(0,512)])).rows[0];
+ const row=(await db.query('INSERT INTO participation_waivers(business_id,customer_id,member_number,participant_name,date_of_birth,signer_name,signer_role,signed_date,document_version,document_hash,document,request_ip,user_agent,media_consent,media_statement) VALUES($1,$2,$3,$4,$5::date,$6,$7,$8::date,$9,$10,$11::jsonb,$12::inet,$13,$14,$15) RETURNING id',[businessId,identity.id,memberNumber,participantName,identity.dob,signed.signerName,signed.signerRole,signed.signedDate,document.version,hash,JSON.stringify(document),isIP(String(audit.ip||''))?audit.ip:null,String(audit.userAgent||'').slice(0,512),input.mediaConsent===true,document.mediaRelease||null])).rows[0];
  return row.id;
 }
 /** Rechecked under the schedule lock, so enabling a waiver cannot race a booking. */

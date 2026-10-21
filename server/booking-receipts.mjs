@@ -11,7 +11,7 @@ export async function bookingReceiptSnapshot(db,{owner,bookingId,date,start,dura
  const membership=memberNumber?await memberIdMembershipSummary(db,owner,memberNumber):null;
  return {businessId:business.id,business:clean(business.name),reference:d.bookingRequestId||bookingId,memberNumber,
   name:clean(d.name||d.customerName),email:String(d.email||d.customerEmail||'').trim(),date:clean(date),start:Number(start),duration:Number(duration),
-  services:(d.services||[]).map(clean),staff:clean(config.staff?.find(s=>s.id===staff)?.name||'Team member'),
+  services:(d.services||[]).map(clean),staff:config.hideTeamNames?'Session team':clean(config.staff?.find(s=>s.id===staff)?.name||'Team member'),
   address:clean(config.address),phone:clean(config.phone),price:Number(d.price??d.quotedPrice??0),membershipCovered:d.membershipCovered===true,
   answers:Object.entries(d.customAnswers||{}).map(([id,value])=>({label:clean(d.customFieldLabels?.[id]||id),value:clean(value)})),
   pending,membership:membership?.status==='active'?membership:null,links:receiptLinks(origin,business.slug),instructions:bookingConfirmationInstructions(pending)};

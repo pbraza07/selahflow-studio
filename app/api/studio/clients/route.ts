@@ -1,3 +1,4 @@
+import {decorateBookingTimeline} from '../../../../server/booking-timeline.mjs';
 import {deleteOwnerClient} from '../../../../server/owner-client-deletion.mjs';
 import {issueMemberId} from '../../../../server/member-id-policy.mjs';
 import {replaceLegacyMemberId} from '../../../../server/replace-legacy-member-id.mjs';
@@ -28,12 +29,14 @@ async function businessFor(owner: string,db:{query:(sql:string,values:unknown[])
  return business;
 }
 async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>Promise<{rows:any[]}>},settings:Record<string,unknown>){
- const [appointments,profiles,requests]=await Promise.all([
+ const [appointments,profiles,requests,payments,clientEvents]=await Promise.all([
   db.query('SELECT id,date,start,duration,staff,status,data FROM appointments WHERE owner=$1 ORDER BY date DESC,start DESC',[owner]),
   db.query('SELECT id,source_key,anchor_appointment_id,name,email,phone,notes,archived,import_columns,registration_answers,registration_field_labels,member_number,date_of_birth,deleted_at FROM business_client_profiles WHERE owner=$1 ORDER BY created_at,id',[owner]),
-  db.query("SELECT id,date,staff_id,start_minute,duration,details,status,created_at FROM booking_requests WHERE owner_id=$1 AND status IN ('pending','declined') ORDER BY created_at DESC",[owner])
+  db.query("SELECT id,date,staff_id,start_minute,duration,details,status,created_at,reviewed_at,appointment_id FROM booking_requests WHERE owner_id=$1 ORDER BY created_at DESC",[owner]),
+  db.query('SELECT p.booking_id,p.status,p.paid_at FROM booking_payments p JOIN businesses b ON b.id=p.business_id WHERE b.owner_id=$1',[owner]),
+  db.query("SELECT kind,created,data FROM events WHERE owner=$1 AND kind IN ('status','cash_sale')",[owner])
  ]);
- const derived=buildClientDirectory([...appointments.rows,...requests.rows.map(pendingBookingAsAppointment)],settings,owner);
+ const derived=buildClientDirectory([...decorateBookingTimeline(appointments.rows,requests.rows,payments.rows,clientEvents.rows),...requests.rows.filter((r:any)=>['pending','declined'].includes(r.status)).map(pendingBookingAsAppointment)],settings,owner);
  const combined=applyClientProfiles(derived,profiles.rows);
  const fields=Array.isArray(settings.bookingCustomFields)?settings.bookingCustomFields:[];
  const members=(await db.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.last_paid_at,m.paid_through,m.price_cents,m.sessions_included,m.sessions_used,m.member_number,m.status,p.name AS membership_name,p.interval_unit,COALESCE(p.badge,g.badge) AS membership_badge FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id LEFT JOIN membership_groups g ON g.id=p.group_id AND g.business_id=m.business_id WHERE b.owner_id=$1 ORDER BY m.created_at DESC",[owner])).rows;

@@ -1,0 +1,3 @@
+# v1.3.122 work in progress
+
+Requested membership billing, monthly credit expiry/reset, owner payment invitations, coupons, mandatory owner approval, payment status timelines, optional media consent and private team accountability are implemented as a candidate. No new release has been deployed. Baseline staging/production remains v1.3.121. Local writes to several files stalled; this branch preserves complete source recovered through GitHub and requires a fresh checkout, regression tests, typecheck, build and isolated staging acceptance before production. No live customer email, billing update, membership credit mutation or booking was performed for development. Do not treat any requirement as verified until the deployment evidence is updated.

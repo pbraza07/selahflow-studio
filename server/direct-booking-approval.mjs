@@ -17,6 +17,7 @@ function directContext(row,allowApproval=false){
 }
 /** Only an intentional checkout click confirms an old request; preview never reserves a seat. */
 export async function confirmDirectBookingForPayment(pool,args){
+ return;
  const context=await pendingDirectBooking(pool,args);
  if(!context)return;
  return confirmUncheckedRequest(pool,context,args.origin);
@@ -43,6 +44,7 @@ async function confirmUncheckedRequest(pool,context,origin){
  * Confirmation uses the same locked policy/price/capacity validation as checkout.
  */
 export async function reconcileUncheckedBookings(pool,{origin,after='',limit=25}={}){
+ return {scanned:0,eligible:0,confirmed:0,unavailable:0,next:''};
  const url=new URL(origin);
  if(url.protocol!=='https:'&&url.hostname!=='localhost')throw Error('A secure application URL is required.');
  const rows=(await pool.query("SELECT r.*,s.data AS settings FROM booking_requests r JOIN businesses b ON b.id=r.business_id AND b.owner_id=r.owner_id JOIN settings s ON s.owner=r.owner_id WHERE b.status='active' AND r.status='pending' AND r.date>=to_char(now() AT TIME ZONE 'America/New_York','YYYY-MM-DD') AND r.id>$1 ORDER BY r.id LIMIT $2",[after,Math.min(100,Math.max(1,limit))])).rows;

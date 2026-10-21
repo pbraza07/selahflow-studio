@@ -54,6 +54,7 @@ export async function confirmBooking(options){
   const settingRow=await client.query('SELECT data FROM settings WHERE owner=$1',[owner]);
   const config=settingRow.rows[0] ? JSON.parse(settingRow.rows[0].data) : {};
   await assertBookingWaiver(client,{owner,config,serviceIds:services.map(s=>s.id),memberNumber:data.memberNumber});
+  if(options.autoConfirmRequest)throw conflict('Owner approval is required before payment.');
   if(options.autoConfirmRequest){
    const saved=options.autoConfirmRequest;
    if(!pendingRequest||pendingRequest.details!==saved.details||pendingRequest.date!==date||pendingRequest.staff_id!==staff||Number(pendingRequest.start_minute)!==start||Number(pendingRequest.duration)!==duration)throw conflict('Booking details changed. Check your registration before paying.');
@@ -67,7 +68,7 @@ export async function confirmBooking(options){
   const session=selectedSession(config,date,staff,services,start);
   const sessionId=data?.sessionId || null;
   if(data.membershipCovered===true){
-   const member=(await client.query('SELECT m.status,m.sessions_included,m.sessions_used,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2',[owner,data.memberNumber])).rows[0];
+   const member=(await client.query('SELECT m.status,m.sessions_included,m.sessions_used,m.paid_through,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2',[owner,data.memberNumber])).rows[0];
    const current=services.map(s=>(config.services||[]).find(v=>v.id===s.id)||s);
    const allowed=session?session.membershipCreditAllowed!==false:current.every(s=>s.membershipCreditAllowed!==false);
    if(!member||!hasUsableMembership(member)||!allowed||!membershipAllows(member.credit_eligibility,{serviceIds:services.map(s=>s.id),sessionId,seriesId:session?.seriesId}))throw conflict('Membership credits do not cover this booking anymore. Refresh and book with the current price.');

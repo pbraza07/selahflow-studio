@@ -10,7 +10,7 @@ import {ArrowLeft,ArrowRight,CalendarDays,CheckCircle2,CreditCard,ShieldCheck} f
 import type {CSSProperties} from 'react';
 import {themeStyles} from '../../../server/themes.mjs';
 import GoogleBusinessGallery from '../../components/google-business-gallery';
-type Plan={creditSummary?:string;id:string;name:string;description:string;interval:'week'|'month'|'year';priceCents:number;groupId:string|null;badge:MembershipBadgeDesign|null};
+type Plan={intervalCount?:number;creditSummary?:string;id:string;name:string;description:string;interval:'week'|'month'|'year';priceCents:number;groupId:string|null;badge:MembershipBadgeDesign|null};
 type Summary={slug:string;name:string;plans:Plan[];groups:{id:string;name:string;badge:MembershipBadgeDesign|null}[];canPay:boolean;theme:any;brandPrimary:string;brandBackground:string;registrationConfig:any};
 const price=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
 export default function MembershipEnrollment(){
@@ -18,6 +18,7 @@ export default function MembershipEnrollment(){
  const [groupTab,setGroupTab]=useState('all');
  const [name,setName]=useState(''),[email,setEmail]=useState(''),[accept,setAccept]=useState(false);
  const [details,setDetails]=useState<Record<string,string>>({firstName:'',lastName:'',dateOfBirth:'',phone:''}),[answers,setAnswers]=useState<Record<string,string|boolean>>({});
+ const [coupon,setCoupon]=useState('');
  const [error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [result,setResult]=useState<{status:string;plan?:string;paidThrough?:string;memberNumber?:string;sessionsLeft?:number}|null>(null);
  const [requested,setRequested]=useState(false),[registeredNumber,setRegisteredNumber]=useState('');
@@ -61,7 +62,7 @@ export default function MembershipEnrollment(){
   setBusy(true);setError('');
   try{
    const response=await fetch('/api/public/memberships',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action:online?'checkoutMembership':'requestMembership',recurringAccepted:online&&accept,requestId:requestId.current||(requestId.current=crypto.randomUUID()),slug,planId:plan.id,name,email,...details,customAnswers:answers,termsAccepted:accept})});
+    body:JSON.stringify({action:online?'checkoutMembership':'requestMembership',couponCode:coupon,recurringAccepted:online&&accept,requestId:requestId.current||(requestId.current=crypto.randomUUID()),slug,planId:plan.id,name,email,...details,customAnswers:answers,termsAccepted:accept})});
    const d=await response.json();
    if(!response.ok)throw Error(d.error||'Secure checkout is unavailable.');
    if(online){if(d.checkoutUrl&&/^https:\/\/checkout\.stripe\.com\//.test(d.checkoutUrl))window.location.assign(d.checkoutUrl);else if(d.returnUrl&&new URL(d.returnUrl).origin===window.location.origin)window.location.assign(d.returnUrl);else throw Error('Secure checkout link unavailable.');}
@@ -110,7 +111,7 @@ export default function MembershipEnrollment(){
      {data.plans.length>0&&<p className="sf-membership-warning">{data.registrationConfig?.pageContent?.membershipRequestNote||('Choose your membership and complete registration. No owner approval is required; benefits activate after payment is verified.')}</p>}
      <button type="button" className="primary sf-membership-next" disabled={!planId} onClick={()=>setStep(2)}>Continue <ArrowRight size={17}/></button>
     </>:<form onSubmit={pay}><button type="button" className="sf-membership-back" onClick={()=>setStep(1)}><ArrowLeft size={16}/> Choose another plan</button>
-     <h2>{data.registrationConfig?.pageContent?.membershipDetailsTitle||"Review your membership"}</h2>{plan&&<div className="sf-membership-order"><b>{plan.name}</b><p>{plan.description}</p><p>{plan.creditSummary}</p>
+     <label>Coupon code (optional)<input maxLength={40} value={coupon} onChange={e=>setCoupon(e.target.value.toUpperCase())}/></label><h2>{data.registrationConfig?.pageContent?.membershipDetailsTitle||"Review your membership"}</h2>{plan&&<div className="sf-membership-order"><b>{plan.name}</b><p>{plan.description}</p><p>{plan.creditSummary}</p>
       <div><strong>{price(plan.priceCents)} / {plan.interval}</strong><span>{plan.interval} membership</span></div></div>}
      <RegistrationFields config={data.registrationConfig||{}} form="membership" values={{...details,email}} answers={answers} onValue={(id,value)=>{if(id==='email')setEmail(value);else setDetails(old=>{const next={...old,[id]:value};setName((next.firstName+' '+next.lastName).trim());return next;});}} onAnswer={(id,value)=>setAnswers(old=>({...old,[id]:value}))} identityHelp={<><p><strong>First membership or first visit?</strong> Leave the ID blank. SelahFlow will assign your permanent business-specific eight-character Unique ID when you register, using the same process as your first booking. First name, last name and date of birth are required to generate the ID.</p>{details.memberNumber&&<><button type="button" className="outline" disabled={lookupBusy||!details.dateOfBirth} onClick={()=>void loadReturningMember()}>{lookupBusy?'Loading customer…':'Load existing customer'}</button>{lookupMessage&&<small role="status">{lookupMessage}</small>}</>}</>}/>
      <label className="sf-membership-agree"><input type="checkbox" required checked={accept} onChange={e=>setAccept(e.target.checked)}/>

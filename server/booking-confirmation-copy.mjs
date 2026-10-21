@@ -1,3 +1,2 @@
-export function bookingConfirmationInstructions(pending){return pending
- ?'Request received. Your time is not reserved until the business approves it. Check registration for updates using your Membership ID.'
- :'Your booking is confirmed. Save your Membership ID and visit details. Check registration for membership and payment status, or contact the business to make changes.';}
+export const PAYMENT_PARTICIPATION_NOTICE='Your place is subject to owner approval and completion of any payment due. Please pay before attending so we can finalize your participation. No additional payment is required when an eligible paid membership covers the session.';
+export function bookingConfirmationInstructions(pending){return (pending?'Request received. Your time is not reserved until the owner approves it. Payment becomes available after approval through your email or verified membership lookup.':'Your booking has been approved. Check your email or verified membership lookup to complete any payment due.')+' '+PAYMENT_PARTICIPATION_NOTICE;}

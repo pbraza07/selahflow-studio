@@ -1,3 +1,4 @@
+import {refreshMemberPeriod} from './membership-periods.mjs';
 import {membershipAllows} from './membership-eligibility.mjs';
 import {selectedSession,bookedSessionCount,overlaps,appointmentData as storedAppointmentData} from './session-scheduling.mjs';
 import {loadOwnerMemberRoster,ownerAppointmentMember} from './owner-appointment-members.mjs';
@@ -18,10 +19,11 @@ export async function debitAppointmentMembershipSession(client,{owner,memberNumb
   return {deducted:false,alreadyDeducted:false,memberFound:false,remaining:null};
  }
  const result=await client.query(
-  "SELECT m.id,m.status,m.sessions_included,m.sessions_used,b.id AS business_id,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2 FOR UPDATE OF m",
+  "SELECT m.*,b.id AS business_id,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2 FOR UPDATE OF m",
   [owner,number]
  );
- const member=result.rows[0];
+ let member=result.rows[0];
+ if(member)member=await refreshMemberPeriod(client,member);
  if(!member)return {deducted:false,alreadyDeducted:false,memberFound:false,remaining:null};
  if(member.status!=='active')return {deducted:false,alreadyDeducted:false,memberFound:true,active:false,remaining:null};
  const remaining=Number(member.sessions_included)-Number(member.sessions_used);

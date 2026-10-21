@@ -92,8 +92,8 @@ export function invoicePaidThrough(invoice){
  const ends=(invoice?.lines?.data||[]).map(l=>l?.period?.end).filter(x=>Number.isSafeInteger(x)&&x>0);
  return ends.length?new Date(Math.max(...ends)*1000).toISOString():null;
 }
-export function shouldActivateInvoice(invoice){
+export function shouldActivateInvoice(invoice,allowZero=false){
  // Current Stripe invoices omit the legacy paid boolean. Explicit false still
  // rejects contradictory legacy payloads; status and collected amount are required.
- return invoice?.paid!==false&&invoice?.status==='paid'&&Number.isSafeInteger(invoice?.amount_paid)&&invoice.amount_paid>0;
+ return invoice?.paid!==false&&invoice?.status==='paid'&&Number.isSafeInteger(invoice?.amount_paid)&&(invoice.amount_paid>0||allowZero&&invoice.amount_paid===0);
 }

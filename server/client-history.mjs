@@ -130,7 +130,7 @@ export function buildClientDirectory(appointments,settings={},owner=''){
    id:String(row.id),date,time:Number(row.start)||0,duration:Number(row.duration)||0,
    serviceNames,serviceTypes:types,staff,status,attended,
    sessionType:data.sessionId?'Group session':'Individual appointment',
-   quotedPrice:Number(data.price)||0,
+   quotedPrice:Number(data.price)||0,paymentTracking:data.paymentTracking||(data.membershipCovered||data.paymentStatus==='paid'||Number(data.price)===0?'completed':'pending'),bookingTimeline:data.bookingTimeline||[{status:'Submitted',at:data.created||null},{status:status,at:null}],
    customerEmail:email,customerPhone:phone,customerName:name,customerMemberNumber:data.memberNumber||null,dateOfBirth:clean(data.dateOfBirth,10),firstName:clean(data.firstName,50),lastName:clean(data.lastName,50),
    answers,originalAnswers,originalSubmission:data.originalSubmission||null,
    submittedAt:data.created||null,policyAccepted:data.policyAccepted===true,policyAcceptedAt:data.policyAcceptedAt||null

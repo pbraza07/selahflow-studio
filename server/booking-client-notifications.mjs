@@ -1,3 +1,5 @@
+import {processMembershipInvitations} from './membership-invitations.mjs';
+import {refreshMembershipPeriods} from './membership-periods.mjs';
 import {processOwnerFormNotifications} from './owner-form-notifications.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {getPool} from './database.mjs';
@@ -87,12 +89,12 @@ export function startClientMessageWorker(){
  if(started)return;started=true;
  const tick=async()=>{if(busy)return;busy=true;try{
   const origin=process.env.APP_URL||process.env.RENDER_EXTERNAL_URL;
-  if(origin)try{
+  if(false&&origin)try{
    const {reconcileUncheckedBookings}=await import('./direct-booking-approval.mjs');
    const result=await reconcileUncheckedBookings(getPool(),{origin,after:approvalCursor});approvalCursor=result.next;
    if(result.confirmed)console.log('Unchecked booking reconciliation:',JSON.stringify({scanned:result.scanned,confirmed:result.confirmed,unavailable:result.unavailable}));
   }catch{console.error('Unchecked booking reconciliation temporarily unavailable');}
-  await processOwnerFormNotifications(getPool());await processClientMessages();await processBookingReceipts(getPool());await processMembershipPaymentEmails(getPool());
+  await processOwnerFormNotifications(getPool());await processClientMessages();await processBookingReceipts(getPool());await processMembershipPaymentEmails(getPool());await processMembershipInvitations(getPool());await refreshMembershipPeriods(getPool());
  }catch{console.error('Client message queue temporarily unavailable');}finally{busy=false;}};
  setInterval(tick,15000).unref();void tick();
 }
