@@ -1,4 +1,4 @@
-**Release source: v1.3.122 — candidate, verification pending.** Owner membership payment invitations, monthly credits without rollover, Stripe recurrence controls, coupons, booking approval before payment, client payment timelines, optional media release and private team accountability.
+**Release source: v1.3.122 — verified LIVE in staging and production.** See [release evidence](docs/V1_3_122_RELEASE.md) and [owner guide](docs/V1_3_122_OWNER_GUIDE.md). Owner membership payment invitations, monthly credits without rollover, Stripe recurrence controls, coupons, booking approval before payment, client payment timelines, optional media release and private team accountability.
 
 **Release source: v1.3.121 — verified LIVE in staging and production.** Matching checkbox sizes and alignment for booking waiver and appointment-policy consent.
 
