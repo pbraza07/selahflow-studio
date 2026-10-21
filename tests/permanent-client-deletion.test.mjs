@@ -27,13 +27,14 @@ test('permanent deletion purges linked registration and history without touching
   await assert.rejects(deleteClientPermanently(db,{owner:'u2',businessId:'b1',client:{id:profileId}}),/not found/);
   const env={APP_ENV:'staging',DATABASE_URL:'postgresql://selahflow_staging_user:fixture@db/selahflow_staging',STAGING_DATABASE_HOST:'db'};
   const target={profileId,businessSlug:'one',originalMemberNumber:'LC122900'};
+  await pg.exec("INSERT INTO client_deletion_authorizations(operation_id,business_id,profile_id,database_name,backup_sha256,restore_evidence_sha256,verified_at,expires_at) SELECT gen_random_uuid(),'b1','"+profileId+"',current_database(),repeat('a',64),repeat('b',64),now(),now()+interval '1 hour'");
   const result=await resetStagingRegistration(pool,target,env);
   assert.equal(result.freshRegistrationVerified,true);assert.equal(result.removed.appointments,1);assert.equal(result.removed.booking_client_messages,1);
   for(const table of ['business_client_profiles','appointments','booking_requests','booking_client_messages','booking_receipt_emails','events'])assert.equal((await query(`SELECT count(*)::int AS n FROM ${table}`)).rows[0].n,0,table);
   assert.equal((await query('SELECT count(*)::int AS n FROM customer_booking_ids')).rows[0].n,2,'sibling and foreign registration survive');
   const retired=(await query("SELECT * FROM business_member_ids WHERE business_id='b1' AND member_number='LC122900'")).rows[0];
-  assert.match(retired.identity_key,/^deleted:/);assert.ok(retired.retired_at);
-  assert.deepEqual((await query('SELECT records FROM staging_snapshot_backups')).rows[0].records,[]);
+  assert.equal(retired,undefined,'Deleted IDs are released immediately');
+  assert.deepEqual((await query('SELECT records FROM staging_snapshot_backups')).rows[0].records,JSON.parse(JSON.stringify(original)),'Backups remain intact; tombstones block replay');
   assert.doesNotMatch(JSON.stringify((await query('SELECT * FROM staging_registration_resets')).rows),/Legacy Client|family@example|2010-12-29/);
   assert.equal((await resetStagingRegistration(pool,target,env)).alreadyApplied,true);
   await query('BEGIN');assert.equal(await issueMemberId(db,{businessId:'b1',name:'Legacy Client',dateOfBirth:'2010-12-29'}),'LC1229');await query('ROLLBACK');

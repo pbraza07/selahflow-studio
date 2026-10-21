@@ -12,6 +12,7 @@ test('registration payment stays tenant-scoped, verifies DOB, respects approval/
   for(const f of (await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort())await pg.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8'));
   const db={query:async(s,v)=>{const r=await pg.query(s,v);return {...r,rowCount:r.rows.length||r.affectedRows||0};},release(){}};const pool={...db,connect:async()=>db};
   await pg.exec("INSERT INTO users(id,email,password_hash) VALUES('u1','one@example.com','hash'),('u2','two@example.com','hash'); INSERT INTO businesses(id,owner_id,slug,name,status) VALUES('b1','u1','one','One','active'),('b2','u2','two','Two','active'); INSERT INTO merchant_accounts(business_id,provider,external_account_id,charges_enabled,onboarding_complete) VALUES('b1','stripe','acct_one',true,true);");
+  await db.query('INSERT INTO settings(owner,data) VALUES($1,$2)',['u1',JSON.stringify({services:[{id:'s',name:'Service',price:25}]})]);
   const id=randomUUID(),request=randomUUID(),data={price:25,services:['Service'],serviceIds:['s'],memberNumber:'AB0101',dateOfBirth:'2000-01-01',email:'private@example.com'};
   await db.query("INSERT INTO appointments(id,owner,date,staff,start,duration,status,data) VALUES($1,'u1','2030-11-01','coach',600,30,'Confirmed',$2)",[id,JSON.stringify(data)]);
   await db.query("INSERT INTO booking_requests(id,business_id,owner_id,date,staff_id,start_minute,duration,details,status,appointment_id) VALUES($1,'b1','u1','2030-11-01','coach',600,30,'{}','accepted',$2)",[request,id]);

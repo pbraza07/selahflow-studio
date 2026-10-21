@@ -1,3 +1,4 @@
+import {assertBookingWaiver} from './participation-waivers.mjs';
 import {randomUUID} from 'node:crypto';
 import {stripeApi,paymentConfigured,invoiceSubscriptionId,invoicePaidThrough,shouldActivateInvoice} from './membership-payments.mjs';
 import {isStaging} from './staging-safety.mjs';
@@ -45,6 +46,9 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
   const appointment=(await db.query('SELECT id,data,status FROM appointments WHERE owner=$1 AND id=$2 FOR UPDATE',[business.owner_id,actualId])).rows[0];
   if(!appointment||!['Confirmed','Checked in','Checked-in','Completed','No-show'].includes(appointment.status))throw Error('This booking is not available for payment.');
   const data=typeof appointment.data==='string'?JSON.parse(appointment.data):appointment.data;
+  const settings=(await db.query('SELECT data FROM settings WHERE owner=$1',[business.owner_id])).rows[0];
+  const config=typeof settings?.data==='string'?JSON.parse(settings.data):settings?.data||{};
+  await assertBookingWaiver(db,{owner:business.owner_id,config,serviceIds:data.serviceIds||[],memberNumber:data.memberNumber});
   if(data.paymentStatus==='paid'){await db.query('COMMIT');return {paid:true};}
   const cents=Math.round(Number(data.price)*100);
   if(data.membershipCovered===true||cents===0)throw Error('No payment is due for this booking.');

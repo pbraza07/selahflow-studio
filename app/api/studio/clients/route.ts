@@ -1,3 +1,4 @@
+import {authorizeClientDeletion} from '../../../../server/deletion-authorization.mjs';
 import {deleteClientPermanently} from '../../../../server/delete-client.mjs';
 import {issueMemberId} from '../../../../server/member-id-policy.mjs';
 import {replaceLegacyMemberId} from '../../../../server/replace-legacy-member-id.mjs';
@@ -158,6 +159,7 @@ export async function POST(req:Request){
     }
    }else if(body.action==='archive'||body.action==='delete'){
     if(!client||body.confirmPhrase!=='DELETE CLIENT')throw Error('Confirm permanent client deletion.');
+    await authorizeClientDeletion(db,{businessId:business.id,profileId:client.id});
     await deleteClientPermanently(db,{owner,businessId:business.id,client});
    }else if(body.action==='deleteArchived'){
     const ids=body.clientIds;
@@ -167,6 +169,7 @@ export async function POST(req:Request){
     for(const value of ids){
      const saved=result.profiles.find((p:any)=>p.id===value);
      const history=result.derived.filter((c:any)=>c.id===saved?.source_key||c.history?.some((r:any)=>r.id===saved?.anchor_appointment_id)||saved?.member_number&&c.memberNumber===saved.member_number||sameClientContact(c,saved)).flatMap((c:any)=>c.history||[]);
+     await authorizeClientDeletion(db,{businessId:business.id,profileId:value});
      await deleteClientPermanently(db,{owner,businessId:business.id,client:{...result.archived.find((c:any)=>c.id===value),memberNumber:saved?.member_number,dateOfBirth:dateOnly(saved?.date_of_birth),history}});
     }
     responseId='deleted';

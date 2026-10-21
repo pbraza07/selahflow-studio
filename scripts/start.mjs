@@ -3,8 +3,6 @@ const result=spawnSync(process.execPath,['--env-file-if-exists=.env.local','scri
 if(result.status!==0)process.exit(result.status||1);
 const snapshot=spawnSync(process.execPath,['--env-file-if-exists=.env.local','scripts/import-staging-snapshot.mjs'],{stdio:'inherit'});
 if(snapshot.status!==0)process.exit(snapshot.status||1);
-const reset=spawnSync(process.execPath,['--env-file-if-exists=.env.local','scripts/reset-staging-registration.mjs'],{stdio:'inherit'});
-if(reset.status!==0)process.exit(reset.status||1);
 const stripe=spawnSync(process.execPath,['--env-file-if-exists=.env.local','scripts/prepare-staging-stripe.mjs'],{stdio:'inherit'});
 if(stripe.status!==0)process.exit(stripe.status||1);
 spawnSync(process.execPath,['--env-file-if-exists=.env.local','scripts/report-staging-delivery.mjs'],{stdio:'inherit'});

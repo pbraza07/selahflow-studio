@@ -1,3 +1,4 @@
+// Historical reset is no longer executed during application startup.
 import {getPool} from '../server/database.mjs';
 import {resetStagingRegistration} from '../server/staging-registration-reset.mjs';
 if(process.env.STAGING_REGISTRATION_RESET_TARGET){

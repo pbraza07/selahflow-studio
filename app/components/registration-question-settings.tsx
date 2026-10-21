@@ -1,6 +1,6 @@
 'use client';
 import {useState} from 'react';
-import {registrationQuestions,STANDARD_REGISTRATION_FIELDS} from '../../server/registration-questions.mjs';
+import {registrationQuestions,STANDARD_REGISTRATION_FIELDS,questionNotificationEnabled} from '../../server/registration-questions.mjs';
 
 type FormType='booking'|'membership';
 type Props={config:any;setConfig:(updater:any)=>void;limit:number;sessionId?:string;serviceId?:string;initialForm?:FormType};
@@ -22,6 +22,8 @@ export default function RegistrationQuestionSettings({config,setConfig,limit,ses
   bookingQuestionOrder:(c.bookingQuestionOrder||[]).filter((key:string)=>key!==id),
   membershipQuestionOrder:(c.membershipQuestionOrder||[]).filter((key:string)=>key!==id),
   bookingPushFields:(c.bookingPushFields||[]).filter((key:string)=>key!==id),
+  bookingQuestionNotifications:Object.fromEntries(Object.entries(c.bookingQuestionNotifications||{}).filter(([key])=>key!==id)),
+  membershipQuestionNotifications:Object.fromEntries(Object.entries(c.membershipQuestionNotifications||{}).filter(([key])=>key!==id)),
   ...(Array.isArray(c.bookingApprovalVisibleFields)?{bookingApprovalVisibleFields:c.bookingApprovalVisibleFields.filter((key:string)=>key!==id)}:{})
  }));
  const scope=(id:string,forms:string[])=>setConfig((c:any)=>({...c,
@@ -53,7 +55,7 @@ export default function RegistrationQuestionSettings({config,setConfig,limit,ses
  <p className="muted">{serviceId?
   'Create questions just for this service, whether new or existing. Customers booking multiple services see each applicable question once. Global fields also appear; changing their labels affects every form where they are used. Save business settings to publish.':
   sessionId?'Review every field customers see for this session, including standard registration fields. Required choices apply to this session.':
-  'Edit standard labels, help text, placeholders and booking or membership custom questions. Scope questions to individual services or sessions and choose their display order.'}</p>
+  'Set Required and Include in notifications for every standard and custom question. Edit labels, help text, placeholders and booking or membership custom questions. Scope questions to individual services or sessions and choose their display order.'}</p>
  <p><strong>{fields.length}/{limit} custom questions used</strong> · Standard questions and edits do not consume extra allowance.</p>
  {!sessionId&&!serviceId&&<label>Form to edit<select value={form} onChange={e=>setForm(e.target.value as FormType)}><option value="booking">Booking registration</option><option value="membership">Membership registration</option></select></label>}
  <button type="button" className="outline" disabled={fields.length>=limit} onClick={add}>+ Add {serviceId?'service':sessionId?'session':form} question</button>
@@ -80,11 +82,12 @@ export default function RegistrationQuestionSettings({config,setConfig,limit,ses
    <label>Question type<select value={f.type} onChange={e=>update(f.id,{type:e.target.value,options:e.target.value==='select'?(f.options?.length?f.options:['Option 1']):[]})}>{['text','number','date','select','checkbox'].map(t=><option key={t} value={t}>{t}</option>)}</select></label>
    {f.type==='select'&&<label>Choices (one per line)<textarea value={(f.options||[]).join('\n')} onChange={e=>update(f.id,{options:e.target.value.split('\n')})}/></label>}
    </>}
-  <label><input type="checkbox" checked={f.required} disabled={!serviceId&&!sessionId&&form==='membership'&&f.standard&&(f.id==='memberNumber'||STANDARD_REGISTRATION_FIELDS.some(x=>x.id===f.id&&x.required))||(!!serviceId||!!sessionId)&&Boolean(f.standard&&f.id==='memberNumber')} onChange={e=>required(f,e.target.checked)}/> {serviceId?'Required for this service':sessionId?'Required for this session':'Required'}</label>
-  {!f.standard&&<><label><input type="checkbox" checked={(config.bookingPushFields||[]).includes(f.id)} onChange={e=>setConfig((c:any)=>({...c,bookingPushFields:e.target.checked?[...new Set([...(c.bookingPushFields||['customerName','services','date']),f.id])]:(c.bookingPushFields||[]).filter((id:string)=>id!==f.id)}))}/> Include in booking push notification</label>
+  <label><input type="checkbox" checked={f.required} onChange={e=>required(f,e.target.checked)}/> {serviceId?'Required for this service':sessionId?'Required for this session':'Required'}</label>
+  <label><input type="checkbox" aria-label={'Include '+f.label+' in notifications'} checked={questionNotificationEnabled(config,editorForm,f)} onChange={e=>setConfig((c:any)=>({...c,[editorForm+'QuestionNotifications']:{...c[editorForm+'QuestionNotifications'],[f.id]:e.target.checked}}))}/> Include this answer in business email and push notifications</label>
+  {!f.standard&&<>
    {serviceId?(f.serviceIds?.includes(serviceId)?<button type="button" className="outline" onClick={()=>removeFromService(f)}>Remove question from this service</button>:<small>Shared question. Edit its visibility in Settings → Booking & membership questions.</small>):<button type="button" className="outline" onClick={()=>remove(f.id)}>Remove question</button>}
   </>}
  </section>)}
- <p className="muted">Save business settings to publish. Historical booking answers keep their original question labels and IDs.</p>
+ <p className="muted">New client ID creation still needs first name, last name and birth date; a valid email is needed for approval and payment emails. Required toggles control form questions. Save business settings to publish. Historical booking answers keep their original question labels and IDs.</p>
  </>;
 }

@@ -7,7 +7,7 @@ import type {MembershipBadgeDesign} from './membership-badge';
 import SortableTable from './sortable-table';
 import RegistrationFields from './registration-fields';
 import {customRegistrationFields} from '../../server/registration-questions.mjs';
-import {useCallback,useEffect,useState} from 'react';
+import {useCallback,useEffect,useState,useRef} from 'react';
 import {CalendarClock,CheckCircle2,CreditCard,ExternalLink,Plus,RefreshCw,ShieldCheck} from 'lucide-react';
 import MembershipBadge from './membership-badge';
 type Plan={id:string;name:string;description:string;interval:'week'|'month'|'year';priceCents:number;sessionsIncluded:number;active:boolean;groupId:string|null;badge:MembershipBadgeDesign|null};
@@ -19,6 +19,7 @@ export default function OwnerMemberships({slug,prefill,onEditQuestions}:{slug:st
  const [modal,setModal]=useState<'plan'|'assign'|'groups'|null>(null),[groupId,setGroupId]=useState(''),[newGroupName,setNewGroupName]=useState('');
  useEffect(()=>{if(!prefill)return;const parts=prefill.name.trim().split(/\s+/);setMemberFirst(parts[0]||'');setMemberLast(parts.slice(1).join(' '));setNewMemberEmail(prefill.email||'');setMemberPhone(prefill.phone||'');setModal('assign');},[prefill]);
  const [planBadge,setPlanBadge]=useState<MembershipBadgeDesign|null>(null),[newGroupBadge,setNewGroupBadge]=useState<MembershipBadgeDesign|null>(null),[groupBadges,setGroupBadges]=useState<Record<string,MembershipBadgeDesign|null>>({});
+ const assignmentReference=useRef('');
  const [manualMemberNumber,setManualMemberNumber]=useState('');
  const [memberDob,setMemberDob]=useState('');
  const [memberFirst,setMemberFirst]=useState(''),[memberLast,setMemberLast]=useState(''),[memberPhone,setMemberPhone]=useState(''),[memberAnswers,setMemberAnswers]=useState<Record<string,string|boolean>>({}),[bookingFields,setBookingFields]=useState<any[]>([]),[registrationConfig,setRegistrationConfig]=useState<any>({});
@@ -65,7 +66,7 @@ export default function OwnerMemberships({slug,prefill,onEditQuestions}:{slug:st
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function assignMember(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');
-  try{const r=await post('assignMember',{name:(memberFirst.trim()+' '+memberLast.trim()).trim(),firstName:memberFirst,lastName:memberLast,email:newMemberEmail,dateOfBirth:memberDob,phone:memberPhone,customAnswers:memberAnswers,planId:newMemberPlan,memberNumber:''});setMessage(r.existingMember?'Existing player found. Reuse membership ID '+r.memberNumber+'. No duplicate ID was created.':'Member assigned. Number: '+r.memberNumber+'. Payment remains pending until verified.');setNewMemberName('');setMemberFirst('');setMemberLast('');setMemberDob('');setMemberPhone('');setMemberAnswers({});setNewMemberEmail('');setManualMemberNumber('');setNewMemberPlan('');setModal(null);await load(true);}
+  try{const r=await post('assignMember',{requestId:assignmentReference.current||(assignmentReference.current=crypto.randomUUID()),name:(memberFirst.trim()+' '+memberLast.trim()).trim(),firstName:memberFirst,lastName:memberLast,email:newMemberEmail,dateOfBirth:memberDob,phone:memberPhone,customAnswers:memberAnswers,planId:newMemberPlan,memberNumber:manualMemberNumber});setMessage(r.existingMember?'Existing player found. Reuse membership ID '+r.memberNumber+'. No duplicate ID was created.':'Member assigned. Number: '+r.memberNumber+'. Payment remains pending until verified.');assignmentReference.current='';setNewMemberName('');setMemberFirst('');setMemberLast('');setMemberDob('');setMemberPhone('');setMemberAnswers({});setNewMemberEmail('');setManualMemberNumber('');setNewMemberPlan('');setModal(null);await load(true);}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function confirmPayment(m:Member,renew=false){

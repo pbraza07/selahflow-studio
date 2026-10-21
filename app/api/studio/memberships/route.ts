@@ -1,3 +1,4 @@
+import {membershipRequestDetails,registerMembershipWithoutApproval} from '../../../../server/membership-requests.mjs';
 import {issueMemberId,MEMBER_ID_POLICIES} from '../../../../server/member-id-policy.mjs';
 import {queueMembershipPaymentEmail} from '../../../../server/membership-payment-emails.mjs';
 import {deliveryProviderStatusWithConnection} from '../../../../server/notification-delivery.mjs';
@@ -28,7 +29,7 @@ function error(err:unknown){
 }
 export async function GET(req:Request){
  try{
-  const {pool,business}=await ctx(req);
+  const {pool,business,owner}=await ctx(req);
   const [plans,members,merchant,usageCounts,ledger,groups]=await Promise.all([
    pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",group_id AS "groupId",badge,active FROM membership_plans WHERE business_id=$1 ORDER BY display_order,created_at DESC',[business.id]),
    pool.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
@@ -50,7 +51,7 @@ export async function GET(req:Request){
 export async function POST(req:Request){
  if(!validOrigin(req))return Response.json({error:'Invalid origin.'},{status:403,headers});
  try{
-  const {pool,business}=await ctx(req);
+  const {pool,business,owner}=await ctx(req);
   const raw=await req.text();if(raw.length>8000)throw Error('Request too large.');
   const input=JSON.parse(raw);
   if(input.action==='saveIdPolicy'){
@@ -207,6 +208,15 @@ export async function POST(req:Request){
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
   }
   if(input.action==='assignMember'){
+   if(!String(input.firstName||'').trim()||!String(input.lastName||'').trim()||!input.dateOfBirth||!String(input.email||'').trim()){
+    const settings=(await pool.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0]?.data;
+    const config=typeof settings==='string'?JSON.parse(settings):settings||{};
+    if(!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(input.requestId||''))throw Error('Invalid registration reference. Refresh and try again.');
+    const details=membershipRequestDetails(config,input);
+    const result=await registerMembershipWithoutApproval(pool,{businessId:business.id,ownerId:owner,planId:String(input.planId||''),requestId:input.requestId,details});
+    return Response.json(result,{headers});
+   }
+
    const name=String(input.name||'').trim(),email=String(input.email||'').trim().toLowerCase(),planId=String(input.planId||'');
    if(name.length<2||name.length>100||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Enter a valid member name and email.');
    const phone=String(input.phone||'').trim().slice(0,40);

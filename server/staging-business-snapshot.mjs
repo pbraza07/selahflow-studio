@@ -13,6 +13,7 @@ export function validateSnapshot(snapshot){
  if(!snapshot.tables.businesses.length||snapshot.tables.businesses.length>1000)throw Error('Invalid business count.');
  for(const t of snapshotTables)for(const r of snapshot.tables[t]){
   if(!r||typeof r!=='object'||Array.isArray(r))throw Error('Invalid snapshot record.');
+  if(r.member_number!=null&&!/^[A-Z]{2}[0-9]{4}$/.test(r.member_number))throw Error('Legacy membership IDs cannot be imported. Refresh the source after ID repair.');
   if(t==='users'&&Object.keys(r).some(k=>!['id','email','created_at'].includes(k)))throw Error('Production credentials cannot be imported.');
  }
  return snapshot;
@@ -42,18 +43,6 @@ export async function importBusinessSnapshot(pool,snapshot,digest,env=process.en
   await db.query('INSERT INTO staging_snapshot_runs(id,source_commit,captured_at,summary) VALUES($1,$2,$3,$4)',[digest,snapshot.sourceCommit,snapshot.capturedAt,JSON.stringify(summary)]);
   // A transactional undo snapshot stays only inside the staging database.
   for(const table of snapshotTables){await db.query(`LOCK TABLE ${ident(table)} IN SHARE ROW EXCLUSIVE MODE`);await db.query(`INSERT INTO staging_snapshot_backups(run_id,table_name,records) SELECT $1,$2,COALESCE(jsonb_agg(to_jsonb(t)),'[]'::jsonb) FROM ${ident(table)} t`,[digest,table]);}
-  // Existing production history predates these future-write checks. Restore its
-  // original rows under exclusive locks, then restore every guard before commit.
-  // No foreign keys are disabled and no other connection can write meanwhile.
-  const legacyGuards=[['business_client_profiles','profile_id_guard','business_client_profiles_member_number_six'],['customer_booking_ids','booking_id_guard','customer_booking_ids_member_number_six'],['customer_memberships','membership_id_guard','customer_memberships_member_number_six']];
-  const constraints=[];
-  for(const [table,trigger,name] of legacyGuards){
-   const constraint=(await db.query('SELECT pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conrelid=$1::regclass AND conname=$2',[table,name])).rows[0];
-   if(!constraint||!constraint.definition.endsWith('NOT VALID'))throw Error('Unexpected legacy member constraint.');
-   constraints.push({table,name,definition:constraint.definition});
-   await db.query(`ALTER TABLE ${ident(table)} DISABLE TRIGGER ${ident(trigger)}`);
-   await db.query(`ALTER TABLE ${ident(table)} DROP CONSTRAINT ${ident(name)}`);
-  }
   const sourceIds=new Set(snapshot.tables.businesses.map(b=>b.id));
   const existing=(await db.query('SELECT id,slug FROM businesses')).rows;
   for(const b of existing){
@@ -76,16 +65,13 @@ export async function importBusinessSnapshot(pool,snapshot,digest,env=process.en
     const keys=Object.keys(row);
     if(keys.some(k=>!metadata.has(k)))throw Error('Unknown snapshot column.');
     const values=keys.map(k=>row[k]===null?null:metadata.get(k)==='jsonb'?JSON.stringify(row[k]):metadata.get(k)==='bytea'?Buffer.from(String(row[k]).replace(/^\\x/,''),'hex'):row[k]);
-    await db.query(`INSERT INTO ${ident(table)} (${keys.map(ident).join(',')}) VALUES (${keys.map((_,i)=>'$'+(i+1)).join(',')})`,values);
+    await db.query(`INSERT INTO ${ident(table)} (${keys.map(ident).join(',')}) VALUES (${keys.map((_,i)=>'$'+(i+1)).join(',')})${table==='business_member_ids'?' ON CONFLICT DO NOTHING':''}`,values);
    }
   }
-  // Capture only this explicitly reviewed historical import, never normal writes.
-  await db.query("INSERT INTO legacy_business_member_numbers(business_id,member_number) SELECT business_id,member_number FROM business_member_ids WHERE member_number !~ '^[A-Z]{2}[0-9]{4}$' UNION SELECT business_id,member_number FROM customer_booking_ids WHERE member_number !~ '^[A-Z]{2}[0-9]{4}$' UNION SELECT business_id,member_number FROM customer_memberships WHERE member_number !~ '^[A-Z]{2}[0-9]{4}$' UNION SELECT b.id,p.member_number FROM business_client_profiles p JOIN businesses b ON b.owner_id=p.owner WHERE p.member_number !~ '^[A-Z]{2}[0-9]{4}$' ON CONFLICT DO NOTHING");
-  for(const [table,trigger] of legacyGuards)await db.query(`ALTER TABLE ${ident(table)} ENABLE TRIGGER ${ident(trigger)}`);
-  for(const c of constraints)await db.query(`ALTER TABLE ${ident(c.table)} ADD CONSTRAINT ${ident(c.name)} ${c.definition}`);
   const beforeCounts=(await db.query('SELECT table_name,jsonb_array_length(records) AS n FROM staging_snapshot_backups WHERE run_id=$1',[digest])).rows;
   for(const table of snapshotTables){
-   const expected=Number(beforeCounts.find(r=>r.table_name===table).n)+snapshot.tables[table].length;
+   const generated=table==='business_member_ids'?new Set(['business_client_profiles','customer_booking_ids','customer_memberships'].flatMap(t=>snapshot.tables[t].filter(r=>r.member_number).map(r=>(r.business_id||snapshot.tables.businesses.find(b=>b.owner_id===r.owner)?.id)+'|'+r.member_number)).filter(key=>!snapshot.tables.business_member_ids.some(r=>r.business_id+'|'+r.member_number===key))).size:0;
+   const expected=Number(beforeCounts.find(r=>r.table_name===table).n)+snapshot.tables[table].length+generated;
    if(Number((await db.query(`SELECT count(*) AS n FROM ${ident(table)}`)).rows[0].n)!==expected)throw Error('Snapshot table count mismatch.');
   }
   summary.verifiedTables=snapshotTables.length;

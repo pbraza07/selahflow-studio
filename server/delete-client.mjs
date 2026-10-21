@@ -1,3 +1,4 @@
+import {retainDeletedClientFinancials} from './client-financial-retention.mjs';
 const object=x=>{try{return typeof x==='string'?JSON.parse(x):x||{};}catch{return {};}};
 const day=x=>x instanceof Date?x.toISOString().slice(0,10):String(x||'').slice(0,10);
 const identity=(name,dob)=>String(name||'').trim().replace(/\s+/g,' ').toLowerCase()+'|'+day(dob);
@@ -7,19 +8,20 @@ export async function deleteClientPermanently(db,{owner,businessId,client}){
  if(!business||!client?.id)throw Error('Client not found in this business.');
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[business.id+':member-id-allocation']);
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
- await db.query('LOCK TABLE appointments,booking_requests,business_client_profiles,business_member_ids,customer_booking_ids,customer_memberships,booking_client_messages,booking_receipt_emails,membership_payment_emails IN SHARE ROW EXCLUSIVE MODE');
+ await db.query('LOCK TABLE appointments,booking_requests,business_client_profiles,business_member_ids,customer_booking_ids,customer_memberships,booking_client_messages,booking_receipt_emails,membership_payment_emails,owner_form_notifications IN SHARE ROW EXCLUSIVE MODE');
  const profile={id:client.id};
  const reservation=(await db.query('SELECT identity_key FROM business_member_ids WHERE business_id=$1 AND member_number=$2',[business.id,client.memberNumber||''])).rows[0];
- const original={identity_key:reservation?.identity_key||identity(client.name,client.dateOfBirth)};
+ const original={identity_key:reservation?.identity_key&&!reservation.identity_key.startsWith('deleted:')?reservation.identity_key:identity(client.name,client.dateOfBirth)};
  if(!reservation&&!client.name)throw Error('Client identity unavailable.');
  const aliases=(await db.query('SELECT * FROM business_member_ids WHERE business_id=$1 AND identity_key=$2',[business.id,original.identity_key])).rows;
- const numbers=aliases.map(r=>r.member_number),numberSet=new Set(numbers);
+ const historicalAliases=(await db.query('SELECT previous_number FROM member_id_history_aliases WHERE business_id=$1 AND current_number=$2',[business.id,client.memberNumber||''])).rows;
+ const numbers=[...new Set([...historicalAliases.map(r=>r.previous_number),...aliases.map(r=>r.member_number),...(client.memberNumber?[client.memberNumber]:[])])],numberSet=new Set(numbers);
  const historyIds=new Set((client.history||[]).map(r=>r.id));
  const sameContact=d=>{
   const email=String(d.email||d.customerEmail||d.customer_email||'').trim().toLowerCase(),phone=String(d.phone||d.customerPhone||d.customer_phone||'').replace(/[^+0-9]/g,'');
   return Boolean(email&&email===String(client.email||'').trim().toLowerCase()||phone&&phone===String(client.phone||'').replace(/[^+0-9]/g,''));
  };
- const matches=d=>numberSet.has(d.memberNumber||d.member_number)||(identity(d.name||d.customerName||d.customer_name||[d.first_name,d.last_name].filter(Boolean).join(' '),d.dateOfBirth||d.date_of_birth)===original.identity_key&&(!original.identity_key.endsWith('|')||sameContact(d)));
+ const matches=d=>numberSet.has(d.memberNumber||d.member_number)||(identity(d.name||d.client||d.customerName||d.customer_name||[d.first_name,d.last_name].filter(Boolean).join(' '),d.dateOfBirth||d.date_of_birth)===original.identity_key&&(!original.identity_key.endsWith('|')||sameContact(d)));
 
  const read=async(table,where,args)=>(await db.query(`SELECT * FROM ${table} WHERE ${where}`,args)).rows;
   const members=(await read('customer_memberships','business_id=$1',[business.id])).filter(matches);
@@ -38,6 +40,7 @@ export async function deleteClientPermanently(db,{owner,businessId,client}){
   });
   const specs=[];
   const add=(table,where,args,rows)=>specs.push({table,where,args,rows});
+  add('owner_form_notifications','business_id=$1 AND source_id=ANY($2::text[])',[business.id,[...bookingKeys,...membershipRequests.map(r=>r.id)]]);
   add('booking_client_messages','booking_id=ANY($1::text[])',[appointmentIds]);
   add('booking_receipt_emails','business_id=$1 AND booking_key=ANY($2::text[])',[business.id,bookingKeys]);
   add('membership_payment_emails','business_id=$1 AND membership_id=ANY($2::text[])',[business.id,memberIds]);
@@ -62,21 +65,22 @@ export async function deleteClientPermanently(db,{owner,businessId,client}){
   add('events','owner=$1 AND id=ANY($2::text[])',[business.owner_id,events.map(e=>e.id)],events);
   for(const s of specs)s.rows??=await read(s.table,s.where,s.args);
   const rowsFor=table=>specs.find(s=>s.table===table).rows;
-  if(['booking_client_messages','booking_receipt_emails','membership_payment_emails'].some(table=>rowsFor(table).some(m=>m.status==='processing')))throw Error('A related email is currently being sent. Retry reset after delivery finishes.');
+  if(['booking_client_messages','booking_receipt_emails','membership_payment_emails','owner_form_notifications'].some(table=>rowsFor(table).some(m=>m.status==='processing')))throw Error('A related email is currently being sent. Retry reset after delivery finishes.');
   if(rowsFor('booking_payments').some(p=>p.status==='pending'&&p.stripe_checkout_session_id))throw Error('Expire this registration open Stripe Checkout before reset.');
-  const result={removed:Object.fromEntries(specs.map(s=>[s.table,s.rows.length])),retiredIds:numbers.length,freshRegistrationVerified:false};
-  for(const s of specs)await db.query(`DELETE FROM ${s.table} WHERE ${s.where}`,s.args);
-  await db.query("UPDATE business_member_ids SET retired_at=COALESCE(retired_at,now()),identity_key='deleted:'||gen_random_uuid()::text WHERE business_id=$1 AND identity_key=$2",[business.id,original.identity_key]);
-  for(const s of specs)if((await read(s.table,s.where,s.args)).length)throw Error('Registration reset verification failed.');
-  await db.query('DELETE FROM legacy_business_member_numbers WHERE business_id=$1 AND member_number=ANY($2::text[])',[business.id,numbers]);
-  const snapshots=await read('staging_snapshot_backups','TRUE',[]);
-  for(const backup of snapshots){
-   if(backup.table_name==='business_member_ids'){const records=object(backup.records);if(Array.isArray(records))await db.query('UPDATE staging_snapshot_backups SET records=$1::jsonb WHERE run_id=$2 AND table_name=$3',[JSON.stringify(records.filter(r=>r.business_id!==business.id||r.identity_key!==original.identity_key&&!numberSet.has(r.member_number))),backup.run_id,backup.table_name]);continue;}
-   const spec=specs.find(s=>s.table===backup.table_name);if(!spec)continue;
-   const deletedIds=new Set(spec.rows.map(r=>r.id).filter(Boolean));
-   const records=object(backup.records);if(!Array.isArray(records))continue;
-   const kept=records.filter(r=>!deletedIds.has(r.id)&&!((r.owner===business.owner_id||r.owner_id===business.owner_id||r.business_id===business.id)&&matches(r)));
-   if(kept.length!==records.length)await db.query('UPDATE staging_snapshot_backups SET records=$1::jsonb WHERE run_id=$2 AND table_name=$3',[JSON.stringify(kept),backup.run_id,backup.table_name]);
+  const retainedFinancialRecords=await retainDeletedClientFinancials(db,{businessId:business.id,specs});
+  const result={removed:Object.fromEntries(specs.map(s=>[s.table,s.rows.length])),releasedIds:numbers.length,retainedFinancialRecords,freshRegistrationVerified:false};
+  // Tombstones track only source record hashes, so stale imports/webhook IDs
+  // cannot recreate deleted rows while a genuinely new registration is allowed.
+  for(const spec of specs)if(['appointments','events','business_client_profiles','customer_booking_ids','customer_memberships','booking_requests','membership_requests'].includes(spec.table))for(const row of spec.rows)if(row.id)await db.query('INSERT INTO deleted_client_records(business_id,source_table,record_digest) VALUES($1,$2,md5($3)) ON CONFLICT DO NOTHING',[business.id,spec.table,String(row.id)]);
+  if(original.identity_key.startsWith('registration:'))await db.query('INSERT INTO deleted_client_records(business_id,source_table,record_digest) VALUES($1,$2,md5($3)) ON CONFLICT DO NOTHING',[business.id,'registration_identity',original.identity_key.slice('registration:'.length)]);
+  for(const s of specs){
+   if(s.table==='stripe_payment_receipts'){await db.query(`UPDATE stripe_payment_receipts SET booking_id=NULL,membership_id=NULL WHERE ${s.where}`,s.args);continue;}
+   await db.query(`DELETE FROM ${s.table} WHERE ${s.where}`,s.args);
   }
+  await db.query('DELETE FROM business_member_ids WHERE business_id=$1 AND (identity_key=$2 OR member_number=ANY($3::text[]))',[business.id,original.identity_key,numbers]);
+  for(const s of specs)if((await read(s.table,s.where,s.args)).length)throw Error('Registration reset verification failed.');
+  await db.query('DELETE FROM member_id_history_aliases WHERE business_id=$1 AND current_number=ANY($2::text[])',[business.id,numbers]);
+  await db.query('DELETE FROM legacy_business_member_numbers WHERE business_id=$1 AND member_number=ANY($2::text[])',[business.id,numbers]);
+  await db.query('INSERT INTO client_deletion_audit(business_id,target_digest,result) VALUES($1,md5($2),$3::jsonb)',[business.id,String(client.id),JSON.stringify(result)]);
   return result;
 }

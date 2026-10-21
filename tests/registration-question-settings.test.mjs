@@ -6,7 +6,7 @@ import {pathToFileURL} from 'node:url';
 import ts from 'typescript';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {registrationQuestions,customRegistrationFields,validateRegistrationQuestions,validateStandardRegistration} from '../server/registration-questions.mjs';
+import {registrationQuestions,customRegistrationFields,validateRegistrationQuestions,validateStandardRegistration,registrationNotificationLines} from '../server/registration-questions.mjs';
 import {sanitizeBookingAnswers,validateBookingFields} from '../server/booking-custom-fields.mjs';
 import {checkSubscriptionLimits} from '../server/plan-entitlements.mjs';
 const field=(id,forms)=>({id,label:id,type:'text',required:true,showInNotification:false,options:[],...(forms?{forms}:{})});
@@ -30,7 +30,7 @@ test('standard edits/reorder consume no quota; membership-only and shared new qu
  assert.throws(()=>checkSubscriptionLimits({plan_code:'free',status:'active'},old,{bookingCustomFields:[...five,field('extra',['membership'])]}),/allows up to 5/);
 });
 test('invalid question order, ID collisions and invalid field types are rejected',()=>{
- for(const config of [{bookingQuestionOrder:['email','email']},{membershipQuestionOrder:['unknown']},{bookingCustomFields:[field('email')]},{bookingCustomFields:[field('bad',[])]},{bookingStandardFields:{email:{type:'text'}}},{membershipStandardFields:{memberNumber:{required:true}}},{membershipStandardFields:{email:{required:false}}}])assert.throws(()=>validateRegistrationQuestions(config));
+ for(const config of [{bookingQuestionOrder:['email','email']},{membershipQuestionOrder:['unknown']},{bookingCustomFields:[field('email')]},{bookingCustomFields:[field('bad',[])]},{bookingStandardFields:{email:{type:'text'}}}])assert.throws(()=>validateRegistrationQuestions(config));
  assert.throws(()=>validateStandardRegistration({bookingStandardFields:{phone:{required:true}}},'booking',{firstName:'A',lastName:'B',email:'a@b.com',dateOfBirth:'2000-01-01'}),/Phone is required/);
  assert.deepEqual(sanitizeBookingAnswers([{...field('date'),type:'date'}],{date:'2026-10-13'}),{date:'2026-10-13'});
 });
@@ -45,4 +45,24 @@ test('rendered registration order matches keyboard/DOM order, custom labels and 
  assert.ok(html.indexOf('name="email"')<html.indexOf('name="firstName"'));
  assert.match(html,/Parent email/);assert.match(html,/For receipts/);assert.match(html,/name="emergency"/);assert.doesNotMatch(html,/bookingOnly/);
  assert.equal((html.match(/name="dateOfBirth"/g)||[]).length,1);
+});
+
+test('all registration fields have independent required and notification controls',()=>{
+ const config={membershipStandardFields:{email:{required:false},memberNumber:{required:true}},membershipQuestionNotifications:{email:false,firstName:true}};
+ validateRegistrationQuestions(config);
+ assert.equal(registrationQuestions(config,'membership').find(f=>f.id==='email').required,false);
+ assert.equal(registrationQuestions(config,'membership').find(f=>f.id==='memberNumber').required,true);
+ assert.throws(()=>validateRegistrationQuestions({bookingQuestionNotifications:{email:'yes'}}),/notification/);
+});
+
+
+test('explicit Notify off overrides legacy preferences independently of Required on both forms',()=>{
+ for(const form of ['booking','membership']) {
+  const config={bookingPushFields:['customerName','customerEmail','privateAnswer'],[form+'StandardFields']:{firstName:{required:true,showInNotification:false},email:{required:false,showInNotification:true}},bookingCustomFields:[{...field('privateAnswer'),showInNotification:false}]};
+  const lines=registrationNotificationLines(config,form,{firstName:'Private',email:'approved@example.test'},{privateAnswer:'sensitive'});
+  assert.deepEqual(lines,['Email: approved@example.test']);
+  assert.equal(registrationQuestions(config,form).find(f=>f.id==='firstName').required,true);
+  config[form+'QuestionNotifications']={email:false};
+  assert.deepEqual(registrationNotificationLines(config,form,{firstName:'Private',email:'approved@example.test'},{privateAnswer:'sensitive'}),[]);
+ }
 });

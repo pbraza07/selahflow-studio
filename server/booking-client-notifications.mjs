@@ -1,3 +1,4 @@
+import {processOwnerFormNotifications} from './owner-form-notifications.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {getPool} from './database.mjs';
 import {tokenHash} from './security.mjs';
@@ -60,7 +61,8 @@ export async function processClientMessages(pool=getPool(),{send=sendNotificatio
    let result;
    if(!state||item.event_type==='payment_confirmation'&&state.payment_status!=='paid'||item.event_type==='payment_link'&&(state.appointment_status==='Cancelled'||state.payment_status==='paid'||new Date(state.expires_at)<=new Date()))result={status:'superseded',detail:'Booking or payment is no longer eligible for this message'};
    else if(item.channel==='email'?!validEmail(item.destination):!validE164(item.destination))result={status:'invalid_destination',detail:item.channel==='sms'?'Registration phone missing or invalid; use +country code and number':'Registration email missing or invalid'};
-   else if(item.event_type==='payment_link'&&(!paymentConfigured()||!state.charges_enabled||!state.onboarding_complete))result={status:'not_configured',detail:'Connect and enable Stripe payments for this business'};
+   // Deliver the approved booking and its private payment page even when card
+   // onboarding is incomplete; that page reports availability honestly.
    else result=await send(item.channel,item.destination,{...dataOf(item.message),idempotencyKey:'client-message-'+item.id,trackAmbiguous:true},undefined,undefined,{kind:'transactional-client',queuedAt:item.client_delivery_authorized_at||item.created_at});
    await pool.query("UPDATE booking_client_messages SET status=$1,detail=$2,attempts=attempts+CASE WHEN $1='failed' THEN 1 ELSE 0 END,next_attempt_at=now()+interval '5 minutes',updated_at=now() WHERE id=$3 AND status='processing'",[result.status,result.detail,item.id]);
    if(item.channel==='email')console.log('Client transactional email:',JSON.stringify({event:item.event_type,status:result.status}));
@@ -90,7 +92,7 @@ export function startClientMessageWorker(){
    const result=await reconcileUncheckedBookings(getPool(),{origin,after:approvalCursor});approvalCursor=result.next;
    if(result.confirmed)console.log('Unchecked booking reconciliation:',JSON.stringify({scanned:result.scanned,confirmed:result.confirmed,unavailable:result.unavailable}));
   }catch{console.error('Unchecked booking reconciliation temporarily unavailable');}
-  await processClientMessages();await processBookingReceipts(getPool());await processMembershipPaymentEmails(getPool());
+  await processOwnerFormNotifications(getPool());await processClientMessages();await processBookingReceipts(getPool());await processMembershipPaymentEmails(getPool());
  }catch{console.error('Client message queue temporarily unavailable');}finally{busy=false;}};
  setInterval(tick,15000).unref();void tick();
 }

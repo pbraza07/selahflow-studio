@@ -1,3 +1,4 @@
+import {registrationNotificationLines} from './registration-questions.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {bookingNotificationLines} from './booking-custom-fields.mjs';
 import {businessDeviceName} from './business-device-name.mjs';
@@ -26,7 +27,7 @@ export async function pushBookingRequest(requestId){
    await pool.query("INSERT INTO booking_action_tokens(id,request_id,reviewer,token_hash,expires_at) VALUES($1,$2,$3,$4,now()+interval '72 hours')",[randomUUID(),r.id,sub.reviewer,tokenHash(raw)]);
    url='/booking/respond/'+raw;
   }
-  const payload={title:businessDeviceName(r.name),body:'New booking request · '+trim(bookingNotificationLines(settings.bookingCustomFields||[],settings.bookingPushFields||['customerName','services','date'],detail.customAnswers||{},{customerName:detail.customerName,customerEmail:detail.customerEmail||detail.email,customerPhone:detail.customerPhone||detail.phone,services:(detail.services||[]).map(x=>typeof x==='string'?x:x.name||'').join(', '),date:r.date,time:String(r.start_minute),duration:detail.duration,quotedPrice:detail.price}).join(' · '),220),
+  const payload={title:businessDeviceName(r.name),body:'New booking request · '+trim(registrationNotificationLines(settings,'booking',{memberNumber:detail.memberNumber,dateOfBirth:detail.dateOfBirth,firstName:detail.firstName,lastName:detail.lastName,email:detail.customerEmail||detail.email,phone:detail.customerPhone||detail.phone},detail.customAnswers||{}).join(' · '),220),
    url,tag:'selah-booking-'+r.business_id+'-'+requestId,businessId:r.business_id};
   const response=await sendWebPush({endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth}},payload);
   if(response.status==='submitted')delivered++;

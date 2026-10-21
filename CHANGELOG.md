@@ -1,3 +1,16 @@
+# v1.3.116 — Optional membership identity fields (candidate)
+
+Respect Required on public enrollment and owner assignment. Incomplete identities use separate registration references, receive six-character IDs, and remain distinct across retries and deletions. No fabricated name, birth date or email. Waiver and birth-date lookup still require sufficient participant identity. Production waiver use requires legal review.
+
+## 1.3.115 — Issue 46 implementation checkpoint (not deployed)
+
+- Version-specific business participation signatures and audit evidence, retained after client removal; booking and checkout checks and a production legal-review gate.
+- Independently configurable form Required/Notify flags and filtered owner notifications; optional membership identity fields remain an open acceptance item.
+- Approval/payment notification safeguards, including zero-balance confirmation without a payment link.
+- Strict six-character issuance/import guards, retained ID history aliases, deletion tombstones, minimal financial retention and preserved Stripe reconciliation references.
+- Destructive maintenance removed from startup. Client deletion requires recent, exact-target, database-specific backup/restore authorization.
+- See docs/ISSUE_46_ACCEPTANCE_EVIDENCE.md for verification and remaining deployment gates.
+
 # v1.3.114 — Owner and booking usability
 
 - Group and search all owner workspace tools; add mobile menu close, backdrop, keyboard handling and focus restoration.

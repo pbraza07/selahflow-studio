@@ -1,0 +1,11 @@
+'use client';
+import {useEffect,useState,use} from 'react';
+import {WaiverDocument} from '../../../components/participation-waiver';
+export default function SignedWaiver({params}:{params:Promise<{id:string}>}){
+ const {id}=use(params),[row,setRow]=useState<any>(null),[error,setError]=useState('');
+ useEffect(()=>{const c=new AbortController();fetch('/api/studio/waivers/'+encodeURIComponent(id),{signal:c.signal}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error);setRow(d.waiver);document.title=d.waiver.document.businessName+' - Signed participation waiver';}).catch(e=>{if(e.name!=='AbortError')setError(e.message);});return()=>c.abort();},[id]);
+ return <main className="sf-signed-waiver" style={{maxWidth:760,margin:'24px auto',padding:'0 16px'}}><style>{`@page{size:letter;margin:12mm} @media print{html,body{background:white!important}body>div[role="status"]{display:none!important}.sf-waiver-tools{display:none!important}.sf-signed-waiver{margin:0!important;padding:0!important;max-width:none!important}.sf-waiver-document{border:0!important;border-radius:0!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}.sf-waiver-document header{padding:10px 16px!important}.sf-waiver-document section{margin-bottom:8px!important}.sf-waiver-document p,.sf-waiver-document strong{font-size:10pt!important;line-height:1.2!important}}`}</style>
+ <div className="sf-waiver-tools"><button className="primary" onClick={()=>window.print()} disabled={!row}>Print / save PDF</button><p>The original signed document and business colors are preserved below.</p></div>
+ {error?<p role="alert">{error}</p>:!row?<p role="status">Loading signed waiver…</p>:<WaiverDocument document={row.document}><div style={{borderTop:'1px solid #aaa',paddingTop:10,fontSize:12,color:'#171717'}}><p><strong>Participant:</strong> {row.participant_name} | <strong>Unique ID:</strong> {row.member_number}</p><p><strong>Birth date:</strong> {String(row.date_of_birth).slice(0,10)}</p><p><strong>Electronic signature:</strong> {row.signer_name} ({row.signer_role})</p><p><strong>Date signed:</strong> {String(row.signed_date).slice(0,10)} | <strong>Recorded:</strong> {new Date(row.signed_at).toISOString()}</p><small>Waiver version: {row.document_version} | Record: {row.id}</small></div></WaiverDocument>}
+ </main>;
+}
