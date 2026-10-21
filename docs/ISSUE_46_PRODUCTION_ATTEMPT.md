@@ -1,0 +1,17 @@
+# v1.3.116 production promotion — October 21, 2026 UTC
+
+The user explicitly removed Noah-record inspection from scope and requested production v1.3.116 and first-booking waiver enforcement. Do not inspect or delete that client's records as part of this continuation.
+
+Main was merged without force to da37e15f261b91ec01016322c55759c4245e3a97 with the identical tested staging tree 65f114ae9aa204e14f2195c4e6207415a0ea068d. Production deployment dep-dbc2culg1s2s738bjl60 built successfully but failed before migrations because the service-name preflight rejected the runtime name.
+
+Corrected the preflight to prefer the two verified immutable Render service IDs, reject unknown IDs, and retain exact database, role, CREATE and table-ownership checks. Regression coverage includes renamed services, unknown IDs and cross-environment database mismatch. This is a deployment correction to the still-unreleased production v1.3.116, not a new functional release.
+
+Correction commit on main/staging: c5d7a9090c1318fe35b52d905229e7627f962862. Production deployment dep-dbc2e4bncjis73ek3bs0 built but failed at 02:46:00Z because the production role does not own all public application tables. Database name/role/schema checks passed before that failure. No migration ran. Backup archive TOC lists all 56 production application tables owned by amanda_realtor_db_user; inspect current ownership before any repair. Do not disable the preflight or grant membership in the broad administrator role.
+
+Local checks after correction: typecheck exit 0, 285 tests passed / 0 failed (46.49 seconds), diff check exit 0. Focused waiver tests additionally passed first signature, same-identity/version reuse, guardian validation and tenant isolation. These do not prove active production waiver settings.
+
+Browser recovery succeeded using a fresh tab through the documented browser API. Automatic approval review rejected copying the external database connection URL because it contains credentials and deployment authorization did not explicitly authorize that extraction. No credential was copied or exposed. Approval is needed to use the existing administrative connection solely to inspect and correct SelahFlow production object ownership, preserving records and all unrelated databases. The read-only Render connector cannot perform that repair or select this child database.
+
+Production remains on the previous LIVE v1.3.114 deployment until a future successful rollout; main's version is ahead of LIVE. No data deletion occurred. The corrected staging deployment dep-dbc2e4lg1s2s73bjh4t0 must be checked to terminal status.
+
+Waiver enforcement is implemented for services whose requiresWaiver flag is enabled, including booking, approval and payment checks. Do not claim all Arcila sessions are active yet: the existing production service flags were not enabled, and no actual legal-review reference/date was supplied. Issue 46 requires legal review before production use. Do not fabricate that review, sign for a customer, or enable a configuration that blocks all bookings before the review is available.
