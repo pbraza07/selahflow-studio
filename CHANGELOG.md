@@ -1,3 +1,9 @@
+## 1.3.131
+
+- Owners can uncheck service approval, standard identity question requirements and session tracking defaults; saved server behavior honors explicit choices.
+- Explicitly unchecked services confirm new bookings immediately with atomic waiver/capacity/coupon checks and secure payment email queues. Existing pending requests remain subject to review.
+- Optional incomplete booking identity receives no fabricated Unique ID; configured waivers still require a verified identity. Green enabled checkboxes across themes; temporary saving/security restrictions retained.
+
 ## 1.3.130
 
 - Brand business-related transactional and owner-alert emails with the current business theme and uploaded inline logo, retaining the shared sender address.

@@ -1988,3 +1988,7 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px soli
 .sf-booking-payment{font-weight:700}.sf-booking-payment.pending{color:#b42318}.sf-booking-payment.completed{color:#167347}
 
 .sf-team-tracking-controls{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:14px 0}.sf-team-tracking-controls>label{display:flex;flex-direction:column;gap:6px;flex:1;min-width:170px}.sf-team-tracking-editor{padding:16px;margin:16px 0;border:1px solid var(--sf-border,#ccc);border-radius:12px}.sf-team-accountability-table{width:100%;min-width:1050px}.sf-team-accountability-table th,.sf-team-accountability-table td{padding:12px;text-align:left;vertical-align:top}.sf-team-accountability-table small{display:block}.sf-team-accountability-table tbody tr+tr{border-top:1px solid var(--sf-border,#ccc)}
+
+/* Owner checkbox settings share a clear, green enabled state across themes. */
+input[type="checkbox"]:not(:disabled),.app-shell[data-selah-theme] input[type="checkbox"]:not(:disabled){accent-color:#236343!important;cursor:pointer}
+input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3px}

@@ -1,6 +1,6 @@
 
 /** The catalog checkbox controls approval; notification routing cannot override it. */
-export function requiresBookingApproval(services=[]){return services.some(service=>service.requiresApproval===true);}
+export function requiresBookingApproval(services=[]){return services.some(service=>service.requiresApproval!==false);}
 export function approvalSettings(config){
  const enabled=config?.bookingApprovalEnabled===true;
  const reviewer=config?.bookingApprovalReviewer||'owner';

@@ -8,11 +8,12 @@ import {deleteClientPermanently} from '../server/delete-client.mjs';
 const config={membershipStandardFields:Object.fromEntries(['firstName','lastName','dateOfBirth','email','phone','memberNumber'].map(k=>[k,{required:false}]))};
 test('membership Required flags independently allow omissions but validate supplied answers',()=>{
  const full={firstName:'Test',lastName:'Person',dateOfBirth:'2000-01-02',email:'test@example.com',requestId:randomUUID()};
- for(const key of ['firstName','lastName','dateOfBirth'])assert.throws(()=>membershipRequestDetails(config,{...full,[key]:''}),/required/);
+ for(const key of ['firstName','lastName','dateOfBirth'])assert.doesNotThrow(()=>membershipRequestDetails(config,{...full,[key]:''}));
+ assert.throws(()=>membershipRequestDetails({}, {...full,firstName:''}),/required/);
  assert.doesNotThrow(()=>membershipRequestDetails(config,{...full,email:''}));
  assert.throws(()=>membershipRequestDetails(config,{...full,email:'invalid'}),/email/);
  assert.throws(()=>membershipRequestDetails(config,{...full,dateOfBirth:'2026-02-30'}),/birth date/);
- assert.throws(()=>membershipRequestDetails(config,{requestId:'invalid'}),/required/);
+ assert.throws(()=>membershipRequestDetails(config,{requestId:'invalid'}),/registration reference/);
 });
 test('required identity and optional email can reach secure checkout, with idempotent retries and no fabricated email',async()=>{
  const {startMembershipCheckout}=await import('../server/membership-checkout.mjs');

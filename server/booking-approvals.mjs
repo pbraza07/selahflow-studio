@@ -1,3 +1,4 @@
+import {bookingDiscount} from './booking-discounts.mjs';
 import {membershipAllows} from './membership-eligibility.mjs';
 import {hasUsableMembership} from './member-badge-state.mjs';
 import {queueOwnerFormNotification} from './owner-form-notifications.mjs';
@@ -55,6 +56,14 @@ export async function confirmBooking(options){
   const config=settingRow.rows[0] ? JSON.parse(settingRow.rows[0].data) : {};
   await assertBookingWaiver(client,{owner,config,serviceIds:services.map(s=>s.id),memberNumber:data.memberNumber});
   if(options.autoConfirmRequest)throw conflict('Owner approval is required before payment.');
+  if(options.submissionOrigin){
+   const current=services.map(s=>(config.services||[]).find(v=>v.id===s.id));
+   if(current.some(s=>!s)||requiresBookingApproval(current))throw conflict('Approval settings changed. Refresh and submit this booking for review.');
+   if(current.some((s,i)=>Number(s.price)!==Number(services[i].price)||Number(s.duration)!==Number(services[i].duration)))throw conflict('Service details changed. Refresh your booking.');
+   const business=(await client.query('SELECT id FROM businesses WHERE owner_id=$1',[owner])).rows[0];
+   if(!business)throw conflict('Business not found.');
+   Object.assign(data,await bookingDiscount(client,{businessId:business.id,services:current,code:options.couponCode,membershipCovered:data.membershipCovered}));
+  }
   if(options.autoConfirmRequest){
    const saved=options.autoConfirmRequest;
    if(!pendingRequest||pendingRequest.details!==saved.details||pendingRequest.date!==date||pendingRequest.staff_id!==staff||Number(pendingRequest.start_minute)!==start||Number(pendingRequest.duration)!==duration)throw conflict('Booking details changed. Check your registration before paying.');

@@ -17,8 +17,9 @@ test('all session questions can be required or optional without changing other s
  const config={bookableSessions:[{id:'one',questionRequired:{firstName:false,lastName:false,dateOfBirth:false,email:false,phone:true,question:false}},{id:'two'}],bookingCustomFields:[{id:'question',label:'Question',type:'text',required:true}]};
  validateRegistrationQuestions(config);
  const questions=registrationQuestions(config,'booking','one__20301101');
- assert.equal(questions.find(f=>f.id==='firstName').required,true);assert.equal(questions.find(f=>f.id==='phone').required,true);
- assert.throws(()=>validateStandardRegistration(config,'booking',{phone:'123'},'one'),/required/);
+ assert.equal(questions.find(f=>f.id==='firstName').required,false);assert.equal(questions.find(f=>f.id==='phone').required,true);
+ assert.doesNotThrow(()=>validateStandardRegistration(config,'booking',{phone:'123'},'one'));
+ assert.throws(()=>validateStandardRegistration(config,'booking',{},'one'),/Phone/);
  assert.doesNotThrow(()=>validateStandardRegistration(config,'booking',{phone:'123',firstName:'Test',lastName:'Person',dateOfBirth:'2000-01-02'},'one'));
  assert.deepEqual(sanitizeBookingAnswers(questions.filter(f=>!f.standard),{}),{question:''});
  assert.throws(()=>validateStandardRegistration(config,'booking',{},'two'),/Date of birth/);

@@ -12,9 +12,9 @@ import {confirmDirectBookingForPayment,reconcileUncheckedBookings} from '../serv
 import {processClientMessages} from '../server/booking-client-notifications.mjs';
 import {sessionIsFull,SESSION_FULL_MESSAGE} from '../server/session-capacity.mjs';
 import {computeDayAvailability} from '../server/session-scheduling.mjs';
-test('legacy catalog flag parsing remains separate from mandatory public owner approval',()=>{
+test('explicit owner catalog choices control new approval; legacy unset stays protected',()=>{
  assert.equal(requiresBookingApproval([{requiresApproval:false}]),false);
- assert.equal(requiresBookingApproval([{}]),false);
+ assert.equal(requiresBookingApproval([{}]),true);
  assert.equal(requiresBookingApproval([{requiresApproval:false},{requiresApproval:true}]),true);
 });
 test('all pending bookings require explicit owner approval before Stripe checkout; capacity and payment receipts remain atomic',async()=>{

@@ -70,7 +70,7 @@ export default function RegistrationQuestionSettings({config,setConfig,limit}:Pr
  <p><strong>{fields.length}/{limit} custom questions used</strong> · Standard questions and edits do not consume extra allowance.</p>
  <div className="form-row"><label>Registration form<select value={form} onChange={e=>{setForm(e.target.value as FormType);setTarget('all');}}><option value="booking">Booking registration</option><option value="membership">Membership registration</option></select></label>
  {form==='booking'&&<label>Question scope<select value={target} onChange={e=>setTarget(e.target.value)}><option value="all">All booking questions</option><optgroup label="Services">{(config.services||[]).map((s:any)=><option key={s.id} value={'service:'+s.id}>{s.name}</option>)}</optgroup><optgroup label="Sessions">{(config.bookableSessions||[]).map((s:any)=><option key={s.id} value={'session:'+s.id}>{s.name||config.services?.find((v:any)=>v.id===s.service)?.name||'Session'} · {s.date}</option>)}</optgroup></select></label>}</div>
- {(serviceId||sessionId)&&<p className="muted">Viewing questions for {service?.name||relatedSession?.name||'this session'}. Labels and notification choices belong to the registration form. Required overrides below apply to this {serviceId?'service':'session'}; existing form and identity requirements still apply.</p>}
+ {(serviceId||sessionId)&&<p className="muted">Viewing questions for {service?.name||relatedSession?.name||'this session'}. Labels and notification choices belong to the registration form. Required overrides below apply to this {serviceId?'service':'session'}; an explicit unchecked override makes this question optional for the selected scope.</p>}
  <button type="button" className="outline" disabled={fields.length>=limit} onClick={add}>+ Add {serviceId?'service':sessionId?'session':form} question</button>
  {questions.map((f:any,i:number)=><section className="sf-settings-custom-field" key={f.id}>
   <div className="button-row"><strong>{i+1}. {f.standard?'Standard field':f.serviceIds?.length?'Service question':f.sessionIds?.length?'Session question':'Shared question'}</strong>
@@ -83,21 +83,21 @@ export default function RegistrationQuestionSettings({config,setConfig,limit}:Pr
    <>
    {!sessionId&&!serviceId&&<label>Show on<select value={!f.forms||f.forms.length===2?'both':f.forms[0]} onChange={e=>scope(f.id,e.target.value==='both'?['booking','membership']:[e.target.value])}><option value="booking">Booking only</option><option value="membership">Membership only</option><option value="both">Booking and membership</option></select></label>}
    {!sessionId&&!serviceId&&(!f.forms||f.forms.includes('booking'))&&<fieldset><legend>Apply to booking services</legend>
-    <label><input type="checkbox" checked={!f.serviceIds?.length} onChange={e=>{if(e.target.checked)update(f.id,{serviceIds:[]});}}/> All services</label>
+    <label><input type="checkbox" checked={!f.serviceIds?.length} onChange={e=>update(f.id,{serviceIds:e.target.checked?[]:(config.services||[]).map((s:any)=>s.id)})}/> All services</label>
     <p className="muted">Or select the new and existing services that require this question. Multiple selected services share one answer field.</p>
     {(config.services||[]).map((s:any)=><label key={s.id}><input type="checkbox" checked={(f.serviceIds||[]).includes(s.id)} onChange={e=>update(f.id,{serviceIds:e.target.checked?[...(f.serviceIds||[]),s.id]:(f.serviceIds||[]).filter((id:string)=>id!==s.id)})}/>{s.name}</label>)}
    </fieldset>}
    {!sessionId&&!serviceId&&(!f.forms||f.forms.includes('booking'))&&<fieldset><legend>Apply to booking sessions</legend>
-    <label><input type="checkbox" checked={!f.sessionIds?.length} onChange={e=>{if(e.target.checked)update(f.id,{sessionIds:[]});}}/> All sessions and regular appointments</label>
+    <label><input type="checkbox" checked={!f.sessionIds?.length} onChange={e=>update(f.id,{sessionIds:e.target.checked?[]:(config.bookableSessions||[]).map((s:any)=>s.id)})}/> All sessions and regular appointments</label>
     <p className="muted">When both a service and session are selected, both must match. A session ID also applies to recurring occurrences.</p>
     {(config.bookableSessions||[]).map((s:any)=><label key={s.id}><input type="checkbox" checked={(f.sessionIds||[]).includes(s.id)} onChange={e=>update(f.id,{sessionIds:e.target.checked?[...(f.sessionIds||[]),s.id]:(f.sessionIds||[]).filter((id:string)=>id!==s.id)})}/>{s.name||config.services?.find((x:any)=>x.id===s.service)?.name||'Session'} · {s.date}</label>)}
    </fieldset>}
    <label>Question type<select value={f.type} onChange={e=>update(f.id,{type:e.target.value,options:e.target.value==='select'?(f.options?.length?f.options:['Option 1']):[]})}>{['text','number','date','select','checkbox'].map(t=><option key={t} value={t}>{t}</option>)}</select></label>
    {f.type==='select'&&<label>Choices (one per line)<textarea value={(f.options||[]).join('\n')} onChange={e=>update(f.id,{options:e.target.value.split('\n')})}/></label>}
    </>}
-  <label><input type="checkbox" checked={f.required} aria-label={'Required: '+f.label} disabled={['firstName','lastName','dateOfBirth'].includes(f.id)} onChange={e=>required(f,e.target.checked)}/> {serviceId?'Required for this service':sessionId?'Required for this session':'Required'}</label>
+  <label><input type="checkbox" checked={f.required} aria-label={'Required: '+f.label} onChange={e=>required(f,e.target.checked)}/> {serviceId?'Required for this service':sessionId?'Required for this session':'Required'}</label>
   <label><input type="checkbox" aria-label={'Show in notifications: '+f.label} checked={questionNotificationEnabled(config,editorForm,f)} onChange={e=>setConfig((c:any)=>({...c,[editorForm+'QuestionNotifications']:{...c[editorForm+'QuestionNotifications'],[f.id]:e.target.checked}}))}/> Show in push notifications and business alert emails</label>
-  {f.standard&&['firstName','lastName','dateOfBirth'].includes(f.id)&&<small>Required to create and verify the client’s unique ID.</small>}
+  {f.standard&&['firstName','lastName','dateOfBirth'].includes(f.id)&&<small>A complete name and birth date are needed to issue a Unique ID and sign an identity-linked waiver. Optional incomplete bookings do not receive a new ID.</small>}
   {!f.standard&&<>
    {serviceId?(f.serviceIds?.includes(serviceId)?<button type="button" className="outline" onClick={()=>removeFromService(f)}>Remove question from this service</button>:<small>Shared question. Edit its visibility in Settings → Questions.</small>):<button type="button" className="outline" onClick={()=>remove(f.id)}>Remove question</button>}
   </>}

@@ -19,17 +19,16 @@ export function customRegistrationFields(config={},form='booking',sessionId=unde
 export function registrationQuestions(config={},form='booking',sessionId=undefined,serviceIds=undefined){
  const edits=config[form+'StandardFields']||{};
  const fields=[...STANDARD_REGISTRATION_FIELDS.map(f=>({...f,...edits[f.id],id:f.id,type:f.type,required:edits[f.id]?.required??f.required,standard:true})),...customRegistrationFields(config,form,sessionId,serviceIds).map(f=>({...f,standard:false}))];
- // A multi-service booking contains the union of applicable questions. A
- // per-service required override only adds a requirement; it cannot turn off
- // mandatory identity fields or requirements of another selected service.
- if(form==='booking'&&Array.isArray(serviceIds))for(const service of config.services||[]){
-  if(!serviceIds.includes(service.id))continue;
-  for(const field of fields)if(service.questionRequired?.[field.id]===true)field.required=true;
+ // Each selected service inherits the form requirement unless explicitly
+ // overridden. A multi-service visit needs an answer if any service requires it.
+ if(form==='booking'&&Array.isArray(serviceIds)&&serviceIds.length)for(const field of fields){
+  field.required=serviceIds.filter(id=>!field.serviceIds?.length||field.serviceIds.includes(id)).some(id=>{
+   const service=(config.services||[]).find(s=>s.id===id);
+   return service?.questionRequired?.[field.id]??field.required;
+  });
  }
  const session=form==='booking'&&sessionId?(config.bookableSessions||[]).find(s=>s.id===String(sessionId).replace(/__\d{8}$/, '')):null;
  if(session?.questionRequired)for(const f of fields)if(typeof session.questionRequired[f.id]==='boolean')f.required=session.questionRequired[f.id];
- // Identity answers are required to derive the eight-character ID.
- for(const field of fields)if(['firstName','lastName','dateOfBirth'].includes(field.id))field.required=true;
  const order=config[form+'QuestionOrder']||[];
  const rank=id=>{const i=order.indexOf(id);return i<0?order.length+fields.findIndex(f=>f.id===id):i;};
  return fields.sort((a,b)=>rank(a.id)-rank(b.id));

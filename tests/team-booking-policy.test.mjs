@@ -30,3 +30,13 @@ test('owner controls and client flow expose per-member hiding and service/sessio
  assert.match(owner,/Hide from client booking/);assert.match(owner,/default team member/);assert.match(owner,/Default session host/);assert.match(owner,/Default tracking team/);
  assert.match(client,/s.bookingVisible!==false&&selected.every/);assert.match(client,/automaticTeam\?/);assert.match(client,/sessionChoice.id:selectedSessionId/);assert.match(tracking,/requireOwner\(req\)/);assert.match(tracking,/hostHistory:bookingHostHistory/);assert.match(approval,/hostTeamIds:data.hostTeamIds/);
 });
+
+test('owner can remove the session host from default accountability without exposing hidden hosts',()=>{
+ const c={...config,bookableSessions:[{...config.bookableSessions[0],trackSessionHost:false,autoAssignStaff:false}]};
+ const recurrence=sessionInstances(c,'2030-11-08')[0];
+ assert.deepEqual(sessionTeamDefaults(c,recurrence),['assistant']);
+ assert.equal(publicSessionTeam(c,recurrence).staffVisible,false);
+ assert.equal(publicTeamMembers(c).some(s=>s.id==='hidden'),false);
+ validateTeamBookingPolicy(c);
+ assert.throws(()=>validateTeamBookingPolicy({...c,bookableSessions:[{...c.bookableSessions[0],trackSessionHost:'no'}]}),/checkbox/);
+});

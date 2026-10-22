@@ -10,7 +10,8 @@ export function clientTeamName(config,staffId){
 export function sessionTeamDefaults(config,session){
  const base=(config.bookableSessions||[]).find(s=>s.id===(session.seriesId||session.id));
  const ids=session.defaultTeamIds??base?.defaultTeamIds??[];
- return [...new Set([session.staff,...ids])].filter(id=>(config.staff||[]).some(s=>s.id===id));
+ const trackHost=(session.trackSessionHost??base?.trackSessionHost)!==false;
+ return [...new Set([...(trackHost?[session.staff]:[]),...ids.filter(id=>trackHost||id!==session.staff)])].filter(id=>(config.staff||[]).some(s=>s.id===id));
 }
 export function sessionAutoAssigns(config,session){
  const base=(config.bookableSessions||[]).find(s=>s.id===(session.seriesId||session.id));
@@ -50,6 +51,7 @@ export function validateTeamBookingPolicy(config){
  for(const member of config.staff||[])if(member.bookingVisible!==undefined&&typeof member.bookingVisible!=='boolean')throw Error('Team booking visibility must be a checkbox value.');
  for(const service of config.services||[])if(service.defaultStaffId!==undefined&&service.defaultStaffId!==''&&(typeof service.defaultStaffId!=='string'||!(config.staff||[]).some(s=>s.id===service.defaultStaffId&&s.services?.includes(service.id))))throw Error('Choose a qualified team member from this business for the service default.');
  for(const session of [...(config.bookableSessions||[]),...(config.sessionOverrides||[])]){
+  if(session.trackSessionHost!==undefined&&typeof session.trackSessionHost!=='boolean')throw Error('Session host tracking must be a checkbox value.');
   if(session.autoAssignStaff!==undefined&&typeof session.autoAssignStaff!=='boolean')throw Error('Session automatic team assignment must be a checkbox value.');
   if(session.defaultTeamIds!==undefined&&(!Array.isArray(session.defaultTeamIds)||session.defaultTeamIds.length>100||new Set(session.defaultTeamIds).size!==session.defaultTeamIds.length||session.defaultTeamIds.some(id=>!(config.staff||[]).some(s=>s.id===id))))throw Error('Choose this business’s team members for default session tracking.');
  }

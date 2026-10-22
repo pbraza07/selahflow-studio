@@ -55,3 +55,23 @@ test('changing a question to membership-only cleans obsolete booking references 
  validateRegistrationQuestions(m.config);assert.equal(registrationQuestions(m.config,'booking').some(f=>f.id==='health'),false);
  assert.equal(registrationQuestions(m.config,'membership').some(f=>f.id==='health'),true);
 });
+
+test('owners can uncheck every identity Required control and service overrides really make questions optional',async()=>{
+ const m=await manager(fixture);
+ for(const label of ['First name','Last name','Date of birth']){
+  const control=m.find(n=>n.props['aria-label']==='Required: '+label);
+  assert.equal(control.props.disabled,undefined);
+  control.props.onChange({target:{checked:false}});
+ }
+ for(const id of ['firstName','lastName','dateOfBirth'])assert.equal(registrationQuestions(m.config,'booking').find(f=>f.id===id).required,false);
+ const service={...fixture,services:[{id:'soccer',questionRequired:{firstName:false,lastName:false,dateOfBirth:false,email:false}}]};
+ assert.equal(registrationQuestions(service,'booking',null,['soccer']).some(f=>f.standard&&f.required),false);
+ const multi={...service,services:[...service.services,{id:'camp'}]};
+ assert.equal(registrationQuestions(multi,'booking',null,['soccer','camp']).find(f=>f.id==='firstName').required,true);
+ validateRegistrationQuestions(m.config);
+});
+
+test('a service-scoped optional override is not made required by another unrelated selected service',()=>{
+ const config={services:[{id:'soccer',questionRequired:{size:false}},{id:'camp'}],bookingCustomFields:[{id:'size',label:'Size',type:'text',required:true,serviceIds:['soccer']}]};
+ assert.equal(registrationQuestions(config,'booking',null,['soccer','camp']).find(f=>f.id==='size').required,false);
+});
