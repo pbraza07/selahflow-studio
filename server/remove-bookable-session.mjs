@@ -17,7 +17,7 @@ export function removeBookableSession(config,id){
   sessionOverrides:(config.sessionOverrides||[]).filter(row=>row.seriesId!==id&&row.id!==id),
   bookingCustomFields,bookingQuestionOrder:omit(config.bookingQuestionOrder,bookingFields),
   membershipQuestionOrder:omit(config.membershipQuestionOrder,removedFields),
-  bookingPushFields:omit(config.bookingPushFields,bookingFields),
+  ...(Array.isArray(config.bookingPushFields)?{bookingPushFields:omit(config.bookingPushFields,bookingFields)}:{}),
   ...(config.bookingApprovalVisibleFields?{bookingApprovalVisibleFields:omit(config.bookingApprovalVisibleFields,bookingFields)}:{}),
   ...(config.bookingQuestionNotifications?{bookingQuestionNotifications:Object.fromEntries(Object.entries(config.bookingQuestionNotifications).filter(([key])=>!bookingFields.has(key)))}:{}),
   ...(config.membershipQuestionNotifications?{membershipQuestionNotifications:required(config.membershipQuestionNotifications)}:{}),

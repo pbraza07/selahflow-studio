@@ -15,7 +15,7 @@ test('removing one-time or rescheduled recurring definitions cleans every linked
   moved=rescheduledConfig(moved,current,{date,start:720,staff:'coach',service:'training',capacity:5});
  }
  const before=JSON.stringify(moved),next=removeBookableSession(moved,'series');
- assert.equal(JSON.stringify(moved),before);assert.deepEqual(next.bookableSessions.map(s=>s.id),['other']);assert.deepEqual(next.sessionOverrides,[]);assert.doesNotThrow(()=>validateBookableSessions(next));assert.deepEqual(sessionInstances(next,'2030-11-08'),[]);
+ assert.equal(JSON.stringify(moved),before);assert.deepEqual(next.bookableSessions.map(s=>s.id),['other']);assert.deepEqual(next.sessionOverrides,[]);assert.equal(next.bookingPushFields,undefined,'An unset notification preference keeps its existing default');assert.doesNotThrow(()=>validateBookableSessions(next));assert.deepEqual(sessionInstances(next,'2030-11-08'),[]);
  assert.equal(removeBookableSession(next,'other').bookableSessions.length,0);
  const stalePayload={...moved,bookableSessions:moved.bookableSessions.filter(s=>s.id!=='series')};
  assert.deepEqual(cleanRemovedBookableSessions(moved,stalePayload),next,'Server handles already-open clients with stale linked overrides');
