@@ -2,7 +2,8 @@
 
 - Edit all current client profile fields with stale-write, business scope and Unique ID collision protection; synchronize linked memberships and booking identities while preserving original evidence.
 - Membership views refresh current contact/profile data.
-- Show email delivery details, check staging recipient restrictions before queueing and allow safe rejected-only retries.
+- Show email delivery details, check staging recipient restrictions before queueing and allow safe rejected-only retries. Recover the blocked staging test message using an additional communication-only approved-address setting.
+- Returning booking forms use current owner profile answers and intentional clears while preserving historical submissions.
 
 ## 1.3.132
 

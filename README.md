@@ -1,4 +1,4 @@
-**Release source: v1.3.133 — implementation pending deployment verification.** Editable client profiles synchronize current membership contacts and answers; communications show delivery issues and safely retry rejected sends.
+**Release source: v1.3.133 — verified LIVE in staging and production.** Owners can edit current client profiles with linked membership/contact and returning-booking synchronization. Communications expose failure reasons and safe retries; the existing staging test email was recovered. See [release evidence](docs/V1_3_133_RELEASE.md).
 
 **Release source: v1.3.132 — verified LIVE in staging and production.** Settings → Client communications syncs client contacts and sends customized emails with saved business branding. See [release evidence](docs/V1_3_132_RELEASE.md).
 
