@@ -1,3 +1,9 @@
+## 1.3.126
+
+- Per-team-member Hide from client booking excludes that member entirely from public team choices and masks client receipts while retaining private owner records.
+- Owners can edit qualified default hosts per service and automatic hosts/default tracking teams per session; choosing a session takes precedence over service defaults.
+- Server resolves assigned hosts from the business configuration and exact occurrence, rejects forged hidden-member selection, and snapshots private booking host history for owner accountability.
+
 ## 1.3.125
 
 - Centralize standard/custom booking and membership question management under Settings → Questions, including service/session scope, ordering, Required and notification display choices.

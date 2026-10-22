@@ -1973,3 +1973,9 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px soli
 .sf-question-delivery-details{margin:16px 0;padding:14px;border:1px solid var(--brand-border,#dce8de);border-radius:10px}
 .sf-question-delivery-details summary{font-weight:600;cursor:pointer}
 .sf-question-center fieldset{min-width:0;margin:12px 0;padding:12px;border:1px solid var(--brand-border,#dce8de);border-radius:8px}
+
+/* Per-member privacy and owner-only session defaults. */
+.sf-team-booking-visibility{display:flex;align-items:center;gap:10px;margin:12px 0;font-weight:600}
+.sf-team-booking-visibility input[type="checkbox"],.sf-session-default-team input[type="checkbox"]{width:20px!important;height:20px!important;min-width:20px;margin:0!important;padding:0!important}
+.sf-session-default-team{grid-column:1/-1;border:1px solid var(--brand-border);border-radius:10px;padding:14px;min-width:0}
+.sf-session-assigned-team{padding:12px;border:1px solid var(--brand-border);border-radius:10px;background:var(--brand-surface)}

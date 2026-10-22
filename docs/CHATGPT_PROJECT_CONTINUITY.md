@@ -1,3 +1,7 @@
+# v1.3.126 release handoff — candidate, deployment pending
+
+Adds per-member bookingVisible privacy, defaultStaffId per service, autoAssignStaff/defaultTeamIds per session, private hostTeamIds snapshots and owner-only tracking history. Hidden team members are omitted from the public staff array/dropdown, not represented by anonymous choices. Sessions remain bookable through their canonical assigned host; session choice overrides service defaults. Customer receipt team names are masked. Existing records/settings remain unchanged unless edited by the owner. No migration/environment change; tests and rollout pending. See V1_3_126_RELEASE.md.
+
 # v1.3.125 release handoff — verified LIVE in staging and production
 
 Application commit `051317c79f1a95e954795b3c11072d0feb4a2bae` (tree `2144dcac5022ea9b69d924aec26c60644b74b71c`). Staging LIVE `dep-dbctl7uq1p3s73d9b710` October 22, 2026 at 5:48:21 a.m. EDT; production LIVE `dep-dbctog5g1s2s738etr1g` at 5:51:37 a.m. EDT. Local, GitHub Actions 39757525483 / job 119753206903, and Render staging passed all 314 tests, typecheck and build. Production build passed. Read-only live checks passed for all five staging / four production businesses, protected settings GET/POST, served question-manager styles and push readiness. Dedicated database/role preflights passed, schema CREATE true and zero unowned tables; no startup error logs observed.
