@@ -1,4 +1,4 @@
-**Release source: v1.3.130 — candidate, deployment pending.** Business emails use current owner-selected colors and uploaded logo while retaining the shared sender. See [release evidence](docs/V1_3_130_RELEASE.md).
+**Release source: v1.3.130 — verified LIVE in staging and production.** Business emails use current owner-selected colors and uploaded logo while retaining the shared sender. See [release evidence](docs/V1_3_130_RELEASE.md).
 
 **Release source: v1.3.129 — verified LIVE in staging and production.** Fix bookable session removal, including recurring reschedules and scoped questions, while retaining customer records. See [release evidence](docs/V1_3_129_RELEASE.md).
 
