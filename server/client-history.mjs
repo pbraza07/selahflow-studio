@@ -40,6 +40,8 @@ export function pendingBookingAsAppointment(row){
    services:Array.isArray(info.services)?info.services:[],
    serviceIds:Array.isArray(info.serviceIds)?info.serviceIds:[],
    price:Number(info.quotedPrice)||0,sessionId:info.sessionId||null,
+   membershipCovered:info.membershipCovered===true,
+   bookingTimeline:[{status:'Submitted',at:row.created_at||info.created||null},{status:row.status==='pending'?'Pending approval':'Declined',at:row.reviewed_at||null}],
    customAnswers:info.customAnswers||{},customFieldLabels:info.customFieldLabels||{},customFieldTypes:info.customFieldTypes||{},
    originalSubmission:info.originalSubmission||null,
    source:'Customer booking request',policyAccepted:info.policyAccepted===true,policyAcceptedAt:info.policyAcceptedAt||null,

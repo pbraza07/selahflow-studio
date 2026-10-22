@@ -1,5 +1,6 @@
 'use client';
 import OwnerHistory from './owner-history';
+import OwnerBookingStatus from './owner-booking-status';
 import SortableTable from './sortable-table';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowLeft,CalendarDays,CheckCircle2,ChevronRight,Download,Upload,RefreshCw,Search,Users,UserPlus,Pencil,Trash2,RotateCcw,ArchiveRestore} from 'lucide-react';
@@ -13,7 +14,7 @@ import {displayAnswer,dateOnly} from '../../server/client-registration-fields.mj
 type Answer={id:string;label:string;value:string|boolean;type?:string};
 type MembershipDetails={registeredAt?:string|null;paidThrough?:string|null;lastPaidAt?:string|null;interval?:string;priceCents?:number;sessionsIncluded?:number;sessionsUsed?:number};
 type FormField={id:string;label:string;type:string;options?:string[]};
-type Visit={
+export type Visit={
  paymentTracking?:string;bookingTimeline?:{status:string;at:string|null}[];id:string;date:string;time:number;duration:number;serviceNames:string[];serviceTypes:string[];
  staff:string;status:string;attended:boolean;sessionType:string;quotedPrice:number;
  answers?:Answer[];originalAnswers?:Answer[];customerName?:string;customerEmail?:string;customerPhone?:string;customerMemberNumber?:string;dateOfBirth?:string;firstName?:string;lastName?:string;
@@ -31,6 +32,7 @@ const money=(amount:number)=>new Intl.NumberFormat('en-US',{style:'currency',cur
 export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()=>void;onAddMembership:(client:{name:string;email:string;phone:string})=>void}){
  const importInput=useRef<HTMLInputElement>(null);
  const [importing,setImporting]=useState(false),[importMessage,setImportMessage]=useState('');
+ const [bookingRows,setBookingRows]=useState<(Visit&{clientName:string;clientEmail:string;clientPhone:string;clientMemberNumber:string})[]>([]),[directoryView,setDirectoryView]=useState('clients');
  const [clients,setClients]=useState<Client[]>([]),[selectedId,setSelectedId]=useState<string|null>(null);
  const [search,setSearch]=useState(''),[busy,setBusy]=useState(true),[error,setError]=useState('');
  const [formFields,setFormFields]=useState<FormField[]>([]);
@@ -49,7 +51,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    const r=await fetch('/api/studio/clients',{cache:'no-store'});
    const result=await r.json();
    if(!r.ok)throw Error(result.error||'Client records are unavailable.');
-   setClients(result.clients||[]);setArchived(result.archived||[]);setFormFields(result.formFields||[]);setRegistrationConfig(result.registrationConfig||{});setError('');
+   setBookingRows(result.bookings||[]);setClients(result.clients||[]);setArchived(result.archived||[]);setFormFields(result.formFields||[]);setRegistrationConfig(result.registrationConfig||{});setError('');
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  },[]);
  useEffect(()=>{const timer=window.setInterval(()=>{if(!document.hidden)void reload(true);},15000);const focus=()=>void reload(true);window.addEventListener('focus',focus);return()=>{clearInterval(timer);window.removeEventListener('focus',focus);};},[reload]);
@@ -148,7 +150,8 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
   {actionError&&<p role="alert" className="alert">{actionError}</p>}
   {importMessage&&<p role="status" className="notice">{importMessage}</p>}
   {busy&&<p role="status" className="muted">Loading client attendance and services…</p>}
-  {selected?<>
+  <div className="sf-client-profile-tabs" role="group" aria-label="Client workspace views"><button type="button" className={directoryView==='clients'?'primary':'outline'} aria-pressed={directoryView==='clients'} onClick={()=>setDirectoryView('clients')}>Clients</button><button type="button" className={directoryView==='bookings'?'primary':'outline'} aria-pressed={directoryView==='bookings'} onClick={()=>{setDirectoryView('bookings');setSelectedId(null);}}>Booking Status</button></div>
+  {directoryView==='bookings'?<OwnerBookingStatus bookings={bookingRows}/>:selected?<>
    <div className="sf-client-detail-nav">
     <button type="button" className="outline" onClick={()=>{setSelectedId(null);setAttendedOnly(false);}}><ArrowLeft size={17}/> Back to clients</button>
     <div className="sf-client-management-buttons">

@@ -1979,3 +1979,10 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px soli
 .sf-team-booking-visibility input[type="checkbox"],.sf-session-default-team input[type="checkbox"]{width:20px!important;height:20px!important;min-width:20px;margin:0!important;padding:0!important}
 .sf-session-default-team{grid-column:1/-1;border:1px solid var(--brand-border);border-radius:10px;padding:14px;min-width:0}
 .sf-session-assigned-team{padding:12px;border:1px solid var(--brand-border);border-radius:10px;background:var(--brand-surface)}
+
+/* Business-wide booking status, shared across owner workspaces. */
+.sf-booking-status-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end;margin:18px 0}
+.sf-booking-status-filters>label{display:flex;flex-direction:column;gap:6px;min-width:0}
+.sf-booking-status-filters>.sf-client-history-filter{flex-direction:row;align-items:center;min-height:44px}
+.sf-booking-status .sf-client-history-table{min-width:1200px}
+.sf-booking-payment{font-weight:700}.sf-booking-payment.pending{color:#b42318}.sf-booking-payment.completed{color:#167347}

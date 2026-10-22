@@ -1,3 +1,5 @@
+**Release source: v1.3.127 — staging candidate.** Clients → Booking Status shows all incoming bookings across clients, with answers, timelines, payment tracking and filters. See [release evidence](docs/V1_3_127_RELEASE.md).
+
 **Release source: v1.3.126 — verified LIVE in staging and production.** Per-member booking privacy, editable service/session default hosts and private owner tracking. See [owner setup and release evidence](docs/V1_3_126_RELEASE.md).
 
 **Release source: v1.3.125 — verified LIVE in staging and production.** Settings → Questions is the single editor for all standard/custom registration questions, required/notification choices and service/session targeting. See [release evidence](docs/V1_3_125_RELEASE.md).

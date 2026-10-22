@@ -1,3 +1,4 @@
+import {allBookingStatusRows} from '../../../../server/booking-status.mjs';
 import {decorateBookingTimeline} from '../../../../server/booking-timeline.mjs';
 import {deleteOwnerClient} from '../../../../server/owner-client-deletion.mjs';
 import {issueMemberId} from '../../../../server/member-id-policy.mjs';
@@ -69,7 +70,7 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
   if(!clients.some((c:any)=>c.memberNumber===m.member_number||(c.name?.trim().toLowerCase()===m.customer_name?.trim().toLowerCase()&&c.email?.toLowerCase()===m.customer_email?.toLowerCase())))
    clients.push({id:profile?.id||virtualId,name:m.customer_name,email:m.customer_email,bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],latestDate:'',history:[],firstBooking:null,latestBookingAnswers:[],...memberData(m)});
  }
- return {derived,profiles:profiles.rows,clients,formFields:fields.map((f:any)=>({id:f.id,label:f.label,type:f.type,options:Array.isArray(f.options)?f.options:[]})),registrationConfig:{bookingStandardFields:settings.bookingStandardFields,bookingQuestionOrder:settings.bookingQuestionOrder,bookingCustomFields:settings.bookingCustomFields},archived:combined.archived.filter((c:{id:string})=>!profiles.rows.some((p:any)=>p.id===c.id&&p.deleted_at))};
+ return {derived,bookings:allBookingStatusRows(derived),profiles:profiles.rows,clients,formFields:fields.map((f:any)=>({id:f.id,label:f.label,type:f.type,options:Array.isArray(f.options)?f.options:[]})),registrationConfig:{bookingStandardFields:settings.bookingStandardFields,bookingQuestionOrder:settings.bookingQuestionOrder,bookingCustomFields:settings.bookingCustomFields},archived:combined.archived.filter((c:{id:string})=>!profiles.rows.some((p:any)=>p.id===c.id&&p.deleted_at))};
 }
 function failure(error:unknown){
  const message=(error as Error).message||'Client operation could not be completed.';
@@ -83,10 +84,10 @@ export async function GET(req:Request){
   const owner=await requireOwner(req);
   const pool=getPool(),business=await businessFor(owner,pool);
   const settings=JSON.parse(business.settings_data||'{}');
-  const {clients,archived,formFields,registrationConfig}=await directory(owner,pool,settings);
+  const {clients,bookings,archived,formFields,registrationConfig}=await directory(owner,pool,settings);
   const url=new URL(req.url);
   if(url.searchParams.get('export')!=='xlsx')
-   return Response.json({clients,archived,formFields,registrationConfig,total:clients.length},{headers:noStore});
+   return Response.json({clients,bookings,archived,formFields,registrationConfig,total:clients.length},{headers:noStore});
   const id=url.searchParams.get('clientId');
   if(id&&!validId(id))return Response.json({error:'Invalid client.'},{status:400,headers:noStore});
   const selected=id?clients.filter(c=>c.id===id):clients;

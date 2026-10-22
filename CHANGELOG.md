@@ -1,3 +1,9 @@
+## 1.3.127
+
+- Add Clients → Booking Status for all business bookings, including pending/declined requests and confirmed appointments, independent of the selected client or directory filters.
+- Show client identity/contact, date/time, service/type, session, team, answers, timeline, dynamic payment state and quote; add search/status/payment/date/attendance filters.
+- Preserve owner-only business scoping and existing histories; record declined review timestamps in request timelines.
+
 ## 1.3.126
 
 - Per-team-member Hide from client booking excludes that member entirely from public team choices and masks client receipts while retaining private owner records.

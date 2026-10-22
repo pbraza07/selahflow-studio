@@ -1,0 +1,7 @@
+# v1.3.127 — all-client Booking Status
+
+Open **Clients → Booking Status**. All clients’ incoming requests and appointments are listed together, newest submissions first. No client selection is required. Search by client/ID/contact/service/team; combine booking status, payment, activity dates or attendance filters. Clear booking filters restores the full list. Columns include client/contact/ID, date and Eastern time, services, service types, session, owner-visible team, booking status/timeline, payment and quote. Expand Booking answers, Original registration answers or + Booking timeline for saved details.
+
+Payment is Pending (red) or Completed (green), including verified payment, recorded cash, membership coverage and no-charge bookings. The existing owner feed refreshes every 15 seconds while visible, on focus, after booking review and via Refresh. This is a recorded payment state, not a new payment collection workflow. Profile directory filters and selected clients do not restrict this view. Accepted requests appear as their canonical appointment rather than a duplicate pending row. Existing per-client Sessions remains available. Retained archived-client bookings remain visible; permanent deletion follows existing retention rules.
+
+The feed uses the existing authenticated owner-only, no-store clients API and owner-scoped database queries. No database/schema/provider changes or customer mutations. Private host names are owner-only. Automated checks and staging/production deployment evidence pending.
