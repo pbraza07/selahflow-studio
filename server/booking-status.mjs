@@ -7,7 +7,8 @@ export function allBookingStatusRows(clients=[]){
   if(rows.has(visit.id))continue;
   rows.set(visit.id,{...visit,submittedAt:visit.bookingTimeline?.find(entry=>entry.status==='Submitted')?.at||visit.submittedAt||null,clientName:visit.customerName||client.name||'',clientEmail:visit.customerEmail||client.email||'',clientPhone:visit.customerPhone||client.phone||'',clientMemberNumber:visit.customerMemberNumber||client.memberNumber||''});
  }
- return [...rows.values()].sort((a,b)=>String(b.submittedAt||'').localeCompare(String(a.submittedAt||''))||b.date.localeCompare(a.date)||b.time-a.time||a.id.localeCompare(b.id));
+ const submitted=row=>new Date(row.submittedAt||0).getTime()||0;
+ return [...rows.values()].sort((a,b)=>submitted(b)-submitted(a)||b.date.localeCompare(a.date)||b.time-a.time||a.id.localeCompare(b.id));
 }
 export function filterBookingStatusRows(rows,{search='',status='',payment='',from='',to='',attendedOnly=false}={}){
  const query=search.trim().toLocaleLowerCase();

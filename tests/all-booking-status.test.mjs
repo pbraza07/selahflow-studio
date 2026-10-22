@@ -21,6 +21,8 @@ const pending={id:'request-b',date:'2026-10-24',staff_id:'coach',start_minute:72
 test('all-client feed includes every incoming request and appointment once, with independent combined filters',()=>{
  const derived=buildClientDirectory([...decorateBookingTimeline([appointment('a','Alex')]),pendingBookingAsAppointment(pending)],settings,'owner-a');
  const rows=allBookingStatusRows([...derived,derived[0]]);
+ const dateObjects=rows.map((r,i)=>({...r,id:'date'+i,submittedAt:new Date(i?'2026-10-23T12:00:00Z':'2026-10-22T12:00:00Z'),bookingTimeline:[]}));
+ assert.equal(allBookingStatusRows([{history:dateObjects}])[0].id,'date1','Postgres Date objects sort chronologically, not by weekday');
  assert.equal(rows.length,2);assert.equal(rows[0].clientName,'Blair');assert.equal(rows[1].clientName,'Alex');
  assert.equal(rows[0].status,'Pending approval');assert.equal(rows[0].answers[0].label,'Player Position');
  assert.equal(rows[1].serviceTypes[0],'Activity');assert.equal(rows[1].staff,'Private Coach');
