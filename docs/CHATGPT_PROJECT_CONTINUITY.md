@@ -1,6 +1,8 @@
-# v1.3.123 release handoff — candidate, not deployed
+# v1.3.123 release handoff — verified LIVE in staging and production
 
-Shared business coupons now apply at final service-booking review. Server snapshots discount/net service lines into pending requests and approval appointments; Stripe and receipt emails use that amount. Submission and approval emails remain durable and independent; owner review links work despite old disabled optional approval settings. Owner accountability adds dated occurrences with exact Eastern session times; legacy series assignments are retained. Migration 055 is additive. Verify all tests, typecheck, builds and exact staging/production LIVE commits before claiming release. No real customer email, payment or assignment is used for QA.
+Application commit `fa0940153b86bae3b68d10f87a909592516bd992`; staging `dep-dbcmf1om7kps73c7k4rg` LIVE October 21, 2026 at 9:37:12 p.m. ET; production `dep-dbcmifbncjis73b1e63g` LIVE 9:40:47 p.m. ET. Local, GitHub Actions and Render staging each passed all 307 tests; typecheck and builds passed. Additive migration 055 applied in each dedicated database; actual database/role checks passed with schema CREATE and zero unowned tables. Public live checks passed across all listed businesses, including service coupon rejection and protected owner/review routes. Production reports Gmail configured=true; no real customer email/payment/assignment was created for QA, and inbox delivery/private browser interaction were not manually verified.
+
+See [release evidence and owner instructions](V1_3_123_RELEASE.md). Shared booking coupons retain server-priced discounts through approval/payment; submission and approval emails stay distinct, with payment links only after approval when due; private team assignments now include actual occurrence date/time. Preserve the saved feature branch `feature/service-discounts-notifications-dated-team`. Main/staging may include documentation-only [skip render] commits after the deployed application SHA above.
 
 # v1.3.122 release handoff — verified LIVE in staging and production
 
