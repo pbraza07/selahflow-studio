@@ -13,7 +13,7 @@ test('direct form outbox filters private answers, deduplicates, honors disabled 
  const input={businessId:'business',sourceId:'visit',form:'booking',values:{name:'Allowed Hidden',email:'secret@example.invalid'}};
  await queueOwnerFormNotification(pg,input);await queueOwnerFormNotification(pg,input);
  const rows=(await pg.query('SELECT * FROM owner_form_notifications')).rows;assert.equal(rows.length,1);assert.match(rows[0].message.text,/Allowed/);assert.doesNotMatch(rows[0].message.text,/Hidden|secret/);
- let sent=0;await processOwnerFormNotifications(pg,{send:async()=>{sent++;throw Error('uncertain');}});await processOwnerFormNotifications(pg,{send:async()=>{sent++;return {status:'submitted'};}});assert.equal(sent,1);assert.equal((await pg.query('SELECT status FROM owner_form_notifications')).rows[0].status,'unknown');
+ let sent=0;await processOwnerFormNotifications(pg,{send:async(_channel,_destination,_message,_env,_fetch,context)=>{assert.equal(context.businessId,'business');sent++;throw Error('uncertain');}});await processOwnerFormNotifications(pg,{send:async()=>{sent++;return {status:'submitted'};}});assert.equal(sent,1);assert.equal((await pg.query('SELECT status FROM owner_form_notifications')).rows[0].status,'unknown');
  await pg.exec("UPDATE owner_form_notifications SET status='queued'");await pg.query('UPDATE settings SET data=$1',[JSON.stringify({...config,bookingNotifyEmail:false})]);
  await processOwnerFormNotifications(pg,{send:async()=>{sent++;return {status:'submitted'};}});assert.equal(sent,1);assert.equal((await pg.query('SELECT status FROM owner_form_notifications')).rows[0].status,'superseded');
  }finally{await pg.close();}

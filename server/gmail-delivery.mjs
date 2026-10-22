@@ -1,7 +1,7 @@
 import {randomBytes,createCipheriv,createDecipheriv,createHash,randomUUID} from 'node:crypto';
 import {getPool} from './database.mjs';
 import {tokenHash} from './security.mjs';
-import {brandedEmailHtml,emailLogo,EMAIL_LOGO_CID} from './branded-email.mjs';
+import {brandedEmailHtml,emailInlineLogo} from './branded-email.mjs';
 export const GMAIL_SCOPE='https://www.googleapis.com/auth/gmail.send';
 export const selectedEmailProvider=(env=process.env)=>env.EMAIL_PROVIDER||(env.RESEND_API_KEY?'resend':'gmail');
 export function gmailConfigured(env=process.env){return !!(env.GMAIL_CLIENT_ID&&env.GMAIL_CLIENT_SECRET&&/^[a-f0-9]{64}$/i.test(env.GMAIL_TOKEN_ENCRYPTION_KEY||''));}
@@ -66,7 +66,8 @@ export function gmailMime(sender,destination,message){
  const subjectWords=Array.from(subject).reduce((chunks,char)=>{if(Buffer.byteLength(chunks.at(-1)+char)>42)chunks.push(char);else chunks[chunks.length-1]+=char;return chunks;},['']).map(s=>'=?UTF-8?B?'+Buffer.from(s).toString('base64')+'?=').join('\r\n ');
  const encode=value=>Buffer.from(value).toString('base64').match(/.{1,76}/g)?.join('\r\n')||'';
  const related='sf-related-'+randomUUID(),alternative='sf-alternative-'+randomUUID();
- const mime=[`From: SelahFlow <${sender}>`,`To: <${destination}>`,`Subject: ${subjectWords}`,'MIME-Version: 1.0',`Content-Type: multipart/related; boundary="${related}"`,'',`--${related}`,`Content-Type: multipart/alternative; boundary="${alternative}"`,'',`--${alternative}`,'Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',encode(String(message.text||'')),`--${alternative}`,'Content-Type: text/html; charset=UTF-8','Content-Transfer-Encoding: base64','',encode(brandedEmailHtml(message)),`--${alternative}--`,`--${related}`,'Content-Type: image/png; name="selahflow-logo.png"','Content-Transfer-Encoding: base64',`Content-ID: <${EMAIL_LOGO_CID}>`,'Content-Disposition: inline; filename="selahflow-logo.png"','',encode(emailLogo()),`--${related}--`,''].join('\r\n');
+ const inline=emailInlineLogo(message);
+ const mime=[`From: SelahFlow <${sender}>`,`To: <${destination}>`,`Subject: ${subjectWords}`,'MIME-Version: 1.0',`Content-Type: multipart/related; boundary="${related}"`,'',`--${related}`,`Content-Type: multipart/alternative; boundary="${alternative}"`,'',`--${alternative}`,'Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',encode(String(message.text||'')),`--${alternative}`,'Content-Type: text/html; charset=UTF-8','Content-Transfer-Encoding: base64','',encode(brandedEmailHtml(message)),`--${alternative}--`,...(inline?[`--${related}`,`Content-Type: image/png; name="${inline.filename}"`,'Content-Transfer-Encoding: base64',`Content-ID: <${inline.cid}>`,`Content-Disposition: inline; filename="${inline.filename}"`,'',encode(inline.bytes)]:[]),`--${related}--`,''].join('\r\n');
  return Buffer.from(mime).toString('base64url');
 }
 export async function sendGmail(destination,message,env=process.env,fetcher=fetch,db=null){

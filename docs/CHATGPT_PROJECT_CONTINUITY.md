@@ -1,3 +1,7 @@
+# v1.3.130 release handoff — candidate, deployment pending
+
+Central email delivery loads business branding by server-derived businessId/ownerId. Current saved theme and uploaded logo apply to business booking/approval/payment/member/owner alert/registration verification emails, including unsent queued messages. Gmail/Resend embed normalized PNG logo attachments; text/button colors adapt to palette contrast. No logo → business-name header, never another tenant logo. Platform-only messages retain SelahFlow identity. Sender/account configuration, links, payment logic, queue idempotency and staging restrictions unchanged. No migrations; sharp 0.35.5 made a direct pinned dependency (already in lock as Next optional dependency). Tests/deployments pending. See [release evidence](V1_3_130_RELEASE.md).
+
 # v1.3.129 release handoff — verified LIVE in staging and production
 
 Application commit `80d4dff477980f9b247349ea203a7dae7011892b` (tree `aac90f7c1166ca101725fe3b0e5fd7b7aae2dceb`). Staging `dep-dbd1gtmj5dgc73a0cneg` LIVE October 22, 2026 at 10:16:29 a.m. EDT; production `dep-dbd1m761egvs73fa37tg` LIVE 10:19:46 a.m. EDT. Local, GitHub Actions run 39792855147 / job 119872928270, and Render staging passed all 329 tests, typecheck and builds. Production build passed. Dedicated database/role preflights passed with schema CREATE true and zero unowned tables. Read-only live health/catalog/protected owner endpoints/served styles/push checks passed across five staging/four production businesses; no startup error-level logs observed.

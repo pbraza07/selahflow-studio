@@ -23,7 +23,7 @@ test('submission and covered approval emails are durable, scoped, idempotent and
   for(const expected of ['CA0814','request-one','Coach One','Sessions left: 5','Sessions taken / used: 3',bookingConfirmationInstructions(true),'https://staging.example/membership/club-one','https://staging.example/book/club-one'])assert.ok(text.includes(expected),expected);
   assert.doesNotMatch(text,/Foreign Package|other-client@example|2013-08-14|Pay securely with Stripe/);
   assert.equal((await db.query("SELECT sessions_used FROM customer_memberships WHERE id='m1'")).rows[0].sessions_used,3);
-  const sent=[];const send=async(channel,destination,message)=>{sent.push({channel,destination,message});return {status:'submitted',detail:'Simulated provider acceptance'};};
+  const sent=[];const send=async(channel,destination,message,_env,_fetch,context)=>{assert.equal(context.businessId,'b1');sent.push({channel,destination,message});return {status:'submitted',detail:'Simulated provider acceptance'};};
   await processBookingReceipts(pool,{send});await processBookingReceipts(pool,{send});assert.equal(sent.length,1);assert.equal(sent[0].channel,'email');assert.equal(sent[0].destination,'client@example.test');
   await confirmBooking({pool,owner:'u1',services:config.services,staff:'coach',date:input.date,start:600,duration:30,buffer:0,id:'approved-one',data:{...input.data,bookingRequestId:input.bookingId},pendingId:input.bookingId,expectedReviewer:'owner',notificationOrigin:input.origin});
   assert.equal((await db.query('SELECT * FROM booking_client_flows')).rows.length,0,'covered approval creates no payment link');

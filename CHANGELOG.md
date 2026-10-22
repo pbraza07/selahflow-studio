@@ -1,3 +1,9 @@
+## 1.3.130
+
+- Brand business-related transactional and owner-alert emails with the current business theme and uploaded inline logo, retaining the shared sender address.
+- Apply branding at delivery time across booking, approval, payment, membership and registration verification flows, including queued unsent messages.
+- Support PNG/JPG/WebP uploads, readable theme contrast, safe business-name fallback, and tenant-isolated lookup for Gmail and Resend.
+
 ## 1.3.129
 
 - Remove recurring session overrides with their parent definition so Save business settings succeeds.

@@ -187,7 +187,7 @@ if(b.action==='registration_code_request'){
  if(!await takeLimit('registration-code-ip:'+owner+':'+tokenHash(ip),8)||!await takeLimit('registration-code-email:'+owner+':'+tokenHash(email),3))return reply({error:'Too many requests. Try again later.'},429);
  if(!deliveryProviderStatus().emailConfigured)return reply({error:'Email verification is currently unavailable. Please contact the business.'},503);
  const code=String(randomInt(0,1000000)).padStart(6,'0'),hash=tokenHash(owner+':'+email+':'+code);
- const sent=await sendNotificationChannel('email',email,{subject:'SelahFlow registration verification code',text:'Your SelahFlow registration verification code is '+code+'. It expires in 10 minutes. If you did not request this, ignore this message.'});
+ const sent=await sendNotificationChannel('email',email,{subject:'Registration verification code — '+config.name,text:'Your '+config.name+' registration verification code is '+code+'. It expires in 10 minutes. If you did not request this, ignore this message.'},undefined,undefined,{ownerId:owner});
  if(sent.status!=='submitted')return reply({error:'Unable to send verification email. Please try again later.'},503);
  await db().prepare("INSERT INTO registration_email_codes(owner_id,email_hash,code_hash,expires_at,attempts) VALUES(?,?,?,NOW()+INTERVAL '10 minutes',0) ON CONFLICT(owner_id,email_hash) DO UPDATE SET code_hash=EXCLUDED.code_hash,expires_at=EXCLUDED.expires_at,attempts=0").bind(owner,tokenHash(email),hash).first();
  return reply({ok:true,message:'If this email can receive messages, a verification code has been sent.'});

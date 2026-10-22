@@ -35,7 +35,7 @@ test('approval commits private payment links; verified payment commits confirmat
   assert.ok(!(await listClientMessages(pool,'u1')).some(x=>'payment_url'in x||'destination'in x||'message'in x));
   const sends=[],send=async(channel,destination,message,env,fetcher,context)=>{sends.push({channel,destination,message,context});return {status:'submitted',detail:'Accepted by test provider'};};
   await processClientMessages(pool,{send});await processClientMessages(pool,{send});
-  assert.equal(sends[0].context.kind,'transactional-client');assert.ok(sends[0].context.queuedAt);
+  assert.equal(sends[0].context.kind,'transactional-client');assert.equal(sends[0].context.businessId,'b1');assert.ok(sends[0].context.queuedAt);
   assert.equal(sends.length,2);assert.equal(sends.find(x=>x.channel==='email').destination,data.email);assert.equal(sends.find(x=>x.channel==='sms').destination,data.phone);assert.match(sends[0].message.text,/payment requested/);
   assert.equal((await retryClientMessages(pool,'u2',bookingId)).queued,0);assert.equal((await retryClientMessages(pool,'u1',bookingId)).queued,0);
   let creates=0;

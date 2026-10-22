@@ -37,7 +37,7 @@ export async function processOwnerFormNotifications(pool,{send=sendNotificationC
      const sub=(await pool.query('SELECT endpoint,p256dh,auth,reviewer FROM business_push_subscriptions WHERE business_id=$1 AND id=$2',[row.business_id,row.destination])).rows[0];
      if(sub&&['owner',recipient.reviewer].includes(sub.reviewer))result=await push({endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth}},{...obj(row.message),tag:'form-'+row.id});
     }else if(row.channel==='email'&&config.bookingNotifyEmail===true&&recipient.email===row.destination||row.channel==='sms'&&config.bookingNotifySms===true&&recipient.phone===row.destination){
-     result=await send(row.channel,row.destination,{...obj(row.message),idempotencyKey:'owner-form-'+row.id,trackAmbiguous:true});
+     result=await send(row.channel,row.destination,{...obj(row.message),idempotencyKey:'owner-form-'+row.id,trackAmbiguous:true},undefined,undefined,{businessId:row.business_id});
     }
    }
    await pool.query("UPDATE owner_form_notifications SET status=$1,attempts=attempts+CASE WHEN $1='failed' THEN 1 ELSE 0 END,next_attempt_at=now()+interval '5 minutes',updated_at=now() WHERE id=$2 AND status='processing'",[result.status,row.id]);

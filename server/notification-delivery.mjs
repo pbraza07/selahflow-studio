@@ -1,3 +1,4 @@
+import {loadBusinessEmailBrand} from './business-email-branding.mjs';
 import {registrationNotificationLines} from './registration-questions.mjs';
 /** Outbound transactional notifications. Never expose provider secrets to the browser. */
 import {randomBytes,randomUUID} from 'node:crypto';
@@ -38,9 +39,13 @@ export function notificationMessage({businessName,request,link,config}){
 }
 export async function sendNotificationChannel(channel,destination,message,env=process.env,fetcher=fetch,context={}){
  if(!stagingNotificationAllowed(channel,destination,env,context))return {status:'not_configured',detail:'External staging notifications are disabled for this recipient'};
+ if(channel==='email'){
+  try{message={...message,emailBrand:context.businessId||context.ownerId?await loadBusinessEmailBrand(context.brandingDb||getPool(),context):null};}
+  catch{return {status:'failed',detail:'Business email branding is temporarily unavailable'};}
+ }
  if(channel==='email'&&selectedEmailProvider(env)==='gmail'){
   if(!validEmail(destination))return {status:'invalid_destination',detail:'Invalid recipient'};
-  try{return await sendGmail(destination,message,env,fetcher);}catch{return {status:'not_configured',detail:'Gmail connection is unavailable; contact the platform administrator'};}
+  try{return await sendGmail(destination,message,env,fetcher,context.brandingDb||null);}catch{return {status:'not_configured',detail:'Gmail connection is unavailable; contact the platform administrator'};}
  }
  const cfg=deliveryProviderStatus(env);
  if(channel==='email'&&!cfg.emailConfigured)return {status:'not_configured',detail:'Resend email is not configured'};
@@ -61,7 +66,7 @@ export async function sendNotificationChannel(channel,destination,message,env=pr
 /** @param {{requestId:string,origin:string}} input */
 export async function notifyBookingRequest({requestId,origin}){
  const pool=getPool();
- const data=(await pool.query("SELECT r.id,r.date,r.start_minute,r.duration,r.details,r.reviewer,r.status,b.name AS business_name,s.data AS settings_data,u.email AS owner_email FROM booking_requests r JOIN businesses b ON b.id=r.business_id JOIN settings s ON s.owner=r.owner_id JOIN users u ON u.id=r.owner_id WHERE r.id=$1",[requestId])).rows[0];
+ const data=(await pool.query("SELECT r.business_id,r.id,r.date,r.start_minute,r.duration,r.details,r.reviewer,r.status,b.name AS business_name,s.data AS settings_data,u.email AS owner_email FROM booking_requests r JOIN businesses b ON b.id=r.business_id JOIN settings s ON s.owner=r.owner_id JOIN users u ON u.id=r.owner_id WHERE r.id=$1",[requestId])).rows[0];
  if(!data||data.status!=='pending')return {email:'not_requested',sms:'not_requested'};
  const config=JSON.parse(data.settings_data||'{}');
  const selected={email:config.bookingNotifyEmail===true,sms:config.bookingNotifySms===true};
@@ -85,7 +90,7 @@ export async function notifyBookingRequest({requestId,origin}){
  for(const channel of ['email','sms']){
   if(!selected[channel]||disabled[channel]){result[channel]=disabled[channel]||'not_requested';continue;}
   const dest=channel==='email'?recipient.email:recipient.phone;
-  const attempt=await sendNotificationChannel(channel,dest,message);
+  const attempt=await sendNotificationChannel(channel,dest,message,undefined,undefined,{businessId:data.business_id});
   result[channel]=attempt.status;
   await pool.query("INSERT INTO booking_notification_attempts(id,request_id,channel,destination_masked,status,detail) VALUES($1,$2,$3,$4,$5,$6)",[randomUUID(),requestId,channel,dest?maskDestination(dest,channel):'',attempt.status,attempt.detail]);
  }
@@ -95,14 +100,14 @@ export async function notifyBookingRequest({requestId,origin}){
 /** Membership requests use the owner's enabled channels, never another business. */
 export async function notifyMembershipRequest({requestId,origin}){
  const pool=getPool();
- const r=(await pool.query("SELECT r.id,r.status,r.details,b.slug,b.name,b.owner_id,u.email,s.data AS settings_data FROM membership_requests r JOIN businesses b ON b.id=r.business_id JOIN users u ON u.id=b.owner_id LEFT JOIN settings s ON s.owner=b.owner_id WHERE r.id=$1",[requestId])).rows[0];
+ const r=(await pool.query("SELECT r.business_id,r.id,r.status,r.details,b.slug,b.name,b.owner_id,u.email,s.data AS settings_data FROM membership_requests r JOIN businesses b ON b.id=r.business_id JOIN users u ON u.id=b.owner_id LEFT JOIN settings s ON s.owner=b.owner_id WHERE r.id=$1",[requestId])).rows[0];
  if(!r||r.status!=='pending')return;
  const settings=JSON.parse(r.settings_data||'{}');
  const link=new URL('/studio/'+encodeURIComponent(r.slug),origin).toString();
  const details=typeof r.details==='string'?JSON.parse(r.details):r.details||{},answers=registrationNotificationLines(settings,'membership',details,details.customAnswers||{});
  const message={subject:'MEMBERSHIP REQUEST · '+r.name,text:'MEMBERSHIP REQUEST\n'+answers.join('\n')+'\nA customer has requested a membership at '+r.name+'. Sign in to review and approve: '+link,sms:'MEMBERSHIP REQUEST · '+r.name+'. Sign in to review: '+link};
  const result={};
- if(settings.bookingNotifyEmail===true)result.email=await sendNotificationChannel('email',settings.bookingNotifyOwnerEmail||r.email,message);
+ if(settings.bookingNotifyEmail===true)result.email=await sendNotificationChannel('email',settings.bookingNotifyOwnerEmail||r.email,message,undefined,undefined,{businessId:r.business_id});
  if(settings.bookingNotifySms===true)result.sms=await sendNotificationChannel('sms',settings.bookingNotifyOwnerPhone||'',message);
  await pool.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'membership_request_notification',$4)",[randomUUID(),r.owner_id,new Date().toISOString(),JSON.stringify({requestId,result})]);
  return result;

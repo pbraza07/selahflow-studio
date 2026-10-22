@@ -59,13 +59,13 @@ export async function processClientMessages(pool=getPool(),{send=sendNotificatio
   if(!item)break;
   processed++;
   try{
-   const state=(await pool.query("SELECT a.status AS appointment_status,f.expires_at,p.status AS payment_status,ma.charges_enabled,ma.onboarding_complete FROM booking_client_flows f JOIN businesses b ON b.id=f.business_id JOIN appointments a ON a.id=f.booking_id AND a.owner=b.owner_id LEFT JOIN booking_payments p ON p.booking_id=f.booking_id AND p.business_id=f.business_id LEFT JOIN merchant_accounts ma ON ma.business_id=f.business_id AND ma.provider='stripe' WHERE f.booking_id=$1 AND b.status='active'",[item.booking_id])).rows[0];
+   const state=(await pool.query("SELECT f.business_id,a.status AS appointment_status,f.expires_at,p.status AS payment_status,ma.charges_enabled,ma.onboarding_complete FROM booking_client_flows f JOIN businesses b ON b.id=f.business_id JOIN appointments a ON a.id=f.booking_id AND a.owner=b.owner_id LEFT JOIN booking_payments p ON p.booking_id=f.booking_id AND p.business_id=f.business_id LEFT JOIN merchant_accounts ma ON ma.business_id=f.business_id AND ma.provider='stripe' WHERE f.booking_id=$1 AND b.status='active'",[item.booking_id])).rows[0];
    let result;
    if(!state||item.event_type==='payment_confirmation'&&state.payment_status!=='paid'||item.event_type==='payment_link'&&(state.appointment_status==='Cancelled'||state.payment_status==='paid'||new Date(state.expires_at)<=new Date()))result={status:'superseded',detail:'Booking or payment is no longer eligible for this message'};
    else if(item.channel==='email'?!validEmail(item.destination):!validE164(item.destination))result={status:'invalid_destination',detail:item.channel==='sms'?'Registration phone missing or invalid; use +country code and number':'Registration email missing or invalid'};
    // Deliver the approved booking and its private payment page even when card
    // onboarding is incomplete; that page reports availability honestly.
-   else result=await send(item.channel,item.destination,{...dataOf(item.message),idempotencyKey:'client-message-'+item.id,trackAmbiguous:true},undefined,undefined,{kind:'transactional-client',queuedAt:item.client_delivery_authorized_at||item.created_at});
+   else result=await send(item.channel,item.destination,{...dataOf(item.message),idempotencyKey:'client-message-'+item.id,trackAmbiguous:true},undefined,undefined,{businessId:state.business_id,kind:'transactional-client',queuedAt:item.client_delivery_authorized_at||item.created_at});
    await pool.query("UPDATE booking_client_messages SET status=$1,detail=$2,attempts=attempts+CASE WHEN $1='failed' THEN 1 ELSE 0 END,next_attempt_at=now()+interval '5 minutes',updated_at=now() WHERE id=$3 AND status='processing'",[result.status,result.detail,item.id]);
    if(item.channel==='email')console.log('Client transactional email:',JSON.stringify({event:item.event_type,status:result.status}));
   }catch{

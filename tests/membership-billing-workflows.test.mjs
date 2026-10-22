@@ -47,7 +47,7 @@ test('owner payment invitation has exact member and plan details, an expiring pr
  const row=(await pg.query('SELECT * FROM membership_payment_invitations')).rows[0];assert.match(row.message.text,/Test Parent/);assert.match(row.message.text,/Sessions included each month: 8/);assert.match(row.message.text,/no.*roll over/);
  const token=row.message.actions[0].url.split('/').at(-1);assert.equal(token.length,64);assert.notEqual(row.token_hash,token);
  assert.equal((await invitationDetails(db,token)).member_number,'TP010190');
- const sent=[];await processMembershipInvitations(pool,{send:async(...a)=>{sent.push(a);return {status:'submitted',detail:'Synthetic provider acceptance'};}});assert.equal(sent.length,1);
+ const sent=[];await processMembershipInvitations(pool,{send:async(...a)=>{sent.push(a);return {status:'submitted',detail:'Synthetic provider acceptance'};}});assert.equal(sent.length,1);assert.equal(sent[0][5].businessId,'biz');
  assert.equal((await pg.query('SELECT status FROM customer_memberships')).rows[0].status,'pending_payment');
  }finally{await pg.close();}
 });
