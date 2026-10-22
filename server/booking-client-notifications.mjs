@@ -1,3 +1,4 @@
+import {processCommunicationEmails} from './client-communications.mjs';
 import {processMembershipInvitations} from './membership-invitations.mjs';
 import {refreshMembershipPeriods} from './membership-periods.mjs';
 import {processOwnerFormNotifications} from './owner-form-notifications.mjs';
@@ -94,7 +95,7 @@ export function startClientMessageWorker(){
    const result=await reconcileUncheckedBookings(getPool(),{origin,after:approvalCursor});approvalCursor=result.next;
    if(result.confirmed)console.log('Unchecked booking reconciliation:',JSON.stringify({scanned:result.scanned,confirmed:result.confirmed,unavailable:result.unavailable}));
   }catch{console.error('Unchecked booking reconciliation temporarily unavailable');}
-  await processOwnerFormNotifications(getPool());await processClientMessages();await processBookingReceipts(getPool());await processMembershipPaymentEmails(getPool());await processMembershipInvitations(getPool());await refreshMembershipPeriods(getPool());
+  await processOwnerFormNotifications(getPool());await processClientMessages();await processBookingReceipts(getPool());await processMembershipPaymentEmails(getPool());await processMembershipInvitations(getPool());await refreshMembershipPeriods(getPool());await processCommunicationEmails(getPool());
  }catch{console.error('Client message queue temporarily unavailable');}finally{busy=false;}};
  setInterval(tick,15000).unref();void tick();
 }

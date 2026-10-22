@@ -1,3 +1,9 @@
+## 1.3.132
+
+- Add Settings → Client communications with live client contact sync, deduplicated recipient selection, personalized subject/message/HTTPS button, business-logo/color preview and explicit Send confirmation.
+- Durable private email queues, campaign history/cancellation and business-scoped unsubscribe; preserve existing transactional emails and staging delivery safeguards.
+- Recheck current contacts before sending, clean eligible communication recipient data on permanent client deletion and prevent duplicate/ambiguous replay.
+
 ## 1.3.131
 
 - Owners can uncheck service approval, standard identity question requirements and session tracking defaults; saved server behavior honors explicit choices.

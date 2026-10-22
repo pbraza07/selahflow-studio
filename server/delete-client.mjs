@@ -8,7 +8,7 @@ export async function deleteClientPermanently(db,{owner,businessId,client}){
  if(!business||!client?.id)throw Error('Client not found in this business.');
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[business.id+':member-id-allocation']);
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
- await db.query('LOCK TABLE appointments,booking_requests,business_client_profiles,business_member_ids,customer_booking_ids,customer_memberships,booking_client_messages,booking_receipt_emails,membership_payment_emails,membership_payment_invitations,owner_form_notifications IN SHARE ROW EXCLUSIVE MODE');
+ await db.query('LOCK TABLE appointments,booking_requests,business_client_profiles,business_member_ids,customer_booking_ids,customer_memberships,booking_client_messages,booking_receipt_emails,membership_payment_emails,membership_payment_invitations,owner_form_notifications,business_communication_recipients IN SHARE ROW EXCLUSIVE MODE');
  const profile={id:client.id};
  const reservation=(await db.query('SELECT identity_key FROM business_member_ids WHERE business_id=$1 AND member_number=$2',[business.id,client.memberNumber||''])).rows[0];
  const original={identity_key:reservation?.identity_key&&!reservation.identity_key.startsWith('deleted:')?reservation.identity_key:identity(client.name,client.dateOfBirth)};
@@ -40,6 +40,7 @@ export async function deleteClientPermanently(db,{owner,businessId,client}){
   });
   const specs=[];
   const add=(table,where,args,rows)=>specs.push({table,where,args,rows});
+  add('business_communication_recipients','business_id=$1 AND source_ids ? $2',[business.id,client.id]);
   add('owner_form_notifications','business_id=$1 AND source_id=ANY($2::text[])',[business.id,[...bookingKeys,...membershipRequests.map(r=>r.id)]]);
   add('booking_client_messages','booking_id=ANY($1::text[])',[appointmentIds]);
   add('booking_receipt_emails','business_id=$1 AND booking_key=ANY($2::text[])',[business.id,bookingKeys]);
@@ -66,7 +67,7 @@ export async function deleteClientPermanently(db,{owner,businessId,client}){
   add('events','owner=$1 AND id=ANY($2::text[])',[business.owner_id,events.map(e=>e.id)],events);
   for(const s of specs)s.rows??=await read(s.table,s.where,s.args);
   const rowsFor=table=>specs.find(s=>s.table===table).rows;
-  if(['booking_client_messages','booking_receipt_emails','membership_payment_emails','membership_payment_invitations','owner_form_notifications'].some(table=>rowsFor(table).some(m=>m.status==='processing')))throw Error('A related email is currently being sent. Retry reset after delivery finishes.');
+  if(['business_communication_recipients','booking_client_messages','booking_receipt_emails','membership_payment_emails','membership_payment_invitations','owner_form_notifications'].some(table=>rowsFor(table).some(m=>m.status==='processing')))throw Error('A related email is currently being sent. Retry reset after delivery finishes.');
   if(rowsFor('booking_payments').some(p=>p.status==='pending'&&p.stripe_checkout_session_id))throw Error('Expire this registration open Stripe Checkout before reset.');
   const retainedFinancialRecords=await retainDeletedClientFinancials(db,{businessId:business.id,specs});
   const result={removed:Object.fromEntries(specs.map(s=>[s.table,s.rows.length])),releasedIds:numbers.length,retainedFinancialRecords,freshRegistrationVerified:false};
