@@ -29,7 +29,7 @@ test('each bookable session exposes standard and applicable custom fields in its
  const component=await readFile(new URL('../app/components/registration-question-settings.tsx',import.meta.url),'utf8');
  const dashboard=await readFile(new URL('../app/studio/owner-dashboard.tsx',import.meta.url),'utf8');
  assert.match(component,/registrationQuestions\(config,editorForm,sessionId/);
- assert.match(component,/including standard registration fields/);
- assert.match(dashboard,/Edit session questions/);
- assert.match(dashboard,/sessionQuestionEditor===x.id/);
+ assert.match(component,/standard or custom registration questions/);
+ assert.doesNotMatch(dashboard,/Edit session questions|sessionQuestionEditor/);
+ assert.match(component,/label="Sessions"/);
 });

@@ -59,7 +59,9 @@ test('approval and theme integration keep occupancy mandatory and service legend
  assert.doesNotMatch(dashboard,/dot purple"\/>Hair/);
  assert.doesNotMatch(dashboard,/dot blue"\/>Barber/);
  assert.match(dashboard,/sf-business-service-legend/);
- assert.match(dashboard,/sf-approval-field-choices/);
+ const questionCenter=await readFile(new URL('app/components/registration-question-settings.tsx',root),'utf8');
+ assert.match(questionCenter,/Details displayed on approval review cards/);
+ assert.doesNotMatch(dashboard,/sf-approval-field-choices/);
  assert.match(review,/sf-approval-activity/);
  assert.match(review,/sf-approval-seats/);
  assert.match(review,/booking request/);

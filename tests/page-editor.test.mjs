@@ -14,6 +14,6 @@ test('owner page editor is reachable from every dashboard page and exposes suppo
  assert.match(editor,/PAGE COLORS/);
  assert.match(editor,/bookingHeaderNote/);
  assert.doesNotMatch(dashboard,/data-sf-settings-group="booking-page"/,'Page editor owns wording controls after Booking page content Settings removal');
- assert.match(dashboard,/Booking & membership questions/,'Settings exposes editable membership questions');
+ assert.match(dashboard,/id:'questions',title:'Questions'/,'Settings exposes the single question manager');
  assert.match(booking,/config\.bookingHeaderNote/);
 });

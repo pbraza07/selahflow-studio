@@ -1,3 +1,7 @@
+# v1.3.125 release handoff — candidate, deployment pending
+
+Questions are created/edited only in Settings → Questions. One shared editor controls booking/membership forms, service/session scope, standard/custom required and alert display flags, ordering, review card display and save. Embedded service/session editors and membership question shortcut removed. Existing identity requirements remain enforced for eight-character IDs; existing saved fields, overrides and historical answers retained. No migration or environment changes. Tests/deployment pending; see V1_3_125_RELEASE.md.
+
 # v1.3.124 release handoff — verified LIVE in staging and production
 
 Application commit `dc96085edddca03195017752301088c7951cf1dd`; staging `dep-dbcn148473hc739jin8g` LIVE 2026-10-22 02:15:59Z; production `dep-dbcn3ve1egvs73etuhq0` LIVE 02:18:09Z. Local, GitHub Actions (39709680076 / job 119597762969), and Render staging passed all 310 tests, typecheck and builds. Both health endpoints report 1.3.124 and Web Push readiness configured=true/reason=ready. Read-only live tests passed for worker, business Home Screen manifest and rejection of unauthorized push tests. Dedicated database/role preflights passed in both environments with zero unowned tables; no startup error logs observed.

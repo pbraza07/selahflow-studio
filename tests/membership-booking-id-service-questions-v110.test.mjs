@@ -95,13 +95,13 @@ test('new and existing service questions apply only to matching selected service
  assert.throws(()=>validateRegistrationQuestions({...config,bookingCustomFields:[{...config.bookingCustomFields[0],serviceIds:['deleted-service']}]}),/Choose existing services/);
  assert.throws(()=>validateRegistrationQuestions({...config,services:config.services.map(s=>s.id==='training'?{...s,questionRequired:{fake:true}}:s)}),/Invalid service required/);
 });
-test('service editor is available for both catalog and Services page, and membership UI displays the Unique ID',async()=>{
+test('service questions are managed only in the question center, and membership UI displays the Unique ID',async()=>{
  const root=new URL('../',import.meta.url);
  const dash=await readFile(new URL('app/studio/owner-dashboard.tsx',root),'utf8');
  const editor=await readFile(new URL('app/components/registration-question-settings.tsx',root),'utf8');
  const booking=await readFile(new URL('app/book/page.tsx',root),'utf8');
  const membership=await readFile(new URL('app/membership/[slug]/page.tsx',root),'utf8');
- assert.match(dash,/Edit service questions/);assert.match(dash,/serviceId=\{serviceQuestionEditor\}/);assert.match(dash,/Add service type/);
+ assert.doesNotMatch(dash,/Edit service questions|serviceQuestionEditor/);assert.equal((dash.match(/<RegistrationQuestionSettings /g)||[]).length,1);assert.match(dash,/Add service type/);
  assert.match(editor,/serviceIds:\[serviceId\]/);assert.match(editor,/Apply to booking services/);assert.match(editor,/Remove question from this service/);
  assert.match(booking,/serviceIds=\{selected\}/);assert.match(membership,/Your Unique Membership ID/);
 });

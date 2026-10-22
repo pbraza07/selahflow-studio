@@ -1,3 +1,9 @@
+## 1.3.125
+
+- Centralize standard/custom booking and membership question management under Settings → Questions, including service/session scope, ordering, Required and notification display choices.
+- Remove embedded catalog/session editors and redundant membership editing shortcuts; move question/review display preferences into the single manager. Add Save questions in that location.
+- Preserve existing identity requirements, field IDs, answers, quota and tenant isolation; clean obsolete references when moving a question to a different form.
+
 ## 1.3.124
 
 - Validate persistent Web Push key pairs and report missing, invalid or staging-disabled setup without disclosing credentials.

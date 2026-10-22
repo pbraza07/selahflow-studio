@@ -1,3 +1,5 @@
+**Release source: v1.3.125 — centralized question management.** Settings → Questions is the single editor for all registration questions. Deployment pending; see [release evidence](docs/V1_3_125_RELEASE.md).
+
 **Release source: v1.3.124 — verified LIVE in staging and production.** Persistent push configuration, subscription recovery and a private device test. See [push setup and verification](docs/V1_3_124_RELEASE.md).
 
 **Release source: v1.3.123 — verified LIVE in staging and production.** Service booking coupons, client submission/approval emails and dated team accountability. See [release evidence and owner steps](docs/V1_3_123_RELEASE.md).
