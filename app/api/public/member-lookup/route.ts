@@ -1,6 +1,6 @@
 import {getPool} from '../../../../server/database.mjs';
 import {tokenHash,validOrigin} from '../../../../server/security.mjs';
-import {restoreBookingCustomAnswers,restoredContact} from '../../../../server/returning-member-prefill.mjs';
+import {restoreCurrentProfileAnswers,restoredContact} from '../../../../server/returning-member-prefill.mjs';
 import {hasUsableMembership,remainingMembershipSessions} from '../../../../server/member-badge-state.mjs';
 
 export const runtime='nodejs';
@@ -48,7 +48,7 @@ export async function POST(req:Request){
   const identity=member.rows[0]||booking.rows[0];
   if(!identity)return Response.json({error:'Membership ID and date of birth did not match. Check both values or contact the business.'},{status:404,headers});
   const profile=(await db.query(
-   "SELECT name,email,phone,notes,import_columns FROM business_client_profiles WHERE owner=$1 AND deleted_at IS NULL AND (member_number=$2 OR (member_number IS NULL AND lower(trim(name))=lower(trim($3)) AND lower(trim(email))=lower(trim($4)))) ORDER BY CASE WHEN member_number=$2 THEN 0 ELSE 1 END,created_at DESC LIMIT 1",
+   "SELECT name,first_name,last_name,email,phone,notes,import_columns,registration_answers FROM business_client_profiles WHERE owner=$1 AND deleted_at IS NULL AND (member_number=$2 OR (member_number IS NULL AND lower(trim(name))=lower(trim($3)) AND lower(trim(email))=lower(trim($4)))) ORDER BY CASE WHEN member_number=$2 THEN 0 ELSE 1 END,created_at DESC LIMIT 1",
    [business.owner_id,memberNumber,identity.customer_name,identity.customer_email]
   )).rows[0]||{};
   const [appointment,request,settings]=await Promise.all([
@@ -67,12 +67,12 @@ export async function POST(req:Request){
   const latest=Number.isFinite(requestedAt)&&(!Number.isFinite(appointedAt)||requestedAt>appointedAt)?latestRequest:latestAppointment;
   const backup=latest===latestRequest?latestAppointment:latestRequest;
   const fields=Array.isArray(config.bookingCustomFields)?config.bookingCustomFields:[];
-  const customAnswers=restoreBookingCustomAnswers(
-   fields,latest.customAnswers,backup.customAnswers,member.rows[0]?.registration_answers,
+  const customAnswers=restoreCurrentProfileAnswers(
+   fields,profile.registration_answers,latest.customAnswers,backup.customAnswers,member.rows[0]?.registration_answers,
    profile.import_columns
   );
   const contact=restoredContact(
-   identity,{...profile,phone:profile.phone||identity.customer_phone},
+   identity,profile,
    Object.keys(latest).length?latest:backup
   );
   const membershipRow=membership.rows[0]||null;

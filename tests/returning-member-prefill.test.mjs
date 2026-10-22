@@ -2,7 +2,7 @@ import {registrationQuestions} from '../server/registration-questions.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {restoreBookingCustomAnswers,restoredContact} from '../server/returning-member-prefill.mjs';
+import {restoreCurrentProfileAnswers,restoreBookingCustomAnswers,restoredContact} from '../server/returning-member-prefill.mjs';
 
 const fields=[
  {id:'level',label:'Player Level',type:'select',options:['Beginner','Intermediate','Advanced']},
@@ -63,5 +63,10 @@ test('lookup requires birth-date verification, business identity and throttling 
  assert.match(endpoint,/registration_answers/);
  assert.match(endpoint,/booking_requests/);
  assert.match(endpoint,/appointments/);
- assert.match(endpoint,/restoreBookingCustomAnswers/);
+ assert.match(endpoint,/restoreCurrentProfileAnswers/);
+});
+
+test('owner profile corrections prefill current answers, intentional clears and explicit name parts over historical values',()=>{
+ assert.deepEqual(restoreCurrentProfileAnswers(fields,{level:'Beginner',notes:'',consent:false},{level:'Advanced',notes:'Old',consent:true}),{level:'Beginner',notes:'',consent:false});
+ assert.deepEqual(restoredContact({customer_name:'Alicia Mia Doe',customer_email:'old@example.test'},{name:'Alicia Mia Doe',first_name:'Alicia Mia',last_name:'Doe',email:'',phone:''},{email:'stale@example.test',phone:'8135550000'}),{firstName:'Alicia Mia',lastName:'Doe',email:'',phone:''});
 });
