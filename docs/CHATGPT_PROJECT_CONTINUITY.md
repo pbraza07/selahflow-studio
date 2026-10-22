@@ -1,3 +1,7 @@
+# v1.3.128 release handoff — candidate, deployment pending
+
+Team accountability lives under Calendar only, before its daily/weekly/monthly calendar controls. Adds private appointment assignments (migration 056), owner-only range list/edit controls and date synchronization. Dated session tracking remains supported. Public booking staff/capacity/notifications remain independent. All businesses share owner-scoped implementation; preserve existing records. Tests/deployment pending. Booking Status v1.3.127 remains included. See [release evidence](V1_3_128_RELEASE.md).
+
 # v1.3.127 release handoff — candidate, deployment pending
 
 Clients → Booking Status displays all owner-scoped appointment/request histories independently of client selection and directory filters. Includes client identity/contact, full session/service history columns, answers, timelines, dynamic payment, quote and filters. Existing 15-second visible-tab/focus/review refresh applies. No migrations, provider configuration or customer mutations required. Tests and deployment pending. See [release evidence](V1_3_127_RELEASE.md).

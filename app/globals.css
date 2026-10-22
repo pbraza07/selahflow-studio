@@ -1986,3 +1986,5 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px soli
 .sf-booking-status-filters>.sf-client-history-filter{flex-direction:row;align-items:center;min-height:44px}
 .sf-booking-status .sf-client-history-table{min-width:1200px}
 .sf-booking-payment{font-weight:700}.sf-booking-payment.pending{color:#b42318}.sf-booking-payment.completed{color:#167347}
+
+.sf-team-tracking-controls{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:14px 0}.sf-team-tracking-controls>label{display:flex;flex-direction:column;gap:6px;flex:1;min-width:170px}.sf-team-tracking-editor{padding:16px;margin:16px 0;border:1px solid var(--sf-border,#ccc);border-radius:12px}.sf-team-accountability-table{width:100%;min-width:1050px}.sf-team-accountability-table th,.sf-team-accountability-table td{padding:12px;text-align:left;vertical-align:top}.sf-team-accountability-table small{display:block}.sf-team-accountability-table tbody tr+tr{border-top:1px solid var(--sf-border,#ccc)}

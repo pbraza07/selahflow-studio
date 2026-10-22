@@ -1,3 +1,9 @@
+## 1.3.128
+
+- Move private team accountability from Overview into Team calendar, synchronized with the selected calendar date.
+- Assign internal team members to individual service appointments as well as dated recurring session occurrences, without changing public hosts or capacity.
+- Add sortable accountability list with session/service names, date, time, team names, saved/default source and private notes, with date-range browsing.
+
 ## 1.3.127
 
 - Add Clients → Booking Status for all business bookings, including pending/declined requests and confirmed appointments, independent of the selected client or directory filters.
