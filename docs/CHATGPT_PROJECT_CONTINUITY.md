@@ -1,6 +1,12 @@
-# v1.3.122 release handoff — candidate, deployment pending
+# v1.3.123 release handoff — candidate, not deployed
 
-All requested membership billing, monthly reset, coupon, approval, timeline, optional media and private team accountability changes are candidates. See docs/V1_3_122_WORK_IN_PROGRESS.md. Local filesystem and command runtime stalled; validation is being performed by GitHub Actions on draft PR #48. Do not promote until full tests, typecheck, build and isolated staging pass. No real charges, client emails or membership changes were performed for development.
+Shared business coupons now apply at final service-booking review. Server snapshots discount/net service lines into pending requests and approval appointments; Stripe and receipt emails use that amount. Submission and approval emails remain durable and independent; owner review links work despite old disabled optional approval settings. Owner accountability adds dated occurrences with exact Eastern session times; legacy series assignments are retained. Migration 055 is additive. Verify all tests, typecheck, builds and exact staging/production LIVE commits before claiming release. No real customer email, payment or assignment is used for QA.
+
+# v1.3.122 release handoff — verified LIVE in staging and production
+
+Application commit `9f1f1604d579dee081ecdf72efc020f5f5ba8b74`; staging `dep-dbcj8aivcj2c73er1l10` LIVE 2026-10-21 21:58:00Z; production `dep-dbcjaum1egvs73epor60` LIVE 22:00:02Z. All 304 tests passed in GitHub Actions and on Render staging, with typecheck and builds passed. Migrations 053/054 applied; actual dedicated database/role preflights passed with schema CREATE and zero unowned tables. Live endpoint verification passed in both environments. No real charges or customer emails were sent for testing; provider operations use mocks and owner browser acceptance was not manually exercised. See [release evidence](V1_3_122_RELEASE.md) and [owner guide](V1_3_122_OWNER_GUIDE.md) for exact scope and practical limits.
+
+The complete source is saved on `feature/membership-billing-coupons-and-approval`. Main/staging point to the application commit; feature-only handoff commits document the deployment without starting duplicate production builds. Local worktrees from this session contain incomplete files after a stalled filesystem/runtime; use a fresh remote checkout. Preserve existing data and the dedicated database connections.
 
 # v1.3.121 release handoff — verified LIVE in staging and production
 

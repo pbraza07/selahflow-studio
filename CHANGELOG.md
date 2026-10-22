@@ -1,3 +1,9 @@
+## 1.3.123
+
+- Apply business coupons to any service at final booking review; server-validated discounts and cent-exact service lines persist through owner approval, Stripe payment and receipt emails.
+- Keep submission receipts and approval/payment emails independent, with complete appointment details and discount totals; owner review links honor mandatory approval even when older optional approval settings were disabled.
+- Add owner-only assignments to a specific recurring occurrence date and Eastern time, preserving prior series assignments and all public capacity/privacy rules.
+
 ## 1.3.122
 
 - Member-specific payment invitation emails and secure Stripe enrollment with recurring authorization.

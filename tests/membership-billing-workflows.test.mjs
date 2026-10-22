@@ -105,7 +105,7 @@ test('owner billing overrides and recurrence changes stay on the matching connec
 });
 test('session team accountability API rejects unauthenticated, cross-business and cross-origin assignments',async()=>{
  const {pg,pool}=await fixture();try{
- const config={services:[{id:'training',name:'Training'}],staff:[{id:'coach',name:'Private Coach'}],bookableSessions:[{id:'series',service:'training',staff:'coach',date:'2030-01-01',start:600}]};
+ const config={services:[{id:'training',name:'Training',duration:30}],staff:[{id:'coach',name:'Private Coach'}],bookableSessions:[{id:'series',service:'training',staff:'coach',date:'2030-01-01',start:600}]};
  await pg.query("INSERT INTO settings(owner,data) VALUES('owner',$1),('other','{}')",[JSON.stringify(config)]);
  const url=new URL('../app/api/studio/team-tracking/route.ts',import.meta.url),exports={},nativeRequire=createRequire(url);
  const compiled=ts.transpileModule(await readFile(url,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
@@ -115,6 +115,8 @@ test('session team accountability API rejects unauthenticated, cross-business an
  const body={sessionId:'series',staffIds:['coach'],note:'Attendance accountability'};
  assert.equal((await post(body,'')).status,401);assert.equal((await post(body,'other')).status,400);assert.equal((await post(body,'owner',false)).status,403);
  assert.equal((await post(body)).status,200);assert.equal((await pg.query('SELECT staff_ids FROM session_team_assignments')).rows[0].staff_ids[0],'coach');
+ const dated={...body,date:'2030-01-01',start:600};assert.equal((await post(dated)).status,200);assert.equal((await post(dated,'other')).status,400);assert.equal((await post({...dated,start:615})).status,400);
+ const get=owner=>exports.GET(new Request(new URL('/api/studio/team-tracking?date=2030-01-01',origin),{headers:{'x-test-owner':owner}}));const privateData=await (await get('owner')).json();assert.equal(privateData.occurrences[0].start,600);assert.equal(privateData.assignments.find(a=>a.scope==='occurrence').session_date,'2030-01-01');assert.equal((await (await get('other')).json()).assignments.length,0);
  assert.equal((await post({action:'privacy',hideTeamNames:true})).status,200);
  assert.equal(JSON.parse((await pg.query("SELECT data FROM settings WHERE owner='owner'")).rows[0].data).hideTeamNames,true);
  }finally{await pg.close();}

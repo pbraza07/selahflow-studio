@@ -25,7 +25,7 @@ test('member lookup drives a zero-price confirmation while preserving the regula
   readFile(new URL('../app/api/public/member-lookup/route.ts',import.meta.url),'utf8')
  ]);
  assert.match(page,/const regularPrice=services\.reduce/);
- assert.match(page,/const price=membershipCovered\?0:regularPrice/);
+ assert.match(page,/const price=membershipCovered\?0:couponQuote\?couponQuote.totalCents\/100:regularPrice/);
  assert.match(page,/expectedPrice:regularPrice/);
  assert.match(lookup,/membershipCovered/);
  assert.match(lookup,/sessionsLeft/);

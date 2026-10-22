@@ -1,3 +1,4 @@
+import {deliveryProviderStatusWithConnection} from '../server/notification-delivery.mjs';
 import {isStaging} from '../server/staging-safety.mjs';
 import {gmailStatus,selectedEmailProvider} from '../server/gmail-delivery.mjs';
 import {getPool} from '../server/database.mjs';
@@ -19,5 +20,12 @@ if(isStaging()){
    approvedTestPhoneCount:String(process.env.STAGING_NOTIFICATION_PHONES||'').split(',').filter(x=>x.trim()).length
   }));
  }catch{console.error('Staging delivery readiness temporarily unavailable');}
+ finally{await pool.end();}
+}
+
+if(!isStaging()){
+ const pool=getPool();
+ try{const status=await deliveryProviderStatusWithConnection(pool);console.log('Client email readiness:',JSON.stringify({provider:status.emailProvider,configured:status.emailConfigured}));}
+ catch{console.error('Client email readiness temporarily unavailable');}
  finally{await pool.end();}
 }

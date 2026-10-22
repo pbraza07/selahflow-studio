@@ -10,7 +10,7 @@ async function getContext(req:Request){
  const result=await pool.query("SELECT t.id,t.reviewer,t.expires_at,r.id AS request_id,r.owner_id,r.reviewer AS assigned_reviewer,r.status,r.date,r.start_minute,r.duration,r.details,b.name AS business_name,s.data AS settings_data FROM booking_action_tokens t JOIN booking_requests r ON r.id=t.request_id JOIN businesses b ON b.id=r.business_id JOIN settings s ON s.owner=r.owner_id WHERE t.token_hash=$1 AND t.expires_at>now() AND b.status='active'",[tokenHash(token)]);
  const row=result.rows[0];if(!row)throw Error('INVALID_LINK');
  const config=JSON.parse(row.settings_data||'{}');
- if(row.reviewer!==row.assigned_reviewer||config.bookingApprovalReviewer!==row.assigned_reviewer||config.bookingApprovalEnabled!==true||row.reviewer!=='owner'&&!config.staff?.some((m:{id:string})=>m.id===row.reviewer))throw Error('INVALID_LINK');
+ if(row.reviewer!==row.assigned_reviewer||row.reviewer!=='owner'&&(config.bookingApprovalReviewer!==row.assigned_reviewer||!config.staff?.some((m:{id:string})=>m.id===row.reviewer)))throw Error('INVALID_LINK');
  return row;
 }
 export async function GET(req:Request){try{const r=await getContext(req);const d=JSON.parse(r.details);return Response.json({id:r.request_id,status:r.status,business:r.business_name,date:r.date,start:r.start_minute,duration:r.duration,services:d.services,customer:d.customerName,price:d.quotedPrice},{headers});}catch{return Response.json({error:'This booking review link is invalid, expired, or no longer assigned.'},{status:403,headers});}}

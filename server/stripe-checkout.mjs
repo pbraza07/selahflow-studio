@@ -78,6 +78,7 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
    mode:'payment','allowed_payment_method_types[0]':'card',client_reference_id:actualId,customer_email:data.email||undefined,
    'line_items[0][quantity]':'1','line_items[0][price_data][currency]':'usd',
    'line_items[0][price_data][unit_amount]':String(record.amount_cents),
+   'line_items[0][price_data][product_data][description]':data.coupon?'Includes coupon '+data.coupon.code+' · discount $'+(data.coupon.discountCents/100).toFixed(2):undefined,
    'line_items[0][price_data][product_data][name]':business.name+' · '+(data.services||['Appointment']).join(' + ').slice(0,150),
    'metadata[booking_id]':actualId,'metadata[selahflow_business_id]':business.id,
    'payment_intent_data[metadata][booking_id]':actualId,
