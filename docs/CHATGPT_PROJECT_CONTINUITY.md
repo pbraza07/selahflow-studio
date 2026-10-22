@@ -1,4 +1,4 @@
-# v1.3.127 release candidate — business-wide Booking Status
+# v1.3.127 release handoff — candidate, deployment pending
 
 Clients → Booking Status displays all owner-scoped appointment/request histories independently of client selection and directory filters. Includes client identity/contact, full session/service history columns, answers, timelines, dynamic payment, quote and filters. Existing 15-second visible-tab/focus/review refresh applies. No migrations, provider configuration or customer mutations required. Tests and deployment pending. See [release evidence](V1_3_127_RELEASE.md).
 
