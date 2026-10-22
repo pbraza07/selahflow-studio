@@ -1,6 +1,6 @@
-**Release source: v1.3.128 — candidate, deployment pending.** Calendar → Team accountability provides private session/service assignments and an owner list with names, date and time. Removed tracking from Overview. See [release evidence](docs/V1_3_128_RELEASE.md).
+**Release source: v1.3.128 — verified LIVE in staging and production.** Calendar → Team accountability provides private session/service assignments and an owner list with names, date and time. Removed tracking from Overview. See [release evidence](docs/V1_3_128_RELEASE.md).
 
-**Release source: v1.3.127 — staging candidate.** Clients → Booking Status shows all incoming bookings across clients, with answers, timelines, payment tracking and filters. See [release evidence](docs/V1_3_127_RELEASE.md).
+**Release source: v1.3.127 — verified LIVE in staging and production; retained in v1.3.128.** Clients → Booking Status shows all incoming bookings across clients, with answers, timelines, payment tracking and filters. See [release evidence](docs/V1_3_127_RELEASE.md).
 
 **Release source: v1.3.126 — verified LIVE in staging and production.** Per-member booking privacy, editable service/session default hosts and private owner tracking. See [owner setup and release evidence](docs/V1_3_126_RELEASE.md).
 
