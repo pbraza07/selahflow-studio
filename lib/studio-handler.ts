@@ -1,3 +1,4 @@
+import {cleanRemovedBookableSessions} from '../server/remove-bookable-session.mjs';
 import {publicTeamMembers,publicSessionTeam,publicBookingStaff,sessionTeamDefaults,validateTeamBookingPolicy} from '../server/team-booking-policy.mjs';
 import {bookingDiscount} from '../server/booking-discounts.mjs';
 import {membershipAllows} from '../server/membership-eligibility.mjs';
@@ -81,7 +82,7 @@ if(b.action==='waiver_records'){
  const records=await getPool().query('SELECT w.* FROM participation_waivers w JOIN businesses biz ON biz.id=w.business_id WHERE biz.owner_id=$1 AND (w.deleted_at IS NOT NULL)=$2 ORDER BY w.signed_at DESC LIMIT 2000',[owner,b.deleted===true]);
  return reply({waivers:records.rows});
 }
-if(b.action==='settings'){const c=b.config;if(Array.isArray(c?.services))c.services=c.services.map((s:any)=>({...s,requiresApproval:true}));
+if(b.action==='settings'){const c=cleanRemovedBookableSessions(config,b.config);if(Array.isArray(c?.services))c.services=c.services.map((s:any)=>({...s,requiresApproval:true}));
  if(c?.waiverLegalReview!=null){const review=c.waiverLegalReview;
   if(typeof review!=='object'||review.version!==publicWaiverDocument(c).version||typeof review.reference!=='string'||review.reference.length>200||typeof review.reviewedAt!=='string'||review.reviewedAt&&!/^\d{4}-\d{2}-\d{2}$/.test(review.reviewedAt)||review.reviewedAt>new Date().toISOString().slice(0,10))throw Error('Enter a valid current waiver legal-review reference and date.');
  }

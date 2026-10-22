@@ -1,3 +1,9 @@
+## 1.3.129
+
+- Remove recurring session overrides with their parent definition so Save business settings succeeds.
+- Clean removed session question targets without turning them into global booking questions.
+- Allow removal of booked definitions while preserving customer reservations/history; show retained appointments on the owner calendar and keep their time blocked.
+
 ## 1.3.128
 
 - Move private team accountability from Overview into Team calendar, synchronized with the selected calendar date.

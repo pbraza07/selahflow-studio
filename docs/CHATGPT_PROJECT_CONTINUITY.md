@@ -1,3 +1,7 @@
+# v1.3.129 release handoff — candidate, deployment pending
+
+Bookable session removal cleans linked reschedules and scoped question references on client and server. Removing an entire definition is allowed with existing bookings; appointment/request/payment/consent data remain untouched. Existing booked dates remain blocked and visible as individual owner calendar records; retained series schedule/capacity edits stay protected. No migration or provider changes. Tests/deployments pending. See [release evidence](V1_3_129_RELEASE.md).
+
 # v1.3.128 release handoff — verified LIVE in staging and production
 
 Application commit `8d873f9a30b19245a4587cbcbb5b98361bcba401` (tree `8cb4d47e80c0ac11d1851da01009c9311f426205`). Staging `dep-dbcvdqgn74is73fmieh0` LIVE October 22, 2026 at 7:49:13 a.m. EDT; production `dep-dbcvgq0u01pc73bq7rgg` LIVE 7:51:39 a.m. EDT. Local, GitHub Actions run 39772715243 / job 119803965265, and Render staging passed all 326 tests, typecheck and builds. Production build passed. Read-only live checks passed for five staging / four production businesses, protected owner APIs, served booking/status/team styles and push readiness. Migration 056 applied successfully to each dedicated database; startup preflights passed schema CREATE and zero unowned tables. No startup error-level logs observed.

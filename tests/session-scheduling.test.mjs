@@ -44,7 +44,7 @@ test('remaining seat counts and normal capacity are independent',()=>{
 });
 test('a confirmed seat prevents destructive session edits',()=>{
  const appointments=[customer('one'),customer('two')];
- assert.throws(()=>validateExistingSessionReservations([session],[],appointments),/confirmed/i);
+ assert.doesNotThrow(()=>validateExistingSessionReservations([session],[],appointments),'Removing the definition preserves its reservations as retained bookings');
  assert.throws(()=>validateExistingSessionReservations([session],[{...session,capacity:1}],appointments),/capacity/i);
  assert.throws(()=>validateExistingSessionReservations([session],[{...session,start:735}],appointments),/schedule/i);
  assert.doesNotThrow(()=>validateExistingSessionReservations([session],[{...session,capacity:3}],appointments));

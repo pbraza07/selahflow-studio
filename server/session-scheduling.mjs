@@ -143,6 +143,9 @@ export function validateExistingSessionReservations(oldInput,newInput,appointmen
   counts.set(key,{old,date,id,count:(counts.get(key)?.count||0)+1});
  }
  for(const {old,date,id,count} of counts.values()){
+  // Removing an entire definition stops publication; existing bookings remain
+  // immutable reservations. Shortening/editing a retained series stays guarded.
+  if(!(newConfig.bookableSessions||[]).some(row=>row.id===(old.seriesId||old.id)))continue;
   const next=sessionInstances(newConfig,date).find(x=>x.id===id);
   if(!next||next.date!==old.date||next.staff!==old.staff||
      next.start!==old.start||next.service!==old.service||
