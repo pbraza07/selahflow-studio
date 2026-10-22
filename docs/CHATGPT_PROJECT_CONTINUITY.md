@@ -1,6 +1,8 @@
-# v1.3.124 release handoff — candidate, deployment pending
+# v1.3.124 release handoff — verified LIVE in staging and production
 
-Persistent environment credentials, validated readiness, service-worker readiness and subscription repair, private device test. No key rotation, customer mutations or automatic test pushes. Production baseline already advertised a public key; the screenshot missing-key state was not current production at investigation. Staging explicit push enablement is being verified. Deployment pending; see V1_3_124_RELEASE.md.
+Application commit `dc96085edddca03195017752301088c7951cf1dd`; staging `dep-dbcn148473hc739jin8g` LIVE 2026-10-22 02:15:59Z; production `dep-dbcn3ve1egvs73etuhq0` LIVE 02:18:09Z. Local, GitHub Actions (39709680076 / job 119597762969), and Render staging passed all 310 tests, typecheck and builds. Both health endpoints report 1.3.124 and Web Push readiness configured=true/reason=ready. Read-only live tests passed for worker, business Home Screen manifest and rejection of unauthorized push tests. Dedicated database/role preflights passed in both environments with zero unowned tables; no startup error logs observed.
+
+Production already had keys when investigated; its public key is unchanged. Staging had no active push configuration even after explicit enablement; a separate persistent pair was provisioned in Render only. Keys are never regenerated at startup or committed. Email/SMS restrictions remain unchanged; production subscriptions are not imported into staging. No customer notifications, charges or data mutations were created for QA. Device opt-in and actual iPhone display still require user action. Preserve branch `fix/persistent-web-push` and see [setup/evidence](V1_3_124_RELEASE.md). Documentation-only [skip render] commits may follow the LIVE application SHA.
 
 # v1.3.123 release handoff — verified LIVE in staging and production
 
