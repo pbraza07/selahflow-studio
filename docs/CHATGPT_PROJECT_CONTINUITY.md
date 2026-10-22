@@ -1,4 +1,4 @@
-# v1.3.124 release candidate — push recovery
+# v1.3.124 release handoff — candidate, deployment pending
 
 Persistent environment credentials, validated readiness, service-worker readiness and subscription repair, private device test. No key rotation, customer mutations or automatic test pushes. Production baseline already advertised a public key; the screenshot missing-key state was not current production at investigation. Staging explicit push enablement is being verified. Deployment pending; see V1_3_124_RELEASE.md.
 
