@@ -1,4 +1,4 @@
-**Release source: v1.3.129 — candidate, deployment pending.** Fix bookable session removal, including recurring reschedules and scoped questions, while retaining customer records. See [release evidence](docs/V1_3_129_RELEASE.md).
+**Release source: v1.3.129 — verified LIVE in staging and production.** Fix bookable session removal, including recurring reschedules and scoped questions, while retaining customer records. See [release evidence](docs/V1_3_129_RELEASE.md).
 
 **Release source: v1.3.128 — verified LIVE in staging and production.** Calendar → Team accountability provides private session/service assignments and an owner list with names, date and time. Removed tracking from Overview. See [release evidence](docs/V1_3_128_RELEASE.md).
 
