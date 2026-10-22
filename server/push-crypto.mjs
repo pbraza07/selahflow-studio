@@ -5,7 +5,20 @@ import {createECDH,createPrivateKey,createSign,createCipheriv,hkdfSync,randomByt
 import {isStaging} from './staging-safety.mjs';
 const b64=b=>Buffer.from(b).toString('base64url');
 const from=s=>Buffer.from(s,'base64url');
-export function configured(env=process.env){return (!isStaging(env)||env.STAGING_PUSH_ENABLED==='true')&&Boolean(env.VAPID_PUBLIC_KEY&&env.VAPID_PRIVATE_KEY&&env.VAPID_SUBJECT);}
+export function pushConfiguration(env=process.env){
+ if(isStaging(env)&&env.STAGING_PUSH_ENABLED!=='true')return {configured:false,reason:'staging_disabled'};
+ if(!env.VAPID_PUBLIC_KEY||!env.VAPID_PRIVATE_KEY||!env.VAPID_SUBJECT)return {configured:false,reason:'missing_keys'};
+ try{
+  const subject=new URL(env.VAPID_SUBJECT);
+  if(!['mailto:','https:'].includes(subject.protocol)||subject.username||subject.password||(subject.protocol==='mailto:'&&!subject.pathname.includes('@')))throw Error();
+  const pub=from(env.VAPID_PUBLIC_KEY),priv=from(env.VAPID_PRIVATE_KEY);
+  if(pub.length!==65||pub[0]!==4||priv.length!==32)throw Error();
+  const ec=createECDH('prime256v1');ec.setPrivateKey(priv);
+  if(!ec.getPublicKey().equals(pub))throw Error();
+  return {configured:true,reason:'ready'};
+ }catch{return {configured:false,reason:'invalid_keys'};}
+}
+export function configured(env=process.env){return pushConfiguration(env).configured;}
 export function vapidKeys(env=process.env){
  if(!configured(env))throw new Error('Web Push VAPID environment is not configured.');
  const pub=from(env.VAPID_PUBLIC_KEY),priv=from(env.VAPID_PRIVATE_KEY);

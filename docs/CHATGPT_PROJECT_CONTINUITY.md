@@ -1,3 +1,7 @@
+# v1.3.124 release candidate — push recovery
+
+Persistent environment credentials, validated readiness, service-worker readiness and subscription repair, private device test. No key rotation, customer mutations or automatic test pushes. Production baseline already advertised a public key; the screenshot missing-key state was not current production at investigation. Staging explicit push enablement is being verified. Deployment pending; see V1_3_124_RELEASE.md.
+
 # v1.3.123 release handoff — verified LIVE in staging and production
 
 Application commit `fa0940153b86bae3b68d10f87a909592516bd992`; staging `dep-dbcmf1om7kps73c7k4rg` LIVE October 21, 2026 at 9:37:12 p.m. ET; production `dep-dbcmifbncjis73b1e63g` LIVE 9:40:47 p.m. ET. Local, GitHub Actions and Render staging each passed all 307 tests; typecheck and builds passed. Additive migration 055 applied in each dedicated database; actual database/role checks passed with schema CREATE and zero unowned tables. Public live checks passed across all listed businesses, including service coupon rejection and protected owner/review routes. Production reports Gmail configured=true; no real customer email/payment/assignment was created for QA, and inbox delivery/private browser interaction were not manually verified.

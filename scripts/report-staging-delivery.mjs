@@ -1,3 +1,5 @@
+import {pushConfiguration} from '../server/push-crypto.mjs';
+console.log('Web Push readiness:',JSON.stringify(pushConfiguration()));
 import {deliveryProviderStatusWithConnection} from '../server/notification-delivery.mjs';
 import {isStaging} from '../server/staging-safety.mjs';
 import {gmailStatus,selectedEmailProvider} from '../server/gmail-delivery.mjs';

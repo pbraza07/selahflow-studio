@@ -1,3 +1,5 @@
+**Release source: v1.3.124 — push setup and device recovery.** See [push setup and verification](docs/V1_3_124_RELEASE.md). Deployment verification pending.
+
 **Release source: v1.3.123 — verified LIVE in staging and production.** Service booking coupons, client submission/approval emails and dated team accountability. See [release evidence and owner steps](docs/V1_3_123_RELEASE.md).
 
 **Release source: v1.3.122 — verified LIVE in staging and production.** Owner membership payment invitations, monthly credits without rollover, Stripe recurrence controls, coupons, booking approval before payment, client payment timelines, optional media release and private team accountability.

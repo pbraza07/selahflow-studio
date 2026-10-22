@@ -1,3 +1,9 @@
+## 1.3.124
+
+- Validate persistent Web Push key pairs and report missing, invalid or staging-disabled setup without disclosing credentials.
+- Repair obsolete browser subscriptions, wait for service-worker activation, refresh device state after returning to the app, and add an authenticated, business-scoped device test.
+- Clarify iPhone Home Screen installation and mandatory booking approval; preserve independent email/SMS settings.
+
 ## 1.3.123
 
 - Apply business coupons to any service at final booking review; server-validated discounts and cent-exact service lines persist through owner approval, Stripe payment and receipt emails.
