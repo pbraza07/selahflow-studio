@@ -30,6 +30,7 @@ export function stagingNotificationAllowed(channel,destination,env=process.env,c
  if(env.STAGING_NOTIFICATIONS_ENABLED!=='true')return false;
  const cutoff=Date.parse(env.STAGING_CLIENT_EMAIL_AFTER||''),queued=new Date(context.queuedAt||'').getTime();
  if(channel==='email'&&context.kind==='transactional-client'&&Number.isFinite(cutoff)&&Number.isFinite(queued)&&queued>=cutoff&&queued<=Date.now())return true;
+ if(channel==='email'&&context.kind==='business-communication'&&String(env.STAGING_COMMUNICATION_EMAILS||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean).includes(String(destination||'').trim().toLowerCase()))return true;
  const value=channel==='email'?env.STAGING_NOTIFICATION_EMAILS:env.STAGING_NOTIFICATION_PHONES;
  return String(value||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean).includes(String(destination||'').trim().toLowerCase());
 }

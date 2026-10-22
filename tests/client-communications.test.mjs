@@ -22,7 +22,7 @@ test('contact sync is current, deduplicated and scoped; preview is branded and n
  await assert.rejects(communications.queueCommunication(f.pool,{owner:'other',campaignId:p.id,env:{APP_ENV:'test'}}),/not found/);
  const sent=[];await communications.processCommunicationEmails(f.pool,{send:async()=>{sent.push(1);return {status:'submitted'};}});assert.equal(sent.length,0,'draft preview sends nothing');
  await communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'test'}});assert.equal((await communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'test'}})).alreadyQueued,true);
- await communications.processCommunicationEmails(f.pool,{send:async(channel,to,m,env,fetcher,context)=>{sent.push(m);assert.equal(channel,'email');assert.equal(to,'family@example.test');assert.equal(context.businessId,'biz');assert.match(m.subject,/Training Club/);assert.match(m.text,/Client One, Client Two/);assert.match(m.text,/123 Training Lane/);assert.equal(m.trackAmbiguous,true);assert.match(m.idempotencyKey,/business-communication-/);return {status:'submitted'};}});
+ await communications.processCommunicationEmails(f.pool,{send:async(channel,to,m,env,fetcher,context)=>{sent.push(m);assert.equal(channel,'email');assert.equal(to,'family@example.test');assert.equal(context.businessId,'biz');assert.equal(context.kind,'business-communication');assert.match(m.subject,/Training Club/);assert.match(m.text,/Client One, Client Two/);assert.match(m.text,/123 Training Lane/);assert.equal(m.trackAmbiguous,true);assert.match(m.idempotencyKey,/business-communication-/);return {status:'submitted'};}});
  await communications.processCommunicationEmails(f.pool,{send:async()=>{throw Error('must not replay');}});assert.equal(sent.length,1);
  const h=await communications.communicationCampaigns(f.pool,'biz');assert.equal(h[0].submitted,1);assert.equal(h[0].total,1);assert.equal((await communications.communicationCampaigns(f.pool,'foreign')).length,0);
  }finally{await f.close();}
@@ -116,6 +116,8 @@ test('staging preflight rejects disallowed recipients before queueing and histor
  const env={APP_ENV:'staging',STAGING_NOTIFICATIONS_ENABLED:'true',STAGING_NOTIFICATION_EMAILS:'approved@example.test'};
  await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env}),/approved test recipients/);
  assert.equal((await f.query('SELECT status FROM business_communication_recipients')).rows[0].status,'draft');
+ await communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{...env,STAGING_COMMUNICATION_EMAILS:'family@example.test'}});
+ await f.query("UPDATE business_email_campaigns SET status='draft' WHERE id=$1",[p.id]);await f.query("UPDATE business_communication_recipients SET status='draft' WHERE campaign_id=$1",[p.id]);
  await communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'production'}});
  await communications.processCommunicationEmails(f.pool,{send:async()=>({status:'failed',detail:'Gmail rejected email (HTTP 403)'})});
  const h=(await communications.communicationCampaigns(f.pool,'biz'))[0];assert.equal(h.delivery_issues[0].detail,'Gmail rejected email (HTTP 403)');assert.equal(h.delivery_issues[0].attempts,1);assert.ok(h.delivery_issues[0].nextAttemptAt);
@@ -127,4 +129,13 @@ test('staging preflight rejects disallowed recipients before queueing and histor
  await f.query("UPDATE business_communication_recipients SET status='unknown'");await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,retry:true}),/No rejected emails/);
  assert.equal(communications.communicationSetup({APP_ENV:'staging'}).stagingDeliveryEnabled,false);
  }finally{await f.close();}
+});
+
+test('dedicated staging communication allowlist preserves global disablement and other notification restrictions',async()=>{
+ const {stagingNotificationAllowed}=await import('../server/staging-safety.mjs');const env={APP_ENV:'staging',STAGING_NOTIFICATIONS_ENABLED:'true',STAGING_NOTIFICATION_EMAILS:'existing@example.test',STAGING_COMMUNICATION_EMAILS:'approved@example.test'};
+ assert.equal(stagingNotificationAllowed('email','APPROVED@example.test',env,{kind:'business-communication'}),true);
+ assert.equal(stagingNotificationAllowed('email','existing@example.test',env,{kind:'business-communication'}),true);
+ assert.equal(stagingNotificationAllowed('email','other@example.test',env,{kind:'business-communication'}),false);
+ assert.equal(stagingNotificationAllowed('email','approved@example.test',env),false);
+ assert.equal(stagingNotificationAllowed('email','approved@example.test',{...env,STAGING_NOTIFICATIONS_ENABLED:'false'},{kind:'business-communication'}),false);
 });

@@ -87,7 +87,7 @@ export async function queueCommunication(pool,{owner,campaignId,retry=false,env=
   if(!rows.length||rows.some(r=>!current.some(x=>x.id===r.contact_id&&!x.unsubscribed&&x.email===r.email&&x.names.join(', ')===r.names&&JSON.stringify([...x.sourceIds].sort())===JSON.stringify([...obj(r.source_ids)].sort()))))throw Error('Contacts changed. Sync and create a new preview before sending.');
   const eligible=retry?rows.filter(r=>['failed','not_configured'].includes(r.status)):rows;
   if(!eligible.length)throw Error('No rejected emails are available to retry. Submitted and unknown emails cannot be replayed.');
-  if(eligible.some(r=>!stagingNotificationAllowed('email',r.email,env)))throw Error('Staging sends are restricted to approved test recipients. Ask the platform administrator to approve the test address; production has no staging recipient restriction.');
+  if(eligible.some(r=>!stagingNotificationAllowed('email',r.email,env,{kind:'business-communication'})))throw Error('Staging sends are restricted to approved test recipients. Ask the platform administrator to approve the test address; production has no staging recipient restriction.');
   await db.query("UPDATE business_email_campaigns SET status='queued',queued_at=now() WHERE id=$1",[c.id]);
   await db.query("UPDATE business_communication_recipients SET status='queued',attempts=0,detail='',next_attempt_at=now(),updated_at=now() WHERE campaign_id=$1 AND business_id=$2 AND status=ANY($3::text[])",[c.id,business.id,retry?['failed','not_configured']:['draft']]);await db.query('COMMIT');return {ok:true,queued:eligible.length};
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
@@ -120,7 +120,7 @@ export async function processCommunicationEmails(pool,{send=sendNotificationChan
    const c=(await pool.query('SELECT * FROM business_email_campaigns WHERE id=$1 AND business_id=$2',[r.campaign_id,r.business_id])).rows[0];
    const contact=business&&(await communicationContacts(pool,business)).contacts.find(x=>x.id===r.contact_id&&!x.unsubscribed&&x.email===r.email&&x.names.join(', ')===r.names&&JSON.stringify([...x.sourceIds].sort())===JSON.stringify([...obj(r.source_ids)].sort()));
    let result={status:'skipped',detail:'Client removed, edited, archived, unsubscribed or campaign cancelled'};
-   if(contact&&c?.status==='queued')result=await send('email',r.email,{...communicationMessage(c,r,business),idempotencyKey:'business-communication-'+r.id,trackAmbiguous:true},undefined,undefined,{businessId:r.business_id});
+   if(contact&&c?.status==='queued')result=await send('email',r.email,{...communicationMessage(c,r,business),idempotencyKey:'business-communication-'+r.id,trackAmbiguous:true},undefined,undefined,{businessId:r.business_id,kind:'business-communication'});
    const status=['submitted','failed','not_configured','invalid_destination','unknown','skipped'].includes(result.status)?result.status:'unknown';
    await pool.query("UPDATE business_communication_recipients SET status=$1,detail=$2,attempts=attempts+1,next_attempt_at=now()+interval '15 minutes',updated_at=now() WHERE id=$3 AND status='processing'",[status,String(result.detail||'').slice(0,300),r.id]);
   }catch{await pool.query("UPDATE business_communication_recipients SET status='unknown',detail='Delivery outcome unknown; no automatic replay',updated_at=now() WHERE id=$1 AND status='processing'",[r.id]);}
