@@ -108,3 +108,23 @@ test('personalization preserves literal replacement characters in client and bus
  const m=communications.communicationMessage({subject:'{{business_name}}',body:'Hello {{client_name}}',action_url:''},{names:'Client $&',unsubscribe_url:'https://app.example.test/unsubscribe'},{name:'Club $&',data:{}});
  assert.equal(m.subject,'Club $&');assert.match(m.text,/Hello Client \$&/);
 });
+
+test('staging preflight rejects disallowed recipients before queueing and history explains failures; retry excludes submitted and unknown',async()=>{
+ const f=await fixture();try{
+ const c=(await communications.communicationContacts(f.pool,await communications.communicationBusiness(f.pool,'owner'))).contacts[0];
+ const p=await communications.previewCommunication(f.pool,{owner:'owner',input:draft([c.id]),origin:'https://app.example.test'});
+ const env={APP_ENV:'staging',STAGING_NOTIFICATIONS_ENABLED:'true',STAGING_NOTIFICATION_EMAILS:'approved@example.test'};
+ await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env}),/approved test recipients/);
+ assert.equal((await f.query('SELECT status FROM business_communication_recipients')).rows[0].status,'draft');
+ await communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'production'}});
+ await communications.processCommunicationEmails(f.pool,{send:async()=>({status:'failed',detail:'Gmail rejected email (HTTP 403)'})});
+ const h=(await communications.communicationCampaigns(f.pool,'biz'))[0];assert.equal(h.delivery_issues[0].detail,'Gmail rejected email (HTTP 403)');assert.equal(h.delivery_issues[0].attempts,1);assert.ok(h.delivery_issues[0].nextAttemptAt);
+ await assert.rejects(communications.queueCommunication(f.pool,{owner:'other',campaignId:p.id,retry:true}),/not found/);
+ await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,retry:true,env}),/approved test recipients/);
+ await communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,retry:true,env:{APP_ENV:'production'}});
+ let sends=0;await communications.processCommunicationEmails(f.pool,{send:async()=>{sends++;return {status:'submitted'};}});
+ await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,retry:true}),/No rejected emails/);assert.equal(sends,1);
+ await f.query("UPDATE business_communication_recipients SET status='unknown'");await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,retry:true}),/No rejected emails/);
+ assert.equal(communications.communicationSetup({APP_ENV:'staging'}).stagingDeliveryEnabled,false);
+ }finally{await f.close();}
+});

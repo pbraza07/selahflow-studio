@@ -1,3 +1,9 @@
+## 1.3.133
+
+- Edit all current client profile fields with stale-write, business scope and Unique ID collision protection; synchronize linked memberships and booking identities while preserving original evidence.
+- Membership views refresh current contact/profile data.
+- Show email delivery details, check staging recipient restrictions before queueing and allow safe rejected-only retries.
+
 ## 1.3.132
 
 - Add Settings → Client communications with live client contact sync, deduplicated recipient selection, personalized subject/message/HTTPS button, business-logo/color preview and explicit Send confirmation.

@@ -10,6 +10,7 @@ import {PGlite} from '@electric-sql/pglite';
 import {allBookingStatusRows,filterBookingStatusRows} from '../server/booking-status.mjs';
 import {buildClientDirectory,pendingBookingAsAppointment} from '../server/client-history.mjs';
 import {decorateBookingTimeline} from '../server/booking-timeline.mjs';
+import {clientProfileEditToken} from '../server/update-client-profile.mjs';
 import {applyClientProfiles} from '../server/client-profile-logic.mjs';
 const compile=source=>ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
 const url=source=>'data:text/javascript;base64,'+Buffer.from(source).toString('base64');
@@ -57,8 +58,8 @@ test('actual clients GET is owner scoped, includes archived booking history, ded
   for(const [id,status,apt,name] of [['accepted','accepted','a','Alex'],['pending','pending',null,'Blair'],['declined','declined',null,'Casey']])await pg.query('INSERT INTO booking_requests(id,business_id,owner_id,date,start_minute,duration,staff_id,status,appointment_id,details,reviewer) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',[id,'biz-owner-a','owner-a','2026-10-24',720,60,'coach',status,apt,JSON.stringify({...data(name),customerName:name,customerEmail:name.toLowerCase()+'@example.test',quotedPrice:67.5}),'owner']);
   const anchor=buildClientDirectory([appointment('a','Alex')],settings,'owner-a')[0].id;
   await pg.query('INSERT INTO business_client_profiles(id,owner,source_key,name,email,archived) VALUES($1,$2,$3,$4,$5,TRUE)',['archived-profile','owner-a',anchor,'Alex','alex@example.test']);
-  globalThis.__bookingStatusRoute={allBookingStatusRows,decorateBookingTimeline,buildClientDirectory,pendingBookingAsAppointment,applyClientProfiles,getPool:()=>({query:(sql,values)=>pg.query(sql,values)}),requireOwner:async req=>{const owner=req.headers.get('x-test-owner');if(!owner)throw Error('AUTH_REQUIRED');return owner;}};
-  let source=await readFile(new URL('../app/api/studio/clients/route.ts',import.meta.url),'utf8');source=source.replace(/^import .*;$/gm,'');source='const {allBookingStatusRows,decorateBookingTimeline,buildClientDirectory,pendingBookingAsAppointment,applyClientProfiles,getPool,requireOwner}=globalThis.__bookingStatusRoute;\n'+source;
+  globalThis.__bookingStatusRoute={clientProfileEditToken,allBookingStatusRows,decorateBookingTimeline,buildClientDirectory,pendingBookingAsAppointment,applyClientProfiles,getPool:()=>({query:(sql,values)=>pg.query(sql,values)}),requireOwner:async req=>{const owner=req.headers.get('x-test-owner');if(!owner)throw Error('AUTH_REQUIRED');return owner;}};
+  let source=await readFile(new URL('../app/api/studio/clients/route.ts',import.meta.url),'utf8');source=source.replace(/^import .*;$/gm,'');source='const {clientProfileEditToken,allBookingStatusRows,decorateBookingTimeline,buildClientDirectory,pendingBookingAsAppointment,applyClientProfiles,getPool,requireOwner}=globalThis.__bookingStatusRoute;\n'+source;
   const route=await import(url(compile(source)));
   const request=owner=>new Request('https://studio.example/api/studio/clients',{headers:owner?{'x-test-owner':owner}:{}});
   assert.equal((await route.GET(request())).status,401);

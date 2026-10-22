@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {rea
 const require=createRequire(import.meta.url);
 test('Settings communications editor selects contacts, previews before sending and invalidates changed previews',async()=>{
  const source=await readFile(new URL('../app/components/owner-communications.tsx',import.meta.url),'utf8'),compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
- const directory={contacts:[{id:'a'.repeat(64),email:'one@example.test',names:['Client One'],unsubscribed:false},{id:'b'.repeat(64),email:'blocked@example.test',names:['Unsubscribed'],unsubscribed:true}],clientCount:2,missingEmail:0,syncedAt:new Date().toISOString(),business:'Club',provider:{emailConfigured:true,emailProvider:'Gmail'},campaigns:[]};
+ const directory={setup:{staging:false,workerEnabled:true,stagingDeliveryEnabled:true},contacts:[{id:'a'.repeat(64),email:'one@example.test',names:['Client One'],unsubscribed:false},{id:'b'.repeat(64),email:'blocked@example.test',names:['Unsubscribed'],unsubscribed:true}],clientCount:2,missingEmail:0,syncedAt:new Date().toISOString(),business:'Club',provider:{emailConfigured:true,emailProvider:'Gmail'},campaigns:[]};
  const state=[],exports={};let index=0;
  const hooks={useState:initial=>{const i=index++;if(!(i in state))state[i]=i===0?directory:initial;return [state[i],next=>state[i]=typeof next==='function'?next(state[i]):next];},useCallback:fn=>fn,useEffect(){}};
  new Function('require','exports',compiled)(path=>path==='react'?hooks:require(path),exports);

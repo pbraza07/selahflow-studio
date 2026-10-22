@@ -1,3 +1,7 @@
+# v1.3.133 release handoff — implementation pending deployment verification
+
+Client profile editing and membership synchronization; communication failure details, staging preflight and rejected-only retries. Full checks and live deployment evidence pending. Original signed/submitted/financial records retained; identity corrections invalidate future waiver reuse. No separate mass-email account needed when shared provider is connected.
+
 # v1.3.132 release handoff — verified LIVE in staging and production
 
 Settings → Client communications syncs the existing business Clients data (profiles, booking history/pending requests and memberships), excludes archived/deleted/invalid-email contacts, deduplicates family/shared email addresses, and allows owners to select/search up to 500 unique recipients per campaign. Customize subject/body and optional HTTPS action; client/business-name placeholders; server-branded sandboxed preview; separate explicit Send confirmation. Uses the existing saved logo/theme and configured Gmail/Resend provider. No external device/Google address-book integration is implied.

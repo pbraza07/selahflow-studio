@@ -9,6 +9,7 @@ import MembershipBadge,{type MembershipBadgeDesign} from './membership-badge';
 import {membershipDisplayStatus} from '../../server/member-badge-state.mjs';
 import {timeLabel} from '../../lib/defaults';
 import {registrationFieldCatalog,filterRegistrationClients} from '../../server/client-registration-filters.mjs';
+import {clientProfileAnswers} from '../../server/client-profile-fields.mjs';
 import {displayAnswer,dateOnly} from '../../server/client-registration-fields.mjs';
 
 type Answer={id:string;label:string;value:string|boolean;type?:string};
@@ -22,7 +23,7 @@ export type Visit={
 };
 type Client={
  membershipBadge?:MembershipBadgeDesign|null;memberNumber?:string;membershipName?:string;membershipStatus?:string;membershipAnswers?:Answer[];membershipDetails?:MembershipDetails;membershipRegistration?:{name:string;firstName:string;lastName:string;email:string;phone:string;dateOfBirth:string;memberNumber:string};dateOfBirth?:string;
- id:string;name:string;email:string;phone:string;bookedSessions:number;attendedSessions:number;
+ id:string;firstName?:string;lastName?:string;editToken?:string;previousMemberNumbers?:string[];profileUpdatedAt?:string;name:string;email:string;phone:string;bookedSessions:number;attendedSessions:number;
  attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;importColumns?:Record<string,string|boolean>;registrationAnswers?:Record<string,string|boolean>;registrationFieldLabels?:Record<string,string>;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:Answer[];
 };
 const humanDate=(date:string)=>date?new Date(date+'T12:00:00Z').toLocaleDateString('en-US',
@@ -80,6 +81,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
   try{
    const created=editing==='new';
    const result=await postClient(created?'create':'update',{...(created?{}:{clientId:editing.id}),...details});
+   window.dispatchEvent(new Event('selahflow:clients-updated'));
    setEditing(null);
    if(!created&&selectedId===editing.id)setSelectedId(result.clientId);
    await reload();
@@ -171,8 +173,8 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
      <div className="sf-client-history-heading"><h3>Client information & registration</h3><small>Current client record, including original registration details when available</small></div>
      <div className="sf-client-first-details">
       <div><small>Full name</small><b>{selected.name}</b></div>
-      <div><small>First name</small><b>{selected.name.trim().split(/\s+/)[0]||'Not available'}</b></div>
-      <div><small>Last name</small><b>{selected.name.trim().split(/\s+/).slice(1).join(' ')||'Not available'}</b></div>
+      <div><small>First name</small><b>{selected.firstName||selected.name.trim().split(/\s+/)[0]||'Not available'}</b></div>
+      <div><small>Last name</small><b>{selected.lastName||selected.name.trim().split(/\s+/).slice(1).join(' ')||'Not available'}</b></div>
       <div><small>Birth date</small><b>{dateOnly(selected.dateOfBirth||selected.firstBooking?.dateOfBirth)?humanDate(dateOnly(selected.dateOfBirth||selected.firstBooking?.dateOfBirth)):'Not recorded'}</b></div>
       <div><small>Email address</small><b>{selected.email||'Not provided'}</b></div>
       <div><small>Phone number</small><b>{selected.phone||'Not provided'}</b></div>
@@ -181,6 +183,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
       <div><small>Membership status</small><b>{membershipDisplayStatus({status:selected.membershipStatus,sessionsIncluded:selected.membershipDetails?.sessionsIncluded,sessionsUsed:selected.membershipDetails?.sessionsUsed}).replaceAll('_',' ')}</b></div>
      </div>
     </section>
+    {profileTab==='Details'&&<section className="sf-client-current-fields"><h3>Current profile answers</h3><div className="sf-client-original-answers">{Object.entries(clientProfileAnswers(selected)).map(([id,value])=><div key={id}><small>{selected.registrationFieldLabels?.[id]||formFields.find(f=>f.id===id)?.label||selected.membershipAnswers?.find(f=>f.id===id)?.label||id}</small><b>{displayAnswer(value)}</b></div>)}</div><button type="button" className="outline" onClick={()=>beginEdit(selected)}>Edit all profile fields</button></section>}
     {selected.membershipName&&<section hidden={profileTab!=='Membership'} className="sf-client-first-booking sf-client-membership-registration">
      <div className="sf-client-history-heading"><h3>Membership registration</h3><small>Membership enrollment and the answers submitted when registering</small></div>
      <div className="sf-client-first-details">
@@ -333,7 +336,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
     </div>):<p className="muted">No removed clients.</p>}
    </div>}
   </div>
-  {editing&&<ClientEditor config={registrationConfig} client={editing==='new'?null:{name:editing.name,email:editing.email,phone:editing.phone,notes:editing.notes||'',memberNumber:editing.memberNumber||'',dateOfBirth:editing.dateOfBirth||'',registrationAnswers:editing.registrationAnswers||{}}}
+  {editing&&<ClientEditor config={registrationConfig} client={editing==='new'?null:editing}
    onClose={()=>{if(!saving)setEditing(null);}} onSave={saveClient} busy={saving} error={editError}/>}
   {removing&&<div className="sf-client-editor-backdrop" role="presentation"><section className="sf-client-editor" role="dialog" aria-modal="true" aria-labelledby="remove-client-title"><header><div className="sf-client-editor-heading"><Trash2 size={20}/><div><small>CLIENT DIRECTORY</small><h2 id="remove-client-title">Remove {removing.name}?</h2></div></div></header><p className="sf-client-editor-note">Permanently delete this client’s registration, membership, bookings, attendance, and saved payment and email records from this business. This cannot be undone. Provider records at Stripe and emails already delivered are not erased. Required accounting records and signed waivers are retained separately. Their ID is released immediately and can be reused when they or another client register again.</p>{actionError&&<p role="alert" className="alert">{actionError}</p>}<footer><button type="button" className="outline" disabled={!!actionBusy} onClick={()=>setRemoving(null)}>Keep client</button><button type="button" className="primary" disabled={!!actionBusy} onClick={()=>void confirmRemoveClient()}><Trash2 size={16}/>{actionBusy?'Removing…':'Delete permanently'}</button></footer></section></div>}
  </section>;

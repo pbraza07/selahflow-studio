@@ -1,3 +1,4 @@
+import {updateClientProfile,clientProfileEditToken} from '../../../../server/update-client-profile.mjs';
 import {allBookingStatusRows} from '../../../../server/booking-status.mjs';
 import {decorateBookingTimeline} from '../../../../server/booking-timeline.mjs';
 import {deleteOwnerClient} from '../../../../server/owner-client-deletion.mjs';
@@ -32,7 +33,7 @@ async function businessFor(owner: string,db:{query:(sql:string,values:unknown[])
 async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>Promise<{rows:any[]}>},settings:Record<string,unknown>){
  const [appointments,profiles,requests,payments,clientEvents]=await Promise.all([
   db.query('SELECT id,date,start,duration,staff,status,data FROM appointments WHERE owner=$1 ORDER BY date DESC,start DESC',[owner]),
-  db.query('SELECT id,source_key,anchor_appointment_id,name,email,phone,notes,archived,import_columns,registration_answers,registration_field_labels,member_number,date_of_birth,deleted_at FROM business_client_profiles WHERE owner=$1 ORDER BY created_at,id',[owner]),
+  db.query('SELECT id,source_key,anchor_appointment_id,name,email,phone,notes,archived,import_columns,registration_answers,registration_field_labels,member_number,date_of_birth,deleted_at,first_name,last_name,previous_member_numbers,updated_at FROM business_client_profiles WHERE owner=$1 ORDER BY created_at,id',[owner]),
   db.query("SELECT id,date,staff_id,start_minute,duration,details,status,created_at,reviewed_at,appointment_id FROM booking_requests WHERE owner_id=$1 ORDER BY created_at DESC",[owner]),
   db.query('SELECT p.booking_id,p.status,p.paid_at FROM booking_payments p JOIN businesses b ON b.id=p.business_id WHERE b.owner_id=$1',[owner]),
   db.query("SELECT kind,created,data FROM events WHERE owner=$1 AND kind IN ('status','cash_sale')",[owner])
@@ -70,13 +71,14 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
   if(!clients.some((c:any)=>c.memberNumber===m.member_number||(c.name?.trim().toLowerCase()===m.customer_name?.trim().toLowerCase()&&c.email?.toLowerCase()===m.customer_email?.toLowerCase())))
    clients.push({id:profile?.id||virtualId,name:m.customer_name,email:m.customer_email,bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],latestDate:'',history:[],firstBooking:null,latestBookingAnswers:[],...memberData(m)});
  }
+ for(const c of clients)(c as any).editToken=clientProfileEditToken(c);
  return {derived,bookings:allBookingStatusRows(derived),profiles:profiles.rows,clients,formFields:fields.map((f:any)=>({id:f.id,label:f.label,type:f.type,options:Array.isArray(f.options)?f.options:[]})),registrationConfig:{bookingStandardFields:settings.bookingStandardFields,bookingQuestionOrder:settings.bookingQuestionOrder,bookingCustomFields:settings.bookingCustomFields},archived:combined.archived.filter((c:{id:string})=>!profiles.rows.some((p:any)=>p.id===c.id&&p.deleted_at))};
 }
 function failure(error:unknown){
  const message=(error as Error).message||'Client operation could not be completed.';
  const status=message==='AUTH_REQUIRED'?401:message==='BUSINESS_UNAVAILABLE'?403:
   /already exists|another client|restore this client|changed|no longer|not found|cancel .*subscription|expire .*checkout|currently being sent|confirm permanent|removed list/i.test(message)?409:
-  /enter |invalid |exceed|cannot |required|requires review|client name|identity unavailable/i.test(message)?400:503;
+  /enter |invalid |exceed|cannot |required|requires review|client name|identity unavailable|unique id|first and last|profile question|imported|birth date/i.test(message)?400:503;
  return Response.json({error:status===503?'Client operation could not be completed.':message==='AUTH_REQUIRED'?'Sign in to manage your clients.':message==='BUSINESS_UNAVAILABLE'?'Business workspace unavailable.':message},{status,headers:noStore});
 }
 export async function GET(req:Request){
@@ -108,7 +110,7 @@ export async function POST(req:Request){
  let raw='';
  try{
   raw=await req.text();
-  if(raw.length>5000)throw Error('Client request exceeds the allowed size.');
+  if(raw.length>60000)throw Error('Client request exceeds the allowed size.');
   const body=JSON.parse(raw);
   if(!['create','update','archive','restore','deleteArchived','delete','replaceLegacyId'].includes(body?.action))throw Error('Invalid client action.');
   const owner=await requireOwner(req),pool=getPool(),db=await pool.connect();
@@ -128,38 +130,26 @@ export async function POST(req:Request){
     if(!selected||body.oldMemberNumber!==selected.memberNumber)throw Error('This registration changed. Refresh before continuing.');
     const replacement=await replaceLegacyMemberId(db,{owner,businessId:business.id,client:selected});
     await db.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'member_id_replaced',$4)",[randomUUID(),owner,new Date().toISOString(),JSON.stringify(replacement)]);
-   }else if(body.action==='create'||body.action==='update'){
-    if(body.action==='update'&&!selected)throw Error('This client was changed or no longer exists. Refresh your directory.');
+   }else if(body.action==='update'){
+    if(!selected)throw Error('This client was changed or no longer exists. Refresh your directory.');
+    responseId=(await updateClientProfile(db,{owner,businessId:business.id,selected,profile,clients:result.clients,config:settings,input:body})).clientId;
+   }else if(body.action==='create'){
     validateStandardRegistration(settings,'booking',body);
     const input=validateClientInput({...body,name:(String(body.firstName||'').trim()+' '+String(body.lastName||'').trim()).trim()});
     const dateOfBirth=String(body.dateOfBirth||'');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)||!Number.isFinite(Date.parse(dateOfBirth))||dateOfBirth>new Date().toISOString().slice(0,10))throw Error('Enter a valid date of birth.');
     const requested=String(body.memberNumber||'').trim().toUpperCase();
-    if(body.action==='update'&&selected?.memberNumber&&requested&&requested!==selected.memberNumber)throw Error('Existing membership IDs cannot be changed.');
-    const memberNumber=body.action==='update'&&selected?.memberNumber?selected.memberNumber:await issueMemberId(db,{businessId:business.id,name:input.name,firstName:body.firstName,lastName:body.lastName,dateOfBirth,requested});
+    const memberNumber=await issueMemberId(db,{businessId:business.id,name:input.name,firstName:body.firstName,lastName:body.lastName,dateOfBirth,requested});
     const fields=customRegistrationFields(settings,'booking',null,[]);
     const registrationAnswers=sanitizeBookingAnswers(fields,body.customAnswers||{});
     const registrationFieldLabels=Object.fromEntries(fields.map((field:any)=>[field.id,field.label]));
     const duplicate=result.clients.find(c=>c.id!==id&&sameClientContact(c,input));
     if(duplicate)throw Error('Another client with that same name and email or phone already exists. Edit that client instead.');
-    if(body.action==='create'){
-     const removed=result.archived.find(c=>sameClientContact(c,input));
-     if(removed)throw Error('This client was previously removed. Restore this client from the Removed clients section.');
-     responseId=randomUUID();
-     await db.query('INSERT INTO business_client_profiles(id,owner,name,email,phone,notes,member_number,date_of_birth,registration_answers,registration_field_labels) VALUES($1,$2,$3,$4,$5,$6,$7,$8::date,$9::jsonb,$10::jsonb)',
-      [responseId,owner,input.name,input.email,input.phone,input.notes,memberNumber||null,dateOfBirth,JSON.stringify(registrationAnswers),JSON.stringify(registrationFieldLabels)]);
-    }else if(profile){
-     await db.query('UPDATE business_client_profiles SET name=$1,email=$2,phone=$3,notes=$4,member_number=$5,date_of_birth=$6::date,registration_answers=$7::jsonb,registration_field_labels=$8::jsonb,updated_at=now() WHERE owner=$9 AND id=$10',
-      [input.name,input.email,input.phone,input.notes,memberNumber||null,dateOfBirth,JSON.stringify(registrationAnswers),JSON.stringify(registrationFieldLabels),owner,id]);
-    }else{
-     // An appointment-derived card is now a managed profile. Anchor by a
-     // historical appointment ID so updating its name never changes history.
-     responseId=randomUUID();
-     const sourceAnchor=selected.history?.[selected.history.length-1]?.id||null;
-     await db.query(
-      'INSERT INTO business_client_profiles(id,owner,source_key,anchor_appointment_id,name,email,phone,notes,member_number,date_of_birth,registration_answers,registration_field_labels) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::date,$11::jsonb,$12::jsonb)',
-      [responseId,owner,id,sourceAnchor,input.name,input.email,input.phone,input.notes,memberNumber||null,dateOfBirth,JSON.stringify(registrationAnswers),JSON.stringify(registrationFieldLabels)]);
-    }
+    const removed=result.archived.find(c=>sameClientContact(c,input));
+    if(removed)throw Error('This client was previously removed. Restore this client from the Removed clients section.');
+    responseId=randomUUID();
+    await db.query('INSERT INTO business_client_profiles(id,owner,name,email,phone,notes,member_number,date_of_birth,registration_answers,registration_field_labels,first_name,last_name) VALUES($1,$2,$3,$4,$5,$6,$7,$8::date,$9::jsonb,$10::jsonb,$11,$12)',
+     [responseId,owner,input.name,input.email,input.phone,input.notes,memberNumber||null,dateOfBirth,JSON.stringify(registrationAnswers),JSON.stringify(registrationFieldLabels),String(body.firstName).trim(),String(body.lastName).trim()]);
    }else if(body.action==='archive'||body.action==='delete'){
     await deleteOwnerClient(db,{owner,businessId:business.id,client,clientId:id,confirmPhrase:body.confirmPhrase});
    }else if(body.action==='deleteArchived'){

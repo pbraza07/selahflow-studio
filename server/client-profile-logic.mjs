@@ -17,7 +17,7 @@ export function sameClientContact(a,b){
  return Boolean((aEmail&&bEmail&&aEmail===bEmail)||(aPhone&&bPhone&&aPhone===bPhone));
 }
 function freshClient(profile){
- return {id:profile.id,name:profile.name,email:profile.email||'',phone:profile.phone||'',memberNumber:profile.member_number||undefined,dateOfBirth:dateOnly(profile.date_of_birth)||undefined,notes:profile.notes||'',importColumns:profile.import_columns||{},registrationAnswers:profile.registration_answers||{},registrationFieldLabels:profile.registration_field_labels||{},
+ return {id:profile.id,name:profile.name,firstName:profile.first_name||'',lastName:profile.last_name||'',previousMemberNumbers:profile.previous_member_numbers||[],profileUpdatedAt:profile.updated_at instanceof Date?profile.updated_at.toISOString():profile.updated_at||'',email:profile.email||'',phone:profile.phone||'',memberNumber:profile.member_number||undefined,dateOfBirth:dateOnly(profile.date_of_birth)||undefined,notes:profile.notes||'',importColumns:profile.import_columns||{},registrationAnswers:profile.registration_answers||{},registrationFieldLabels:profile.registration_field_labels||{},
   bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],
   latestDate:'',history:[],firstBooking:null,latestBookingAnswers:[],managed:true};
 }
@@ -49,7 +49,7 @@ export function applyClientProfiles(derived,profiles){
  for(const client of rows){
   const anchor=records.find(p=>p.anchor_appointment_id&&client.history?.some(v=>v.id===p.anchor_appointment_id));
   const source=records.find(p=>p.source_key===client.id);
-  const member=records.find(p=>p.member_number&&client.memberNumber&&p.member_number===client.memberNumber);
+  const member=records.find(p=>p.member_number&&client.memberNumber&&(p.member_number===client.memberNumber||(p.previous_member_numbers||[]).includes(client.memberNumber)));
   const contact=records.find(p=>sameClientContact(p,client));
   const profile=member||anchor||source||contact;
   if(!profile){detached.push({...client,notes:'',managed:false});continue;}

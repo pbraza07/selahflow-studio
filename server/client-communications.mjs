@@ -4,10 +4,12 @@ import {applyClientProfiles} from './client-profile-logic.mjs';
 import {loadBusinessEmailBrand} from './business-email-branding.mjs';
 import {brandedEmailHtml} from './branded-email.mjs';
 import {sendNotificationChannel,validEmail} from './notification-delivery.mjs';
+import {stagingNotificationAllowed,isStaging} from './staging-safety.mjs';
 import {tokenHash} from './security.mjs';
 const obj=x=>typeof x==='string'?JSON.parse(x):x||{};
 export const communicationContactId=(businessId,email)=>createHash('sha256').update(businessId+'|'+String(email).trim().toLowerCase()).digest('hex');
 const validId=x=>typeof x==='string'&&/^[a-f0-9-]{36}$/i.test(x);
+export function communicationSetup(env=process.env){return {staging:isStaging(env),workerEnabled:env.SELAHFLOW_MESSAGE_WORKER==='true',stagingDeliveryEnabled:!isStaging(env)||env.STAGING_NOTIFICATIONS_ENABLED==='true'};}
 export async function communicationBusiness(db,owner){
  const b=(await db.query("SELECT b.id,b.owner_id,b.name,b.slug,s.data FROM businesses b LEFT JOIN settings s ON s.owner=b.owner_id WHERE b.owner_id=$1 AND b.status='active'",[owner])).rows[0];
  if(!b)throw Error('Business workspace unavailable.');return b;
@@ -74,23 +76,27 @@ export async function previewCommunication(pool,{owner,input,origin}){
   return {id,recipientCount:recipients.length,recipients:recipients.map(r=>({email:r.email,names:r.names})),html:brandedEmailHtml({...example,emailBrand:brand},{logoSrc:brand.logo?'data:image/png;base64,'+brand.logo.toString('base64'):undefined})};
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
 }
-export async function queueCommunication(pool,{owner,campaignId}){
+export async function queueCommunication(pool,{owner,campaignId,retry=false,env=process.env}){
  if(!validId(campaignId))throw Error('Choose a valid campaign.');const db=await pool.connect();try{
   await db.query('BEGIN');const business=await communicationBusiness(db,owner);
   const c=(await db.query('SELECT * FROM business_email_campaigns WHERE id=$1 AND business_id=$2 FOR UPDATE',[campaignId,business.id])).rows[0];if(!c)throw Error('Campaign not found.');
-  if(c.status==='queued'){await db.query('COMMIT');return {ok:true,alreadyQueued:true};}if(c.status!=='draft')throw Error('This campaign was cancelled.');
+  if(c.status==='queued'&&!retry){await db.query('COMMIT');return {ok:true,alreadyQueued:true};}if(c.status!=='draft'&&!(retry&&c.status==='queued'))throw Error('This campaign was cancelled.');
   if(Date.now()-new Date(c.created_at).getTime()>24*3600000)throw Error('Preview expired. Create a new preview before sending.');
   const brand=await loadBusinessEmailBrand(db,{businessId:business.id});if(digestBrand(brand)!==c.brand_digest)throw Error('Business branding changed. Create a new preview before sending.');
   const current=(await communicationContacts(db,business)).contacts,rows=(await db.query('SELECT * FROM business_communication_recipients WHERE campaign_id=$1 AND business_id=$2',[c.id,business.id])).rows;
   if(!rows.length||rows.some(r=>!current.some(x=>x.id===r.contact_id&&!x.unsubscribed&&x.email===r.email&&x.names.join(', ')===r.names&&JSON.stringify([...x.sourceIds].sort())===JSON.stringify([...obj(r.source_ids)].sort()))))throw Error('Contacts changed. Sync and create a new preview before sending.');
+  const eligible=retry?rows.filter(r=>['failed','not_configured'].includes(r.status)):rows;
+  if(!eligible.length)throw Error('No rejected emails are available to retry. Submitted and unknown emails cannot be replayed.');
+  if(eligible.some(r=>!stagingNotificationAllowed('email',r.email,env)))throw Error('Staging sends are restricted to approved test recipients. Ask the platform administrator to approve the test address; production has no staging recipient restriction.');
   await db.query("UPDATE business_email_campaigns SET status='queued',queued_at=now() WHERE id=$1",[c.id]);
-  await db.query("UPDATE business_communication_recipients SET status='queued',updated_at=now() WHERE campaign_id=$1 AND status='draft'",[c.id]);await db.query('COMMIT');return {ok:true,queued:rows.length};
+  await db.query("UPDATE business_communication_recipients SET status='queued',attempts=0,detail='',next_attempt_at=now(),updated_at=now() WHERE campaign_id=$1 AND business_id=$2 AND status=ANY($3::text[])",[c.id,business.id,retry?['failed','not_configured']:['draft']]);await db.query('COMMIT');return {ok:true,queued:eligible.length};
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
 }
 export async function communicationCampaigns(db,businessId){return (await db.query(`SELECT c.id,c.subject,c.status,c.created_at,c.queued_at,
  count(r.id)::int AS total,count(r.id) FILTER(WHERE r.status='submitted')::int AS submitted,
  count(r.id) FILTER(WHERE r.status IN ('queued','processing') OR r.status IN ('failed','not_configured') AND r.attempts<3)::int AS pending,
  count(r.id) FILTER(WHERE r.status IN ('failed','not_configured','invalid_destination'))::int AS failed,
+ COALESCE(jsonb_agg(jsonb_build_object('email',r.email,'status',r.status,'detail',r.detail,'attempts',r.attempts,'nextAttemptAt',CASE WHEN r.status IN ('failed','not_configured') AND r.attempts<3 THEN r.next_attempt_at ELSE NULL END) ORDER BY r.email) FILTER(WHERE r.status IN ('failed','not_configured','invalid_destination','unknown','skipped')),'[]'::jsonb) AS delivery_issues,
  count(r.id) FILTER(WHERE r.status='unknown')::int AS unknown,count(r.id) FILTER(WHERE r.status='skipped')::int AS skipped
  FROM business_email_campaigns c LEFT JOIN business_communication_recipients r ON r.campaign_id=c.id AND r.business_id=c.business_id
  WHERE c.business_id=$1 GROUP BY c.id ORDER BY c.created_at DESC LIMIT 30`,[businessId])).rows;}

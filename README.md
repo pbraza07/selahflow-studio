@@ -1,3 +1,5 @@
+**Release source: v1.3.133 — implementation pending deployment verification.** Editable client profiles synchronize current membership contacts and answers; communications show delivery issues and safely retry rejected sends.
+
 **Release source: v1.3.132 — verified LIVE in staging and production.** Settings → Client communications syncs client contacts and sends customized emails with saved business branding. See [release evidence](docs/V1_3_132_RELEASE.md).
 
 **Release source: v1.3.131 — verified LIVE in staging and production.** Green, editable owner checkboxes; service approval and question/team defaults honor saved choices. See [release evidence](docs/V1_3_131_RELEASE.md).
