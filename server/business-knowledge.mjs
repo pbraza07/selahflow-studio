@@ -41,10 +41,11 @@ export function buildBusinessKnowledge(business,config={},plans=[],now=new Date(
   const waiver=waiverDocument(config),review=config.waiverLegalReview;
   if(review?.version===waiver.version&&text(review.reference)&&Number.isFinite(Date.parse(review.reviewedAt||'')))for(const [title,body] of waiver.sections)add('waiver',title,body);
  }
- const start=day(now);
+ const start=day(now),localClock=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(now).split(':').map(Number),currentMinute=localClock[0]*60+localClock[1];
  for(let n=0;n<31;n++){
   const date=new Date(Date.parse(start+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);
   for(const session of sessionsForDate(config,date)){
+   if(date===start&&session.start<=currentMinute)continue;
    const service=services.find(s=>s.id===session.service);if(!service)continue;
    add('session',`${service.name} · ${date}`,`${date} · ${clock(session.start)} Eastern time. ${text(service.description)} Configured capacity: ${session.capacity??session.maxSlots??service.maxSlots??1}. Check booking for live remaining seats; this schedule is not a seat reservation.`);
   }
@@ -61,29 +62,37 @@ export async function loadBusinessKnowledge(pool,slug,now=new Date()){
 }
 export function answerBusinessQuestion(knowledge,question){
  const input=text(question).slice(0,1000),query=keywords(input),exact=tokens(input).filter(w=>!stop.has(w));
+ const waiverIntent=/\b(waivers?|media|guardian|consent|release|risks?|safety|emergency)\b/i.test(input);
+ const isoDate=input.match(/\b(20\d{2}-\d{2}-\d{2})\b/)?.[1];
+ const months=['january','february','march','april','may','june','july','august','september','october','november','december'];
+ const monthDay=input.toLowerCase().match(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})\b/);
+ const scheduleIntent=!!(isoDate||monthDay)||families[5].filter(w=>!['session','sessions'].includes(w)).some(w=>exact.includes(w));
+ const matchingServices=knowledge.documents.filter(d=>d.kind==='service'&&tokens(d.title).some(w=>exact.includes(w)&&!['service','services','session','sessions','training'].includes(w)));
+ const matchesSession=d=>(!isoDate||d.title.includes(isoDate))&&(!monthDay||d.title.includes('-'+String(months.indexOf(monthDay[1])+1).padStart(2,'0')+'-'+monthDay[2].padStart(2,'0')))&&(!matchingServices.length||matchingServices.some(s=>d.title.startsWith(s.title+' · ')));
  let ranked=knowledge.documents.map(d=>{
   const words=new Set(tokens(d.title+' '+d.text)),title=new Set(tokens(d.title));
   let score=0;for(const w of query)if(words.has(w))score+=exact.includes(w)?3:1;
   for(const w of exact)if(title.has(w))score+=7;
   const covered=exact.filter(w=>words.has(w)||[...keywords(w)].some(k=>words.has(k))).length;
   if(exact.length&&covered/exact.length<0.6&&!exact.some(w=>title.has(w)))score=0;
-  if(d.kind==='session'&&!families[5].some(w=>exact.includes(w)))score=0;
+  if(d.kind==='waiver'&&!waiverIntent)score=0;
+  if(d.kind==='session'&&(!scheduleIntent||!matchesSession(d)))score=0;
   return {d,score};
  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
- const wantsAll=/\b(everything|all information|overview|offer|offers|about this business)\b/i.test(input);
+ const wantsAll=/\b(everything|all information|overview|offer|offers|about this business)\b|^what do you do\??$/i.test(input);
  if(wantsAll)ranked=knowledge.documents.filter(d=>['overview','contact','hours','service','membership','policy'].includes(d.kind)).map(d=>({d,score:1}));
  const selected=ranked.slice(0,8).map(x=>x.d);
  // Topic queries should include the factual category even when generic words
  // such as "booking" appear in many unrelated descriptions.
  const desired=[];
- if(/\b(hours?|open|closing)\b/i.test(input))desired.push('hours');
+ if(/\b(hours?|open|opening|close|closing)\b/i.test(input))desired.push('hours');
  if(/\b(address|location|directions|phone|contact|human)\b/i.test(input))desired.push('contact');
  if(/\b(memberships?|credits?|plans?)\b/i.test(input))desired.push('membership','membership-rules','membership-wording');
- if(/\b(waiver|media|guardian|consent|release)\b/i.test(input))desired.push('waiver');
- if(/\b(prices?|cost|pricing)\b/i.test(input)&&!servicesNamed(knowledge,exact))desired.push('service');
- const docs=desired.length?knowledge.documents.filter(d=>desired.includes(d.kind)).slice(0,50):selected;
+ if(waiverIntent)desired.push('waiver');
+ if(scheduleIntent)desired.push('session');
+ if(/\b(prices?|cost|pricing)\b/i.test(input)&&(!/\b(memberships?|plans?)\b/i.test(input)||matchingServices.length||/\bservices?\b/i.test(input)))desired.push('service');
+ const docs=desired.length?knowledge.documents.filter(d=>desired.includes(d.kind)&&(d.kind!=='session'||matchesSession(d))&&(d.kind!=='service'||!matchingServices.length||matchingServices.includes(d))).slice(0,50):selected;
 
  let size=0;const unique=[...new Map(docs.map(d=>[d.id,d])).values()].filter(d=>{size+=d.title.length+d.text.length+3;return size<=18000;});
  return {businessName:knowledge.name,answer:unique.length?unique.map(d=>d.title+'\n'+d.text).join('\n\n'):`I couldn’t find a published answer to that question for ${knowledge.name}. Please contact the business or check its booking page. I can help with services, prices, schedules, memberships, policies, waivers and registration questions.`,sources:unique.map(d=>({title:d.title,href:d.href})),links:knowledge.links,updatedAt:knowledge.updatedAt};
 }
-function servicesNamed(knowledge,query){return knowledge.documents.some(d=>d.kind==='service'&&tokens(d.title).some(w=>query.includes(w)&&!['service','session','training'].includes(w)));}
