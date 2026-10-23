@@ -1,4 +1,4 @@
-**Release source: v1.3.141 — pending deployment verification.** Stripe onboarding validates destinations and provides a browser continuation fallback.
+**Release source: v1.3.141 — verified LIVE in staging and production.** Stripe onboarding validates destinations and provides a browser continuation fallback. Actual staging button reached Stripe-hosted onboarding. First-time live merchant-account creation remains owner acceptance. See [release evidence](docs/V1_3_141_RELEASE.md).
 
 **Release source: v1.3.140 — verified LIVE in staging and production.** Public Privacy Policy page linked from main navigation and footer. See [release notes](docs/V1_3_140_RELEASE.md).
 
