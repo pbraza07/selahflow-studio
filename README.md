@@ -1,4 +1,4 @@
-**Release source: v1.3.134 — pending deployment verification.** Saved email drafts can be reopened and sent with a visible mobile-friendly confirmation button.
+**Release source: v1.3.134 — verified LIVE in staging and production.** Saved email drafts reopen with Review & send and a visible Send now toolbar; mobile history keeps actions on screen. See [release evidence](docs/V1_3_134_RELEASE.md).
 
 **Release source: v1.3.133 — verified LIVE in staging and production.** Owners can edit current client profiles with linked membership/contact and returning-booking synchronization. Communications expose failure reasons and safe retries; the existing staging test email was recovered. See [release evidence](docs/V1_3_133_RELEASE.md).
 
