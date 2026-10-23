@@ -1,4 +1,4 @@
-**Release source: v1.3.137**. See [release notes](docs/V1_3_137_RELEASE.md) for question styling, waiver version activation and permanent waiver deletion. Deployment verification pending.
+**Release source: v1.3.137 — verified LIVE in staging and production.** White question cards/fields and permanent owner waiver deletion. Numbered media-release waiver version is available for review; activation requires completed version-specific business legal review. See [release evidence](docs/V1_3_137_RELEASE.md).
 
 **Release source: v1.3.136 — verified LIVE in staging and production.** Add Client accepts the correctly generated initials + MMDDYY ID while preserving uniqueness and rollback safeguards. See [release evidence](docs/V1_3_136_RELEASE.md).
 
