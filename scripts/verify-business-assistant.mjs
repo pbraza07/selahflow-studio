@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 const targets=JSON.parse(process.env.SMOKE_TARGETS||'[]');assert.ok(targets.length,'Explicit targets required');
 for(const {url:base,version} of targets){
  const get=async path=>{const r=await fetch(base+path,{signal:AbortSignal.timeout(30000)});assert.equal(r.status,200,path);return r.json();};
- const ask=async(slug,message,expected=200,origin=base)=>{const r=await fetch(base+'/api/public/assistant',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({slug,message}),signal:AbortSignal.timeout(30000)});assert.equal(r.status,expected,message);assert.match(r.headers.get('cache-control')||'',/no-store/);return r.json();};
+ const ask=async(slug,message,expected=200,origin=base)=>{const r=await fetch(base+'/api/public/assistant',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({slug,message}),signal:AbortSignal.timeout(30000)});assert.equal(r.status,expected,message);assert.match(r.headers.get('cache-control')||'',/no-store/);const data=await r.json();if(expected===200){
+   assert.ok(Array.isArray(data.sections),'Structured answer sections');
+   const items=data.sections.flatMap(section=>{assert.ok(section.title);assert.ok(section.items.length);return section.items;});
+   assert.equal(items.length,data.sources.length,'Every selected source has a subsection');
+   for(const item of items){assert.ok(item.title&&item.text);assert.ok(data.answer.includes(item.title+'\n'+item.text));assert.ok(data.sources.some(source=>source.title===item.title&&source.href===item.href));}
+  }return data;};
  const health=await get('/api/health');assert.equal(health.version,version);
  const {businesses}=await get('/api/marketplace');assert.ok(businesses.length);
  for(const b of businesses){
