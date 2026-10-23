@@ -1,6 +1,6 @@
 # v1.3.141 release handoff — source pending deployment verification
 
-Align business Stripe onboarding with v2 merchant Account Links, validate returned Stripe destinations on the server and client, and provide a visible continuation link if automatic navigation does not occur. Existing connected account IDs are reused; no financial account is created for QA. Current LIVE baseline remains v1.3.140 until verified below. No migrations or environment changes.
+Retain verified stable Stripe Account Links, validate returned Stripe destinations on the server and client, and provide a visible continuation link if automatic navigation does not occur. Existing connected account IDs are reused; no financial account is created for QA. Current LIVE baseline remains v1.3.140 until verified below. No migrations or environment changes.
 
 # v1.3.140 release handoff — verified LIVE in staging and production
 

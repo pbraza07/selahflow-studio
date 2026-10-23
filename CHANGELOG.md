@@ -1,5 +1,5 @@
 ## 1.3.141
-- Align business Stripe onboarding links with v2 merchant accounts and show a secure continuation link when automatic navigation is interrupted.
+- Validate business Stripe onboarding destinations and show a secure continuation link when automatic navigation is interrupted.
 
 ## 1.3.140
 - Add a public Privacy Policy page with desktop/mobile navigation and footer links across the platform site.

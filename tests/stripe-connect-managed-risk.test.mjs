@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createStripeMerchantAccount,createStripeOnboardingLink} from '../server/membership-payments.mjs';
 
-test('Connect creates a v2 merchant with Stripe-owned risk, then uses v2 merchant onboarding',async(t)=>{
+test('Connect creates a v2 merchant with Stripe-owned risk, then uses validated stable onboarding',async(t)=>{
  const previous=process.env; process.env={...previous,APP_ENV:'staging',STRIPE_SECRET_KEY:'sk_test_fixture'}; t.after(()=>{process.env=previous;});
  const calls=[];
  t.mock.method(globalThis,'fetch',async(url,options)=>{
@@ -24,10 +24,10 @@ test('Connect creates a v2 merchant with Stripe-owned risk, then uses v2 merchan
  assert.equal(body.contact_email,'owner@example.com');
  assert.equal(body.type,undefined);
  assert.equal(body.configuration.recipient,undefined);
- assert.equal(calls[1].url,'https://api.stripe.com/v2/core/account_links');
- assert.equal(calls[1].headers['Content-Type'],'application/json');
- assert.equal(calls[1].headers['Stripe-Version'],'2026-09-30.endive');
- assert.deepEqual(JSON.parse(calls[1].body),{account:account.id,use_case:{type:'account_onboarding',account_onboarding:{configurations:['merchant'],return_url:'https://selahflow-staging.onrender.com/studio/test?stripe=connected',refresh_url:'https://selahflow-staging.onrender.com/studio/test?stripe=retry'}}});
+ assert.equal(calls[1].url,'https://api.stripe.com/v1/account_links');
+ assert.equal(calls[1].headers['Content-Type'],'application/x-www-form-urlencoded');
+ assert.equal(calls[1].headers['Stripe-Version'],undefined);
+ assert.deepEqual(Object.fromEntries(new URLSearchParams(calls[1].body)),{account:account.id,type:'account_onboarding',return_url:'https://selahflow-staging.onrender.com/studio/test?stripe=connected',refresh_url:'https://selahflow-staging.onrender.com/studio/test?stripe=retry'});
 });
 
 test('Connect retries use the same account key, omit absent email and propagate provider failures',async(t)=>{
@@ -55,7 +55,7 @@ test('resuming onboarding uses the existing account, generates fresh links and r
  const first=await createStripeOnboardingLink(...args,api),second=await createStripeOnboardingLink(...args,api);
  assert.notEqual(first.url,second.url);
  assert.equal(calls.length,2);
- assert.ok(calls.every(c=>c.path==='core/account_links'&&c.options.params.account==='acct_existing'));
+ assert.ok(calls.every(c=>c.path==='account_links'&&c.options.params.account==='acct_existing'));
  assert.ok(calls.every(c=>!c.options.idempotencyKey),'single-use link creation must not reuse cached links');
  for(const url of [undefined,'javascript:alert(1)','https://stripe.com.evil.test/','https://connect.stripe.com:444/','https://user:pass@connect.stripe.com/'])
   await assert.rejects(createStripeOnboardingLink(...args,async()=>({url})),/onboarding/);

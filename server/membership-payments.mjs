@@ -57,7 +57,7 @@ export async function stripeApi(endpoint,options={}){
 }
 // Managed Risk platforms cannot create legacy Express accounts with platform
 // loss liability. Full dashboard access supports Stripe-owned risk without a
-// preview API. Merchant onboarding uses v2 Account Links; direct charges use v1.
+// preview API. v2 IDs remain compatible with v1 account links and direct charges.
 export async function createStripeMerchantAccount(business,email){
  const created=await stripeApi('core/accounts',{namespace:'v2',params:{
   display_name:business.name,...(email?{contact_email:email}:{}),
@@ -69,17 +69,16 @@ export async function createStripeMerchantAccount(business,email){
  if(!/^acct_[A-Za-z0-9]+$/.test(created.id||''))throw Error('Stripe returned an invalid connected account.');
  return created;
 }
-// Keep merchant configuration explicit: v2 links must match the account's role.
+// Retain the stable Account Links API verified against hosted onboarding.
+// Never return an unvalidated destination to the owner browser.
 export async function createStripeOnboardingLink(account,returnUrl,refreshUrl,api=stripeApi){
  if(!/^acct_[A-Za-z0-9]+$/.test(account||''))throw Error('Invalid connected payment account.');
  for(const value of [returnUrl,refreshUrl]){
   const url=new URL(value);
   if(url.protocol!=='https:'||url.username||url.password)throw Error('Invalid Stripe return destination.');
  }
- const link=await api('core/account_links',{namespace:'v2',params:{account,use_case:{
-  type:'account_onboarding',account_onboarding:{configurations:['merchant'],
-   return_url:returnUrl,refresh_url:refreshUrl}
- }}});
+ const link=await api('account_links',{params:{account,type:'account_onboarding',
+  return_url:returnUrl,refresh_url:refreshUrl}});
  let url;try{url=new URL(link.url);}catch{throw Error('Stripe did not return an onboarding link. Please try again.');}
  if(url.protocol!=='https:'||!url.hostname.endsWith('.stripe.com')||url.username||url.password||url.port)
   throw Error('Unexpected Stripe onboarding destination.');
