@@ -53,3 +53,21 @@ test('anonymized deleted-client card and removed-list retry are deletable withou
  assert.equal(denied.status,409);
  }finally{await pg.close();}
 });
+
+
+test('Add Client accepts the editor-generated ID and saves required profile answers atomically',async()=>{
+ const {pg,post}=await fixture();try{
+ const fields=[{id:'level',label:'Player Level',type:'select',options:['2 (Recreational)'],required:true},{id:'age',label:'Age group',type:'select',options:['Adult'],required:true},{id:'position',label:'Player Position',type:'select',options:['Striker'],required:true}];
+ await pg.query("UPDATE settings SET data=$1 WHERE owner='owner'",[JSON.stringify({bookingCustomFields:fields})]);
+ const body={action:'create',firstName:'Jamie',lastName:'Rivera',dateOfBirth:'1995-07-23',memberNumber:'JR072395',email:'new@example.test',phone:'8135550100',notes:'New player',customAnswers:{level:'2 (Recreational)',age:'Adult',position:'Striker'}};
+ const created=await post(body);assert.equal(created.status,200,await created.clone().text());const id=(await created.json()).clientId;
+ const row=(await pg.query('SELECT * FROM business_client_profiles WHERE id=$1',[id])).rows[0];assert.equal(row.member_number,'JR072395');assert.equal(row.first_name,'Jamie');assert.equal(row.last_name,'Rivera');assert.equal(row.notes,'New player');assert.deepEqual(row.registration_answers,body.customAnswers);assert.equal(row.registration_field_labels.position,'Player Position');
+ assert.equal((await pg.query("SELECT member_number FROM business_member_ids WHERE business_id='biz' AND member_number='JR072395'")).rows.length,1);
+ assert.equal((await post(body)).status,409,'repeat submission cannot create a second client');
+ const invalid=await post({...body,firstName:'Tammy',lastName:'Random',email:'different@example.test',memberNumber:'ZZ010190'});assert.equal(invalid.status,400);assert.match((await invalid.json()).error,/supplied membership ID/);
+ assert.equal((await pg.query("SELECT count(*)::int n FROM business_member_ids WHERE business_id='biz' AND member_number='TR072395'")).rows[0].n,0,'failed request rolls back ID allocation');
+ const collision=await post({...body,firstName:'Jordan',lastName:'Roberts',email:'collision@example.test'});assert.equal(collision.status,400);assert.match((await collision.json()).error,/already assigned/);
+ const foreign=await post({...body,email:'foreign@example.test'},'other');assert.equal(foreign.status,200,'same ID is independent in another business');
+ const missing=await post({...body,firstName:'Lara',lastName:'Young',memberNumber:'LY072395',customAnswers:{...body.customAnswers,position:''}});assert.equal(missing.status,400);assert.match((await missing.json()).error,/Player Position is required/);assert.equal((await pg.query("SELECT member_number FROM business_member_ids WHERE business_id='biz' AND member_number='LY072395'")).rows.length,0);
+ }finally{await pg.close();}
+});

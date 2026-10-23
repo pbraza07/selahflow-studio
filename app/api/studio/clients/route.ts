@@ -2,7 +2,7 @@ import {updateClientProfile,clientProfileEditToken} from '../../../../server/upd
 import {allBookingStatusRows} from '../../../../server/booking-status.mjs';
 import {decorateBookingTimeline} from '../../../../server/booking-timeline.mjs';
 import {deleteOwnerClient} from '../../../../server/owner-client-deletion.mjs';
-import {issueMemberId} from '../../../../server/member-id-policy.mjs';
+import {issueMemberId,birthdateMemberId} from '../../../../server/member-id-policy.mjs';
 import {replaceLegacyMemberId} from '../../../../server/replace-legacy-member-id.mjs';
 import {randomUUID} from 'node:crypto';
 import {getPool} from '../../../../server/database.mjs';
@@ -78,7 +78,7 @@ function failure(error:unknown){
  const message=(error as Error).message||'Client operation could not be completed.';
  const status=message==='AUTH_REQUIRED'?401:message==='BUSINESS_UNAVAILABLE'?403:
   /already exists|another client|restore this client|changed|no longer|not found|cancel .*subscription|expire .*checkout|currently being sent|confirm permanent|removed list/i.test(message)?409:
-  /enter |invalid |exceed|cannot |required|requires review|client name|identity unavailable|unique id|first and last|profile question|imported|birth date/i.test(message)?400:503;
+  /enter |choose |invalid |exceed|cannot |required|requires review|client name|identity unavailable|unique id|supplied membership ID|booking field answer|first and last|profile question|imported|birth date/i.test(message)?400:503;
  return Response.json({error:status===503?'Client operation could not be completed.':message==='AUTH_REQUIRED'?'Sign in to manage your clients.':message==='BUSINESS_UNAVAILABLE'?'Business workspace unavailable.':message},{status,headers:noStore});
 }
 export async function GET(req:Request){
@@ -139,7 +139,7 @@ export async function POST(req:Request){
     const dateOfBirth=String(body.dateOfBirth||'');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)||!Number.isFinite(Date.parse(dateOfBirth))||dateOfBirth>new Date().toISOString().slice(0,10))throw Error('Enter a valid date of birth.');
     const requested=String(body.memberNumber||'').trim().toUpperCase();
-    const memberNumber=await issueMemberId(db,{businessId:business.id,name:input.name,firstName:body.firstName,lastName:body.lastName,dateOfBirth,requested});
+    const memberNumber=await issueMemberId(db,{businessId:business.id,name:input.name,firstName:body.firstName,lastName:body.lastName,dateOfBirth,requested:requested===birthdateMemberId(input.name,dateOfBirth,body.firstName,body.lastName)?'':requested});
     const fields=customRegistrationFields(settings,'booking',null,[]);
     const registrationAnswers=sanitizeBookingAnswers(fields,body.customAnswers||{});
     const registrationFieldLabels=Object.fromEntries(fields.map((field:any)=>[field.id,field.label]));

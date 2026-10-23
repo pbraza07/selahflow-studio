@@ -1,3 +1,7 @@
+# v1.3.136 release handoff — candidate, verification pending
+
+The Add Client editor auto-fills initials + MMDDYY, but create passed that suggestion as proof of an existing membership ID. Exact server-derived suggestions now use new-ID allocation; other supplied IDs still require existing identity ownership. Shared allocation rules, collision rejection and atomic rollback remain. Validation errors are actionable. Regression reproduces original HTTP 503, verifies saved identity/questions/notes, repeated submission, mismatched IDs, collision, cross-business independence and rollback. See [release evidence](V1_3_136_RELEASE.md).
+
 # v1.3.135 release handoff — verified LIVE in staging and production
 
 Application commit `b1011a21abb5431a3dd4133bf8dec663a3f145b8` (tree `b6b2e1c8afa72dcd339d080c19954b0a7730b731`). Staging `dep-dbdjs36i0phs73a2aa9g` LIVE October 23, 2026 at 7:05:42 a.m. EDT; production `dep-dbdk125bedkc73d393s0` LIVE 7:11:52 a.m. EDT. Local, CI run 39942873081 / job 120378335260 and Render staging passed all 358 tests, typecheck and builds; production build passed. Read-only live health/catalog/protected owner/communications/style/push checks passed across five staging/four production businesses. Actual runtime dedicated database/user preflights passed with schema CREATE true and zero unowned tables; additive migration 059 applied in both. No startup error-level entries observed in the final check.

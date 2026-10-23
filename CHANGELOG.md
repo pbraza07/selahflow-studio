@@ -1,3 +1,9 @@
+## 1.3.136
+
+- Fix owner Add Client rejecting the automatically suggested eight-character ID as an existing membership ID.
+- Preserve server allocation, business-scoped uniqueness, required questions and transaction rollback.
+- Show actionable validation for mismatched supplied IDs and invalid dropdown answers.
+
 ## 1.3.135
 
 - Confirming Send automatically approves exact, current client recipients for that staging campaign without Render configuration edits.
