@@ -20,8 +20,9 @@ jobs:
           node-version: '22'
       - name: Verify deployed endpoints without customer mutations
         env:
-          SMOKE_TARGETS: '[{"url":"https://selahflow-staging.onrender.com","version":"1.3.144"},{"url":"https://salonflow-hf3w.onrender.com","version":"1.3.144"}]'
+          SMOKE_TARGETS: '[{"url":"https://selahflow-staging.onrender.com","version":"1.3.145"},{"url":"https://salonflow-hf3w.onrender.com","version":"1.3.145"}]'
         run: |
           node scripts/verify-live-deployment.mjs
           node scripts/verify-business-assistant.mjs
           node scripts/verify-assistant-status.mjs
+          node scripts/verify-first-customer-commissions.mjs
