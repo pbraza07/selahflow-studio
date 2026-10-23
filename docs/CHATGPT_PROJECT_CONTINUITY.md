@@ -1,3 +1,7 @@
+# v1.3.144 release handoff — implementation pending verification
+
+Shared assistant answers are organized by topic with individually expandable subsections for published services, membership plans, schedules, policies, waiver clauses and registration questions. Membership and latest booking status are separate sections. Details start collapsed, retain public source links and white readable cards, and use native accessible disclosure controls. ID-only lookup and its existing privacy projection are unchanged. No database or environment changes. Tests and staging/production verification pending; v1.3.143 remains the last verified runtime.
+
 # v1.3.143 release handoff — verified LIVE in staging and production
 
 Shared assistant adds Membership status and Booking status buttons, asks only for the unique client ID, and accepts a direct ID to check both. Reuses existing business-scoped registration_latest_status API and limits. Answers show membership status/plan/type/remaining sessions or latest booking status/date/payment state. Names, contacts, DOB, custom answers, amounts, booking access identifiers/tokens and payment links are excluded from chat. Valid IDs are masked; lookup context resets on business changes. Current eight-character and legacy six-character IDs work. Public business knowledge remains available and its status guidance was updated. Profile-prefill and payment verification gates remain unchanged. No new database query, migration, credentials or environment changes; no customer records modified.

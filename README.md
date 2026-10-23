@@ -1,3 +1,5 @@
+**Release source: v1.3.144 — implementation pending verification.** Assistant answers use topic headings and expandable subsections. See [release evidence](docs/V1_3_144_RELEASE.md).
+
 **Release source: v1.3.143 — verified LIVE in staging and production.** Assistant membership and booking status checks require only the unique client ID, with limited results and masked IDs. All 375 tests, typecheck/build and live/browser checks passed. See [release evidence](docs/V1_3_143_RELEASE.md).
 
 **Release source: v1.3.142 — verified LIVE in staging and production.** The shared assistant reads current published business content, with sources, public-page availability and tenant privacy. All 371 tests/typecheck/build and read-only checks for both live environments passed. See [release evidence](docs/V1_3_142_RELEASE.md).

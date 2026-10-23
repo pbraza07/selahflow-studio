@@ -45,3 +45,12 @@ export function formatAssistantStatus(data,mode='both'){
  lines.push('Status checked now. For changes or detailed account information, contact the business.');
  return lines.join('\n');
 }
+
+/** Separate status topics using the same explicit privacy projection as the text fallback. */
+export function assistantStatusSections(data,mode='both'){
+ const footer='Status checked now. For changes or detailed account information, contact the business.';
+ return ['membership','booking'].filter(kind=>mode==='both'||mode===kind).map(kind=>({
+  title:kind==='membership'?'Membership status':'Latest booking status',
+  items:[{title:kind==='membership'?'Plan and remaining sessions':'Booking and payment',text:formatAssistantStatus(data,kind).replace('\n'+footer,'')}]
+ }));
+}

@@ -1,3 +1,4 @@
+import {groupAssistantDocuments} from './assistant-sections.mjs';
 import {PAGE_CONTENT_FIELDS} from './page-content.mjs';
 import {registrationQuestions} from './registration-questions.mjs';
 import {publicTeamMembers} from './team-booking-policy.mjs';
@@ -94,5 +95,5 @@ export function answerBusinessQuestion(knowledge,question){
  const docs=desired.length?knowledge.documents.filter(d=>desired.includes(d.kind)&&(d.kind!=='session'||matchesSession(d))&&(d.kind!=='service'||!matchingServices.length||matchingServices.includes(d))).slice(0,50):selected;
 
  let size=0;const unique=[...new Map(docs.map(d=>[d.id,d])).values()].filter(d=>{size+=d.title.length+d.text.length+3;return size<=18000;});
- return {businessName:knowledge.name,answer:unique.length?unique.map(d=>d.title+'\n'+d.text).join('\n\n'):`I couldn’t find a published answer to that question for ${knowledge.name}. Please contact the business or check its booking page. I can help with services, prices, schedules, memberships, policies, waivers and registration questions.`,sources:unique.map(d=>({title:d.title,href:d.href})),links:knowledge.links,updatedAt:knowledge.updatedAt};
+ return {sections:groupAssistantDocuments(unique),businessName:knowledge.name,answer:unique.length?unique.map(d=>d.title+'\n'+d.text).join('\n\n'):`I couldn’t find a published answer to that question for ${knowledge.name}. Please contact the business or check its booking page. I can help with services, prices, schedules, memberships, policies, waivers and registration questions.`,sources:unique.map(d=>({title:d.title,href:d.href})),links:knowledge.links,updatedAt:knowledge.updatedAt};
 }

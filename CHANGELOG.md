@@ -1,3 +1,6 @@
+## 1.3.144
+- Organize all shared assistant knowledge/status answers into topic headings and collapsed subsections with source links.
+
 ## 1.3.143
 - Add assistant Membership status and Booking status flows requiring only a unique ID, including direct-ID questions and current summaries.
 - Reuse existing scoped/rate-limited lookup; mask IDs in chat and exclude private contacts, amounts and payment access.
