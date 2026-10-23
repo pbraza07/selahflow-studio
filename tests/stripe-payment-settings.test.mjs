@@ -17,8 +17,12 @@ test('Stripe settings render loading, unavailable, onboarding and ready states w
   const {default:Settings}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
   const html=renderToStaticMarkup(React.createElement(Settings));
   assert.ok(html.includes(expected),expected);
-  assert.equal(/Connect Stripe payments|Complete Stripe setup/.test(html),connect);
-  assert.equal(html.includes('Verify Stripe'),verify);
+  assert.match(html,/aria-expanded="false" aria-controls="sf-stripe-setup-help"/);
+  assert.match(html,/<section id="sf-stripe-setup-help"[^>]*hidden=""/);
+  assert.ok(html.includes('Business owners do not need to configure server API keys or webhooks.'));
+  assert.ok(html.includes('Returning to SelahFlow alone does not confirm approval.'));
+  assert.equal(/<button[^>]*>(?:Connect Stripe payments|Complete Stripe setup)<\/button>/.test(html),connect);
+  assert.equal(/<button[^>]*> Verify Stripe<\/button>/.test(html),verify);
   for(const button of html.matchAll(/<button\b[^>]*>/g))assert.ok(button[0].includes('type="button"'));
   if(status&&!status.configured)assert.match(html,/<button[^>]*disabled=""/);
  }

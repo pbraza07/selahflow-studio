@@ -2019,3 +2019,6 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
  --sf-surface:#fff;--sf-on-surface:#17251d;--sf-input:#fff;--sf-on-input:#17251d;--sf-border:#84958e;
  background:#fff!important;color:#17251d!important;
 }
+
+/* Stripe setup help stays readable within business Settings on mobile and desktop. */
+.sf-stripe-settings-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.sf-stripe-settings-header h2{margin-bottom:0!important}.sf-stripe-setup-help{margin:18px 0;padding:18px;border:1px solid var(--sf-settings-line,#cbd5ce);border-radius:12px;background:#fff;color:var(--sf-settings-ink,#203b35)}.sf-stripe-setup-help[hidden]{display:none}.sf-stripe-setup-help li{margin:12px 0;line-height:1.6}.sf-stripe-setup-help ol,.sf-stripe-setup-help ul{padding-left:22px}@media(max-width:650px){.sf-stripe-settings-header>button{width:100%}.sf-stripe-setup-help{padding:14px}}
