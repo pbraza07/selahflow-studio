@@ -1,4 +1,6 @@
 'use client';
+import BusinessAssistant from '../../components/business-assistant';
+
 import PoweredBySelahFlow from '../../components/powered-by-selahflow';
 
 import BusinessNavigation from '../../components/business-navigation';
@@ -125,5 +127,6 @@ export default function MembershipEnrollment(){
    </section>
   </main>
   <PoweredBySelahFlow/>
+ <BusinessAssistant slug={slug} name={data?.name}/>
  </div>;
 }

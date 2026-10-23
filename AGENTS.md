@@ -1,3 +1,9 @@
+# v1.3.142 release handoff — implementation; deployment pending
+
+Shared business assistant answers from current published profile, service descriptions/prices, booking wording, question definitions, active memberships/credit eligibility, public team, schedules and version-reviewed waiver clauses. A business-scoped, no-store API projects allowlisted public fields from saved data on each request. It excludes clients, question answers, signed documents, hidden staff and internal settings. Shared owner/public home/booking/membership widget provides sources and booking links, readable white cards and existing owner handoff inbox. No external scraping service or generative model is connected; unknown answers direct visitors to the business and live availability remains in booking. No migration or existing record/environment changes.
+
+Branch `feature/business-knowledge-assistant`. Local/CI/staging/production verification pending; the previous verified LIVE version is 1.3.141.
+
 # v1.3.141 release handoff — verified LIVE in staging and production
 
 Business Settings → Stripe payments retains the stable Account Links API verified against existing connected accounts. Complete Stripe setup reuses the saved account ID and requests a fresh single-use link. Both server and browser validate the HTTPS Stripe destination; the browser retains a Continue to Stripe link when automatic navigation does not occur. No migration, credential, environment or customer-record changes.

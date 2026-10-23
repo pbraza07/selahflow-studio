@@ -1,3 +1,7 @@
+## 1.3.142
+- Expand the shared assistant to current business descriptions, services/prices, memberships/credit eligibility, schedules, page wording, question definitions, public team and reviewed waiver text.
+- Add source-linked, readable assistant on business home, booking and membership pages; preserve tenant privacy and owner handoff.
+
 ## 1.3.141
 - Validate business Stripe onboarding destinations and show a secure continuation link when automatic navigation is interrupted.
 
