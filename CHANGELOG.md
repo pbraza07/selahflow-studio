@@ -1,3 +1,6 @@
+## 1.3.140
+- Add a public Privacy Policy page with desktop/mobile navigation and footer links across the platform site.
+
 ## 1.3.139
 - Add Help: set up Stripe with an in-app owner guide and troubleshooting, available even before Stripe is configured.
 - Move business Stripe onboarding, connection status and verification into Settings → Stripe payments for all businesses. Membership billing stays in Memberships; onboarding returns to payment settings.

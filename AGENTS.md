@@ -1,3 +1,7 @@
+# v1.3.140 release handoff — implementation complete; validation and deployment pending
+
+Adds public /privacy with SelahFlow branding, dated policy, section navigation and privacy contact selahflow7@gmail.com. Privacy Policy links appear in desktop/mobile main navigation and the shared public footer, including the homepage. Covers accounts, client/membership/waiver records, minors/guardians, providers, Stripe payments, cookies/device storage, communications/opt-outs, retention, security and requests. Describes current behavior without claiming counsel review or legal-compliance certification. No data collection, consent flow, migration, credentials, environment or existing business records changed. Saved feature branch feature/public-privacy-policy.
+
 # v1.3.139 release handoff — verified LIVE in staging and production
 
 Business owners now connect and verify Stripe under Settings → Stripe payments. Memberships has a shortcut to this category and retains plans, payment invitations, credits and recurring billing controls. Help: set up Stripe opens an in-app, six-step owner guide covering business identity, hosted onboarding, required information, return/verification and payment management, plus troubleshooting for missing platform configuration, expired links and incomplete verification. The guide is available while loading or unconfigured. Stripe return/retry URLs reopen payment settings. Shared across all businesses; existing owner authorization and business-scoped payment APIs are unchanged. No migration or environment changes.
