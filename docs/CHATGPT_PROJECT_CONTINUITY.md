@@ -1,3 +1,9 @@
+# v1.3.138 release handoff — implementation awaiting verification
+
+Removed the circled Welcome back / We remembered your name / Not you? Clear name box from the shared booking review form, including its display-only state, unused clear handler and styling. The shared form serves /book and /book/[slug], so all businesses receive this removal. Name fields remain directly editable and existing business-scoped name-only device autofill and its disclosure remain. Verified client lookup, waiver consent/reuse, booking policy, approval/payment flows and records are unchanged. No database migration, settings or environment changes.
+
+Local validation passed: all 361 tests, typecheck and production build. Staging/production deployment verification pending. Feature branch: fix/remove-returning-name-banner. No real booking, signature, email, payment or deletion should be generated for QA.
+
 ## Waiver participation-2 activation — October 23, 2026
 
 After the user explicitly confirmed review of participation-2, recorded business-supplied reference LGL-2026-WVR-0892 — PMA (Corporate Counsel), reviewedAt 2026-10-23, through the authenticated Arcila Training owner settings in staging and production. Both save confirmations succeeded. Public booking APIs independently return participation-2, seven sections, mediaReleaseIncluded=true and Media release at clause 6, with identical document hash 6551fdbd3ed45cd7ca18fe8f54c80b8b182fdb3d47643436147472e075327f2e. All four services in each Arcila configuration remain waiver-required. New signatures use the numbered media clause without a separate media checkbox. Existing signed documents and media choices remain untouched and active prior consent still satisfies participation requirements for the same verified identity. No real waiver was signed/deleted for QA, and no customer or financial records were changed.

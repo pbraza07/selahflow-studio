@@ -1,3 +1,5 @@
+**Release source: v1.3.138.** Remove the remembered-name Welcome back box from every business booking form. Deployment verification pending; see [release evidence](docs/V1_3_138_RELEASE.md).
+
 **Release source: v1.3.137 — verified LIVE in staging and production.** White question cards/fields and permanent owner waiver deletion. The reviewed numbered media-release waiver participation-2 is active for Arcila Training in staging and production as of October 23, 2026; each other business retains its own version-specific review requirement. See [release evidence](docs/V1_3_137_RELEASE.md).
 
 **Release source: v1.3.136 — verified LIVE in staging and production.** Add Client accepts the correctly generated initials + MMDDYY ID while preserving uniqueness and rollback safeguards. See [release evidence](docs/V1_3_136_RELEASE.md).

@@ -1939,16 +1939,16 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
 .sf-registration-field input:not([type=checkbox]),.sf-registration-field select{width:100%;min-width:0}
 .sf-field-optional{font-size:.85em;opacity:.8}
 .sf-registration-field small{display:block;margin-top:5px}
-[data-selah-theme] .sf-member-number-booking,[data-selah-theme] .sf-returning-name{background:var(--sf-card,#f7f9f8)!important;color:var(--sf-on-card,#17251d)!important;border:1px solid var(--sf-border,#d7dfda);border-radius:14px;padding:16px}
+[data-selah-theme] .sf-member-number-booking{background:var(--sf-card,#f7f9f8)!important;color:var(--sf-on-card,#17251d)!important;border:1px solid var(--sf-border,#d7dfda);border-radius:14px;padding:16px}
 [data-selah-theme] .sf-member-number-booking{background:#000!important;color:#fff!important;--sf-on-surface:#fff;--sf-on-card:#fff}
-[data-selah-theme] .sf-member-number-booking :is(label,p,strong,small,span,em,[role=status]),[data-selah-theme] .sf-returning-name :is(p,strong){color:var(--sf-on-card,#17251d)!important}
+[data-selah-theme] .sf-member-number-booking :is(label,p,strong,small,span,em,[role=status]){color:var(--sf-on-card,#17251d)!important}
 [data-selah-theme] .sf-member-number-booking :is(label,p,strong,small,span,em,[role=status]){color:#fff!important}
 /* Beat public-form, client-editor and booking-editor label specificity. Text
    fill is explicit too, so inherited/autofill fill cannot turn labels black. */
 [data-selah-theme] .sf-registration-fields .sf-member-number-booking :is(label,.sf-registration-label,p,strong,small,span,em,[role=status]){color:#fff!important;-webkit-text-fill-color:#fff!important;opacity:1!important}
 [data-selah-theme] .sf-member-number-booking .sf-field-optional{color:#fff!important;opacity:1!important}
 [data-selah-theme] .sf-member-number-booking input::placeholder{color:#53635c!important;-webkit-text-fill-color:#53635c!important;opacity:1!important}
-[data-selah-theme] :is(.sf-returning-name,.sf-approval-wait,.sf-booking-editor-lock,.sf-booking-editor-original) :is(label,p,strong,small,span,em,[role=status]){color:inherit}
+[data-selah-theme] :is(.sf-approval-wait,.sf-booking-editor-lock,.sf-booking-editor-original) :is(label,p,strong,small,span,em,[role=status]){color:inherit}
 [data-selah-theme] .sf-registration-fields :is(input,select,textarea){background:var(--sf-card,#fff)!important;color:var(--sf-on-card,#17251d)!important;caret-color:var(--sf-on-card,#17251d)}
 [data-selah-theme] .sf-registration-fields input:-webkit-autofill{-webkit-text-fill-color:var(--sf-on-card,#17251d)!important;-webkit-box-shadow:0 0 0 1000px var(--sf-card,#fff) inset!important;caret-color:var(--sf-on-card,#17251d)}
 [data-selah-theme] .sf-registration-fields input:autofill{background:var(--sf-card,#fff)!important;color:var(--sf-on-card,#17251d)!important}

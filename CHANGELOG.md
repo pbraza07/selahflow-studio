@@ -1,3 +1,7 @@
+## 1.3.138
+
+- Remove the remembered-name Welcome back banner from shared booking forms across all businesses.
+
 ## 1.3.137
 
 - Standardize shared question inputs to white backgrounds and dark text across themes.

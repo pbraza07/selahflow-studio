@@ -79,7 +79,7 @@ test('name auto-population stays local to a business and never includes contact 
  assert.match(booking,/selahflow:remembered-booking-name:/);
  assert.match(booking,/localStorage\.getItem/);
  assert.match(booking,/localStorage\.setItem/);
- assert.match(booking,/Not you\? Clear name/);
+ assert.doesNotMatch(booking,/sf-returning-name|Welcome back!|We remembered your name on this device|Not you\? Clear name/);
  const fields=await readFile(new URL('../app/components/registration-fields.tsx',import.meta.url),'utf8');
  assert.match(booking,/<RegistrationFields/);
  assert.match(fields,/f.id==='firstName'\?'given-name':f.id==='lastName'\?'family-name'/);
