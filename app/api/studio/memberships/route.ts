@@ -14,7 +14,7 @@ import {sanitizeBookingAnswers} from '../../../../server/booking-custom-fields.m
 import {getPool} from '../../../../server/database.mjs';
 import {requireOwner} from '../../../../lib/auth';
 import {validOrigin,trustedOrigin} from '../../../../server/security.mjs';
-import {paymentConfigured,validateMembershipPlan,stripeApi,createStripeMerchantAccount} from '../../../../server/membership-payments.mjs';
+import {paymentConfigured,validateMembershipPlan,stripeApi,createStripeMerchantAccount,createStripeOnboardingLink} from '../../../../server/membership-payments.mjs';
 import {planEntitlements,activeMembershipLimit} from '../../../../server/plan-entitlements.mjs';
 // Manual payment confirmation and session usage are maintained in an auditable ledger.
 // Stripe integration remains optional and can be revisited separately.
@@ -307,10 +307,9 @@ export async function POST(req:Request){
      [business.id,accountId]);
    }
    const origin=trustedOrigin(req);
-   const link=await stripeApi('account_links',{params:{
-    account:accountId,refresh_url:origin+'/studio/'+business.slug+'?stripe=retry',
-    return_url:origin+'/studio/'+business.slug+'?stripe=connected',type:'account_onboarding'
-   }});
+   const link=await createStripeOnboardingLink(accountId,
+    origin+'/studio/'+business.slug+'?stripe=connected',
+    origin+'/studio/'+business.slug+'?stripe=retry');
    return Response.json({url:link.url},{headers});
   }
   if(input.action==='verify'){

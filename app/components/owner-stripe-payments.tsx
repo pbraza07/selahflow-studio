@@ -6,6 +6,7 @@ type PaymentStatus={configured:boolean;connected:boolean;ready:boolean};
 export default function OwnerStripePayments(){
  const [payments,setPayments]=useState<PaymentStatus|null>(null);
  const [helpOpen,setHelpOpen]=useState(false);
+ const [onboardingUrl,setOnboardingUrl]=useState('');
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
  const load=useCallback(async()=>{
   const response=await fetch('/api/studio/memberships',{cache:'no-store'});
@@ -21,11 +22,13 @@ export default function OwnerStripePayments(){
   return data;
  }
  async function connect(){
-  setBusy(true);setError('');setMessage('');
+  setBusy(true);setError('');setMessage('');setOnboardingUrl('');
   try{
    const result=await post('connect'),url=new URL(result.url);
-   if(url.protocol!=='https:'||!url.hostname.endsWith('.stripe.com'))throw Error('Unexpected payment onboarding destination.');
+   if(url.protocol!=='https:'||!url.hostname.endsWith('.stripe.com')||url.username||url.password||url.port)throw Error('Unexpected payment onboarding destination.');
+   setOnboardingUrl(url.toString());
    window.location.assign(url.toString());
+   setBusy(false);
   }catch(e){setError((e as Error).message);setBusy(false);}
  }
  async function verify(){
@@ -60,6 +63,7 @@ export default function OwnerStripePayments(){
   </section>
   <p>Connect this business to Stripe to receive service and membership payments.</p>
   {error&&<p className="sf-membership-error" role="alert">{error}</p>}
+  {onboardingUrl&&<p role="status">Opening Stripe’s secure setup page… If you stay here, <a href={onboardingUrl} referrerPolicy="no-referrer">Continue to Stripe</a>. If the link has expired, select Complete Stripe setup again.</p>}
   {message&&<p className="sf-membership-success" role="status">{message}</p>}
   {!payments?<p role="status">{error?'Payment settings could not be loaded.':'Loading Stripe payment settings…'}</p>:<>
    <p role="status">{!payments.configured?'Platform setup required: ask the platform administrator to configure the Stripe API key and Connect webhook signing secret.':payments.ready?'Stripe connected · ready to accept payments':payments.connected?'Stripe connected · verify onboarding and payment readiness':'Connect your business Stripe account to start accepting payments.'}</p>

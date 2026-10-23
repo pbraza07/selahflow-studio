@@ -38,3 +38,31 @@ test('one Stripe setup entry is wired under Settings and onboarding returns reop
  assert.doesNotMatch(memberships,/async function (connect|verify)\(|onClick=\{(connect|verify)\}|Secure membership payments/);
  assert.match(memberships,/onClick=\{onOpenPayments\}/);
 });
+
+test('Complete Stripe setup requests a fresh link, navigates to Stripe and retains a usable fallback',async(t)=>{
+ const source=await readFile(new URL('../app/components/owner-stripe-payments.tsx',import.meta.url),'utf8');
+ let compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
+ compiled=compiled.replace(/import \{ useCallback, useEffect, useState \} from 'react';/,`let index=0;export const writes=[];const useState=initial=>{const i=index++;return [i===0?{configured:true,connected:true,ready:false}:initial,value=>writes.push([i,value])];};const useEffect=()=>{};const useCallback=f=>f;`)
+ .replace(/import \{[^\n]+\} from 'lucide-react';/,`const CreditCard=()=>null,RefreshCw=()=>null,ShieldCheck=()=>null;`)
+ .replace(/import \{[^\n]+\} from "react\/jsx-runtime";/,`const _jsx=(type,props)=>({type,props}),_jsxs=_jsx,_Fragment='fragment';`);
+ const {default:Settings,writes}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
+ const buttons=[];function visit(n){if(!n||typeof n!=='object')return;if(n.type==='button')buttons.push(n);for(const c of [n.props?.children].flat(Infinity))visit(c);}visit(Settings());
+ const connect=buttons.find(b=>b.props.children?.includes('Complete Stripe setup'));
+ assert.ok(connect);
+ const destinations=[],requests=[];
+ const previousWindow=globalThis.window;globalThis.window={location:{assign:url=>destinations.push(url)}};
+ t.after(()=>{if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;});
+ let response={url:'https://accounts.stripe.com/r/acct_existing#one-use'};
+ t.mock.method(globalThis,'fetch',async(url,options)=>{requests.push({url,options});return {ok:true,json:async()=>response};});
+ await connect.props.onClick();
+ assert.equal(requests[0].url,'/api/studio/memberships');
+ assert.deepEqual(JSON.parse(requests[0].options.body),{action:'connect'});
+ assert.equal(requests[0].options.method,'POST');
+ assert.deepEqual(destinations,[response.url]);
+ assert.ok(writes.some(([i,v])=>i===2&&v===response.url),'fallback URL survives an interrupted navigation');
+ assert.ok(writes.some(([i,v])=>i===3&&v===false),'button can be retried if navigation does not happen');
+ response={url:'https://connect.stripe.com.evil.test/'};
+ await connect.props.onClick();
+ assert.equal(destinations.length,1);
+ assert.ok(writes.some(([i,v])=>i===4&&/Unexpected payment onboarding/.test(v)));
+});

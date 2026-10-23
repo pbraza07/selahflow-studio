@@ -1,3 +1,7 @@
+# v1.3.141 release handoff — source pending deployment verification
+
+Align business Stripe onboarding with v2 merchant Account Links, validate returned Stripe destinations on the server and client, and provide a visible continuation link if automatic navigation does not occur. Existing connected account IDs are reused; no financial account is created for QA. Current LIVE baseline remains v1.3.140 until verified below. No migrations or environment changes.
+
 # v1.3.140 release handoff — verified LIVE in staging and production
 
 Adds public /privacy with SelahFlow branding, metadata, effective date October 23, 2026, eleven linked sections and privacy contact selahflow7@gmail.com. Privacy Policy links appear in desktop/mobile main navigation and the shared public footer, including the homepage. Covers accounts, client/membership/waiver records, minors/guardians, providers, Stripe payments, cookies/device storage, communications/opt-outs, retention, security and requests. Describes current behavior without claiming counsel review or legal-compliance certification. No new data collection, consent gate, migration, credentials, environment or existing business-record changes.

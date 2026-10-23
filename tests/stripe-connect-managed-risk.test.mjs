@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createStripeMerchantAccount,stripeApi} from '../server/membership-payments.mjs';
+import {createStripeMerchantAccount,createStripeOnboardingLink} from '../server/membership-payments.mjs';
 
-test('Connect creates a v2 merchant with Stripe-owned risk, then uses compatible v1 onboarding',async(t)=>{
+test('Connect creates a v2 merchant with Stripe-owned risk, then uses v2 merchant onboarding',async(t)=>{
  const previous=process.env; process.env={...previous,APP_ENV:'staging',STRIPE_SECRET_KEY:'sk_test_fixture'}; t.after(()=>{process.env=previous;});
  const calls=[];
  t.mock.method(globalThis,'fetch',async(url,options)=>{
@@ -11,7 +11,7 @@ test('Connect creates a v2 merchant with Stripe-owned risk, then uses compatible
  });
  const business={id:'tenant-123',name:'Synthetic Studio'};
  const account=await createStripeMerchantAccount(business,'owner@example.com');
- await stripeApi('account_links',{params:{account:account.id,type:'account_onboarding',refresh_url:'https://selahflow-staging.onrender.com/studio/test?stripe=retry',return_url:'https://selahflow-staging.onrender.com/studio/test?stripe=connected'}});
+ await createStripeOnboardingLink(account.id,'https://selahflow-staging.onrender.com/studio/test?stripe=connected','https://selahflow-staging.onrender.com/studio/test?stripe=retry');
  assert.equal(calls[0].url,'https://api.stripe.com/v2/core/accounts');
  assert.equal(calls[0].headers['Content-Type'],'application/json');
  assert.equal(calls[0].headers['Stripe-Version'],'2026-09-30.endive');
@@ -24,10 +24,10 @@ test('Connect creates a v2 merchant with Stripe-owned risk, then uses compatible
  assert.equal(body.contact_email,'owner@example.com');
  assert.equal(body.type,undefined);
  assert.equal(body.configuration.recipient,undefined);
- assert.equal(calls[1].url,'https://api.stripe.com/v1/account_links');
- assert.equal(calls[1].headers['Content-Type'],'application/x-www-form-urlencoded');
- assert.equal(calls[1].headers['Stripe-Version'],undefined);
- assert.equal(new URLSearchParams(calls[1].body).get('account'),account.id);
+ assert.equal(calls[1].url,'https://api.stripe.com/v2/core/account_links');
+ assert.equal(calls[1].headers['Content-Type'],'application/json');
+ assert.equal(calls[1].headers['Stripe-Version'],'2026-09-30.endive');
+ assert.deepEqual(JSON.parse(calls[1].body),{account:account.id,use_case:{type:'account_onboarding',account_onboarding:{configurations:['merchant'],return_url:'https://selahflow-staging.onrender.com/studio/test?stripe=connected',refresh_url:'https://selahflow-staging.onrender.com/studio/test?stripe=retry'}}});
 });
 
 test('Connect retries use the same account key, omit absent email and propagate provider failures',async(t)=>{
@@ -47,4 +47,20 @@ test('v2 Connect cannot send live credentials from staging',async(t)=>{
  const mock=t.mock.method(globalThis,'fetch',async()=>{throw Error('Network must not be called');});
  await assert.rejects(createStripeMerchantAccount({id:'tenant-a',name:'Test'}),/Live Stripe credentials/);
  assert.equal(mock.mock.callCount(),0);
+});
+
+test('resuming onboarding uses the existing account, generates fresh links and rejects unsafe provider URLs',async()=>{
+ const calls=[];const api=async(path,options)=>{calls.push({path,options});return {url:'https://accounts.stripe.com/r/acct_existing#single-use-'+calls.length};};
+ const args=['acct_existing','https://example.com/studio/test?stripe=connected','https://example.com/studio/test?stripe=retry'];
+ const first=await createStripeOnboardingLink(...args,api),second=await createStripeOnboardingLink(...args,api);
+ assert.notEqual(first.url,second.url);
+ assert.equal(calls.length,2);
+ assert.ok(calls.every(c=>c.path==='core/account_links'&&c.options.params.account==='acct_existing'));
+ assert.ok(calls.every(c=>!c.options.idempotencyKey),'single-use link creation must not reuse cached links');
+ for(const url of [undefined,'javascript:alert(1)','https://stripe.com.evil.test/','https://connect.stripe.com:444/','https://user:pass@connect.stripe.com/'])
+  await assert.rejects(createStripeOnboardingLink(...args,async()=>({url})),/onboarding/);
+ let reached=false;
+ await assert.rejects(createStripeOnboardingLink('bad',args[1],args[2],async()=>{reached=true;}),/Invalid connected/);
+ assert.equal(reached,false);
+ await assert.rejects(createStripeOnboardingLink(...args,async()=>{throw Error('Provider requirements need attention.');}),/Provider requirements/);
 });
