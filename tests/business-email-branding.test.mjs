@@ -47,7 +47,7 @@ test('Gmail and Resend use matching business logo attachments, escaped content a
 test('central delivery applies canonical branding for both providers, keeps sender/staging controls, and rejects forged message branding',async()=>{
  const {pg,db}=await fixture();try{
   await pg.query('INSERT INTO business_logos(business_id,mime_type,bytes) VALUES($1,$2,$3)',['biz-a','image/png',await png()]);
-  const sent=[],fetcher=async(path,options)=>{sent.push({path,body:JSON.parse(options.body)});return {ok:true,json:async()=>({})};};
+  const sent=[],fetcher=async(path,options)=>{sent.push({path,body:JSON.parse(options.body)});return {ok:true,json:async()=>({id:'resend-fixture'})};};
   const resendEnv={EMAIL_PROVIDER:'resend',RESEND_API_KEY:'synthetic',RESEND_FROM_EMAIL:'SelahFlow <sender@example.test>'};
   const context={businessId:'biz-a',brandingDb:db};
   assert.equal((await sendNotificationChannel('email','client@example.test',{...message,emailBrand:{name:'FORGED OTHER BUSINESS'}},resendEnv,fetcher,context)).status,'submitted');assert.equal(sent[0].body.from,resendEnv.RESEND_FROM_EMAIL);assert.match(sent[0].body.html,/Business a/);assert.doesNotMatch(sent[0].body.html,/FORGED OTHER/);
@@ -55,7 +55,7 @@ test('central delivery applies canonical branding for both providers, keeps send
   assert.equal((await sendNotificationChannel('email','client@example.test',message,resendEnv,fetcher,{...context,businessId:'missing'})).status,'failed');assert.equal(sent.length,1);
   const env={EMAIL_PROVIDER:'gmail',GMAIL_CLIENT_ID:'fixture',GMAIL_CLIENT_SECRET:'fixture',GMAIL_TOKEN_ENCRYPTION_KEY:'a'.repeat(64)};
   await pg.query("INSERT INTO platform_gmail_connection(id,email,encrypted_refresh_token,status,connected_by) VALUES('shared','sender@gmail.com',$1,'connected','a')",[sealGmail('synthetic-refresh','refresh',env)]);
-  let mime='';const gmailFetch=async(path,options)=>path.includes('/token')?{ok:true,json:async()=>({access_token:'fixture'})}:(mime=Buffer.from(JSON.parse(options.body).raw,'base64url').toString(),{ok:true});
+  let mime='';const gmailFetch=async(path,options)=>path.includes('/token')?{ok:true,json:async()=>({access_token:'fixture'})}:(mime=Buffer.from(JSON.parse(options.body).raw,'base64url').toString(),{ok:true,json:async()=>({id:'gmail-fixture'})});
   assert.equal((await sendNotificationChannel('email','client@example.test',message,env,gmailFetch,context)).status,'submitted');assert.match(htmlFromMime(mime),/Business a/);assert.match(mime,/Content-ID: <business-logo>/);assert.match(mime,/From: SelahFlow <sender@gmail.com>/);
  }finally{await pg.close();}
 });

@@ -86,7 +86,7 @@ test('transactional transports preserve staging allowlists, email idempotency an
  assert.equal(clientSmsPhone('1 415 555 2671'),'+14155552671');assert.equal(clientSmsPhone('+55 11 99999-9999'),'+5511999999999');
  const message={subject:'Booking',text:'Payment received',sms:'Payment received',idempotencyKey:'client-message-test',trackAmbiguous:true};
  const env={RESEND_API_KEY:'fixture',RESEND_FROM_EMAIL:'sender@example.com',TWILIO_ACCOUNT_SID:'ACfixture',TWILIO_AUTH_TOKEN:'fixture',TWILIO_FROM_NUMBER:'+14155550000'};
- let calls=0;const fetcher=async(url,options)=>{calls++;if(url.includes('resend'))assert.equal(options.headers['Idempotency-Key'],message.idempotencyKey);return {ok:true};};
+ let calls=0;const fetcher=async(url,options)=>{calls++;if(url.includes('resend'))assert.equal(options.headers['Idempotency-Key'],message.idempotencyKey);return {ok:true,json:async()=>({id:'resend-fixture'})};};
  assert.equal((await sendNotificationChannel('email','client@example.com',message,env,fetcher)).status,'submitted');
  assert.equal((await sendNotificationChannel('sms','+14155552671',message,env,async()=>{throw Error('timeout');})).status,'unknown');
  assert.equal((await sendNotificationChannel('sms','+14155552671',message,env,async()=>({ok:false,status:503}))).status,'unknown');

@@ -36,9 +36,10 @@ test('Gmail authorization is encrypted, one-time, session-bound and requests sen
    if(path.includes('/token')){assert.equal(new URLSearchParams(o.body).get('refresh_token'),'private-refresh');return {ok:true,json:async()=>({access_token:'new-access'})};}
    delivered++;assert.equal(path,'https://gmail.googleapis.com/gmail/v1/users/me/messages/send');assert.equal(o.headers.Authorization,'Bearer new-access');
    const mime=Buffer.from(JSON.parse(o.body).raw,'base64url').toString();assert.match(mime,/From: SelahFlow <sender@gmail.com>/);assert.match(mime,/To: <client@example.com>/);assert.doesNotMatch(mime,/Bcc:/);assert.match(mime,/Content-Transfer-Encoding: base64/);
-   return {ok:true};
+   return {ok:true,json:async()=>({id:'gmail-fixture-message'})};
   };
-  assert.equal((await sendGmail('client@example.com',message,env,sendFetch,db)).status,'submitted');assert.equal(delivered,1);
+  const receipt=await sendGmail('client@example.com',message,env,sendFetch,db);assert.equal(receipt.status,'submitted');assert.equal(receipt.providerMessageId,'gmail-fixture-message');assert.equal(delivered,1);
+  assert.equal((await sendGmail('client@example.com',message,env,async p=>p.includes('/token')?{ok:true,json:async()=>({access_token:'a'})}:{ok:true,json:async()=>({})},db)).status,'unknown','HTTP acceptance without an ID must not claim verified submission');
   assert.equal((await sendGmail('client@example.com',message,env,async p=>{if(p.includes('/token'))return {ok:true,json:async()=>({access_token:'a'})};throw Error('timeout');},db)).status,'unknown');
   assert.equal((await sendGmail('client@example.com',message,env,async()=>({ok:false,status:400}),db)).status,'not_configured');assert.equal((await gmailStatus(db,env)).needsReconnect,true);
   assert.equal((await sendGmail('client@example.com',message,env,sendFetch,db)).status,'not_configured');assert.equal(delivered,1);

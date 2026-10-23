@@ -110,20 +110,20 @@ test('personalization preserves literal replacement characters in client and bus
  assert.equal(m.subject,'Club $&');assert.match(m.text,/Hello Client \$&/);
 });
 
-test('staging preflight rejects disallowed recipients before queueing and history explains failures; retry excludes submitted and unknown',async()=>{
+test('staging owner confirmation automatically approves current contacts; global disablement and retry safeguards remain',async()=>{
  const f=await fixture();try{
  const c=(await communications.communicationContacts(f.pool,await communications.communicationBusiness(f.pool,'owner'))).contacts[0];
  const p=await communications.previewCommunication(f.pool,{owner:'owner',input:draft([c.id]),origin:'https://app.example.test'});
  const env={APP_ENV:'staging',STAGING_NOTIFICATIONS_ENABLED:'true',STAGING_NOTIFICATION_EMAILS:'approved@example.test'};
- await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env}),/approved test recipients/);
+ await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{...env,STAGING_NOTIFICATIONS_ENABLED:'false'}}),/delivery is disabled/);
  assert.equal((await f.query('SELECT status FROM business_communication_recipients')).rows[0].status,'draft');
- await communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{...env,STAGING_COMMUNICATION_EMAILS:'family@example.test'}});
+ await communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env});
  await f.query("UPDATE business_email_campaigns SET status='draft' WHERE id=$1",[p.id]);await f.query("UPDATE business_communication_recipients SET status='draft' WHERE campaign_id=$1",[p.id]);
  await communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'production'}});
  await communications.processCommunicationEmails(f.pool,{send:async()=>({status:'failed',detail:'Gmail rejected email (HTTP 403)'})});
  const h=(await communications.communicationCampaigns(f.pool,'biz'))[0];assert.equal(h.delivery_issues[0].detail,'Gmail rejected email (HTTP 403)');assert.equal(h.delivery_issues[0].attempts,1);assert.ok(h.delivery_issues[0].nextAttemptAt);
  await assert.rejects(communications.queueCommunication(f.pool,{owner:'other',campaignId:p.id,retry:true}),/not found/);
- await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,retry:true,env}),/approved test recipients/);
+ await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,retry:true,env:{...env,STAGING_NOTIFICATIONS_ENABLED:'false'}}),/delivery is disabled/);
  await communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,retry:true,env:{APP_ENV:'production'}});
  let sends=0;await communications.processCommunicationEmails(f.pool,{send:async()=>{sends++;return {status:'submitted'};}});
  await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,retry:true}),/No rejected emails/);assert.equal(sends,1);
@@ -146,11 +146,45 @@ test('saved draft review restores exact content and recipients without sending; 
  const b=await communications.communicationBusiness(f.pool,'owner'),c=(await communications.communicationContacts(f.pool,b)).contacts[0];const p=await communications.previewCommunication(f.pool,{owner:'owner',input:draft([c.id]),origin:'https://app.example.test'});
  const reviewed=await communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'production'}});assert.equal(reviewed.id,p.id);assert.equal(reviewed.subject,draft([]).subject);assert.equal(reviewed.body,draft([]).body);assert.equal(reviewed.recipientCount,1);assert.deepEqual(reviewed.contactIds,[c.id]);assert.equal(reviewed.refreshReason,'');assert.equal(reviewed.deliveryWarning,'');assert.match(reviewed.html,/Training Club/);assert.equal((await f.query('SELECT status FROM business_communication_recipients')).rows[0].status,'draft');assert.equal((await f.query('SELECT id FROM business_email_campaigns')).rows.length,1);
  await assert.rejects(communications.reviewCommunication(f.pool,{owner:'other',campaignId:p.id}),/not found/);await assert.rejects(communications.reviewCommunication(f.pool,{owner:'owner',campaignId:'invalid'}),/valid campaign/);
- const restricted=await communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'staging',STAGING_NOTIFICATIONS_ENABLED:'true'}});assert.match(restricted.deliveryWarning,/Staging cannot send to 1/);
+ const restricted=await communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'staging',STAGING_NOTIFICATIONS_ENABLED:'true'}});assert.equal(restricted.deliveryWarning,'');
  await f.query("UPDATE business_communication_recipients SET status='skipped' WHERE campaign_id=$1",[p.id]);assert.match((await communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id})).refreshReason,/Contacts changed/);await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'production'}}),/recipients changed/);await f.query("UPDATE business_communication_recipients SET status='draft' WHERE campaign_id=$1",[p.id]);
  await f.query("UPDATE business_email_campaigns SET created_at=now()-interval '25 hours' WHERE id=$1",[p.id]);assert.match((await communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id})).refreshReason,/expired/);await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'production'}}),/expired/);
  await f.query('UPDATE business_email_campaigns SET created_at=now() WHERE id=$1',[p.id]);await f.query("UPDATE businesses SET brand_primary='#111111' WHERE id='biz'");assert.match((await communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id})).refreshReason,/branding changed/);
  await f.query("UPDATE business_client_profiles SET email='changed@example.test' WHERE id=$1",[f.ids.one]);assert.match((await communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id})).refreshReason,/Contacts changed/);
  await communications.cancelCommunication(f.pool,{owner:'owner',campaignId:p.id});await assert.rejects(communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id}),/no longer a draft/);
+ }finally{await f.close();}
+});
+
+
+test('owner-confirmed staging campaign sends separately to every current client without environment allowlists and records provider receipts',async()=>{
+ const f=await fixture();try{
+ const {sealGmail}=await import('../server/gmail-delivery.mjs');
+ const {sendNotificationChannel}=await import('../server/notification-delivery.mjs');
+ const {stagingNotificationAllowed}=await import('../server/staging-safety.mjs');
+ const env={APP_ENV:'staging',STAGING_NOTIFICATIONS_ENABLED:'true',EMAIL_PROVIDER:'gmail',GMAIL_CLIENT_ID:'fixture',GMAIL_CLIENT_SECRET:'fixture',GMAIL_TOKEN_ENCRYPTION_KEY:'a'.repeat(64)};
+ await f.query("INSERT INTO platform_gmail_connection(id,email,encrypted_refresh_token,status,connected_by) VALUES('shared','sender@example.test',$1,'connected','owner')",[sealGmail('fixture-refresh','refresh',env)]);
+ for(let i=1;i<=3;i++)await f.query("INSERT INTO business_client_profiles(id,owner,name,email) VALUES($1,'owner',$2,$3)",[randomUUID(),'Recipient '+i,'recipient'+i+'@example.test']);
+ const directory=await communications.communicationContacts(f.pool,await communications.communicationBusiness(f.pool,'owner'));
+ const p=await communications.previewCommunication(f.pool,{owner:'owner',input:draft(directory.contacts.map(c=>c.id)),origin:'https://app.example.test',env});
+ assert.equal(p.recipientCount,4);assert.equal(p.deliveryWarning,'');
+ assert.equal((await f.query('SELECT client_delivery_authorized_at FROM business_communication_recipients LIMIT 1')).rows[0].client_delivery_authorized_at,null,'preview does not authorize or send');
+ await assert.rejects(communications.queueCommunication(f.pool,{owner:'other',campaignId:p.id,env}),/not found/);
+ await communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env});
+ const approved=(await f.query('SELECT * FROM business_communication_recipients')).rows;assert.equal(approved.filter(r=>r.client_delivery_authorized_at).length,4);
+ const sent=[];
+ const fetcher=async(path,o)=>{
+  if(path.includes('/token'))return {ok:true,json:async()=>({access_token:'fixture-access'})};
+  const mime=Buffer.from(JSON.parse(o.body).raw,'base64url').toString();const to=mime.match(/\r\nTo: <([^>]+)>/)[1];
+  assert.doesNotMatch(mime,/\r\n(?:Cc|Bcc):/i);sent.push(to);return {ok:true,json:async()=>({id:'gmail-receipt-'+sent.length})};
+ };
+ await communications.processCommunicationEmails(f.pool,{send:(channel,to,message,e,fetch,context)=>sendNotificationChannel(channel,to,message,env,fetcher,{...context,brandingDb:f.pool})});
+ assert.deepEqual(sent.sort(),directory.contacts.map(c=>c.email).sort());
+ const h=(await communications.communicationCampaigns(f.pool,'biz'))[0];assert.equal(h.submitted,4);assert.equal(h.pending,0);assert.equal(h.failed,0);assert.equal(h.delivery_results.length,4);assert.equal(new Set(h.delivery_results.map(r=>r.providerMessageId)).size,4);assert.ok(h.delivery_results.every(r=>r.provider==='Gmail'));
+ await communications.processCommunicationEmails(f.pool,{send:()=>{throw Error('cannot replay submitted');}});assert.equal(sent.length,4);
+ const ctx={businessId:'biz',kind:'business-communication',communicationAuthorizedAt:new Date(Date.now()-1000).toISOString()};
+ assert.equal(stagingNotificationAllowed('email','new@example.test',env,ctx),true);
+ for(const bad of [{...ctx,kind:'transactional-client'},{...ctx,businessId:''},{...ctx,communicationAuthorizedAt:null},{...ctx,communicationAuthorizedAt:new Date(Date.now()+60000).toISOString()}])assert.equal(stagingNotificationAllowed('email','new@example.test',env,bad),false);
+ assert.equal(stagingNotificationAllowed('sms','+15555555555',env,ctx),false);
+ assert.equal(stagingNotificationAllowed('email','new@example.test',{...env,STAGING_NOTIFICATIONS_ENABLED:'false'},ctx),false);
  }finally{await f.close();}
 });

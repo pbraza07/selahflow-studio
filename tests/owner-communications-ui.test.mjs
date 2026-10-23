@@ -42,3 +42,13 @@ test('saved drafts reopen after a reload and send only after explicit confirmati
  const css=await readFile(new URL('../app/globals.css',import.meta.url),'utf8');assert.match(css,/sf-communication-history tr\{display:grid/);assert.match(css,/content:attr\(data-label\)/);assert.match(css,/sf-communication-sendbar\{position:sticky/);
  }finally{globalThis.fetch=oldFetch;if(oldWindow===undefined)delete globalThis.window;else globalThis.window=oldWindow;}
 });
+
+test('staging explains automatic campaign approval and exposes each recipient receipt without calling it delivered',async()=>{
+ const source=await readFile(new URL('../app/components/owner-communications.tsx',import.meta.url),'utf8'),compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ const directory={setup:{staging:true,workerEnabled:true,stagingDeliveryEnabled:true},contacts:[],provider:{emailConfigured:true,emailProvider:'Gmail'},clientCount:0,missingEmail:0,syncedAt:new Date().toISOString(),campaigns:[{id:'sent',subject:'Club update',created_at:new Date().toISOString(),status:'queued',total:2,submitted:1,pending:0,failed:1,unknown:0,skipped:0,delivery_issues:[],delivery_results:[{email:'one@example.test',status:'submitted',provider:'Gmail',providerMessageId:'receipt-one',detail:'Accepted by Gmail'},{email:'two@example.test',status:'failed',detail:'Provider rejected request'}]}]};
+ const state=[],exports={};let index=0;const hooks={useState:initial=>{const i=index++;if(!(i in state))state[i]=i===0?directory:initial;return [state[i],()=>{}];},useCallback:f=>f,useEffect(){}};
+ new Function('require','exports',compiled)(p=>p==='react'?hooks:require(p),exports);
+ const text=n=>n==null?'':typeof n!=='object'?String(n):Array.isArray(n)?n.map(text).join(' '):text(n.props?.children);index=0;const rendered=text(exports.default());
+ for(const value of ['client emails sync automatically','no Render update is needed','Recipient results','one@example.test','two@example.test','receipt-one','Finished · review recipient results','Provider acceptance does not confirm inbox delivery'])assert.ok(rendered.includes(value),value);
+ assert.doesNotMatch(rendered,/administrator-approved test recipients|Finished processing/);
+});

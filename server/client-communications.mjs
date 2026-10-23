@@ -4,7 +4,7 @@ import {applyClientProfiles} from './client-profile-logic.mjs';
 import {loadBusinessEmailBrand} from './business-email-branding.mjs';
 import {brandedEmailHtml} from './branded-email.mjs';
 import {sendNotificationChannel,validEmail} from './notification-delivery.mjs';
-import {stagingNotificationAllowed,isStaging} from './staging-safety.mjs';
+import {isStaging} from './staging-safety.mjs';
 import {tokenHash} from './security.mjs';
 const obj=x=>typeof x==='string'?JSON.parse(x):x||{};
 export const communicationContactId=(businessId,email)=>createHash('sha256').update(businessId+'|'+String(email).trim().toLowerCase()).digest('hex');
@@ -58,8 +58,7 @@ export function communicationMessage(campaign,recipient,business){
   actions:[...(campaign.action_url?[{label:campaign.action_label,url:campaign.action_url}]:[]),{label:'Unsubscribe from communications',url:recipient.unsubscribe_url}]};
 }
 function previewDelivery(recipients,env=process.env){
- const blocked=recipients.filter(r=>!stagingNotificationAllowed('email',r.email,env,{kind:'business-communication'})).length;
- return {deliveryWarning:blocked?'Staging cannot send to '+blocked+' selected address(es). Ask the platform administrator to approve these test recipients, or select approved test addresses. Production uses its connected email provider.':''};
+ return {deliveryWarning:isStaging(env)&&env.STAGING_NOTIFICATIONS_ENABLED!=='true'?'Staging email delivery is disabled. Ask the platform administrator to enable email delivery.':''};
 }
 /** Reopen the exact saved draft, scoped to the current authenticated business. Reading never queues mail. */
 export async function reviewCommunication(pool,{owner,campaignId,env=process.env}){
@@ -107,9 +106,9 @@ export async function queueCommunication(pool,{owner,campaignId,retry=false,env=
   if(!retry&&rows.some(r=>r.status!=='draft'))throw Error('Draft recipients changed. Create a fresh preview before sending.');
   const eligible=retry?rows.filter(r=>['failed','not_configured'].includes(r.status)):rows;
   if(!eligible.length)throw Error('No rejected emails are available to retry. Submitted and unknown emails cannot be replayed.');
-  if(eligible.some(r=>!stagingNotificationAllowed('email',r.email,env,{kind:'business-communication'})))throw Error('Staging sends are restricted to approved test recipients. Ask the platform administrator to approve the test address; production has no staging recipient restriction.');
+  if(isStaging(env)&&env.STAGING_NOTIFICATIONS_ENABLED!=='true')throw Error('Staging email delivery is disabled. Ask the platform administrator to enable email delivery.');
   await db.query("UPDATE business_email_campaigns SET status='queued',queued_at=now() WHERE id=$1",[c.id]);
-  await db.query("UPDATE business_communication_recipients SET status='queued',attempts=0,detail='',next_attempt_at=now(),updated_at=now() WHERE campaign_id=$1 AND business_id=$2 AND status=ANY($3::text[])",[c.id,business.id,retry?['failed','not_configured']:['draft']]);await db.query('COMMIT');return {ok:true,queued:eligible.length};
+  await db.query("UPDATE business_communication_recipients SET status='queued',attempts=0,detail='',client_delivery_authorized_at=now(),next_attempt_at=now(),updated_at=now() WHERE campaign_id=$1 AND business_id=$2 AND status=ANY($3::text[])",[c.id,business.id,retry?['failed','not_configured']:['draft']]);await db.query('COMMIT');return {ok:true,queued:eligible.length};
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
 }
 export async function communicationCampaigns(db,businessId){return (await db.query(`SELECT c.id,c.subject,c.status,c.created_at,c.queued_at,
@@ -117,6 +116,7 @@ export async function communicationCampaigns(db,businessId){return (await db.que
  count(r.id) FILTER(WHERE r.status IN ('queued','processing') OR r.status IN ('failed','not_configured') AND r.attempts<3)::int AS pending,
  count(r.id) FILTER(WHERE r.status IN ('failed','not_configured','invalid_destination'))::int AS failed,
  COALESCE(jsonb_agg(jsonb_build_object('email',r.email,'status',r.status,'detail',r.detail,'attempts',r.attempts,'nextAttemptAt',CASE WHEN r.status IN ('failed','not_configured') AND r.attempts<3 THEN r.next_attempt_at ELSE NULL END) ORDER BY r.email) FILTER(WHERE r.status IN ('failed','not_configured','invalid_destination','unknown','skipped')),'[]'::jsonb) AS delivery_issues,
+ COALESCE(jsonb_agg(jsonb_build_object('email',r.email,'status',r.status,'detail',r.detail,'attempts',r.attempts,'providerMessageId',r.provider_message_id,'provider',r.email_provider) ORDER BY r.email) FILTER(WHERE r.id IS NOT NULL),'[]'::jsonb) AS delivery_results,
  count(r.id) FILTER(WHERE r.status='unknown')::int AS unknown,count(r.id) FILTER(WHERE r.status='skipped')::int AS skipped
  FROM business_email_campaigns c LEFT JOIN business_communication_recipients r ON r.campaign_id=c.id AND r.business_id=c.business_id
  WHERE c.business_id=$1 GROUP BY c.id ORDER BY c.created_at DESC LIMIT 30`,[businessId])).rows;}
@@ -140,9 +140,9 @@ export async function processCommunicationEmails(pool,{send=sendNotificationChan
    const c=(await pool.query('SELECT * FROM business_email_campaigns WHERE id=$1 AND business_id=$2',[r.campaign_id,r.business_id])).rows[0];
    const contact=business&&(await communicationContacts(pool,business)).contacts.find(x=>x.id===r.contact_id&&!x.unsubscribed&&x.email===r.email&&x.names.join(', ')===r.names&&JSON.stringify([...x.sourceIds].sort())===JSON.stringify([...obj(r.source_ids)].sort()));
    let result={status:'skipped',detail:'Client removed, edited, archived, unsubscribed or campaign cancelled'};
-   if(contact&&c?.status==='queued')result=await send('email',r.email,{...communicationMessage(c,r,business),idempotencyKey:'business-communication-'+r.id,trackAmbiguous:true},undefined,undefined,{businessId:r.business_id,kind:'business-communication'});
+   if(contact&&c?.status==='queued')result=await send('email',r.email,{...communicationMessage(c,r,business),idempotencyKey:'business-communication-'+r.id,trackAmbiguous:true},undefined,undefined,{businessId:r.business_id,kind:'business-communication',communicationAuthorizedAt:r.client_delivery_authorized_at});
    const status=['submitted','failed','not_configured','invalid_destination','unknown','skipped'].includes(result.status)?result.status:'unknown';
-   await pool.query("UPDATE business_communication_recipients SET status=$1,detail=$2,attempts=attempts+1,next_attempt_at=now()+interval '15 minutes',updated_at=now() WHERE id=$3 AND status='processing'",[status,String(result.detail||'').slice(0,300),r.id]);
+   await pool.query("UPDATE business_communication_recipients SET status=$1,detail=$2,attempts=attempts+1,next_attempt_at=now()+interval '15 minutes',email_provider=$4,provider_message_id=$5,updated_at=now() WHERE id=$3 AND status='processing'",[status,String(result.detail||'').slice(0,300),r.id,String(result.provider||'').slice(0,30),String(result.providerMessageId||'').slice(0,200)]);
   }catch{await pool.query("UPDATE business_communication_recipients SET status='unknown',detail='Delivery outcome unknown; no automatic replay',updated_at=now() WHERE id=$1 AND status='processing'",[r.id]);}
  }
 }

@@ -55,7 +55,9 @@ export async function sendNotificationChannel(channel,destination,message,env=pr
   if(channel==='email'){
    const result=await fetcher('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','User-Agent':'SelahFlow/1.3.87',...(message.idempotencyKey?{'Idempotency-Key':message.idempotencyKey}:{})},body:JSON.stringify({from:env.RESEND_FROM_EMAIL,to:[destination],subject:message.subject,text:message.text,...resendBrand(message)}),signal:AbortSignal.timeout(7500)});
    if(!result.ok)return {status:message.trackAmbiguous&&result.status>=500?'unknown':'failed',detail:'Email provider rejected request (HTTP '+result.status+')'};
-   return {status:'submitted',detail:'Accepted by email provider'};
+   const receipt=await result.json();
+   if(typeof receipt.id!=='string'||!/^[A-Za-z0-9_-]{1,200}$/.test(receipt.id))return {status:'unknown',detail:'Email provider accepted the request but returned no verifiable message ID; check the provider before retrying'};
+   return {status:'submitted',detail:'Accepted by email provider; inbox delivery is not confirmed',provider:'Resend',providerMessageId:receipt.id};
   }
   const sid=env.TWILIO_ACCOUNT_SID,form=new URLSearchParams({From:env.TWILIO_FROM_NUMBER,To:destination,Body:message.sms});
   const result=await fetcher('https://api.twilio.com/2010-04-01/Accounts/'+encodeURIComponent(sid)+'/Messages.json',{method:'POST',headers:{Authorization:'Basic '+Buffer.from(sid+':'+env.TWILIO_AUTH_TOKEN).toString('base64'),'Content-Type':'application/x-www-form-urlencoded'},body:form.toString(),signal:AbortSignal.timeout(7500)});

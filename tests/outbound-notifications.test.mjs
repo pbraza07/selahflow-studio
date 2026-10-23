@@ -21,7 +21,7 @@ test('v1.3.10 notification contacts, provider readiness and booking content',()=
 });
 test('v1.3.10 Resend and Twilio APIs use correct request parameters without contacting networks',async()=>{
  const calls=[];
- const fakeFetch=async(url,options)=>{calls.push({url,options});return {ok:true,status:202};};
+ const fakeFetch=async(url,options)=>{calls.push({url,options});return {ok:true,status:202,json:async()=>({id:'resend-fixture'})};};
  const emailEnv={RESEND_API_KEY:'re_fake',RESEND_FROM_EMAIL:'SelahFlow <verified@example.com>'};
  const smsEnv={TWILIO_ACCOUNT_SID:'ACtest',TWILIO_AUTH_TOKEN:'fake-token',TWILIO_FROM_NUMBER:'+18135550199'};
  const message={subject:'New Booking',text:'Details plus link',sms:'Booking review https://example.com'};

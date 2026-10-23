@@ -1,3 +1,9 @@
+## 1.3.135
+
+- Confirming Send automatically approves exact, current client recipients for that staging campaign without Render configuration edits.
+- Persist per-recipient provider message IDs and expose all recipient results; never claim inbox delivery from provider acceptance.
+- Keep global staging enablement, business scoping, contact rechecks, opt-outs and non-replay of submitted/unknown outcomes.
+
 ## 1.3.134
 
 - Reopen saved email drafts with Review & send, including original recipients, message and business-branded preview.

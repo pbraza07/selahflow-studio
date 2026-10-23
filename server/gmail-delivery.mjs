@@ -91,7 +91,9 @@ export async function sendGmail(destination,message,env=process.env,fetcher=fetc
  try{
   const result=await fetcher('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{method:'POST',headers:{Authorization:'Bearer '+access,'Content-Type':'application/json'},body:JSON.stringify({raw:gmailMime(row.email,destination,message)}),signal:AbortSignal.timeout(7500)});
   if(!result.ok)return {status:message.trackAmbiguous&&result.status>=500?'unknown':'failed',detail:'Gmail rejected email (HTTP '+result.status+')'};
-  return {status:'submitted',detail:'Accepted by Gmail'};
+  const receipt=await result.json();
+  if(typeof receipt.id!=='string'||!/^[A-Za-z0-9_-]{1,200}$/.test(receipt.id))return {status:'unknown',detail:'Gmail accepted the request but returned no verifiable message ID; check the sender mailbox before retrying'};
+  return {status:'submitted',detail:'Accepted by Gmail; inbox delivery is not confirmed',provider:'Gmail',providerMessageId:receipt.id};
  }catch{return {status:message.trackAmbiguous?'unknown':'failed',detail:'Gmail send outcome could not be verified'};}
 }
 export async function disconnectGmail(db,actor,env=process.env,fetcher=fetch){
