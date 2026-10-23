@@ -1,8 +1,10 @@
-# v1.3.138 release handoff — implementation awaiting verification
+# v1.3.138 release handoff — verified LIVE in staging and production
 
-Removed the circled Welcome back / We remembered your name / Not you? Clear name box from the shared booking review form, including its display-only state, unused clear handler and styling. The shared form serves /book and /book/[slug], so all businesses receive this removal. Name fields remain directly editable and existing business-scoped name-only device autofill and its disclosure remain. Verified client lookup, waiver consent/reuse, booking policy, approval/payment flows and records are unchanged. No database migration, settings or environment changes.
+Application commit `42327ef97c9fad4f4f07538249a81317c4ec92de` (tree `82e520ea5ade3c39a0821fc8e2535b62428d9a7f`). Staging `dep-dbdmfq8n74is739a4720` LIVE October 23, 2026 at 10:04:39 a.m. EDT; production `dep-dbdmjp942hec739ceoh0` LIVE at 10:08:14 a.m. EDT. Local, GitHub CI run 39965599372 / job 120454526058 and Render staging passed all 361 tests, typecheck and builds; production build passed. Both live health endpoints report 1.3.138. Read-only checks verified absence of all three banner phrases/class in the eight actual booking JS bundles per environment, preserved name-only autofill bundle code, protected client/waiver endpoints and unchanged reviewed participation-2 waiver hash. Actual runtime preflights confirmed dedicated stage/prod database roles, schema CREATE true and zero unowned tables. No startup error-level entries observed in the final check.
 
-Local validation passed: all 361 tests, typecheck and production build. Staging/production deployment verification pending. Feature branch: fix/remove-returning-name-banner. No real booking, signature, email, payment or deletion should be generated for QA.
+Both staging and production browser booking flows were opened through the review step without submission. The former banner is absent; waiver and policy controls remain visible. Production footer was visually checked. No real customer details, booking, signature, email, payment, settings edit or deletion was generated for QA. Device names remain directly editable; name-only business-scoped autofill/disclosure stay in place. No database migration or environment change. Saved feature branch `fix/remove-returning-name-banner`; PR #64 merged. Documentation-only [skip render] commits may follow the LIVE application SHA.
+
+See [release evidence](V1_3_138_RELEASE.md).
 
 ## Waiver participation-2 activation — October 23, 2026
 
