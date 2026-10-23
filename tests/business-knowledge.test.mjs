@@ -37,7 +37,8 @@ test('actual assistant API enforces origin, body limits, active slug scope and n
  let source=ts.transpileModule(await readFile(new URL('../app/api/public/assistant/route.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
  source=source.replace(/import \{ getPool \}[^\n]+;/,'const getPool=()=>globalThis.__knowledgePool;').replaceAll("'../../../../server/security.mjs'",JSON.stringify(new URL('../server/security.mjs',import.meta.url).href)).replaceAll("'../../../../server/business-knowledge.mjs'",JSON.stringify(new URL('../server/business-knowledge.mjs',import.meta.url).href));
  const {POST}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
- const req=(body,origin='https://example.com')=>new Request('https://example.com/api/public/assistant',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:typeof body==='string'?body:JSON.stringify(body)});
+ const appOrigin=new URL(process.env.APP_URL||process.env.RENDER_EXTERNAL_URL||'https://example.com').origin;
+ const req=(body,origin=appOrigin)=>new Request(appOrigin+'/api/public/assistant',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:typeof body==='string'?body:JSON.stringify(body)});
  const r=await POST(req({slug:'arcila-test',message:'Indoor soccer price'}));assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'no-store');const data=await r.json();assert.match(data.answer,/\$35\.00/);assert.ok(!JSON.stringify(data).includes('SECRET_'));
  assert.equal((await POST(req({slug:'arcila-test',message:'Hi'},'https://evil.test'))).status,403);
  assert.equal((await POST(req({slug:'archived-test',message:'Hi'}))).status,404);
