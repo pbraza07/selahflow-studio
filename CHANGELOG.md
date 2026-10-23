@@ -1,3 +1,6 @@
+## 1.3.139
+- Move business Stripe onboarding, connection status and verification into Settings → Stripe payments for all businesses. Membership billing stays in Memberships; onboarding returns to payment settings.
+
 ## 1.3.138
 
 - Remove the remembered-name Welcome back banner from shared booking forms across all businesses.

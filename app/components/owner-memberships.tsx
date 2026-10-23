@@ -9,14 +9,14 @@ import SortableTable from './sortable-table';
 import RegistrationFields from './registration-fields';
 import {customRegistrationFields} from '../../server/registration-questions.mjs';
 import {useCallback,useEffect,useState,useRef} from 'react';
-import {CalendarClock,CheckCircle2,CreditCard,ExternalLink,Plus,RefreshCw,ShieldCheck} from 'lucide-react';
+import {ExternalLink,Plus} from 'lucide-react';
 import MembershipBadge from './membership-badge';
 type CreditEligibility={mode:'all'|'selected';serviceIds:string[];sessionIds:string[]};
 type Plan={intervalCount?:number;creditEligibility:CreditEligibility;creditSummary?:string;id:string;name:string;description:string;interval:'week'|'month'|'year';priceCents:number;sessionsIncluded:number;active:boolean;groupId:string|null;badge:MembershipBadgeDesign|null};
 type Member={current_profile_answers?:Record<string,string|boolean>;current_profile_labels?:Record<string,string>;initial_paid_at?:string;billing_start_override?:string;credit_period_start?:string;credit_period_end?:string;stripe_subscription_id?:string;stripe_interval_unit?:string;stripe_interval_count?:number;badge:MembershipBadgeDesign|null;id:string;customer_name:string;customer_email:string;member_number:string|null;plan_id:string;sessions_included:number;sessions_used:number;recorded_sessions:number;history:{appointment_id:string;event_type:string;session_delta:number;created_at:string;appointment_status?:string|null;service_names?:string[];service_date?:string|null}[];plan_name:string;interval_unit:string;status:string;paid_through:string|null};
 type Payload={invitations?:{membership_id:string;status:string;detail:string}[];creditOptions:{services:{id:string;name:string}[];sessions:{id:string;name:string}[]};memberIdPolicy:string;businessName:string;plans:Plan[];groups:{id:string;name:string;badge:MembershipBadgeDesign|null}[];members:Member[];planBenefits:{name:string;limits:{membershipPlans:number}};payments:{connected:boolean;configured:boolean;ready:boolean};emailDelivery?:{provider:string;ready:boolean}};
 const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
-export default function OwnerMemberships({slug,prefill}:{slug:string;prefill?:{name:string;email:string;phone:string}|null}){
+export default function OwnerMemberships({slug,prefill,onOpenPayments}:{slug:string;onOpenPayments:()=>void;prefill?:{name:string;email:string;phone:string}|null}){
  const [data,setData]=useState<Payload|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
  const [modal,setModal]=useState<'plan'|'assign'|'groups'|null>(null),[groupId,setGroupId]=useState(''),[newGroupName,setNewGroupName]=useState('');
  useEffect(()=>{if(!prefill)return;const parts=prefill.name.trim().split(/\s+/);setMemberFirst(parts[0]||'');setMemberLast(parts.slice(1).join(' '));setNewMemberEmail(prefill.email||'');setMemberPhone(prefill.phone||'');setModal('assign');},[prefill]);
@@ -102,19 +102,6 @@ export default function OwnerMemberships({slug,prefill}:{slug:string;prefill?:{n
   try{await post('updateMember',{id:m.id,planId:selected,sessionsIncluded:Number(included),sessionsUsed:Number(used)});await load();setMessage('Membership updated.');}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
- async function connect(){
-  setBusy(true);setError('');setMessage('');
-  try{
-   const result=await post('connect');
-   const url=new URL(result.url);
-   if(url.protocol!=='https:'||!url.hostname.endsWith('.stripe.com'))throw Error('Unexpected payment onboarding destination.');
-   window.location.assign(url.toString());
-  }catch(e){setError((e as Error).message);setBusy(false);}
- }
- async function verify(){
-  setBusy(true);setError('');try{const r=await post('verify');await load();setMessage(r.ready?'Stripe is connected and ready to collect membership payments.':'Stripe is connected but still needs additional account verification.');}
-  catch(e){setError((e as Error).message);}finally{setBusy(false);}
- }
  async function billingAction(m:Member,action:string){setBusy(true);setError('');try{let body:any={id:m.id,requestId:crypto.randomUUID()};if(action==='setInitialDate'){const date=window.prompt('Initial membership date (YYYY-MM-DD). Future monthly payments follow this day; short months use their last day. No immediate charge is created.',String(m.billing_start_override||m.initial_paid_at||'').slice(0,10));if(!date)return;body.initialDate=date;}if(action==='syncRecurrence'){const interval=window.prompt('New billing frequency: week, month, or year. Takes effect at the next renewal.',m.stripe_interval_unit||m.interval_unit);if(!interval)return;const count=window.prompt('Bill every how many periods (1–12)?',String(m.stripe_interval_count||1));if(!count)return;body.interval=interval;body.intervalCount=Number(count);}await post(action,body);setMessage(action==='sendPayment'?'Payment invitation queued for the member’s email.':action==='setInitialDate'?'Initial date and next monthly anniversary updated.':'Recurring schedule synchronized with Stripe for the next renewal.');await load(true);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
  const planForEdit=(plan:Plan)=>{setCreditEligibility(plan.creditEligibility||{mode:'all',serviceIds:[],sessionIds:[]});setIntervalCount(plan.intervalCount||1);setEdit(plan.id);setName(plan.name);setDescription(plan.description);setIntervalValue(plan.interval);setAmount((plan.priceCents/100).toFixed(2));setSessionsIncluded(plan.sessionsIncluded||0);setGroupId(plan.groupId||'');setPlanBadge(plan.badge||null);setError('');setMessage('');setModal('plan');};
  const clear=()=>{setIntervalCount(1);setCreditEligibility({mode:'all',serviceIds:[],sessionIds:[]});setEdit(null);setName('');setDescription('');setIntervalValue('month');setAmount('49.00');setSessionsIncluded(0);setGroupId('');setPlanBadge(null);};
@@ -126,19 +113,7 @@ export default function OwnerMemberships({slug,prefill}:{slug:string;prefill?:{n
   {error&&!modal&&<p className="sf-membership-error" role="alert">{error}</p>}
   {message&&<p className="sf-membership-success" role="status">{message}</p>}
   {loading?<p>Loading membership management…</p>:<>
-   <section className="sf-membership-merchant">
-    <div><ShieldCheck size={23}/><div><strong>Secure membership payments</strong>
-     <p>{!data?.payments.configured?'Platform setup required: Stripe API and Connect webhook secrets have not been configured.':
-      data?.payments.ready?'Stripe connected · accepting advance membership payments':
-      data?.payments.connected?'Stripe connected · verify onboarding and charges':
-      'Connect your own Stripe account to collect membership fees directly.'}</p></div></div>
-    <div className="sf-membership-actions">
-     {data?.payments.connected?<button type="button" className="outline" onClick={verify} disabled={busy}><RefreshCw size={16}/> Verify Stripe</button>:null}
-     <button type="button" className="primary" onClick={connect} disabled={busy||!data?.payments.configured}>
-      <CreditCard size={16}/>{data?.payments.connected?'Complete Stripe setup':'Connect Stripe payments'}</button>
-    </div>
-    <small>Each business uses its own connected account. Stripe's hosted Checkout processes payment details; customer membership status remains pending until a verified payment webhook confirms the charge.</small>
-   </section>
+   <p className="sf-membership-plan-allowance">Business Stripe setup is now in Settings. <button type="button" className="outline" onClick={onOpenPayments}>Open Stripe payments settings</button></p>
    <p className="sf-membership-plan-allowance" role="status"><strong>Membership payment emails:</strong> {data?.emailDelivery?.ready?`${data.emailDelivery.provider} sender connected — confirmations are queued after verified payment. Provider acceptance does not guarantee inbox delivery.`:"Email provider is not connected. Paid confirmations are queued but cannot be sent until Gmail or another email provider is configured."}</p>
    <p className="sf-membership-plan-allowance" role="status">
    <strong>{data?.planBenefits.name||'Free'} subscription:</strong> {(data?.plans||[]).filter(x=>x.active).length}/{data?.planBenefits.limits.membershipPlans||2} active membership offers. Existing members and plans remain preserved if your subscription changes. <a href="/pricing">Compare SelahFlow plans ↗</a>

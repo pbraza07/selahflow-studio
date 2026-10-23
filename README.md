@@ -1,4 +1,4 @@
-**Release source: v1.3.138 — verified LIVE in staging and production.** Removed the remembered-name Welcome back box from every business booking form. See [release evidence](docs/V1_3_138_RELEASE.md).
+**Release source: v1.3.139 — validation and deployment pending.** Business Stripe setup is now under Settings → Stripe payments. See [release notes](docs/V1_3_139_RELEASE.md).
 
 **Release source: v1.3.137 — verified LIVE in staging and production.** White question cards/fields and permanent owner waiver deletion. The reviewed numbered media-release waiver participation-2 is active for Arcila Training in staging and production as of October 23, 2026; each other business retains its own version-specific review requirement. See [release evidence](docs/V1_3_137_RELEASE.md).
 
