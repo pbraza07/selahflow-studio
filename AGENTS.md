@@ -1,4 +1,6 @@
 # v1.3.145 release handoff — feature LIVE; business activation pending
+Final authentication attempt: the secure primary-administrator sign-in returned submitted, but a fresh protected administrator tab returned to Sign in. No administrator session was verified, no webhook configuration was changed, and manual authentication is required to finish that step. No credentials were exposed or saved in project files.
+
 
 Independent optional 10% commissions on a client's first paid booking and, separately, first paid membership at each business. Owner Settings → Stripe payments contains two activation toggles, fee terms/acceptance, recorded totals, and expiry of unpaid commission checkouts. Primary platform admin monitors business status, can pause commissions, and can add required payment/refund events to the existing matching Stripe webhook. Owners must activate fees after reviewing terms; existing and future businesses start off. No live commission was activated or customer payment made for QA.
 
