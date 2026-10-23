@@ -75,6 +75,7 @@ test('owner API rejects unauthenticated/cross-origin callers; unsubscribe GET do
  assert.equal((await api.GET(request(null))).status,401);assert.equal((await api.POST(request(null,{action:'preview'}))).status,401);assert.equal((await api.POST(request('owner',{action:'preview'},'https://evil.test'))).status,403);
  const list=await (await api.GET(request('owner'))).json();assert.equal(list.contacts.length,1);assert.doesNotMatch(JSON.stringify(list),/Other Tenant|deleted@example/);
  const p=await (await api.POST(request('owner',{action:'preview',...draft([list.contacts[0].id])}))).json();assert.ok(p.id);
+ const reviewResponse=await api.POST(request('owner',{action:'review',campaignId:p.id}));assert.equal(reviewResponse.status,200);assert.equal((await reviewResponse.json()).id,p.id);assert.equal((await api.POST(request('other',{action:'review',campaignId:p.id}))).status,400);assert.equal((await api.POST(request(null,{action:'review',campaignId:p.id}))).status,401);
  assert.equal((await api.POST(request('other',{action:'send',campaignId:p.id,env:{APP_ENV:'test'}}))).status,400);
  const row=(await f.query('SELECT unsubscribe_url FROM business_communication_recipients WHERE campaign_id=$1',[p.id])).rows[0],token=row.unsubscribe_url.split('/').at(-1),ctx={params:Promise.resolve({token})},unsubscribe=await load('app/communications/unsubscribe/[token]/route.ts');
  assert.equal((await unsubscribe.GET(new Request(row.unsubscribe_url),ctx)).status,200);assert.equal((await f.query('SELECT * FROM business_communication_suppressions')).rows.length,0,'GET link scanners cannot unsubscribe');
@@ -138,4 +139,18 @@ test('dedicated staging communication allowlist preserves global disablement and
  assert.equal(stagingNotificationAllowed('email','other@example.test',env,{kind:'business-communication'}),false);
  assert.equal(stagingNotificationAllowed('email','approved@example.test',env),false);
  assert.equal(stagingNotificationAllowed('email','approved@example.test',{...env,STAGING_NOTIFICATIONS_ENABLED:'false'},{kind:'business-communication'}),false);
+});
+
+test('saved draft review restores exact content and recipients without sending; scope, expiry, branding and contact checks remain enforced',async()=>{
+ const f=await fixture();try{
+ const b=await communications.communicationBusiness(f.pool,'owner'),c=(await communications.communicationContacts(f.pool,b)).contacts[0];const p=await communications.previewCommunication(f.pool,{owner:'owner',input:draft([c.id]),origin:'https://app.example.test'});
+ const reviewed=await communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'production'}});assert.equal(reviewed.id,p.id);assert.equal(reviewed.subject,draft([]).subject);assert.equal(reviewed.body,draft([]).body);assert.equal(reviewed.recipientCount,1);assert.deepEqual(reviewed.contactIds,[c.id]);assert.equal(reviewed.refreshReason,'');assert.equal(reviewed.deliveryWarning,'');assert.match(reviewed.html,/Training Club/);assert.equal((await f.query('SELECT status FROM business_communication_recipients')).rows[0].status,'draft');assert.equal((await f.query('SELECT id FROM business_email_campaigns')).rows.length,1);
+ await assert.rejects(communications.reviewCommunication(f.pool,{owner:'other',campaignId:p.id}),/not found/);await assert.rejects(communications.reviewCommunication(f.pool,{owner:'owner',campaignId:'invalid'}),/valid campaign/);
+ const restricted=await communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'staging',STAGING_NOTIFICATIONS_ENABLED:'true'}});assert.match(restricted.deliveryWarning,/Staging cannot send to 1/);
+ await f.query("UPDATE business_communication_recipients SET status='skipped' WHERE campaign_id=$1",[p.id]);assert.match((await communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id})).refreshReason,/Contacts changed/);await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'production'}}),/recipients changed/);await f.query("UPDATE business_communication_recipients SET status='draft' WHERE campaign_id=$1",[p.id]);
+ await f.query("UPDATE business_email_campaigns SET created_at=now()-interval '25 hours' WHERE id=$1",[p.id]);assert.match((await communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id})).refreshReason,/expired/);await assert.rejects(communications.queueCommunication(f.pool,{owner:'owner',campaignId:p.id,env:{APP_ENV:'production'}}),/expired/);
+ await f.query('UPDATE business_email_campaigns SET created_at=now() WHERE id=$1',[p.id]);await f.query("UPDATE businesses SET brand_primary='#111111' WHERE id='biz'");assert.match((await communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id})).refreshReason,/branding changed/);
+ await f.query("UPDATE business_client_profiles SET email='changed@example.test' WHERE id=$1",[f.ids.one]);assert.match((await communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id})).refreshReason,/Contacts changed/);
+ await communications.cancelCommunication(f.pool,{owner:'owner',campaignId:p.id});await assert.rejects(communications.reviewCommunication(f.pool,{owner:'owner',campaignId:p.id}),/no longer a draft/);
+ }finally{await f.close();}
 });

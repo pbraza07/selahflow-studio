@@ -1,3 +1,7 @@
+# v1.3.134 release handoff — pending deployment verification
+
+Saved email draft review/send and mobile action visibility. Full tests, build, staging/production evidence pending. Preview remains non-sending; explicit Send queues background delivery. Existing staging safeguards and contact/membership synchronization remain intact.
+
 # v1.3.133 release handoff — verified LIVE in staging and production
 
 Application commit `61e74d5e8fae74ddf588255804a5a842ac47359d` (tree `f28eb0b296070e109a7a23785b0bd1b102adf617`). Staging `dep-dbd8706i0phs73fjt6ig` LIVE October 22, 2026 at 5:49:39 p.m. EDT; production `dep-dbd8atek1f9s738s9he0` LIVE at 5:53:27 p.m. EDT. Local, GitHub Actions run 39858989134 / job 120104474457 and Render staging passed all 354 tests, typecheck and builds. Production build passed. Read-only live health/catalog/protected-owner-route/style/push checks passed across five staging/four production businesses. Migration 058 applied in each dedicated database; schema CREATE true and zero unowned tables. No error-level startup logs observed in the final verification window. One transient Render log-retrieval 503 resolved on the later check.

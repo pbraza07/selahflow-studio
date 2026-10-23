@@ -57,7 +57,26 @@ export function communicationMessage(campaign,recipient,business){
  return {subject:personalize(campaign.subject).replace(/[\r\n\u0000-\u001f]/g,' ').slice(0,180),text:personalize(campaign.body)+'\n\n'+business.name+'\n'+String(obj(business.data).address||'')+'\nYou received this message as a client of '+business.name+'.\nUnsubscribe from business communications: '+recipient.unsubscribe_url,
   actions:[...(campaign.action_url?[{label:campaign.action_label,url:campaign.action_url}]:[]),{label:'Unsubscribe from communications',url:recipient.unsubscribe_url}]};
 }
-export async function previewCommunication(pool,{owner,input,origin}){
+function previewDelivery(recipients,env=process.env){
+ const blocked=recipients.filter(r=>!stagingNotificationAllowed('email',r.email,env,{kind:'business-communication'})).length;
+ return {deliveryWarning:blocked?'Staging cannot send to '+blocked+' selected address(es). Ask the platform administrator to approve these test recipients, or select approved test addresses. Production uses its connected email provider.':''};
+}
+/** Reopen the exact saved draft, scoped to the current authenticated business. Reading never queues mail. */
+export async function reviewCommunication(pool,{owner,campaignId,env=process.env}){
+ if(!validId(campaignId))throw Error('Choose a valid campaign.');
+ const db=await pool.connect();try{
+  await db.query('BEGIN');const business=await communicationBusiness(db,owner);
+  const c=(await db.query('SELECT * FROM business_email_campaigns WHERE id=$1 AND business_id=$2 FOR UPDATE',[campaignId,business.id])).rows[0];
+  if(!c)throw Error('Campaign not found.');if(c.status!=='draft')throw Error('This campaign is no longer a draft. Refresh communication history.');
+  const recipients=(await db.query('SELECT * FROM business_communication_recipients WHERE campaign_id=$1 AND business_id=$2 ORDER BY email',[c.id,business.id])).rows;
+  const current=(await communicationContacts(db,business)).contacts,brand=await loadBusinessEmailBrand(db,{businessId:business.id});
+  const changed=recipients.some(r=>r.status!=='draft'||!current.some(x=>x.id===r.contact_id&&!x.unsubscribed&&x.email===r.email&&x.names.join(', ')===r.names&&JSON.stringify([...x.sourceIds].sort())===JSON.stringify([...obj(r.source_ids)].sort())));
+  const refreshReason=!recipients.length||changed?'Contacts changed. Review your current recipients and create a fresh preview.':Date.now()-new Date(c.created_at).getTime()>24*3600000?'Preview expired. Create a fresh preview before sending.':digestBrand(brand)!==c.brand_digest?'Business branding changed. Create a fresh preview before sending.':'';
+  const result={id:c.id,subject:c.subject,body:c.body,actionLabel:c.action_label,actionUrl:c.action_url,contactIds:recipients.map(r=>r.contact_id),recipientCount:recipients.length,recipients:recipients.map(r=>({email:r.email,names:[r.names]})),refreshReason,...previewDelivery(recipients,env),html:recipients.length?brandedEmailHtml({...communicationMessage(c,recipients[0],business),emailBrand:brand},{logoSrc:brand.logo?'data:image/png;base64,'+brand.logo.toString('base64'):undefined}):''};
+  await db.query('COMMIT');return result;
+ }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
+}
+export async function previewCommunication(pool,{owner,input,origin,env=process.env}){
  const content=validateCommunication(input),ids=input.contactIds;
  if(!Array.isArray(ids)||!ids.length||ids.length>500||new Set(ids).size!==ids.length||ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{64}$/.test(id)))throw Error('Select between 1 and 500 client email contacts.');
  const host=new URL(origin);if(host.protocol!=='https:'&&host.hostname!=='localhost')throw Error('Secure application URL required.');
@@ -73,7 +92,7 @@ export async function previewCommunication(pool,{owner,input,origin}){
    example??=communicationMessage(campaign,recipient,business);
   }
   await db.query('COMMIT');
-  return {id,recipientCount:recipients.length,recipients:recipients.map(r=>({email:r.email,names:r.names})),html:brandedEmailHtml({...example,emailBrand:brand},{logoSrc:brand.logo?'data:image/png;base64,'+brand.logo.toString('base64'):undefined})};
+  return {id,subject:content.subject,...previewDelivery(recipients,env),recipientCount:recipients.length,recipients:recipients.map(r=>({email:r.email,names:r.names})),html:brandedEmailHtml({...example,emailBrand:brand},{logoSrc:brand.logo?'data:image/png;base64,'+brand.logo.toString('base64'):undefined})};
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
 }
 export async function queueCommunication(pool,{owner,campaignId,retry=false,env=process.env}){
@@ -85,6 +104,7 @@ export async function queueCommunication(pool,{owner,campaignId,retry=false,env=
   const brand=await loadBusinessEmailBrand(db,{businessId:business.id});if(digestBrand(brand)!==c.brand_digest)throw Error('Business branding changed. Create a new preview before sending.');
   const current=(await communicationContacts(db,business)).contacts,rows=(await db.query('SELECT * FROM business_communication_recipients WHERE campaign_id=$1 AND business_id=$2',[c.id,business.id])).rows;
   if(!rows.length||rows.some(r=>!current.some(x=>x.id===r.contact_id&&!x.unsubscribed&&x.email===r.email&&x.names.join(', ')===r.names&&JSON.stringify([...x.sourceIds].sort())===JSON.stringify([...obj(r.source_ids)].sort()))))throw Error('Contacts changed. Sync and create a new preview before sending.');
+  if(!retry&&rows.some(r=>r.status!=='draft'))throw Error('Draft recipients changed. Create a fresh preview before sending.');
   const eligible=retry?rows.filter(r=>['failed','not_configured'].includes(r.status)):rows;
   if(!eligible.length)throw Error('No rejected emails are available to retry. Submitted and unknown emails cannot be replayed.');
   if(eligible.some(r=>!stagingNotificationAllowed('email',r.email,env,{kind:'business-communication'})))throw Error('Staging sends are restricted to approved test recipients. Ask the platform administrator to approve the test address; production has no staging recipient restriction.');

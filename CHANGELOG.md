@@ -1,3 +1,9 @@
+## 1.3.134
+
+- Reopen saved email drafts with Review & send, including original recipients, message and business-branded preview.
+- Move Send now above the preview, scroll to review and keep its toolbar visible; stack communication history into readable mobile cards.
+- Explain draft status, require fresh previews for changed/expired drafts and display staging recipient restrictions before sending.
+
 ## 1.3.133
 
 - Edit all current client profile fields with stale-write, business scope and Unique ID collision protection; synchronize linked memberships and booking identities while preserving original evidence.
