@@ -1,4 +1,5 @@
 'use client';
+import BusinessCommissions from './business-commissions';
 import {useCallback,useEffect,useState} from 'react';
 import {CreditCard,RefreshCw,ShieldCheck} from 'lucide-react';
 
@@ -75,5 +76,6 @@ export default function OwnerStripePayments(){
   <p className="muted">Each business uses its own connected account. Enter business and bank details only on Stripe’s secure onboarding page. Server API keys are managed by the platform administrator.</p>
   <p className="muted">Stripe connection changes take effect directly; Save business settings is not required. Manage membership plans and recurring billing in Memberships. Payment status updates after verified Stripe events.</p>
   {error&&<button type="button" className="outline" disabled={busy} onClick={()=>{setError('');void load().catch(e=>setError(e.message));}}>Reload payment settings</button>}
+  <BusinessCommissions/>
  </div>;
 }

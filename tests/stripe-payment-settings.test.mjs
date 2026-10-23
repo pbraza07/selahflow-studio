@@ -11,7 +11,7 @@ test('Stripe settings render loading, unavailable, onboarding and ready states w
  const require=createRequire(import.meta.url),source=await readFile(new URL('../app/components/owner-stripe-payments.tsx',import.meta.url),'utf8');
  for(const [status,expected,connect,verify] of [[null,'Loading Stripe payment settings',false,false],[{configured:false,connected:false,ready:false},'Platform setup required',true,false],[{configured:true,connected:false,ready:false},'Connect your business Stripe account',true,false],[{configured:true,connected:true,ready:false},'verify onboarding and payment readiness',true,true],[{configured:true,connected:true,ready:true},'ready to accept payments',true,true]]){
   let compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
-  compiled=compiled.replace(/import \{ useCallback, useEffect, useState \} from 'react';/,`let stateIndex=0; const useState=initial=>[stateIndex++===0?${JSON.stringify(status)}:initial,()=>{}];const useEffect=()=>{};const useCallback=f=>f;`)
+  compiled=compiled.replace(/import BusinessCommissions[^\n]+;/,'const BusinessCommissions=()=>null;').replace(/import \{ useCallback, useEffect, useState \} from 'react';/,`let stateIndex=0; const useState=initial=>[stateIndex++===0?${JSON.stringify(status)}:initial,()=>{}];const useEffect=()=>{};const useCallback=f=>f;`)
    .replace(/import \{[^\n]+\} from 'lucide-react';/,`const CreditCard=()=>null,RefreshCw=()=>null,ShieldCheck=()=>null;`)
    .replace('"react/jsx-runtime"',JSON.stringify(pathToFileURL(require.resolve('react/jsx-runtime')).href));
   const {default:Settings}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
@@ -42,7 +42,7 @@ test('one Stripe setup entry is wired under Settings and onboarding returns reop
 test('Complete Stripe setup requests a fresh link, navigates to Stripe and retains a usable fallback',async(t)=>{
  const source=await readFile(new URL('../app/components/owner-stripe-payments.tsx',import.meta.url),'utf8');
  let compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
- compiled=compiled.replace(/import \{ useCallback, useEffect, useState \} from 'react';/,`let index=0;export const writes=[];const useState=initial=>{const i=index++;return [i===0?{configured:true,connected:true,ready:false}:initial,value=>writes.push([i,value])];};const useEffect=()=>{};const useCallback=f=>f;`)
+ compiled=compiled.replace(/import BusinessCommissions[^\n]+;/,'const BusinessCommissions=()=>null;').replace(/import \{ useCallback, useEffect, useState \} from 'react';/,`let index=0;export const writes=[];const useState=initial=>{const i=index++;return [i===0?{configured:true,connected:true,ready:false}:initial,value=>writes.push([i,value])];};const useEffect=()=>{};const useCallback=f=>f;`)
  .replace(/import \{[^\n]+\} from 'lucide-react';/,`const CreditCard=()=>null,RefreshCw=()=>null,ShieldCheck=()=>null;`)
  .replace(/import \{[^\n]+\} from "react\/jsx-runtime";/,`const _jsx=(type,props)=>({type,props}),_jsxs=_jsx,_Fragment='fragment';`);
  const {default:Settings,writes}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));

@@ -1,3 +1,4 @@
+import {completeInitialMembershipCheckout} from '../../../../../server/membership-initial-payment.mjs';
 import {getPool} from '../../../../../server/database.mjs';
 import {stripeApi} from '../../../../../server/membership-payments.mjs';
 import {assertTestPayment,applyMembershipInvoice} from '../../../../../server/stripe-checkout.mjs';
@@ -11,7 +12,9 @@ export async function GET(req:Request){
   const member=(await pool.query("SELECT m.business_id,m.stripe_account_id FROM customer_memberships m JOIN businesses b ON b.id=m.business_id WHERE b.slug=$1 AND b.status='active' AND m.stripe_checkout_session_id=$2",[slug,session])).rows[0];
   if(member){
    const checkout=await stripeApi('checkout/sessions/'+session,{method:'GET',account:member.stripe_account_id});assertTestPayment(checkout);
-   if(typeof checkout.subscription==='string'){
+   if(checkout.mode==='payment'&&checkout.metadata?.membership_initial==='true'){
+    const db=await pool.connect();try{await db.query('BEGIN');await completeInitialMembershipCheckout(db,{businessId:member.business_id,account:member.stripe_account_id,session:checkout});await db.query('COMMIT');}catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
+   }else if(typeof checkout.subscription==='string'){
     const subscription=await stripeApi('subscriptions/'+checkout.subscription,{method:'GET',account:member.stripe_account_id});
     if(typeof subscription.latest_invoice==='string'){
      const invoice=await stripeApi('invoices/'+subscription.latest_invoice+'?expand[]=amount_paid_off_stripe',{method:'GET',account:member.stripe_account_id});

@@ -1,3 +1,4 @@
+import {reserveCommission,attachCommissionSession,settleCommission} from './first-customer-commissions.mjs';
 import {monthlyPeriod,refreshMemberPeriod,membershipAnchor,nextBillingAnchor} from './membership-periods.mjs';
 import {assertBookingWaiver} from './participation-waivers.mjs';
 import {randomUUID} from 'node:crypto';
@@ -64,7 +65,7 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
    const existing=await api('checkout/sessions/'+record.stripe_checkout_session_id,{method:'GET',account});
    assertTestPayment(existing);
    if(existing.payment_status==='paid'){
-    if(!await applyBookingPayment(db,business.id,account,existing))throw Error('The payment details need review by the business. Do not pay again.');await db.query('COMMIT');return {paid:true};
+    if(!await applyBookingPayment(db,business.id,account,existing,api))throw Error('The payment details need review by the business. Do not pay again.');await db.query('COMMIT');return {paid:true};
    }
    if(existing.status==='open'){await db.query('COMMIT');return {checkoutUrl:checkoutUrl(existing)};}
    if(existing.status!=='expired')throw Error('The previous payment is still processing. Please wait before retrying.');
@@ -74,8 +75,10 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
    if(lines.reduce((sum,line)=>sum+Math.round(Number(line.price)*100)*line.qty,0)!==cents)throw Error('Booking payment details need review by the business.');
    record=(await db.query('INSERT INTO booking_payments(booking_id,business_id,stripe_account_id,amount_cents,lines) VALUES($1,$2,$3,$4,$5::jsonb) RETURNING *',[actualId,business.id,account,cents,JSON.stringify(lines)])).rows[0];
   }else if(record.amount_cents!==cents)throw Error('The booking price changed. Contact the business before paying.');
+  const eligible=Math.min(record.amount_cents,record.lines.filter(line=>line.type==='service').reduce((n,line)=>n+Math.round(Number(line.price)*100)*line.qty,0));
+  const commission=await reserveCommission(db,{businessId:business.id,kind:'booking',memberNumber:data.memberNumber,sourceId:actualId,account,grossCents:cents,eligibleCents:eligible},api);
   const session=await api('checkout/sessions',{account,idempotencyKey:'booking-'+actualId+'-'+(record.stripe_checkout_session_id||'initial'),params:{
-   mode:'payment','allowed_payment_method_types[0]':'card',client_reference_id:actualId,customer_email:data.email||undefined,
+   mode:'payment',...(commission?{'payment_intent_data[application_fee_amount]':commission.fee_cents,'metadata[commission_claim_id]':commission.id}:{}),'allowed_payment_method_types[0]':'card',client_reference_id:actualId,customer_email:data.email||undefined,
    'line_items[0][quantity]':'1','line_items[0][price_data][currency]':'usd',
    'line_items[0][price_data][unit_amount]':String(record.amount_cents),
    'line_items[0][price_data][product_data][description]':data.coupon?'Includes coupon '+data.coupon.code+' · discount $'+(data.coupon.discountCents/100).toFixed(2):undefined,
@@ -86,18 +89,20 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
    cancel_url:origin+'/payment/'+slug+'?booking_id='+encodeURIComponent(bookingId)+'&cancelled=1'
   }});
   assertTestPayment(session);const url=checkoutUrl(session);
+  await attachCommissionSession(db,commission,session);
   await db.query("UPDATE booking_payments SET stripe_checkout_session_id=$1,status='pending',updated_at=now() WHERE booking_id=$2 AND business_id=$3",[session.id,actualId,business.id]);
   await db.query('COMMIT');return {checkoutUrl:url};
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
 }
 
 // Caller owns a transaction. The receipt and financial writes commit together.
-export async function applyBookingPayment(db,businessId,account,session){
+export async function applyBookingPayment(db,businessId,account,session,api=stripeApi){
  assertTestPayment(session);
  if(session.mode!=='payment'||session.payment_status!=='paid'||session.currency!=='usd'||typeof session.payment_intent!=='string')return false;
  const row=(await db.query('SELECT * FROM booking_payments WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 FOR UPDATE',[businessId,account,session.id])).rows[0];
  if(!row||session.client_reference_id!==row.booking_id||session.metadata?.booking_id!==row.booking_id||session.metadata?.selahflow_business_id!==businessId||session.amount_total!==row.amount_cents)return false;
  if(row.status==='paid')return true;
+ await settleCommission(db,{businessId,account,session},api);
  const receipt=await db.query('INSERT INTO stripe_payment_receipts(stripe_account_id,provider_reference,business_id,booking_id,amount_cents) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING provider_reference',[account,session.payment_intent,businessId,row.booking_id,row.amount_cents]);
  if(!receipt.rowCount)return true;
  await db.query("UPDATE booking_payments SET status='paid',stripe_payment_intent_id=$1,paid_at=now(),updated_at=now() WHERE booking_id=$2 AND business_id=$3",[session.payment_intent,row.booking_id,businessId]);
@@ -115,20 +120,23 @@ export async function applyMembershipInvoice(db,businessId,account,invoice,subsc
  if(!subscriptionId||subscription.id!==subscriptionId||!paidThrough||subscription.metadata?.selahflow_business_id!==businessId)return false;
  const member=(await db.query('SELECT * FROM customer_memberships WHERE id=$1 AND business_id=$2 AND stripe_account_id=$3 FOR UPDATE',[memberId,businessId,account])).rows[0];
  if(!member||Number(invoice.billing_reason==='subscription_create'?(member.first_invoice_cents??member.price_cents):(member.renewal_invoice_cents??member.price_cents))>invoice.amount_paid||(member.stripe_subscription_id&&member.stripe_subscription_id!==subscriptionId))return false;
- const credits=Number(member.stripe_sessions_per_period);
- if(!Number.isSafeInteger(credits)||credits<0)return false;
- const receipt=await db.query('INSERT INTO stripe_payment_receipts(stripe_account_id,provider_reference,business_id,membership_id,amount_cents) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING provider_reference',[account,invoice.id,businessId,member.id,invoice.amount_paid]);
- if(!receipt.rowCount)return true;
- const paymentId=randomUUID();
  const starts=(invoice.lines?.data||[]).map(l=>l.period?.start).filter(Number.isSafeInteger);
  const paidAt=invoice.billing_reason==='subscription_create'&&invoice.status_transitions?.paid_at?new Date(invoice.status_transitions.paid_at*1000):starts.length?new Date(Math.min(...starts)*1000):new Date();
+ return recordMembershipPaidPeriod(db,{businessId,account,member,reference:invoice.id,amountCents:invoice.amount_paid,paidAt,paidThrough,subscription,customerId:typeof invoice.customer==='string'?invoice.customer:null,renewal:invoice.billing_reason==='subscription_cycle'});
+}
+export async function recordMembershipPaidPeriod(db,{businessId,account,member,reference,amountCents,paidAt,paidThrough,subscription,customerId,renewal=false}){
+ const credits=Number(member.stripe_sessions_per_period);
+ if(!Number.isSafeInteger(credits)||credits<0)return false;
+ const receipt=await db.query('INSERT INTO stripe_payment_receipts(stripe_account_id,provider_reference,business_id,membership_id,amount_cents) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING provider_reference',[account,reference,businessId,member.id,amountCents]);
+ if(!receipt.rowCount)return true;
+ const paymentId=randomUUID();
  const initial=member.initial_paid_at||paidAt;const anchor=membershipAnchor({...member,initial_paid_at:initial});const period=monthlyPeriod(anchor,paidAt);
- const effectivePaidThrough=invoice.billing_reason==='subscription_create'&&member.stripe_interval_unit==='month'?nextBillingAnchor(anchor,paidAt,Number(member.stripe_interval_count)||1).toISOString():paidThrough;
+ const effectivePaidThrough=!renewal&&member.stripe_interval_unit==='month'?nextBillingAnchor(anchor,paidAt,Number(member.stripe_interval_count)||1).toISOString():paidThrough;
  const reset=!member.initial_paid_at||!member.credit_period_end||new Date(member.credit_period_end)<=paidAt;
  if(reset&&member.credit_period_start)await db.query('INSERT INTO membership_credit_periods(business_id,membership_id,period_start,period_end,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING',[businessId,member.id,member.credit_period_start,member.credit_period_end,member.sessions_included,member.sessions_used]);
- await db.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[paymentId,businessId,member.id,'stripe:'+invoice.id,reset?credits:0,invoice.amount_paid]);
- await db.query("UPDATE customer_memberships SET sessions_included=CASE WHEN $8 THEN $1 ELSE sessions_included END,sessions_used=CASE WHEN $8 THEN 0 ELSE sessions_used END,initial_paid_at=COALESCE(initial_paid_at,$9),monthly_sessions=$1,credit_period_start=CASE WHEN $8 THEN $10 ELSE credit_period_start END,credit_period_end=CASE WHEN $8 THEN $11 ELSE credit_period_end END,status=CASE WHEN $7='canceled' THEN 'canceled' WHEN GREATEST(paid_through,$2::timestamptz)>now() THEN 'active' ELSE 'expired' END,paid_through=GREATEST(paid_through,$2::timestamptz),last_paid_at=now(),stripe_subscription_id=$3,stripe_customer_id=$4,updated_at=now() WHERE id=$5 AND business_id=$6",[credits,effectivePaidThrough,subscriptionId,typeof invoice.customer==='string'?invoice.customer:null,member.id,businessId,subscription.status,reset,new Date(initial).toISOString(),period.start.toISOString(),period.end.toISOString()]);
+ await db.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[paymentId,businessId,member.id,'stripe:'+reference,reset?credits:0,amountCents]);
+ await db.query("UPDATE customer_memberships SET sessions_included=CASE WHEN $8 THEN $1 ELSE sessions_included END,sessions_used=CASE WHEN $8 THEN 0 ELSE sessions_used END,initial_paid_at=COALESCE(initial_paid_at,$9),monthly_sessions=$1,credit_period_start=CASE WHEN $8 THEN $10 ELSE credit_period_start END,credit_period_end=CASE WHEN $8 THEN $11 ELSE credit_period_end END,status=CASE WHEN $7='canceled' THEN 'canceled' WHEN GREATEST(paid_through,$2::timestamptz)>now() THEN 'active' ELSE 'expired' END,paid_through=GREATEST(paid_through,$2::timestamptz),last_paid_at=now(),stripe_subscription_id=$3,stripe_customer_id=$4,updated_at=now() WHERE id=$5 AND business_id=$6",[credits,effectivePaidThrough,subscription.id,customerId,member.id,businessId,subscription.status,reset,new Date(initial).toISOString(),period.start.toISOString(),period.end.toISOString()]);
  // Reports already reconcile the session payment ledger, so no duplicate audit sale.
- await queueMembershipPaymentEmail(db,{businessId,paymentId,paymentMethod:isStaging()?'Stripe sandbox':'Stripe',renewal:invoice.billing_reason==='subscription_cycle'});
+ await queueMembershipPaymentEmail(db,{businessId,paymentId,paymentMethod:isStaging()?'Stripe sandbox':'Stripe',renewal:renewal});
  return true;
 }

@@ -1,3 +1,5 @@
+import {completeInitialMembershipCheckout} from '../../../../server/membership-initial-payment.mjs';
+import {refundCommission} from '../../../../server/first-customer-commissions.mjs';
 import {monthlyPeriod,membershipAnchor,nextBillingAnchor} from '../../../../server/membership-periods.mjs';
 import {getPool} from '../../../../server/database.mjs';
 import {verifyStripeWebhook,stripeApi,invoiceSubscriptionId,shouldActivateInvoice} from '../../../../server/membership-payments.mjs';
@@ -45,7 +47,8 @@ export async function POST(req:Request){
     await db.query('UPDATE merchant_accounts SET charges_enabled=$1,onboarding_complete=$2,updated_at=now() WHERE business_id=$3 AND external_account_id=$4',
      [object.charges_enabled===true,object.details_submitted===true,merchant.business_id,account]);
    }else if(event.type==='checkout.session.completed'&&object.mode==='payment'){
-    await applyBookingPayment(db,merchant.business_id,account,object);
+    if(object.metadata?.membership_initial==='true'&&object.metadata?.selahflow_business_id===merchant.business_id){if(!await completeInitialMembershipCheckout(db,{businessId:merchant.business_id,account,session:object}))throw Error('Initial membership payment is awaiting local checkout reconciliation.');}
+    else await applyBookingPayment(db,merchant.business_id,account,object);
    }else if(event.type==='checkout.session.completed'&&object.mode==='subscription'&&object.client_reference_id&&object.subscription){
     const id=object.client_reference_id;
     await db.query("UPDATE customer_memberships SET stripe_checkout_session_id=$1,stripe_customer_id=$2,stripe_subscription_id=$3,updated_at=now() WHERE id=$4 AND business_id=$5 AND stripe_account_id=$6 AND stripe_checkout_session_id=$1 AND (stripe_subscription_id IS NULL OR stripe_subscription_id=$3)",
@@ -54,6 +57,11 @@ export async function POST(req:Request){
     // proof that a recurring subscription's first invoice was paid.
    }else if(event.type==='invoice.paid'&&subscription){
     await applyMembershipInvoice(db,merchant.business_id,account,object,subscription);
+   }else if(event.type==='checkout.session.expired'&&object.status==='expired'){
+    await db.query("UPDATE first_customer_commissions SET status='expired',updated_at=now() WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 AND status='reserved'",[merchant.business_id,account,object.id]);
+    await db.query("UPDATE booking_payments SET status='expired',updated_at=now() WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 AND status='pending'",[merchant.business_id,account,object.id]);
+   }else if(event.type==='charge.refunded'){
+    await refundCommission(db,{businessId:merchant.business_id,account,charge:object});
    }else if(event.type==='invoice.payment_failed'){
     const sub=invoiceSubscriptionId(object);
     if(sub)await db.query(

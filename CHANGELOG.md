@@ -1,3 +1,7 @@
+## 1.3.145
+- Add separately activated first-booking and first-membership 10% Stripe commissions, privacy-preserving identity tracking, refunds and accounting views.
+- Keep recurring membership application fees at 0% after the initial paid period.
+
 ## 1.3.144
 - Organize all shared assistant knowledge/status answers into topic headings and collapsed subsections with source links.
 

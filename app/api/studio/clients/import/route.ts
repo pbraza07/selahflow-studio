@@ -35,10 +35,10 @@ export async function POST(req:Request){
   for(const row of mapped){
    const match=existing.find((p:{id:string;name:string;email:string;phone:string})=>sameClientContact(p,row));
    if(match){
-    await client.query('UPDATE business_client_profiles SET import_columns=COALESCE(import_columns,\'{}\'::jsonb)||$1::jsonb,updated_at=now() WHERE owner=$2 AND id=$3',[JSON.stringify(row.columns),owner,match.id]);updated++;
+    await client.query('UPDATE business_client_profiles SET commission_existing_client=true,import_columns=COALESCE(import_columns,\'{}\'::jsonb)||$1::jsonb,updated_at=now() WHERE owner=$2 AND id=$3',[JSON.stringify(row.columns),owner,match.id]);updated++;
    }else{
     const id=randomUUID();
-    await client.query('INSERT INTO business_client_profiles(id,owner,name,email,phone,notes,import_columns) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb)',[id,owner,row.name,row.email,row.phone,row.notes,JSON.stringify(row.columns)]);
+    await client.query('INSERT INTO business_client_profiles(id,owner,name,email,phone,notes,import_columns,commission_existing_client) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,true)',[id,owner,row.name,row.email,row.phone,row.notes,JSON.stringify(row.columns)]);
     existing.push({id,...row});created++;
    }
   }

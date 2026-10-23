@@ -1,3 +1,5 @@
+**Release source: v1.3.145 — implementation pending verification.** Separate first-booking and first-membership commissions with Stripe Connect and owner activation. See [release evidence](docs/V1_3_145_RELEASE.md).
+
 **Release source: v1.3.144 — verified LIVE in staging and production.** Shared assistant answers are grouped into expandable subsections with source links and separate membership/booking status. All 379 tests, typecheck/build and live/browser checks passed. See [release evidence](docs/V1_3_144_RELEASE.md).
 
 **Release source: v1.3.143 — verified LIVE in staging and production.** Assistant membership and booking status checks require only the unique client ID, with limited results and masked IDs. All 375 tests, typecheck/build and live/browser checks passed. See [release evidence](docs/V1_3_143_RELEASE.md).
