@@ -1,3 +1,5 @@
+**Release source: v1.3.143 — deployment pending.** Assistant membership/booking status checks ask only for the unique ID and reuse existing limited, business-scoped lookup. See [release notes](docs/V1_3_143_RELEASE.md).
+
 **Release source: v1.3.142 — verified LIVE in staging and production.** The shared assistant reads current published business content, with sources, public-page availability and tenant privacy. All 371 tests/typecheck/build and read-only checks for both live environments passed. See [release evidence](docs/V1_3_142_RELEASE.md).
 
 **Release source: v1.3.141 — verified LIVE in staging and production.** Stripe onboarding validates destinations and provides a browser continuation fallback. Actual staging button reached Stripe-hosted onboarding. First-time live merchant-account creation remains owner acceptance. See [release evidence](docs/V1_3_141_RELEASE.md).

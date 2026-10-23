@@ -1,3 +1,9 @@
+# v1.3.143 release handoff — implementation; deployment pending
+
+The shared assistant adds Membership status and Booking status buttons, detects status requests and standalone unique IDs, asks only for ID, and reuses the existing business-scoped registration_latest_status API. Answers project membership status/plan/credits or latest booking date/status/payment state without names, contacts, DOB, amounts, access tokens or payment links. Normal business knowledge remains available. No profile-prefill verification is relaxed; no new database query, migration or environment setting. Existing rate limits and owner/business isolation apply. Legacy six-character IDs remain readable alongside current eight-character IDs. Lookup context clears when business changes, and valid IDs are masked in the chat transcript.
+
+Source branch `feature/assistant-id-status`. Verification and deployment pending; previous verified LIVE release is v1.3.142.
+
 # v1.3.142 release handoff — verified LIVE in staging and production
 
 Shared business assistant reads current saved public profile, service descriptions/prices, booking/page wording, question definitions, active memberships/credit eligibility, public team, policies, next 31 days of configured future sessions and version-reviewed waiver clauses. A business-scoped no-store API projects allowlisted public fields on each question. It excludes client records, question answers, signed documents, hidden staff and internal settings. Shared owner/public home/booking/membership widget provides sources and booking links, white readable cards and existing explicit owner handoff. Unknown information directs visitors to the business; booking verifies live seats. This is factual published-content retrieval, not a newly connected generative model or external scraping service. No migration, credentials, environment or customer-record changes.

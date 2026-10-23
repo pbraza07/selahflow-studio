@@ -1,3 +1,7 @@
+## 1.3.143
+- Add assistant Membership status and Booking status flows requiring only a unique ID, including direct-ID questions and current summaries.
+- Reuse existing scoped/rate-limited lookup; mask IDs in chat and exclude private contacts, amounts and payment access.
+
 ## 1.3.142
 - Expand the shared assistant to current business descriptions, services/prices, memberships/credit eligibility, schedules, page wording, question definitions, public team and reviewed waiver text.
 - Add source-linked, readable assistant on business home, booking and membership pages; preserve tenant privacy and owner handoff.
