@@ -1,3 +1,4 @@
+import {acceptedWaiverVersions,WAIVER_VERSION,LEGACY_WAIVER_VERSION} from '../server/waiver-content.mjs';
 import {cleanRemovedBookableSessions} from '../server/remove-bookable-session.mjs';
 import {publicTeamMembers,publicSessionTeam,publicBookingStaff,sessionTeamDefaults,validateTeamBookingPolicy} from '../server/team-booking-policy.mjs';
 import {bookingDiscount} from '../server/booking-discounts.mjs';
@@ -74,7 +75,7 @@ if(b.action==='waiver_status'){
  if(!first||!last||first.length>100||last.length>100||!/^\d{4}-\d{2}-\d{2}$/.test(dob)||Number.isNaN(Date.parse(dob)))return reply({signed:false});
  const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();
  if(!await takeLimit('waiver-lookup:'+owner+':'+tokenHash(ip),30))return reply({error:'Too many waiver checks. Please try again later.'},429);
- const signed=await getPool().query("SELECT w.id FROM participation_waivers w JOIN businesses biz ON biz.id=w.business_id JOIN customer_booking_ids c ON c.id=w.customer_id AND c.business_id=biz.id WHERE biz.owner_id=$1 AND lower(c.first_name)=lower($2) AND lower(c.last_name)=lower($3) AND c.date_of_birth=$4::date AND ($5='' OR c.member_number=$5) AND w.document_version=$6 AND w.deleted_at IS NULL LIMIT 1",[owner,first,last,dob,number,publicWaiverDocument(config).version]);
+ const signed=await getPool().query("SELECT w.id FROM participation_waivers w JOIN businesses biz ON biz.id=w.business_id JOIN customer_booking_ids c ON c.id=w.customer_id AND c.business_id=biz.id WHERE biz.owner_id=$1 AND lower(c.first_name)=lower($2) AND lower(c.last_name)=lower($3) AND c.date_of_birth=$4::date AND ($5='' OR c.member_number=$5) AND w.document_version=ANY($6::text[]) AND w.deleted_at IS NULL LIMIT 1",[owner,first,last,dob,number,acceptedWaiverVersions(config)]);
  return reply({signed:!!signed.rows[0]});
 }
 if(b.action==='waiver_records'){
@@ -84,7 +85,7 @@ if(b.action==='waiver_records'){
 }
 if(b.action==='settings'){const c=cleanRemovedBookableSessions(config,b.config);
  if(c?.waiverLegalReview!=null){const review=c.waiverLegalReview;
-  if(typeof review!=='object'||review.version!==publicWaiverDocument(c).version||typeof review.reference!=='string'||review.reference.length>200||typeof review.reviewedAt!=='string'||review.reviewedAt&&!/^\d{4}-\d{2}-\d{2}$/.test(review.reviewedAt)||review.reviewedAt>new Date().toISOString().slice(0,10))throw Error('Enter a valid current waiver legal-review reference and date.');
+  if(typeof review!=='object'||![WAIVER_VERSION,LEGACY_WAIVER_VERSION].includes(review.version)||typeof review.reference!=='string'||review.reference.length>200||typeof review.reviewedAt!=='string'||review.reviewedAt&&!/^\d{4}-\d{2}-\d{2}$/.test(review.reviewedAt)||review.reviewedAt>new Date().toISOString().slice(0,10))throw Error('Enter a valid current waiver legal-review reference and date.');
  }
 
  if(c?.theme!==undefined&&c.theme!==null){if(!themeIsValid(c.theme))throw Error('Choose valid theme colors and fonts.');c.theme=resolveTheme(c.theme);}

@@ -1,3 +1,13 @@
+# v1.3.137 release handoff — implementation awaiting verification
+
+Shared booking, membership and client registration fields now use white backgrounds, dark text, consistent sizing, light native controls and readable autofill in every business theme. Checkbox styling and Required/Notify configuration remain independent.
+
+Waiver version participation-2 includes numbered clause 6, Media release, within the signed wording; it has no separate media checkbox. Server-side signature validation, immutable text/hash, guardian rules and stored media evidence remain. Existing reviewed participation-1 wording stays active until the owner records the completed review reference/date for participation-2 in Service Catalog → Participation waivers, where the complete new text is previewable. The earlier review is not silently reused for changed consent. Prior active v1 signatures continue to satisfy participation requirements without gaining new media permission. No real signature or legal review was created by QA.
+
+Owners can permanently delete individual active or previously soft-deleted waivers. The authenticated, same-origin, business-scoped DELETE removes the whole database row, including document/signature/media/request evidence. It runs under the booking schedule lock. Retrieval returns 404 afterward; future waiver-required bookings need a fresh signature. Existing client, membership, appointment and financial records remain. No automatic bulk purge or change to provider-managed backups is performed; historical backups are not claimed erased. Existing previously deleted rows are visible for explicit permanent removal.
+
+Local validation: all 361 tests and typecheck passed. One-page numbered waiver review PDF rendered and visually checked, eight interactive identity/signature/role fields, no platform branding. Production build passed. Staging and production deployment verification pending. No migration or environment change. Feature branch: fix/white-questions-numbered-waiver.
+
 # v1.3.136 release handoff — verified LIVE in staging and production
 
 Application commit `3daeec9fb477159c738ba5212fe98c91967fb361` (tree `62d0ce53dffcfe32f7a994c13698894735809e36`). Staging `dep-dbdk6mvb9u1s73a01jqg` LIVE October 23, 2026 at 7:28:16 a.m. EDT; production `dep-dbdka1u417fc738nhrjg` LIVE 7:30:56 a.m. EDT. Local, GitHub CI run 39945550084 / job 120387209180 and Render staging passed all 359 tests, typecheck and builds; production build passed. Live read-only endpoint checks passed across five staging/four production businesses. Actual database preflights confirmed the dedicated databases/users, schema CREATE true and zero unowned tables. No migration or environment changes; no final startup error-level entries observed.

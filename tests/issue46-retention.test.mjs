@@ -20,7 +20,7 @@ const config={name:'Test business',services:[{id:'training',requiresWaiver:true}
 test('deletion preserves consent and reconcilable Stripe receipts once, releases ID and rejects stale source replay',async()=>{
  const {pg,db}=await fixture();try{
  const identity=(await pg.query('SELECT id FROM customer_booking_ids')).rows[0].id;
- await ensureParticipationWaiver(db,{businessId:'business',memberNumber:'TP010190',config,services:config.services,input:{signature:'Test Participant',role:'self',date:waiverToday(),version:'participation-1',documentHash:publicWaiverDocument(config).hash,accepted:true}});
+ await ensureParticipationWaiver(db,{businessId:'business',memberNumber:'TP010190',config,services:config.services,input:{signature:'Test Participant',role:'self',date:waiverToday(),version:publicWaiverDocument(config).version,documentHash:publicWaiverDocument(config).hash,accepted:true}});
  await pg.query("INSERT INTO appointments(id,owner,date,start,duration,staff,status,data) VALUES('visit','owner','2030-01-01',600,30,'coach','Completed',$1)",[JSON.stringify({name:'Test Participant',dateOfBirth:'1990-01-01',memberNumber:'TP010190',price:15})]);
  await pg.exec("INSERT INTO booking_payments(booking_id,business_id,stripe_account_id,amount_cents,lines,status) VALUES('visit','business','account',1500,'[]','paid'); INSERT INTO stripe_payment_receipts(stripe_account_id,provider_reference,business_id,booking_id,amount_cents) VALUES('account','payment','business','visit',1500)");
  await pg.query("INSERT INTO events(id,owner,created,kind,data) VALUES('receipt-event','owner','2030-01-01','cash_sale',$1)",[JSON.stringify({bookingId:'visit',providerReference:'payment',total:15,tax:0})]);

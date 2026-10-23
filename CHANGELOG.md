@@ -1,3 +1,9 @@
+## 1.3.137
+
+- Standardize shared question inputs to white backgrounds and dark text across themes.
+- Add a reviewed, versioned numbered media-release clause and preserve prior signatures/media choices.
+- Allow owners to permanently delete active or previously deleted signed waivers; invalidate consent immediately.
+
 ## 1.3.136
 
 - Fix owner Add Client rejecting the automatically suggested eight-character ID as an existing membership ID.

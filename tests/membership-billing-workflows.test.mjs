@@ -122,12 +122,12 @@ test('session team accountability API rejects unauthenticated, cross-business an
  }finally{await pg.close();}
 });
 
-test('optional media release is recorded with the exact waiver and does not imply consent on older signatures',async()=>{
+test('numbered media release is included in the signed document and recorded without a separate checkbox',async()=>{
  const {pg,db}=await fixture();try{
  await pg.exec("INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,date_of_birth,member_number) VALUES('biz','Test','Parent','parent@example.test','1990-01-01','TP010190')");
  const config={name:'Club One',services:[{id:'training',requiresWaiver:true}]},doc=publicWaiverDocument(config);
- const id=await ensureParticipationWaiver(db,{businessId:'biz',memberNumber:'TP010190',config,services:config.services,input:{signature:'Test Parent',role:'self',date:waiverToday(),accepted:true,version:doc.version,documentHash:doc.hash,mediaConsent:true}});
- const row=(await pg.query('SELECT media_consent,media_statement FROM participation_waivers WHERE id=$1',[id])).rows[0];assert.equal(row.media_consent,true);assert.match(row.media_statement,/Declining does not affect participation/);
+ const id=await ensureParticipationWaiver(db,{businessId:'biz',memberNumber:'TP010190',config,services:config.services,input:{signature:'Test Parent',role:'self',date:waiverToday(),accepted:true,version:doc.version,documentHash:doc.hash,mediaConsent:false}});
+ const row=(await pg.query('SELECT media_consent,media_statement FROM participation_waivers WHERE id=$1',[id])).rows[0];assert.equal(row.media_consent,true);assert.match(row.media_statement,/photograph or record/);
  assert.equal(await ensureParticipationWaiver(db,{businessId:'biz',memberNumber:'TP010190',config,services:config.services,input:null}),id);
  }finally{await pg.close();}
 });

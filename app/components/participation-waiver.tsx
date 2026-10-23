@@ -22,7 +22,7 @@ export default function ParticipationWaiver({document,dob,participantName,value,
   <label>Date signed<input type="date" required value={value.date} min={waiverToday()} max={waiverToday()} onChange={e=>patch({date:e.target.value})}/></label></div>
   <label>Electronic signature - full name<input required autoComplete="off" maxLength={100} value={value.signature} onChange={e=>patch({signature:e.target.value})} placeholder={minor?'Parent or guardian full name':'Signer full name'}/></label>
   <label className="consent"><input type="checkbox" required checked={value.accepted} onChange={e=>patch({accepted:e.target.checked})}/><span>I have read and agree to this waiver. Typing my full name is my electronic signature. {value.role==='parent'||value.role==='guardian'?'I confirm I am the participant’s parent or legal guardian and am at least 18.':''}</span></label>
-  {document.mediaRelease&&<div><p>{document.mediaRelease}</p><label className="consent"><input type="checkbox" checked={value.mediaConsent===true} onChange={e=>patch({mediaConsent:e.target.checked})}/><span>I give the optional media permission above.</span></label></div>}
+  {document.mediaRelease&&!document.mediaReleaseIncluded&&<div><p>{document.mediaRelease}</p><label className="consent"><input type="checkbox" checked={value.mediaConsent===true} onChange={e=>patch({mediaConsent:e.target.checked})}/><span>I give the optional media permission above.</span></label></div>}
   </>}
  </section>;
 }

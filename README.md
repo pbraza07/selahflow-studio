@@ -1,3 +1,5 @@
+**Release source: v1.3.137**. See [release notes](docs/V1_3_137_RELEASE.md) for question styling, waiver version activation and permanent waiver deletion. Deployment verification pending.
+
 **Release source: v1.3.136 — verified LIVE in staging and production.** Add Client accepts the correctly generated initials + MMDDYY ID while preserving uniqueness and rollback safeguards. See [release evidence](docs/V1_3_136_RELEASE.md).
 
 **Release source: v1.3.135 — verified LIVE in staging and production.** Owner-confirmed client email recipients are automatically approved within staging; each recipient has provider receipt evidence. See [release evidence](docs/V1_3_135_RELEASE.md).

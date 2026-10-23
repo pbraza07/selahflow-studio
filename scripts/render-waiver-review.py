@@ -17,9 +17,9 @@ c.setFillColor(white);c.setFont('Bold',23);c.drawString(38,754,d['businessName']
 c.setFillColor(red);c.setFont('Bold',8.7);c.drawString(38,675,'REVIEW DRAFT - LEGAL APPROVAL REQUIRED BEFORE USE')
 c.setFillColor(black);c.setFont('Body',8);c.drawString(38,660,'Facility activities | Indoor/outdoor training | Camps | Parties | Indoor soccer & pick-up')
 y=638
-for title,body in d['sections']:
- c.setFillColor(red);c.setFont('Bold',9.5);c.drawString(38,y,title);y-=5
- para=Paragraph(escape(body),ParagraphStyle('body',fontName='Body',fontSize=9.5,leading=12.5,textColor=black));_,h=para.wrap(536,700);para.drawOn(c,38,y-h);y-=h+17
+for number,(title,body) in enumerate(d['sections'],1):
+ c.setFillColor(red);c.setFont('Bold',9.5);c.drawString(38,y,str(number)+'. '+title);y-=5
+ para=Paragraph(escape(body),ParagraphStyle('body',fontName='Body',fontSize=9,leading=11.5,textColor=black));_,h=para.wrap(536,700);para.drawOn(c,38,y-h);y-=h+14
 
 def field(name,label,x,y,width):
  c.setFillColor(black);c.setFont('Body',7.5);c.drawString(x,y+24,label)

@@ -22,9 +22,9 @@ export async function DELETE(req:Request,{params}:{params:Promise<{id:string}>})
   try{
    await db.query('BEGIN');
    await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
-   const row=(await db.query("UPDATE participation_waivers w SET deleted_at=COALESCE(w.deleted_at,now()),deleted_by=COALESCE(w.deleted_by,$2) FROM businesses b WHERE w.id=$1 AND b.id=w.business_id AND b.owner_id=$2 AND b.status='active' RETURNING w.id",[id,owner])).rows[0];
+   const row=(await db.query("DELETE FROM participation_waivers w USING businesses b WHERE w.id=$1 AND b.id=w.business_id AND b.owner_id=$2 AND b.status='active' RETURNING w.id",[id,owner])).rows[0];
    await db.query('COMMIT');
-   return row?Response.json({ok:true,retained:true},{headers}):Response.json({error:'Waiver not found.'},{status:404,headers});
+   return row?Response.json({ok:true,permanentlyDeleted:true},{headers}):Response.json({error:'Waiver not found.'},{status:404,headers});
   }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
  }catch(e){const auth=(e as Error).message==='AUTH_REQUIRED';return Response.json({error:auth?'Please sign in to manage waivers.':'Unable to delete waiver. Please try again.'},{status:auth?401:503,headers});}
 }

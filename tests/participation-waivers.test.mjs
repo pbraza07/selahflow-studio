@@ -2,12 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
-import {waiverDocument,waiverMinor,waiverToday,validateWaiverSignature,requiresWaiver} from '../server/waiver-content.mjs';
+import {WAIVER_VERSION,waiverDocument,waiverMinor,waiverToday,validateWaiverSignature,requiresWaiver} from '../server/waiver-content.mjs';
 import {ensureParticipationWaiver,assertBookingWaiver,publicWaiverDocument,assertWaiverLegalReview} from '../server/participation-waivers.mjs';
 import {deleteClientPermanently} from '../server/delete-client.mjs';
 import {issueMemberId} from '../server/member-id-policy.mjs';
 const config={name:'Arcila Training',services:[{id:'training',requiresWaiver:true}]},services=config.services;
-const signature=(options={})=>({signature:'Jane Doe',role:'self',date:waiverToday(),accepted:true,version:'participation-1',documentHash:publicWaiverDocument(config).hash,...options});
+const signature=(options={})=>({signature:'Jane Doe',role:'self',date:waiverToday(),accepted:true,version:WAIVER_VERSION,documentHash:publicWaiverDocument(config).hash,...options});
 test('waiver branding uses only the business identity and readable palette',()=>{
  const doc=waiverDocument(config,'#000000','#831100');
  assert.equal(doc.businessName,'Arcila Training');assert.equal(doc.colors.header,'#000000');assert.equal(doc.colors.hero,'#831100');
@@ -110,7 +110,7 @@ test('released eight-character ID can be reassigned to another client without tr
  }finally{await pg.close();}
 });
 
-test('owner waiver deletion is private, repeat-safe, retains evidence and requires fresh consent',async()=>{
+test('owner permanent waiver deletion is private, removes all evidence and requires fresh consent',async()=>{
  const pg=await fixture();try{
  const {createRequire}=await import('node:module'),{default:ts}=await import('typescript');
  const url=new URL('../app/api/studio/waivers/[id]/route.ts',import.meta.url),nativeRequire=createRequire(url),exports={};
@@ -118,7 +118,6 @@ test('owner waiver deletion is private, repeat-safe, retains evidence and requir
  const db={query:(s,p)=>pg.query(s,p),release(){}},pool={...db,connect:async()=>db};
  new Function('require','exports',compiled)(path=>path.endsWith('/server/database.mjs')?{getPool:()=>pool}:path.endsWith('/lib/auth')?{requireOwner:async req=>{const owner=req.headers.get('x-test-owner');if(!owner)throw Error('AUTH_REQUIRED');return owner;}}:nativeRequire(path),exports);
  const args={businessId:'owner-a',memberNumber:'JD010190',config,services,input:signature()},id=await ensureParticipationWaiver(pg,args);
- const original=(await pg.query('SELECT * FROM participation_waivers WHERE id=$1',[id])).rows[0];
  const origin=process.env.APP_URL||process.env.RENDER_EXTERNAL_URL||'https://example.test';
  const remove=(owner='owner-a',phrase='DELETE WAIVER',valid=true)=>exports.DELETE(new Request(new URL('/api/studio/waivers/'+id,origin),{method:'DELETE',headers:{'Content-Type':'application/json',...(owner?{'x-test-owner':owner}:{}),Origin:valid?new URL(origin).origin:'https://untrusted.invalid'},body:JSON.stringify({confirmPhrase:phrase})}),{params:Promise.resolve({id})});
  assert.equal((await remove('')).status,401);
@@ -127,18 +126,51 @@ test('owner waiver deletion is private, repeat-safe, retains evidence and requir
  assert.equal((await remove('owner-a','DELETE WAIVER',false)).status,403);
  assert.equal(await ensureParticipationWaiver(pg,{...args,input:null}),id);
  assert.equal((await remove()).status,200);
- assert.equal((await remove()).status,200);
+ assert.equal((await remove()).status,404);
  const retained=(await pg.query('SELECT * FROM participation_waivers WHERE id=$1',[id])).rows[0];
- assert.ok(retained.deleted_at);assert.equal(retained.deleted_by,'owner-a');
- for(const field of ['document','document_hash','signer_name','signed_at','audit_id','retention_status'])assert.deepEqual(retained[field],original[field]);
+ assert.equal(retained,undefined,'Signed document, signature, media and request evidence are physically absent');
  await assert.rejects(assertBookingWaiver(pg,{owner:'owner-a',config,serviceIds:['training'],memberNumber:'JD010190'}),/required/);
  await assert.rejects(ensureParticipationWaiver(pg,{...args,input:null}),/sign/);
  const next=await ensureParticipationWaiver(pg,args);assert.notEqual(next,id);
  await assertBookingWaiver(pg,{owner:'owner-a',config,serviceIds:['training'],memberNumber:'JD010190'});
- assert.equal((await remove()).status,200,'old deletion retry does not revoke the new signature');
+ assert.equal((await remove()).status,404,'old deletion retry does not revoke the new signature');
  assert.equal(await ensureParticipationWaiver(pg,{...args,input:null}),next);
  const get=owner=>exports.GET(new Request(new URL('/api/studio/waivers/'+id,origin),{headers:{'x-test-owner':owner}}),{params:Promise.resolve({id})});
- assert.equal((await get('owner-a')).status,200);assert.equal((await get('owner-b')).status,404);
- assert.equal((await pg.query('SELECT count(*)::int n FROM participation_waivers WHERE deleted_at IS NULL')).rows[0].n,1);
+ assert.equal((await get('owner-a')).status,404);assert.equal((await get('owner-b')).status,404);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM participation_waivers')).rows[0].n,1);
+ await pg.query('UPDATE participation_waivers SET deleted_at=now() WHERE id=$1',[next]);
+ const legacyDelete=await exports.DELETE(new Request(new URL('/api/studio/waivers/'+next,origin),{method:'DELETE',headers:{'Content-Type':'application/json','x-test-owner':'owner-a',Origin:new URL(origin).origin},body:JSON.stringify({confirmPhrase:'DELETE WAIVER'})}),{params:Promise.resolve({id:next})});
+ assert.equal(legacyDelete.status,200);assert.equal((await pg.query('SELECT * FROM participation_waivers')).rows.length,0);
+ assert.equal((await pg.query('SELECT * FROM customer_booking_ids')).rows.length,2,'Deleting waivers preserves client identities');
  }finally{await pg.close();}
+});
+
+test('numbered media release is versioned; old reviewed wording and prior media choices are preserved',async()=>{
+ const latest=waiverDocument(config);assert.equal(latest.version,WAIVER_VERSION);assert.equal(latest.sections.length,7);
+ assert.deepEqual(latest.sections[5],['Media release',latest.mediaRelease]);assert.equal(latest.mediaReleaseIncluded,true);
+ const oldConfig={...config,waiverLegalReview:{version:'participation-1',reference:'old review',reviewedAt:'2026-10-20'}};
+ const legacy=publicWaiverDocument(oldConfig);assert.equal(legacy.version,'participation-1');assert.equal(legacy.sections.length,6);assert.equal(legacy.mediaReleaseIncluded,undefined);
+ const reviewed={...config,waiverLegalReview:{version:WAIVER_VERSION,reference:'new review',reviewedAt:'2026-10-23'}};
+ assert.equal(waiverDocument(reviewed).version,WAIVER_VERSION);
+ const pg=await fixture();try{
+ const args={businessId:'owner-a',memberNumber:'JD010190',config:oldConfig,services,input:signature({version:legacy.version,documentHash:legacy.hash,mediaConsent:false})};
+ const id=await ensureParticipationWaiver(pg,args);
+ const before=(await pg.query('SELECT * FROM participation_waivers WHERE id=$1',[id])).rows[0];
+ assert.equal(before.media_consent,false);
+ assert.equal(await ensureParticipationWaiver(pg,{...args,config:reviewed,input:null}),id);
+ await assertBookingWaiver(pg,{owner:'owner-a',config:reviewed,serviceIds:['training'],memberNumber:'JD010190'});
+ assert.deepEqual((await pg.query('SELECT * FROM participation_waivers WHERE id=$1',[id])).rows[0],before);
+ }finally{await pg.close();}
+});
+
+test('waiver form places media release in numbered text with only the signature agreement checkbox',async()=>{
+ const {createRequire}=await import('node:module'),{default:ts}=await import('typescript');
+ const {createElement}=await import('react'),{renderToStaticMarkup}=await import('react-dom/server');
+ const url=new URL('../app/components/participation-waiver.tsx',import.meta.url),exports={};
+ const compiled=ts.transpileModule(await readFile(url,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
+ new Function('require','exports',compiled)(createRequire(url),exports);
+ const document=publicWaiverDocument(config);
+ const html=renderToStaticMarkup(createElement(exports.default,{document,dob:'1990-01-01',participantName:'Jane Doe',value:signature(),onChange(){},signed:false,checking:false,error:'',onRetry(){}}));
+ assert.match(html,/6\. Media release/);assert.equal((html.match(/type="checkbox"/g)||[]).length,1);
+ assert.doesNotMatch(html,/I give the optional media permission/);
 });
