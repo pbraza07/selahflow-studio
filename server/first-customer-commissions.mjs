@@ -10,17 +10,27 @@ export async function commissionSettings(db,businessId){
 }
 export async function saveCommissionSettings(db,{businessId,actor,bookingEnabled,membershipEnabled,acceptTerms}){
  if(typeof bookingEnabled!=='boolean'||typeof membershipEnabled!=='boolean')throw Error('Choose both commission settings.');
- const business=(await db.query("SELECT id FROM businesses WHERE id=$1 AND status='active'",[businessId])).rows[0];if(!business)throw Error('Business unavailable.');
+ const business=(await db.query('SELECT id,status FROM businesses WHERE id=$1',[businessId])).rows[0];if(!business)throw Error('Business unavailable.');
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[businessId+':commission-settings']);
  const old=(await db.query('SELECT * FROM business_commission_policies WHERE business_id=$1 FOR UPDATE',[businessId])).rows[0];
- if((bookingEnabled||membershipEnabled)&&old?.terms_version!==COMMISSION_TERMS&&acceptTerms!==true)throw Error('Review and accept the 10% commission terms before activation.');
- if(bookingEnabled||membershipEnabled){
+ const enabling=(bookingEnabled&&!old?.booking_enabled)||(membershipEnabled&&!old?.membership_enabled);
+ if(enabling&&business.status!=='active')throw Error('Business must be active before enabling commissions.');
+ if(enabling&&(old?.terms_version!==COMMISSION_TERMS||!old?.accepted_at)&&acceptTerms!==true)throw Error('Review and accept the 10% commission terms before activation.');
+ // Turning a condition off must remain possible when Stripe is unavailable.
+ if(enabling){
   if(!paymentConfigured())throw Error('Configure Stripe payments before activating commissions.');
   if(!(await db.query("SELECT 1 FROM merchant_accounts WHERE business_id=$1 AND provider='stripe' AND charges_enabled=true AND onboarding_complete=true",[businessId])).rows.length)throw Error('Connect and verify this business Stripe account first.');
  }
  await db.query(`INSERT INTO business_commission_policies(business_id,booking_enabled,membership_enabled,booking_enabled_at,membership_enabled_at,terms_version,accepted_by,accepted_at) VALUES($1,$2,$3,CASE WHEN $2 THEN now() END,CASE WHEN $3 THEN now() END,$4,$5,CASE WHEN $6 THEN now() END) ON CONFLICT(business_id) DO UPDATE SET booking_enabled=$2,membership_enabled=$3,booking_enabled_at=CASE WHEN $2 THEN COALESCE(business_commission_policies.booking_enabled_at,now()) ELSE business_commission_policies.booking_enabled_at END,membership_enabled_at=CASE WHEN $3 THEN COALESCE(business_commission_policies.membership_enabled_at,now()) ELSE business_commission_policies.membership_enabled_at END,terms_version=CASE WHEN $6 THEN $4 ELSE business_commission_policies.terms_version END,accepted_by=CASE WHEN $6 THEN $5 ELSE business_commission_policies.accepted_by END,accepted_at=CASE WHEN $6 THEN now() ELSE business_commission_policies.accepted_at END,updated_at=now()`,[businessId,bookingEnabled,membershipEnabled,COMMISSION_TERMS,actor,acceptTerms===true]);
  await db.query("INSERT INTO events(id,owner,created,kind,data) SELECT $1,owner_id,$2,'commission_settings',$3 FROM businesses WHERE id=$4",[randomUUID(),new Date().toISOString(),JSON.stringify({bookingEnabled,membershipEnabled,ratePercent:10,termsVersion:COMMISSION_TERMS,actor}),businessId]);
  return commissionSettings(db,businessId);
+}
+/** Caller owns a transaction. Change one condition without overwriting the other or accepting business terms. */
+export async function setPlatformCommissionEnabled(db,{businessId,actor,kind,enabled}){
+ if(!['booking','membership'].includes(kind)||typeof enabled!=='boolean')throw Error('Choose a commission type and an enabled or disabled state.');
+ await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[businessId+':commission-settings']);
+ const old=(await db.query('SELECT booking_enabled,membership_enabled FROM business_commission_policies WHERE business_id=$1 FOR UPDATE',[businessId])).rows[0];
+ return saveCommissionSettings(db,{businessId,actor,bookingEnabled:kind==='booking'?enabled:old?.booking_enabled===true,membershipEnabled:kind==='membership'?enabled:old?.membership_enabled===true,acceptTerms:false});
 }
 /** Caller owns a transaction. Separate once-per-identity claims for booking and membership. */
 export async function reserveCommission(db,{businessId,kind,memberNumber,sourceId,account,grossCents,eligibleCents=grossCents},api=stripeApi){

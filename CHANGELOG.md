@@ -1,3 +1,7 @@
+## 1.3.146
+- Add primary platform-admin controls to independently enable or disable each business’s first-booking and first-membership commissions.
+- Preserve business terms, Stripe readiness, audit history and once-per-client eligibility; allow disabling during Stripe outages.
+
 ## 1.3.145
 - Add separately activated first-booking and first-membership 10% Stripe commissions, privacy-preserving identity tracking, refunds and accounting views.
 - Keep recurring membership application fees at 0% after the initial paid period.
