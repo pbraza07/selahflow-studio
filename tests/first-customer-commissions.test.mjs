@@ -120,6 +120,7 @@ test('actual owner commission API enforces authentication, origin, request size,
  const route=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64')),origin=new URL(process.env.APP_URL||process.env.RENDER_EXTERNAL_URL||'https://example.test').origin;
  const req=(body,from=origin)=>new Request(origin+'/api/studio/commissions',{method:'POST',headers:{'Content-Type':'application/json',Origin:from},body:JSON.stringify(body)});
  assert.equal((await route.GET(new Request(origin))).status,401);globalThis.__commissionActor='u1';assert.equal((await route.POST(req({action:'save'},'https://evil.test'))).status,403);
+ const consent=await route.POST(req({action:'save',bookingEnabled:false,membershipEnabled:false,acceptTerms:true}));assert.equal(consent.status,200);const consentData=await consent.json();assert.ok(consentData.acceptedAt);assert.equal(consentData.bookingEnabled,false);assert.equal(consentData.membershipEnabled,false);
  const r=await route.POST(req({action:'save',businessId:'b2',bookingEnabled:true,membershipEnabled:true,acceptTerms:true}));assert.equal(r.status,200);assert.match(r.headers.get('cache-control'),/no-store/);assert.equal((await commissionSettings(db,'b1')).bookingEnabled,true);assert.equal((await commissionSettings(db,'b2')).bookingEnabled,false);
  assert.equal((await route.POST(req({action:'save',text:'x'.repeat(2000)}))).status,400);
 });
@@ -148,7 +149,9 @@ test('actual platform commission setup is restricted to the primary administrato
  globalThis.__commissionRole='owner';assert.equal((await route.POST(change(enable))).status,403);globalThis.__commissionRole='primary';
  assert.equal((await route.POST(change(enable,'https://evil.test'))).status,403);
  let r=await route.POST(change(enable));assert.equal(r.status,400);assert.match((await r.json()).error,/accept/,'admin cannot accept business terms through this endpoint');
- await tx(()=>saveCommissionSettings(db,{businessId,actor:'u3',bookingEnabled:true,membershipEnabled:true,acceptTerms:true}));
+ await tx(()=>saveCommissionSettings(db,{businessId,actor:'u3',bookingEnabled:false,membershipEnabled:false,acceptTerms:true}));
+ r=await route.POST(change(enable));assert.equal(r.status,200);assert.equal((await r.json()).membershipEnabled,false);
+ r=await route.POST(change({...enable,kind:'membership'}));assert.equal(r.status,200);
  r=await route.POST(change({...enable,enabled:false}));assert.equal(r.status,200);let saved=await r.json();assert.equal(saved.bookingEnabled,false);assert.equal(saved.membershipEnabled,true);
  globalThis.__commissionStripeDown=true;
  r=await route.POST(change(enable));assert.equal(r.status,400);assert.match((await r.json()).error,/Webhook/);
