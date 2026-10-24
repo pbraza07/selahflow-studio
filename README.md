@@ -1,3 +1,5 @@
+**v1.3.145 operational status:** Production Stripe commission webhook events are configured and verified Ready. Business verification and owner activation remain pending; no live fees are collecting. Staging administrator authentication remains pending. See [current setup evidence](docs/V1_3_145_RELEASE.md).
+
 **Release source: v1.3.145 — feature LIVE in staging and production; owner activation pending.** Independent 10% first-booking and first-membership Stripe commissions, protected repeat purchases/renewals, refunds and accounting. All 393 tests, typecheck/build and live/browser checks passed. No live fees activated for QA. See [release evidence and setup steps](docs/V1_3_145_RELEASE.md).
 
 **Release source: v1.3.144 — verified LIVE in staging and production.** Shared assistant answers are grouped into expandable subsections with source links and separate membership/booking status. All 379 tests, typecheck/build and live/browser checks passed. See [release evidence](docs/V1_3_144_RELEASE.md).
