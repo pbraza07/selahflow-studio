@@ -1,4 +1,4 @@
-**Release source: v1.3.146 — validation in progress.** Primary platform administrators can independently enable or disable both first-purchase commission conditions for each business, after existing business terms and Stripe readiness. No migration or environment change. See [release evidence](docs/V1_3_146_RELEASE.md).
+**Release source: v1.3.146 — verified LIVE in staging and production.** Primary platform admins can independently enable or disable each business’s two 10% first-purchase commission conditions. Owners can accept terms while keeping both off. All 396 CI/staging tests, typecheck/build and live checks passed. Business terms and Stripe verification remain pending; no live fees activated for QA. See [release evidence](docs/V1_3_146_RELEASE.md).
 
 **v1.3.145 operational status:** Production Stripe commission webhook events are configured and verified Ready. Business verification and owner activation remain pending; no live fees are collecting. Staging administrator authentication remains pending. See [current setup evidence](docs/V1_3_145_RELEASE.md).
 
