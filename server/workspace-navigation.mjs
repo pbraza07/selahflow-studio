@@ -2,7 +2,7 @@
 export const workspaceGroups = [
  {title:'Daily work',items:['Overview','Calendar','Clients']},
  {title:'Sales & records',items:['Services','Memberships','Checkout','Reports','History']},
- {title:'Your business',items:['Receptionist','Branding','Page editor','Settings','Security']}
+ {title:'Your business',items:['Receptionist','Branding','Settings','Security']}
 ];
 /** @type {Record<string,string>} */
 export const workspaceDescriptions = {
@@ -15,8 +15,7 @@ export const workspaceDescriptions = {
  Checkout:'Record a sale or settle an eligible booking.',
  Reports:'Review paid revenue and amounts awaiting approval or payment.',
  Receptionist:'Manage booking guidance and approved business answers.',
- Branding:'Customize your logo, colors and fonts.',
- 'Page editor':'Edit your public business, booking and membership pages.',
+ Branding:'Edit public pages, wording, logo, social links, colors, fonts and booking QR sharing.',
  Settings:'Update business details, booking rules, sessions and team.',
  Security:'Manage your account password.'
 };
@@ -25,5 +24,5 @@ export function filteredWorkspaceGroups(query='') {
  return workspaceGroups.map(group=>({...group,items:group.items.filter(item=>terms.every(term=>(item+' '+workspaceDescriptions[item]).toLowerCase().includes(term)))})).filter(group=>group.items.length);
 }
 export function hasUnsavedWorkspaceChanges(view,config,savedConfig) {
- return (view==='Settings'||view==='Page editor')&&JSON.stringify(config)!==savedConfig;
+ return (view==='Settings'||view==='Branding')&&JSON.stringify(config)!==savedConfig;
 }

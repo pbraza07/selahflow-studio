@@ -113,9 +113,11 @@ test('public booking creates protected owner records; exposes catalog only; reje
 
  // Owner unchecking approval must survive settings save, public catalog and
  // the actual locked confirmation/payment queues. No customer network sends.
- const optionalConfig={...saved,services:saved.services.map(s=>({...s,requiresApproval:false,requiresWaiver:false})),bookingStandardFields:{firstName:{required:false},lastName:{required:false},dateOfBirth:{required:false}}};
+ const optionalConfig={...saved,socialLinks:{instagram:'https://instagram.com/fixture-business'},business_model:'A fixture business story',homeServicesTitle:'Fixture services',services:saved.services.map(s=>({...s,requiresApproval:false,requiresWaiver:false})),bookingStandardFields:{firstName:{required:false},lastName:{required:false},dateOfBirth:{required:false}}};
  const saveOptional=await handler.studioPost(new Request('https://studio.example/api/studio',{method:'POST',headers:{origin:'https://studio.example','Content-Type':'application/json','x-test-owner':'owner'},body:JSON.stringify({action:'settings',config:optionalConfig})}),false);
  assert.equal(saveOptional.status,200,await saveOptional.clone().text());
+ const brandingSaved=JSON.parse((await pg.query("SELECT data FROM settings WHERE owner='owner'")).rows[0].data);assert.equal(brandingSaved.socialLinks.instagram,'https://instagram.com/fixture-business');assert.equal((await pg.query("SELECT business_model FROM businesses WHERE owner_id='owner'")).rows[0].business_model,'A fixture business story');
+ const invalidSocial=await handler.studioPost(new Request('https://studio.example/api/studio',{method:'POST',headers:{origin:'https://studio.example','Content-Type':'application/json','x-test-owner':'owner'},body:JSON.stringify({action:'settings',config:{...optionalConfig,socialLinks:{instagram:'javascript:alert(1)'}}})}),false);assert.equal(invalidSocial.status,400);assert.equal(JSON.parse((await pg.query("SELECT data FROM settings WHERE owner='owner'")).rows[0].data).socialLinks.instagram,'https://instagram.com/fixture-business');
  assert.equal(JSON.parse((await pg.query("SELECT data FROM settings WHERE owner='owner'")).rows[0].data).services[0].requiresApproval,false);
  const optionalCatalog=(await (await handler.publicGet(new Request('https://studio.example/api/booking'))).json()).config;
  assert.equal(optionalCatalog.services.find(s=>s.id==='barber').requiresApproval,false);

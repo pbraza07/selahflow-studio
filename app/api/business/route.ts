@@ -41,7 +41,7 @@ export async function POST(req:Request){
    if(b.requestListing&&(!settings?.services?.length||!settings?.staff?.length))
     {await client.query('ROLLBACK');return Response.json({error:'Add at least one service and team member before requesting a listing.'},{status:400});}
    await saveBusinessProfile(client,{owner,name,description,city,region,brandPrimary,brandBackground,businessModel,googleLink});
-   if(settings){settings.name=name;if(requestedTheme!==null)settings.theme=resolveTheme(requestedTheme);if(address!==null)settings.address=address;await client.query('UPDATE settings SET data=$1 WHERE owner=$2',[JSON.stringify(settings),owner]);}
+   if(settings){settings.name=name;if(businessModel!==null)settings.business_model=businessModel;if(requestedTheme!==null)settings.theme=resolveTheme(requestedTheme);if(address!==null)settings.address=address;await client.query('UPDATE settings SET data=$1 WHERE owner=$2',[JSON.stringify(settings),owner]);}
    await client.query('COMMIT');
    return Response.json({ok:true,listingPending:!!b.requestListing},{headers:noStore});
   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}

@@ -4,7 +4,7 @@ import {filteredWorkspaceGroups,workspaceGroups,hasUnsavedWorkspaceChanges} from
 
 test('workspace search finds tools by purpose and preserves every existing destination',()=>{
  const all=workspaceGroups.flatMap(group=>group.items);
- assert.equal(all.length,13);assert.equal(new Set(all).size,13);
+ assert.equal(all.length,12);assert.equal(new Set(all).size,12);
  assert.deepEqual(filteredWorkspaceGroups('  PAYMENT  ').flatMap(group=>group.items),['Reports']);
  assert.deepEqual(filteredWorkspaceGroups('booking rules').flatMap(group=>group.items),['Settings']);
  assert.equal(filteredWorkspaceGroups('does not exist').length,0);
@@ -13,10 +13,10 @@ test('workspace search finds tools by purpose and preserves every existing desti
 test('draft protection covers settings and public page editor without flagging other workspace views',()=>{
  const config={name:'Business',services:[{id:'one',price:30}]},saved=JSON.stringify(config);
  assert.equal(hasUnsavedWorkspaceChanges('Settings',config,saved),false);
- assert.equal(hasUnsavedWorkspaceChanges('Page editor',{...config,policy:'New policy'},saved),true);
+ assert.equal(hasUnsavedWorkspaceChanges('Branding',{...config,policy:'New policy'},saved),true);
  assert.equal(hasUnsavedWorkspaceChanges('Settings',{...config,services:[{id:'one',price:40}]},saved),true);
  assert.equal(hasUnsavedWorkspaceChanges('Overview',{...config,name:'Changed'},saved),false);
- assert.equal(hasUnsavedWorkspaceChanges('Page editor',JSON.parse(saved),saved),false);
+ assert.equal(hasUnsavedWorkspaceChanges('Branding',JSON.parse(saved),saved),false);
 });
 
 test('visual text editor keeps the editable component stable across field selection and saves',async()=>{
