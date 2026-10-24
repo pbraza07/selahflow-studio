@@ -50,13 +50,13 @@ export async function ownerGet(req:Request){
    db().prepare("SELECT * FROM events WHERE owner=? AND kind<>'membership_payment' ORDER BY created DESC").bind(owner).all(),
    loadOwnerMemberRoster(getPool(),owner),
    loadMembershipReportPayments(getPool(),owner),
-   getPool().query("SELECT name FROM businesses WHERE owner_id=$1 AND status='active'",[owner])
+   getPool().query("SELECT name,business_model FROM businesses WHERE owner_id=$1 AND status='active'",[owner])
   ]);
   const visits=a.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   const activityEvents=e.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   const paidBookingFallback=await reconcileStripeBookingReceipts(getPool(),owner,activityEvents);
   return reply({
-   config,reportBusinessName:businessDetails.rows[0]?.name,appointments:decorateOwnerAppointments(visits,roster),
+   config:{...config,business_model:businessDetails.rows[0]?.business_model??config.business_model},reportBusinessName:businessDetails.rows[0]?.name,appointments:decorateOwnerAppointments(visits,roster),
    events:await visibleReportPayments(getPool(),owner,[...reportSaleEvents([...activityEvents,...paidBookingFallback],config.services),...membershipPayments])
   });
  }catch(e){
@@ -174,8 +174,8 @@ try{
  }
  if(JSON.stringify(oldConfig.waiverLegalReview||null)!==JSON.stringify(c.waiverLegalReview||null))await client.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5)',[crypto.randomUUID(),owner,new Date().toISOString(),'waiver_legal_review',JSON.stringify({review:c.waiverLegalReview||null})]);
  await client.query('INSERT INTO settings(owner,data) VALUES($1,$2) ON CONFLICT(owner) DO UPDATE SET data=excluded.data',[owner,JSON.stringify(c)]);
- await client.query('UPDATE businesses SET name=$1,city=COALESCE($2,city),region=COALESCE($3,region),updated_at=now() WHERE owner_id=$4',
-  [c.name,typeof c.city==='string'?c.city:null,typeof c.region==='string'?c.region:null,owner]);
+ await client.query('UPDATE businesses SET name=$1,city=COALESCE($2,city),region=COALESCE($3,region),business_model=COALESCE($5,business_model),brand_primary=COALESCE($6,brand_primary),brand_background=COALESCE($7,brand_background),updated_at=now() WHERE owner_id=$4',
+  [c.name,typeof c.city==='string'?c.city:null,typeof c.region==='string'?c.region:null,owner,typeof c.business_model==='string'?c.business_model:null,c.theme?.colors?.button||null,c.theme?.colors?.page||null]);
  await client.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING',
   [crypto.randomUUID(),owner,new Date().toISOString(),'settings','{}']);
  await client.query('COMMIT');

@@ -1,3 +1,13 @@
+# v1.3.147 release handoff — Branding page customization and booking sharing (validation in progress)
+
+Branding contains Business & logo, Colors & fonts, Page editor, Social links and Booking QR & sharing. Removed the separate Page editor navigation and global editing shortcut; existing visual/wording controls remain within Branding. Draft protection now covers Branding, and visited sections remain mounted while switching tabs. Theme/profile saves synchronize their shared fields without discarding unrelated page drafts. Supported home-page wording now renders on the public page; business story and theme colors persist consistently.
+
+Owners can save supported HTTPS Instagram, Facebook, TikTok, YouTube, LinkedIn, X and website links; safe buttons appear at the top right of the public business page. Empty fields hide buttons. Booking QR images are generated inside SelahFlow, owner-scoped and no-store, with PNG/SVG downloads and native sharing/copy fallback; the QR encodes only the business booking URL for its environment. No external QR provider, tracking redirect, credentials or migration.
+
+Waivers are unchanged: other businesses currently use the same activity Participation Waiver with their own name/colors, not industry-specific templates. Production acceptance requires each business's review for the current version. Existing signed documents are not rewritten.
+
+Feature branch feature/branding-page-sharing. Source validation and staging/production deployment pending. v1.3.146 remains the last verified LIVE runtime.
+
 # v1.3.146 release handoff — verified LIVE in staging and production
 
 Primary Platform Admin → First-time customer commissions now has separate immediate-save green-accent checkboxes for each business’s 10% first paid booking and first paid membership, plus Disable both commissions when either is enabled. The primary-only API changes only the chosen condition under the existing transaction/advisory lock and records the administrator actor. Owners can save terms acceptance while both commissions remain off, allowing initial activation by platform admin once Stripe is ready. The admin API cannot accept terms for a business. Disabling works during Stripe outages and after business archival. Original activation dates, consent, identity salts, fee claims, refunds and retained accounting history are preserved. Existing open checkouts retain their quoted fee; the panel explains how to expire unpaid checkouts before replacing them.
