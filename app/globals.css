@@ -2022,3 +2022,7 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 
 /* Stripe setup help stays readable within business Settings on mobile and desktop. */
 .sf-stripe-settings-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.sf-stripe-settings-header h2{margin-bottom:0!important}.sf-stripe-setup-help{margin:18px 0;padding:18px;border:1px solid var(--sf-settings-line,#cbd5ce);border-radius:12px;background:#fff;color:var(--sf-settings-ink,#203b35)}.sf-stripe-setup-help[hidden]{display:none}.sf-stripe-setup-help li{margin:12px 0;line-height:1.6}.sf-stripe-setup-help ol,.sf-stripe-setup-help ul{padding-left:22px}@media(max-width:650px){.sf-stripe-settings-header>button{width:100%}.sf-stripe-setup-help{padding:14px}}
+
+/* One owner workspace for public-page identity, design and sharing. */
+.sf-branding-workspace{display:grid;gap:20px;min-width:0}.sf-branding-tabs,.sf-branding-actions{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}.sf-branding-tabs button{min-height:44px}.sf-booking-qr{background:#fff;padding:16px;display:inline-block;border:1px solid #d4ded8;border-radius:12px;margin:20px 0}.sf-booking-qr img{display:block;max-width:100%;height:auto}.sf-branding-share input{width:100%;min-width:0}.sf-branding-workspace>details>summary{cursor:pointer;font-weight:700;padding:10px 0}.sf-branding-workspace .sf-visual-editor{margin-top:0}
+@media(max-width:650px){.sf-branding-tabs button{flex:1 1 140px}.sf-branding-actions>*{flex:1 1 160px;text-align:center}.sf-booking-qr{max-width:100%}}

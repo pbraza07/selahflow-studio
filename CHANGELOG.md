@@ -1,3 +1,7 @@
+## 1.3.147
+- Centralize business identity, design, page editing, social links and booking QR sharing under Branding.
+- Add owner-scoped QR downloads and safe top-right social buttons; synchronize page story, colors and supported wording.
+
 ## 1.3.146
 - Add primary platform-admin controls to independently enable or disable each business’s first-booking and first-membership commissions.
 - Preserve business terms, Stripe readiness, audit history and once-per-client eligibility; allow disabling during Stripe outages.

@@ -1,24 +1,22 @@
 'use client';
-import {useEffect,useState} from 'react';
-import Link from 'next/link';
-import OwnerThemeEditor from './owner-theme-editor';
-type Profile={slug:string;name:string;description:string;city:string;region:string;brand_primary:string;brand_background:string;business_model:string;has_logo:boolean;google_listing_url?:string};
-export default function OwnerBranding({slug}:{slug:string}){
- const [profile,setProfile]=useState<Profile|null>(null),[model,setModel]=useState(''),[googleLink,setGoogleLink]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[version,setVersion]=useState(0);
- async function load(){const r=await fetch('/api/business',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error);const b=d.business as Profile;if(!b)throw Error('Business not found.');setProfile(b);setModel(b.business_model);setGoogleLink(b.google_listing_url||'');}
- useEffect(()=>{load().catch(e=>setMessage(e.message));},[]);
- async function save(e:React.FormEvent){e.preventDefault();if(!profile)return;setBusy(true);setMessage('');try{
- const r=await fetch('/api/business',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:profile.name,description:profile.description,city:profile.city,region:profile.region,requestListing:false,businessModel:model,googleListingUrl:googleLink})}),d=await r.json();if(!r.ok)throw Error(d.error);await load();setMessage('Business branding and Google listing link saved. Customize page colors below.');}
- catch(e){setMessage((e as Error).message);}finally{setBusy(false);}}
- async function upload(e:React.ChangeEvent<HTMLInputElement>){const file=e.target.files?.[0];if(!file)return;setBusy(true);setMessage('');try{if(file.size>300*1024)throw Error('Logo must be no larger than 300 KB.');
- const form=new FormData();form.set('logo',file);const r=await fetch('/api/branding/logo',{method:'POST',body:form}),d=await r.json();if(!r.ok)throw Error(d.error);await load();setVersion(Date.now());setMessage('Business logo uploaded.');}
- catch(e){setMessage((e as Error).message);}finally{setBusy(false);e.target.value='';}}
- async function remove(){setBusy(true);try{const r=await fetch('/api/branding/logo',{method:'DELETE'}),d=await r.json();if(!r.ok)throw Error(d.error);await load();setVersion(Date.now());setMessage('Logo removed.');}catch(e){setMessage((e as Error).message);}finally{setBusy(false);}}
- return <><section className="panel padded"><h2>Customize your business page</h2><p className="muted">Your business story and logo appear on your public pages. The full-page color and font editor is below.</p>
- {message&&<p role="status" className="notice section-gap">{message}</p>}
- <div className="branding-preview" style={{background:'var(--sf-page)'}}><div style={{borderLeft:'5px solid var(--sf-accent)',padding:16,background:'var(--sf-card)',borderRadius:8}}>{profile?.has_logo?<img src={'/api/branding/logo?slug='+encodeURIComponent(slug)+'&v='+version} alt="Business logo" className="sf-business-profile-logo"/>:<h3 style={{color:'var(--sf-on-card)'}}>{profile?.name||slug}</h3>}<p style={{color:'var(--sf-on-card)'}}>{model||'Your business story appears here.'}</p></div></div>
- 
- <form onSubmit={save}><label>Google Maps business listing link<input type="url" value={googleLink} onChange={e=>setGoogleLink(e.target.value)} maxLength={500} placeholder="https://maps.app.goo.gl/... or https://www.google.com/maps/place/..." /></label><p className="muted">Google listing photos appear as a Next/Previous carousel on your public business and booking pages when SelahFlow has Google Places API access. Google provides a selection of listing photos (up to 10), not necessarily every uploaded image. Required photographer credits are displayed.</p>{googleLink&&<p className="sf-google-preview"><a href={googleLink} target="_blank" rel="noopener noreferrer">Open saved Google Maps listing ↗</a></p>}<label>Business model / description<textarea maxLength={2000} rows={5} value={model} onChange={e=>setModel(e.target.value)} placeholder="Describe your services, specialties and business model."/></label><small>{model.length}/2000 characters</small><button className="primary" disabled={busy||!profile} type="submit">Save branding</button></form>
- <div className="section-gap"><h3>Business logo</h3><p className="muted">PNG, JPG or WebP, maximum 300 KB. Stored with your business in the database.</p><label>Upload / replace logo<input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={upload}/></label>{profile?.has_logo&&<button className="outline" type="button" disabled={busy} onClick={remove}>Remove logo</button>}</div>
- <p className="section-gap"><Link className="outline" href={'/'+slug} target="_blank">Open public business page</Link></p></section><OwnerThemeEditor/></>;
+import {useState} from 'react';
+import dynamic from 'next/dynamic';
+import {SOCIAL_PLATFORMS} from '../../server/business-social-links.mjs';
+const OwnerBrandProfile=dynamic(()=>import('./owner-brand-profile'));
+const OwnerThemeEditor=dynamic(()=>import('./owner-theme-editor'));
+const VisualPageEditor=dynamic(()=>import('./visual-page-editor'));
+const PageEditorSettings=dynamic(()=>import('./page-editor-settings'));
+const BookingPageSharing=dynamic(()=>import('./booking-page-sharing'));
+const sections=[['identity','Business & logo'],['appearance','Colors & fonts'],['pages','Page editor'],['social','Social links'],['sharing','Booking QR & sharing']] as const;
+export default function OwnerBranding({slug,config,setConfig,onSave,onProfileSaved,busy,dirty}:{slug:string;config:any;setConfig:any;onSave:()=>void;onProfileSaved:(profile:any)=>void;busy:boolean;dirty:boolean}){
+ const [section,setSection]=useState<(typeof sections)[number][0]>('identity');
+ const [visited,setVisited]=useState<string[]>(['identity']);
+ function openSection(id:(typeof sections)[number][0]){setSection(id);setVisited(old=>old.includes(id)?old:[...old,id]);}
+ return <section className="sf-branding-workspace" aria-label="Branding and public pages"><div className="panel padded"><h2>Your brand, pages &amp; sharing</h2><p>Manage your business identity, page design and links in one place. Questions stay in Settings → Questions; plans and prices stay in their business tools.</p><nav className="sf-branding-tabs" aria-label="Branding sections">{sections.map(([id,label])=><button key={id} type="button" className={section===id?'primary':'outline'} aria-current={section===id?'page':undefined} onClick={()=>openSection(id)}>{label}</button>)}</nav>{dirty&&<p role="status">You have unpublished page changes. <button type="button" className="primary" disabled={busy} onClick={onSave}>Save page changes</button></p>}</div>
+ <div hidden={section!=='identity'}>{visited.includes('identity')&&<OwnerBrandProfile slug={slug} onSaved={onProfileSaved}/>}</div>
+ <div hidden={section!=='appearance'}>{visited.includes('appearance')&&<OwnerThemeEditor/>}</div>
+ <div hidden={section!=='pages'}>{visited.includes('pages')&&<><VisualPageEditor config={config} setConfig={setConfig} slug={slug} onSave={onSave} onExit={()=>setSection('identity')} busy={busy} dirty={dirty}/><details className="panel padded"><summary>All page wording &amp; booking display options</summary><PageEditorSettings config={config} setConfig={setConfig}/><button type="button" className="primary" disabled={busy||!dirty} onClick={onSave}>Save page changes</button></details></>}</div>
+ <div hidden={section!=='social'}>{visited.includes('social')&&<section className="panel padded"><h2>Social media buttons</h2><p>Add full HTTPS profile links. Saved links appear at the top right of your public business page. Leave a field empty to hide its button.</p>{SOCIAL_PLATFORMS.map(([id,label])=><label key={id}>{label}<input type="url" maxLength={500} value={config.socialLinks?.[id]||''} placeholder={id==='website'?'https://your-business.com':'https://'+(id==='x'?'x.com':id+'.com')+'/your-profile'} onChange={e=>setConfig((c:any)=>({...c,socialLinks:{...(c.socialLinks||{}),[id]:e.target.value}}))}/></label>)}<button type="button" className="primary" disabled={busy||!dirty} onClick={onSave}>{busy?'Saving…':'Save social links'}</button></section>}</div>
+ <div hidden={section!=='sharing'}>{visited.includes('sharing')&&<BookingPageSharing slug={slug} name={config.name}/>}</div>
+ </section>;
 }
