@@ -75,7 +75,7 @@ test('public booking and business pages link to memberships, owner dashboard can
  const base=new URL('../',import.meta.url);
  const files=await Promise.all([
   'app/studio/owner-dashboard.tsx','app/book/page.tsx','app/[slug]/page.tsx',
-  'app/components/owner-branding.tsx','app/components/google-business-gallery.tsx',
+  'app/components/owner-brand-profile.tsx','app/components/google-business-gallery.tsx',
   'app/api/public/memberships/route.ts','app/api/stripe/webhook/route.ts',
   'app/api/public/google-gallery/route.ts','app/api/public/google-gallery/photo/route.ts'
  ].map(f=>readFile(new URL(f,base),'utf8')));
