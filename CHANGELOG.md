@@ -1,3 +1,9 @@
+## 1.3.148
+
+- Optional 1, 2 or 3 membership sessions per week under Memberships, within anniversary-based calendar months including a partial fifth week.
+- Enforce weekly reservations on submission/approval/attendance and session moves; preserve existing fixed monthly plans and all history.
+- Explain usage rules in owner/customer plans, payment invitations/confirmations and assistant knowledge.
+
 ## 1.3.147
 - Centralize business identity, design, page editing, social links and booking QR sharing under Branding.
 - Add owner-scoped QR downloads and safe top-right social buttons; synchronize page story, colors and supported wording.

@@ -1,3 +1,4 @@
+import {membershipUsageSummary} from '../../../../server/membership-weekly.mjs';
 import {quoteCoupon} from '../../../../server/business-coupons.mjs';
 import {membershipEligibilitySummary} from '../../../../server/membership-eligibility.mjs';
 import {startMembershipCheckout} from '../../../../server/membership-checkout.mjs';
@@ -17,11 +18,11 @@ export async function GET(req:Request){
   const pool=getPool();
   const b=(await pool.query("SELECT b.id,b.name,b.slug,b.brand_primary,b.brand_background,s.data AS settings_data,a.charges_enabled,a.onboarding_complete FROM businesses b LEFT JOIN settings s ON s.owner=b.owner_id LEFT JOIN merchant_accounts a ON a.business_id=b.id WHERE b.slug=$1 AND b.status='active'",[slug])).rows[0];
   if(!b)return Response.json({error:'Business not found.'},{status:404,headers:noStore});
-  const plans=(await pool.query("SELECT p.interval_count AS \"intervalCount\",p.credit_eligibility,p.id,p.name,p.description,p.interval_unit AS interval,p.price_cents AS \"priceCents\",p.group_id AS \"groupId\",COALESCE(p.badge,g.badge) AS badge FROM membership_plans p LEFT JOIN membership_groups g ON g.id=p.group_id AND g.business_id=p.business_id WHERE p.business_id=$1 AND p.active=TRUE ORDER BY p.display_order,p.created_at DESC,p.name",[b.id])).rows;
+  const plans=(await pool.query("SELECT p.weekly_sessions AS \"weeklySessions\",p.sessions_included AS \"sessionsIncluded\",p.interval_count AS \"intervalCount\",p.credit_eligibility,p.id,p.name,p.description,p.interval_unit AS interval,p.price_cents AS \"priceCents\",p.group_id AS \"groupId\",COALESCE(p.badge,g.badge) AS badge FROM membership_plans p LEFT JOIN membership_groups g ON g.id=p.group_id AND g.business_id=p.business_id WHERE p.business_id=$1 AND p.active=TRUE ORDER BY p.display_order,p.created_at DESC,p.name",[b.id])).rows;
   const groups=(await pool.query('SELECT g.id,g.name,g.badge FROM membership_groups g WHERE g.business_id=$1 AND EXISTS(SELECT 1 FROM membership_plans p WHERE p.business_id=g.business_id AND p.group_id=g.id AND p.active=true) ORDER BY g.display_order,g.created_at,g.id',[b.id])).rows;
   let config:any={};try{config=JSON.parse(b.settings_data||'{}')}catch{}
   const theme=config.theme||null;
-  return Response.json({slug:b.slug,name:b.name,plans:plans.map((p:any)=>{const {credit_eligibility,...plan}=p;return {...plan,creditSummary:membershipEligibilitySummary(credit_eligibility,config)};}),groups,brandPrimary:b.brand_primary,brandBackground:b.brand_background,theme,registrationConfig:publicRegistrationSettings(config),
+  return Response.json({slug:b.slug,name:b.name,plans:plans.map((p:any)=>{const {credit_eligibility,...plan}=p;return {...plan,usageSummary:membershipUsageSummary(p.weeklySessions,p.sessionsIncluded),creditSummary:membershipEligibilitySummary(credit_eligibility,config)};}),groups,brandPrimary:b.brand_primary,brandBackground:b.brand_background,theme,registrationConfig:publicRegistrationSettings(config),
    acceptsRequests:true,canPay:paymentConfigured()&&b.charges_enabled===true&&b.onboarding_complete===true},{headers:noStore});
  }catch{return Response.json({error:'Membership enrollment unavailable.'},{status:503,headers:noStore});}
 }

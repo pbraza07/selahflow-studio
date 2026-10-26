@@ -1,3 +1,4 @@
+import {assertWeeklyMembershipBooking,membershipBookingActive} from './membership-weekly.mjs';
 import {bookingDiscount} from './booking-discounts.mjs';
 import {membershipAllows} from './membership-eligibility.mjs';
 import {hasUsableMembership} from './member-badge-state.mjs';
@@ -77,10 +78,11 @@ export async function confirmBooking(options){
   const session=selectedSession(config,date,staff,services,start);
   const sessionId=data?.sessionId || null;
   if(data.membershipCovered===true){
-   const member=(await client.query('SELECT m.status,m.sessions_included,m.sessions_used,m.paid_through,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2',[owner,data.memberNumber])).rows[0];
+   await assertWeeklyMembershipBooking(client,{owner,memberNumber:data.memberNumber,date,excludeIds:[id,pendingId].filter(Boolean)});
+   const member=(await client.query('SELECT m.status,m.sessions_included,m.sessions_used,m.paid_through,m.initial_paid_at,m.billing_start_override,p.weekly_sessions,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2',[owner,data.memberNumber])).rows[0];
    const current=services.map(s=>(config.services||[]).find(v=>v.id===s.id)||s);
    const allowed=session?session.membershipCreditAllowed!==false:current.every(s=>s.membershipCreditAllowed!==false);
-   if(!member||!hasUsableMembership(member)||!allowed||!membershipAllows(member.credit_eligibility,{serviceIds:services.map(s=>s.id),sessionId,seriesId:session?.seriesId}))throw conflict('Membership credits do not cover this booking anymore. Refresh and book with the current price.');
+   if(!member||!membershipBookingActive(member,date)||!allowed||!membershipAllows(member.credit_eligibility,{serviceIds:services.map(s=>s.id),sessionId,seriesId:session?.seriesId}))throw conflict('Membership credits do not cover this booking anymore. Refresh and book with the current price.');
   }
 
   if(sessionId && (!session || session.id!==sessionId))

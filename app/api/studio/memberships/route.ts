@@ -1,3 +1,4 @@
+import {validateWeeklySessions,membershipUsageSummary,assertWeeklyMembershipBooking} from '../../../../server/membership-weekly.mjs';
 import {applyManualPeriod} from '../../../../server/manual-membership-period.mjs';
 import {membershipBillingAction} from '../../../../server/membership-billing-actions.mjs';
 import {monthlyPeriod,anniversary,refreshMembershipPeriods} from '../../../../server/membership-periods.mjs';
@@ -36,7 +37,7 @@ export async function GET(req:Request){
   const {pool,business,owner}=await ctx(req);
   await refreshMembershipPeriods(pool,business.id);
   const [plans,members,merchant,usageCounts,ledger,groups]=await Promise.all([
-   pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",group_id AS "groupId",badge,interval_count AS "intervalCount",credit_eligibility AS "creditEligibility",active FROM membership_plans WHERE business_id=$1 ORDER BY display_order,created_at DESC',[business.id]),
+   pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",weekly_sessions AS "weeklySessions",group_id AS "groupId",badge,interval_count AS "intervalCount",credit_eligibility AS "creditEligibility",active FROM membership_plans WHERE business_id=$1 ORDER BY display_order,created_at DESC',[business.id]),
    pool.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.initial_paid_at,m.billing_start_override,m.credit_period_start,m.credit_period_end,m.stripe_subscription_id,m.stripe_interval_unit,m.stripe_interval_count,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
    pool.query("SELECT external_account_id,charges_enabled,onboarding_complete FROM merchant_accounts WHERE business_id=$1",[business.id]),
    pool.query("SELECT membership_id,COUNT(*)::int AS recorded_sessions FROM membership_session_ledger WHERE business_id=$1 AND event_type='session_used' GROUP BY membership_id",[business.id]),
@@ -53,7 +54,7 @@ export async function GET(req:Request){
   const benefits=planEntitlements(business.plan_code,business.subscription_status);
   if(Number.isInteger(individual.membershipPlans))benefits.limits.membershipPlans=individual.membershipPlans;
   const emailDelivery=await deliveryProviderStatusWithConnection(pool);
-  return Response.json({coupons,invitations,businessName:business.name,emailDelivery:{provider:emailDelivery.emailProvider,ready:emailDelivery.emailConfigured},memberIdPolicy:business.member_id_policy,creditOptions:{services:(catalog.services||[]).map((s:any)=>({id:s.id,name:s.name})),sessions:(catalog.bookableSessions||[]).map((s:any)=>({id:s.id,name:((catalog.services||[]).find((v:any)=>v.id===s.service)?.name||'Session')+' · '+s.date+' · '+String(Math.floor(s.start/60)).padStart(2,'0')+':'+String(s.start%60).padStart(2,'0')+(s.repeat?' (recurring series)':'')}))},plans:plans.rows.map((p:any)=>({...p,creditSummary:membershipEligibilitySummary(p.creditEligibility,catalog)})),groups:groups.rows,members:members.rows.map((m:any)=>{const actual=Number(usageCounts.rows.find((u:any)=>u.membership_id===m.id)?.recorded_sessions||0);const plan=plans.rows.find((p:any)=>p.id===m.plan_id);const profile=profiles.find((p:any)=>p.member_number&&p.member_number===m.member_number);return {...m,current_profile_answers:{...m.registration_answers,...(profile?.registration_answers||{})},current_profile_labels:{...m.registration_field_labels,...(profile?.registration_field_labels||{})},badge:plan?.badge||groups.rows.find((g:any)=>g.id===plan?.groupId)?.badge||null,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
+  return Response.json({coupons,invitations,businessName:business.name,emailDelivery:{provider:emailDelivery.emailProvider,ready:emailDelivery.emailConfigured},memberIdPolicy:business.member_id_policy,creditOptions:{services:(catalog.services||[]).map((s:any)=>({id:s.id,name:s.name})),sessions:(catalog.bookableSessions||[]).map((s:any)=>({id:s.id,name:((catalog.services||[]).find((v:any)=>v.id===s.service)?.name||'Session')+' · '+s.date+' · '+String(Math.floor(s.start/60)).padStart(2,'0')+':'+String(s.start%60).padStart(2,'0')+(s.repeat?' (recurring series)':'')}))},plans:plans.rows.map((p:any)=>({...p,usageSummary:membershipUsageSummary(p.weeklySessions,p.sessionsIncluded),creditSummary:membershipEligibilitySummary(p.creditEligibility,catalog)})),groups:groups.rows,members:members.rows.map((m:any)=>{const actual=Number(usageCounts.rows.find((u:any)=>u.membership_id===m.id)?.recorded_sessions||0);const plan=plans.rows.find((p:any)=>p.id===m.plan_id);const profile=profiles.find((p:any)=>p.member_number&&p.member_number===m.member_number);return {...m,current_profile_answers:{...m.registration_answers,...(profile?.registration_answers||{})},current_profile_labels:{...m.registration_field_labels,...(profile?.registration_field_labels||{})},badge:plan?.badge||groups.rows.find((g:any)=>g.id===plan?.groupId)?.badge||null,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
    payments:{configured:paymentConfigured(),connected:!!account.external_account_id,
     ready:paymentConfigured()&&account.charges_enabled===true&&account.onboarding_complete===true}}, {headers});
  }catch(e){return error(e);}
@@ -110,7 +111,8 @@ export async function POST(req:Request){
      const groupId=await requireMembershipGroup(client,business.id,input.groupId);
      const badge=validateMembershipBadge(input.badge);
      const active=input.active!==false;
-     const sessionsIncluded=Number(input.sessionsIncluded??0);
+     const weeklySessions=validateWeeklySessions(input.weeklySessions);
+     const sessionsIncluded=weeklySessions?weeklySessions*5:Number(input.sessionsIncluded??0);
      if(!Number.isInteger(sessionsIncluded)||sessionsIncluded<0||sessionsIncluded>100000)throw Error('Enter a valid session allowance.');
      if(input.id){
       if(!/^[a-f0-9-]{36}$/i.test(input.id))throw Error('Invalid membership offer.');
@@ -121,14 +123,14 @@ export async function POST(req:Request){
       if(active&&!old.active&&count>=limit)
        throw Error('Your '+planEntitlements(record?.plan_code,record?.status).name+' plan allows up to '+limit+' active customer membership offers. Existing offers are preserved.');
       await client.query(
-       'UPDATE membership_plans SET name=$1,description=$2,interval_unit=$3,price_cents=$4,active=$5,updated_at=now(),sessions_included=$8,group_id=CASE WHEN $10 THEN $9 ELSE group_id END,badge=CASE WHEN $12 THEN $11::jsonb ELSE badge END,credit_eligibility=COALESCE($13::jsonb,credit_eligibility),interval_count=$14 WHERE id=$6 AND business_id=$7',
-       [plan.name,plan.description,plan.interval,plan.price,active,input.id,business.id,sessionsIncluded,groupId,input.groupId!==undefined,badge?JSON.stringify(badge):null,input.badge!==undefined,eligibility?JSON.stringify(eligibility):null,intervalCount]);
+       'UPDATE membership_plans SET name=$1,description=$2,interval_unit=$3,price_cents=$4,active=$5,updated_at=now(),sessions_included=$8,group_id=CASE WHEN $10 THEN $9 ELSE group_id END,badge=CASE WHEN $12 THEN $11::jsonb ELSE badge END,credit_eligibility=COALESCE($13::jsonb,credit_eligibility),interval_count=$14,weekly_sessions=CASE WHEN $16 THEN $15 ELSE weekly_sessions END WHERE id=$6 AND business_id=$7',
+       [plan.name,plan.description,plan.interval,plan.price,active,input.id,business.id,sessionsIncluded,groupId,input.groupId!==undefined,badge?JSON.stringify(badge):null,input.badge!==undefined,eligibility?JSON.stringify(eligibility):null,intervalCount,weeklySessions,input.weeklySessions!==undefined]);
      }else{
       if(active&&count>=limit)
        throw Error('Your '+planEntitlements(record?.plan_code,record?.status).name+' plan allows up to '+limit+' active customer membership offers. Existing offers are preserved.');
       await client.query(
-       'INSERT INTO membership_plans(id,business_id,name,description,interval_unit,price_cents,active,sessions_included,group_id,badge,credit_eligibility,interval_count) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12)',
-       [randomUUID(),business.id,plan.name,plan.description,plan.interval,plan.price,active,sessionsIncluded,groupId,badge?JSON.stringify(badge):null,JSON.stringify(eligibility||{mode:'all',serviceIds:[],sessionIds:[]}),intervalCount]);
+       'INSERT INTO membership_plans(id,business_id,name,description,interval_unit,price_cents,active,sessions_included,group_id,badge,credit_eligibility,interval_count,weekly_sessions) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13)',
+       [randomUUID(),business.id,plan.name,plan.description,plan.interval,plan.price,active,sessionsIncluded,groupId,badge?JSON.stringify(badge):null,JSON.stringify(eligibility||{mode:'all',serviceIds:[],sessionIds:[]}),intervalCount,weeklySessions]);
      }
     }else{
      if(!/^[a-f0-9-]{36}$/i.test(input.id||''))throw Error('Invalid membership offer.');
@@ -189,11 +191,12 @@ export async function POST(req:Request){
     const member=(await client.query('SELECT m.id,m.member_number,m.sessions_included,m.sessions_used,m.status,p.credit_eligibility FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE m.business_id=$1 AND m.id=$2 FOR UPDATE OF m',[business.id,id])).rows[0];
     if(!member||member.status!=='active'||!member.member_number)throw Error('An active member is required.');
     if(member.sessions_used>=member.sessions_included)throw Error('No sessions remaining.');
-    const visits=(await client.query("SELECT a.id,a.data FROM appointments a JOIN businesses b ON b.owner_id=a.owner WHERE b.id=$1 AND a.status IN ('Completed','Attended') AND ($2='' OR a.id=$2) ORDER BY a.date ASC",[business.id,appointmentId])).rows;
+    const visits=(await client.query("SELECT a.id,a.date,a.data FROM appointments a JOIN businesses b ON b.owner_id=a.owner WHERE b.id=$1 AND a.status IN ('Completed','Attended') AND ($2='' OR a.id=$2) ORDER BY a.date ASC",[business.id,appointmentId])).rows;
     const unrecorded=[] as typeof visits;
     for(const v of visits){try{const d=typeof v.data==='string'?JSON.parse(v.data):v.data||{};if(d.membershipCreditAllowed!==false&&membershipAllows(member.credit_eligibility,{serviceIds:d.serviceIds||[],sessionId:d.sessionId})&&String(d.memberNumber||'').toUpperCase()===String(member.member_number).toUpperCase()){const found=await client.query("SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='session_used'",[business.id,id,v.id]);if(!found.rowCount)unrecorded.push(v);}}catch{}}
     const selected=unrecorded[0];
     if(!selected)throw Error('No unrecorded completed visits found for this member.');
+    await assertWeeklyMembershipBooking(client,{owner,memberNumber:member.member_number,date:selected.date,excludeIds:[selected.id]});
     const info=typeof selected.data==='string'?JSON.parse(selected.data):selected.data||{};
     if(info.memberNumber!==member.member_number)throw Error('Appointment member number does not match.');
     await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta) VALUES($1,$2,$3,$4,'session_used',-1)",[randomUUID(),business.id,id,selected.id]);

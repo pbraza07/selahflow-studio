@@ -1,3 +1,4 @@
+import {membershipUsageSummary} from './membership-weekly.mjs';
 import {groupAssistantDocuments} from './assistant-sections.mjs';
 import {PAGE_CONTENT_FIELDS} from './page-content.mjs';
 import {registrationQuestions} from './registration-questions.mjs';
@@ -33,7 +34,7 @@ export function buildBusinessKnowledge(business,config={},plans=[],now=new Date(
  add('payment','Booking, approval and payment','Choose a service and use the booking calendar to check live availability. Each service states whether approval is required. Participation is conditional on completing any payment due. Approved bookings receive payment instructions by email; eligible memberships may cover the session. The assistant can show limited membership and latest booking status using your unique ID. Detailed personal records and payment access require separate verification. It cannot make a booking, take payment or guarantee an available seat.');
  for(const [key,label] of Object.entries(PAGE_CONTENT_FIELDS))add(key.startsWith('membership')?'membership-wording':'wording',label,config.pageContent?.[key],key.startsWith('membership')?membership:book);
  for(const key of ['bookingEyebrow','bookingHeadline','bookingDescription','bookingHeaderNote','bookingPolicyTitle','bookingPaymentNote','bookingMembershipTitle','bookingMembershipDescription','bookingMembershipButton','bookingOwnerLoginLabel'])add('wording',key.replace(/([A-Z])/g,' $1'),config[key]);
- for(const p of plans)add('membership',p.name,[p.description,`Price: ${money(Number(p.price_cents)/100)} every ${p.interval_count||1} ${p.interval_unit}(s).`,Number.isInteger(p.sessions_included)?`Included sessions: ${p.sessions_included}.`:'',membershipEligibilitySummary(p.credit_eligibility,config)],membership);
+ for(const p of plans)add('membership',p.name,[p.description,`Price: ${money(Number(p.price_cents)/100)} every ${p.interval_count||1} ${p.interval_unit}(s).`,Number.isInteger(p.sessions_included)?(p.weekly_sessions?membershipUsageSummary(p.weekly_sessions,p.sessions_included):`Included sessions: ${p.sessions_included}.`):'',membershipEligibilitySummary(p.credit_eligibility,config)],membership);
  if(plans.length)add('membership-rules','Membership renewal and credits','Membership payments recur according to the plan’s billing interval and start date. Monthly session allowances reset from the paid membership start date; unused monthly sessions do not roll over. The business can adjust a member’s billing anchor. Ask the assistant for membership status and sessions remaining using only your unique ID. Detailed personal records require separate verification.',membership);
  for(const member of publicTeamMembers(config))add('team',member.name,[member.role,(member.services||[]).map(id=>services.find(s=>s.id===id)?.name).filter(Boolean).join(', ')]);
  for(const form of ['booking','membership'])for(const field of registrationQuestions(config,form))add('question',`${form==='booking'?'Booking':'Membership'} question: ${field.label}`,[field.required?'Required by default; selected service/session overrides may apply.':'Optional by default; selected service/session overrides may apply.',...(field.type==='select'?field.options||[]:[])],form==='membership'?membership:book);
@@ -58,7 +59,7 @@ export async function loadBusinessKnowledge(pool,slug,now=new Date()){
  const business=(await pool.query("SELECT b.id,b.name,b.slug,b.industry,b.description,b.business_model,b.city,b.region,s.data FROM businesses b LEFT JOIN settings s ON s.owner=b.owner_id WHERE b.slug=$1 AND b.status='active' LIMIT 1",[slug])).rows[0];
  if(!business)return null;
  let config={};try{config=typeof business.data==='string'?JSON.parse(business.data):business.data||{};}catch{}
- const plans=(await pool.query('SELECT name,description,price_cents,interval_unit,interval_count,sessions_included,credit_eligibility FROM membership_plans WHERE business_id=$1 AND active=true ORDER BY display_order,created_at DESC,name',[business.id])).rows;
+ const plans=(await pool.query('SELECT name,description,price_cents,interval_unit,interval_count,sessions_included,weekly_sessions,credit_eligibility FROM membership_plans WHERE business_id=$1 AND active=true ORDER BY display_order,created_at DESC,name',[business.id])).rows;
  return buildBusinessKnowledge(business,config,plans,now);
 }
 export function answerBusinessQuestion(knowledge,question){

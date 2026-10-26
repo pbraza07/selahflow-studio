@@ -1,3 +1,4 @@
+import {weeklyMonthCredits} from './membership-weekly.mjs';
 import {reserveCommission,attachCommissionSession,settleCommission} from './first-customer-commissions.mjs';
 import {monthlyPeriod,refreshMemberPeriod,membershipAnchor,nextBillingAnchor} from './membership-periods.mjs';
 import {assertBookingWaiver} from './participation-waivers.mjs';
@@ -125,7 +126,9 @@ export async function applyMembershipInvoice(db,businessId,account,invoice,subsc
  return recordMembershipPaidPeriod(db,{businessId,account,member,reference:invoice.id,amountCents:invoice.amount_paid,paidAt,paidThrough,subscription,customerId:typeof invoice.customer==='string'?invoice.customer:null,renewal:invoice.billing_reason==='subscription_cycle'});
 }
 export async function recordMembershipPaidPeriod(db,{businessId,account,member,reference,amountCents,paidAt,paidThrough,subscription,customerId,renewal=false}){
- const credits=Number(member.stripe_sessions_per_period);
+ let credits=Number(member.stripe_sessions_per_period);
+ const weekly=(await db.query('SELECT weekly_sessions FROM membership_plans WHERE id=$1 AND business_id=$2',[member.plan_id,businessId])).rows[0]?.weekly_sessions;
+ if(weekly)credits=weeklyMonthCredits({...member,initial_paid_at:member.initial_paid_at||paidAt},weekly,paidAt);
  if(!Number.isSafeInteger(credits)||credits<0)return false;
  const receipt=await db.query('INSERT INTO stripe_payment_receipts(stripe_account_id,provider_reference,business_id,membership_id,amount_cents) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING provider_reference',[account,reference,businessId,member.id,amountCents]);
  if(!receipt.rowCount)return true;
@@ -133,7 +136,7 @@ export async function recordMembershipPaidPeriod(db,{businessId,account,member,r
  const initial=member.initial_paid_at||paidAt;const anchor=membershipAnchor({...member,initial_paid_at:initial});const period=monthlyPeriod(anchor,paidAt);
  const effectivePaidThrough=!renewal&&member.stripe_interval_unit==='month'?nextBillingAnchor(anchor,paidAt,Number(member.stripe_interval_count)||1).toISOString():paidThrough;
  const reset=!member.initial_paid_at||!member.credit_period_end||new Date(member.credit_period_end)<=paidAt;
- if(reset&&member.credit_period_start)await db.query('INSERT INTO membership_credit_periods(business_id,membership_id,period_start,period_end,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING',[businessId,member.id,member.credit_period_start,member.credit_period_end,member.sessions_included,member.sessions_used]);
+ if(reset&&member.credit_period_start&&member.credit_period_end)await db.query('INSERT INTO membership_credit_periods(business_id,membership_id,period_start,period_end,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING',[businessId,member.id,member.credit_period_start,member.credit_period_end,member.sessions_included,member.sessions_used]);
  await db.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[paymentId,businessId,member.id,'stripe:'+reference,reset?credits:0,amountCents]);
  await db.query("UPDATE customer_memberships SET sessions_included=CASE WHEN $8 THEN $1 ELSE sessions_included END,sessions_used=CASE WHEN $8 THEN 0 ELSE sessions_used END,initial_paid_at=COALESCE(initial_paid_at,$9),monthly_sessions=$1,credit_period_start=CASE WHEN $8 THEN $10 ELSE credit_period_start END,credit_period_end=CASE WHEN $8 THEN $11 ELSE credit_period_end END,status=CASE WHEN $7='canceled' THEN 'canceled' WHEN GREATEST(paid_through,$2::timestamptz)>now() THEN 'active' ELSE 'expired' END,paid_through=GREATEST(paid_through,$2::timestamptz),last_paid_at=now(),stripe_subscription_id=$3,stripe_customer_id=$4,updated_at=now() WHERE id=$5 AND business_id=$6",[credits,effectivePaidThrough,subscription.id,customerId,member.id,businessId,subscription.status,reset,new Date(initial).toISOString(),period.start.toISOString(),period.end.toISOString()]);
  // Reports already reconcile the session payment ledger, so no duplicate audit sale.
