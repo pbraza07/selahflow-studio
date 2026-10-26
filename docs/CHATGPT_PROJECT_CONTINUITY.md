@@ -1,4 +1,4 @@
-# v1.3.148 — Weekly membership allowances (validation in progress)
+# v1.3.148 release handoff — Weekly membership allowances (validation in progress)
 
 Memberships → Create/Edit membership plan adds a choice between the existing fixed monthly allowance and 1, 2 or 3 sessions per week. A membership month follows the initial business date (or owner override) to its next monthly anniversary, clamping short months without drifting the original day. Seven-day blocks restart at each monthly anniversary; a remaining partial fifth block receives the weekly allowance. No weekly rollover. Billing frequency remains independent; use Monthly / every 1 month for a monthly paid term.
 

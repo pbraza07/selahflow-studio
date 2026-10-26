@@ -76,8 +76,9 @@ test('one, two and three weekly uses are enforced independently; manual activati
   for(let i=0;i<limit;i++)await book('limit-'+limit+'-'+i,date,600+i*30);
   await assert.rejects(book('excess-'+limit,date,800),/per week/);
  }
+ await pg.exec("UPDATE customer_memberships SET status='pending_payment',initial_paid_at=NULL,credit_period_start=NULL,credit_period_end=NULL,paid_through=NULL WHERE id='member'");
  const m=(await pg.query("SELECT * FROM customer_memberships WHERE id='member'")).rows[0];
- await applyManualPeriod(db,{member:{...m,status:'pending_payment',initial_paid_at:null,credit_period_end:null},credits:15,plan:{id:'plan',interval_unit:'month',interval_count:1},now:new Date('2030-01-31T18:00Z')});
+ await applyManualPeriod(db,{member:m,credits:15,plan:{id:'plan',interval_unit:'month',interval_count:1},now:new Date('2030-01-31T18:00Z')});
  assert.equal((await pg.query("SELECT sessions_included FROM customer_memberships WHERE id='member'")).rows[0].sessions_included,12);
  await pg.exec("UPDATE customer_memberships SET initial_paid_at=NULL,credit_period_end=NULL,stripe_sessions_per_period=15 WHERE id='member'");
  const stripeMember=(await pg.query("SELECT * FROM customer_memberships WHERE id='member'")).rows[0];
