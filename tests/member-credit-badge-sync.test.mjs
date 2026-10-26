@@ -11,7 +11,7 @@ async function fixture(){
  await db.exec(`
  CREATE TABLE businesses(id TEXT PRIMARY KEY,owner_id TEXT NOT NULL);
  CREATE TABLE membership_groups(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,badge JSONB);
- CREATE TABLE membership_plans(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,name TEXT,group_id TEXT,badge JSONB,credit_eligibility JSONB);
+ CREATE TABLE membership_plans(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,name TEXT,group_id TEXT,badge JSONB,credit_eligibility JSONB,weekly_sessions INTEGER);
  CREATE TABLE customer_memberships(id TEXT PRIMARY KEY,business_id TEXT NOT NULL REFERENCES businesses(id),plan_id TEXT NOT NULL REFERENCES membership_plans(id),
  member_number TEXT NOT NULL,customer_name TEXT,customer_email TEXT,date_of_birth DATE,status TEXT NOT NULL,
  sessions_included INTEGER NOT NULL,sessions_used INTEGER NOT NULL,updated_at TIMESTAMPTZ DEFAULT now());
@@ -142,5 +142,5 @@ test('Overview, Clients and Members all render the same badge with live remainin
  assert.match(members,/sessionsIncluded=\{m\.sessions_included\}/);
  assert.match(api,/applyManualPeriod\(client/);
  assert.match(api,/COUNT\(\*\)::int AS recorded_sessions/);
- assert.match(helper,/if\(remaining<=0\)return \{deducted:false/);
+ assert.match(helper,/if\(remaining<=0&&!member.weekly_sessions\)return \{deducted:false/);
 });

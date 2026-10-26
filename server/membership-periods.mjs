@@ -1,3 +1,4 @@
+import {weeklyMonthCredits} from './membership-weekly.mjs';
 /** Month arithmetic clamps short months without drifting the original anniversary day. */
 export function anniversary(anchor,offset){const d=new Date(anchor);if(!Number.isFinite(d.getTime()))throw Error('Invalid membership start date.');const y=d.getUTCFullYear(),m=d.getUTCMonth()+offset,day=d.getUTCDate();const r=new Date(Date.UTC(y,m,1,d.getUTCHours(),d.getUTCMinutes(),d.getUTCSeconds()));r.setUTCDate(Math.min(day,new Date(Date.UTC(r.getUTCFullYear(),r.getUTCMonth()+1,0)).getUTCDate()));return r;}
 export function monthlyPeriod(anchor,at=new Date()){
@@ -7,9 +8,14 @@ export async function refreshMemberPeriod(db,member,at=new Date()){
  if(!member.initial_paid_at||!member.credit_period_end)return member;
  const now=new Date(at);
  if(member.paid_through&&new Date(member.paid_through)<=now){await db.query("UPDATE customer_memberships SET status='expired',updated_at=now() WHERE id=$1 AND business_id=$2 AND status='active'",[member.id,member.business_id]);return {...member,status:member.status==='active'?'expired':member.status};}
- if(member.status!=='active'||new Date(member.credit_period_end)>now)return member;
+ if(member.status!=='active')return member;
+ const weekly=(await db.query('SELECT weekly_sessions FROM membership_plans WHERE id=$1 AND business_id=$2',[member.plan_id,member.business_id])).rows[0]?.weekly_sessions;
+ if(new Date(member.credit_period_end)>now){
+  if(weekly){const credits=weeklyMonthCredits(member,weekly,now);if(credits!==Number(member.sessions_included)){await db.query('UPDATE customer_memberships SET sessions_included=$1 WHERE id=$2 AND business_id=$3',[Math.max(credits,Number(member.sessions_used)),member.id,member.business_id]);return {...member,sessions_included:Math.max(credits,Number(member.sessions_used))};}}
+  return member;
+ }
  const anchor=membershipAnchor(member);
- const period=monthlyPeriod(anchor,now),credits=Number(member.monthly_sessions??member.stripe_sessions_per_period??0);
+ const period=monthlyPeriod(anchor,now),credits=weekly?weeklyMonthCredits(member,weekly,now):Number(member.monthly_sessions??member.stripe_sessions_per_period??0);
  await db.query('INSERT INTO membership_credit_periods(business_id,membership_id,period_start,period_end,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING',[member.business_id,member.id,member.credit_period_start,member.credit_period_end,member.sessions_included,member.sessions_used]);
  await db.query('UPDATE customer_memberships SET sessions_included=$1,sessions_used=0,credit_period_start=$2,credit_period_end=$3,updated_at=now() WHERE id=$4 AND business_id=$5',[credits,period.start.toISOString(),period.end.toISOString(),member.id,member.business_id]);
  return {...member,sessions_included:credits,sessions_used:0,credit_period_start:period.start,credit_period_end:period.end};

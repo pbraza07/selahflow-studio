@@ -8,8 +8,8 @@ async function fixture(){
  const db=new PGlite();
  await db.exec(`
   CREATE TABLE businesses(id TEXT PRIMARY KEY,owner_id TEXT NOT NULL);
-  CREATE TABLE membership_plans(id TEXT PRIMARY KEY,business_id TEXT,credit_eligibility JSONB);
-  INSERT INTO membership_plans VALUES('p1','b1',NULL),('p2','b2',NULL);
+  CREATE TABLE membership_plans(id TEXT PRIMARY KEY,business_id TEXT,credit_eligibility JSONB,weekly_sessions INTEGER);
+  INSERT INTO membership_plans VALUES('p1','b1',NULL,NULL),('p2','b2',NULL,NULL);
   CREATE TABLE customer_memberships(
    id TEXT PRIMARY KEY,business_id TEXT NOT NULL REFERENCES businesses(id),
    plan_id TEXT,member_number TEXT,status TEXT NOT NULL,sessions_included INTEGER NOT NULL DEFAULT 0,

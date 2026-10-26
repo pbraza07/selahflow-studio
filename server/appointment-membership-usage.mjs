@@ -1,3 +1,4 @@
+import {assertWeeklyMembershipBooking} from './membership-weekly.mjs';
 import {refreshMemberPeriod} from './membership-periods.mjs';
 import {membershipAllows} from './membership-eligibility.mjs';
 import {selectedSession,bookedSessionCount,overlaps,appointmentData as storedAppointmentData} from './session-scheduling.mjs';
@@ -19,13 +20,14 @@ export async function debitAppointmentMembershipSession(client,{owner,memberNumb
   return {deducted:false,alreadyDeducted:false,memberFound:false,remaining:null};
  }
  const result=await client.query(
-  "SELECT m.*,b.id AS business_id,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2 FOR UPDATE OF m",
+  "SELECT m.*,b.id AS business_id,p.weekly_sessions,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2 FOR UPDATE OF m",
   [owner,number]
  );
  let member=result.rows[0];
  if(member)member=await refreshMemberPeriod(client,member);
  if(!member)return {deducted:false,alreadyDeducted:false,memberFound:false,remaining:null};
  if(member.status!=='active')return {deducted:false,alreadyDeducted:false,memberFound:true,active:false,remaining:null};
+ let appliesToCurrentPeriod=true;
  const remaining=Number(member.sessions_included)-Number(member.sessions_used);
  const prior=await client.query(
   "SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='session_used' LIMIT 1",
@@ -38,12 +40,19 @@ export async function debitAppointmentMembershipSession(client,{owner,memberNumb
   if(details.membershipCovered===true)throw Error('Membership no longer covers this appointment. Review its membership plan eligibility before recording attendance.');
   return {deducted:false,alreadyDeducted:false,memberFound:true,remaining:null,ineligible:true};
  }
- if(remaining<=0)return {deducted:false,alreadyDeducted:false,memberFound:true,active:false,exhausted:true,remaining:0};
+ if(member.weekly_sessions){
+  const appointment=(await client.query('SELECT date FROM appointments WHERE owner=$1 AND id=$2',[owner,appointmentId])).rows[0];
+  if(!appointment)throw Error('Appointment unavailable.');
+  appliesToCurrentPeriod=appointment.date>=new Date(member.credit_period_start).toISOString().slice(0,10)&&appointment.date<new Date(member.credit_period_end).toISOString().slice(0,10);
+  await assertWeeklyMembershipBooking(client,{owner,memberNumber:number,date:appointment.date,excludeIds:[appointmentId]});
+ }
+ if(remaining<=0&&!member.weekly_sessions)return {deducted:false,alreadyDeducted:false,memberFound:true,active:false,exhausted:true,remaining:0};
  const inserted=await client.query(
   "INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta) VALUES($1,$2,$3,$4,'session_used',-1) ON CONFLICT DO NOTHING RETURNING id",
   [ledgerId,member.business_id,member.id,appointmentId]
  );
  if(!inserted.rowCount)return {deducted:false,alreadyDeducted:true,memberFound:true,active:true,remaining};
+ if(member.weekly_sessions&&!appliesToCurrentPeriod)return {deducted:true,alreadyDeducted:false,memberFound:true,active:true,remaining:Math.max(0,remaining)};
  const updated=await client.query(
   "UPDATE customer_memberships SET sessions_used=sessions_used+1,updated_at=now() WHERE business_id=$1 AND id=$2 AND sessions_used<sessions_included RETURNING sessions_used,sessions_included",
   [member.business_id,member.id]

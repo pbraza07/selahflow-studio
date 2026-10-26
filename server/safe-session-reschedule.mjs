@@ -1,3 +1,4 @@
+import {assertWeeklyMembershipBooking} from './membership-weekly.mjs';
 import {randomUUID} from 'node:crypto';
 import {getPool} from './database.mjs';
 import {
@@ -177,6 +178,10 @@ export async function rescheduleSessionForOwner({owner,input,pool=getPool()}){
    await client.query(
     "UPDATE booking_requests SET date=$1,staff_id=$2,start_minute=$3,duration=$4,details=$5 WHERE id=$6 AND owner_id=$7 AND status='pending'",
     [move.date,move.staff,move.start,service.duration,JSON.stringify(updated),request.id,owner]);
+  }
+  for(const row of [...impacted,...pending]){
+   const details=row.details?JSON.parse(row.details):getData(row);
+   if(details.membershipCovered===true)await assertWeeklyMembershipBooking(client,{owner,memberNumber:details.memberNumber,date:move.date,excludeIds:[row.id]});
   }
   // Historical group bookings created by earlier versions could retain
   // individual minute locks. A shared-seat group session must not leave those

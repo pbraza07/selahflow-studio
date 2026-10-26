@@ -1,3 +1,4 @@
+import {assertWeeklyMembershipBooking,membershipBookingActive} from '../server/membership-weekly.mjs';
 import {acceptedWaiverVersions,WAIVER_VERSION,LEGACY_WAIVER_VERSION} from '../server/waiver-content.mjs';
 import {cleanRemovedBookableSessions} from '../server/remove-bookable-session.mjs';
 import {publicTeamMembers,publicSessionTeam,publicBookingStaff,sessionTeamDefaults,validateTeamBookingPolicy} from '../server/team-booking-policy.mjs';
@@ -341,7 +342,7 @@ if(b.key){
  if(b.notMember!==true){
   const number=String(b.memberNumber||'').trim().toUpperCase();
   if(!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(number))throw Error('Enter your eight-character membership ID or choose N/A.');
-  const member=await db().prepare("SELECT m.customer_name,m.date_of_birth,m.status,m.sessions_included,m.sessions_used,m.paid_through,p.credit_eligibility FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id JOIN businesses biz ON biz.id=m.business_id WHERE biz.owner_id=? AND m.member_number=?").bind(owner,number).first() as any;
+  const member=await db().prepare("SELECT m.customer_name,m.date_of_birth,m.status,m.sessions_included,m.sessions_used,m.paid_through,m.initial_paid_at,m.billing_start_override,p.weekly_sessions,p.credit_eligibility FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id JOIN businesses biz ON biz.id=m.business_id WHERE biz.owner_id=? AND m.member_number=?").bind(owner,number).first() as any;
   const customer=await db().prepare("SELECT c.first_name,c.last_name,c.date_of_birth FROM customer_booking_ids c JOIN businesses biz ON biz.id=c.business_id WHERE biz.owner_id=? AND c.member_number=?").bind(owner,number).first() as any;
   if(!member&&!customer)throw Error('Membership ID was not found for this business.');
   const expectedName=String(member?.customer_name||[customer?.first_name,customer?.last_name].join(' ')).trim().replace(/\s+/g,' ').toLowerCase();
@@ -394,7 +395,7 @@ if(isPublic&&b.firstName&&b.lastName&&b.dateOfBirth){
   await client.query('COMMIT');
  }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
 }
-const bookedSession=selectedSession(config,b.date,b.staff,services,b.start);const membershipCreditAllowed=(bookedSession?bookedSession.membershipCreditAllowed!==false:services.every((service:any)=>service.membershipCreditAllowed!==false))&&(!verifiedMembership||membershipAllows(verifiedMembership.credit_eligibility,{serviceIds:services.map((s:any)=>s.id),sessionId:bookedSession?.id,seriesId:bookedSession?.seriesId}));const membershipCovered=!!verifiedMembership&&hasUsableMembership(verifiedMembership)&&membershipCreditAllowed&&membershipAllows(verifiedMembership.credit_eligibility,{serviceIds:services.map((s:any)=>s.id),sessionId:bookedSession?.id,seriesId:bookedSession?.seriesId});
+const bookedSession=selectedSession(config,b.date,b.staff,services,b.start);const membershipCreditAllowed=(bookedSession?bookedSession.membershipCreditAllowed!==false:services.every((service:any)=>service.membershipCreditAllowed!==false))&&(!verifiedMembership||membershipAllows(verifiedMembership.credit_eligibility,{serviceIds:services.map((s:any)=>s.id),sessionId:bookedSession?.id,seriesId:bookedSession?.seriesId}));const membershipCovered=!!verifiedMembership&&membershipBookingActive(verifiedMembership,b.date)&&membershipCreditAllowed&&membershipAllows(verifiedMembership.credit_eligibility,{serviceIds:services.map((s:any)=>s.id),sessionId:bookedSession?.id,seriesId:bookedSession?.seriesId});
 const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID();const data:any={name:b.name.trim()||'Guest',firstName:isPublic?String(b.firstName||'').trim():undefined,lastName:isPublic?String(b.lastName||'').trim():undefined,dateOfBirth:isPublic?String(b.dateOfBirth||''):undefined,email:b.email,phone:String(b.phone||'').slice(0,40),services:services.map((s:any)=>s.name),price:membershipCovered?0:services.reduce((a:number,s:any)=>a+s.price,0),membershipCovered,membershipCreditAllowed,channel:isPublic?'Online booking':b.channel==='Booking portal'?'Booking portal':'Front desk',created:new Date().toISOString()};data.paymentLines=services.map((s:any)=>({id:s.id,name:s.name,type:'service',price:s.price,qty:1}));data.serviceIds=services.map((s:any)=>s.id);data.customAnswers=customAnswers;data.memberNumber=isPublic?issuedMemberNumber:null;data.policyAccepted=isPublic?b.policyAccepted===true:null;data.policyAcceptedAt=isPublic?new Date().toISOString():null;data.customFieldLabels=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.label]));data.customFieldTypes=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.type]));if(bookedSession)data.sessionId=bookedSession.id;data.hostTeamIds=bookedSession?sessionTeamDefaults(config,bookedSession):[b.staff];
  if(isPublic&&requiresBookingApproval(services)){
   const approval={reviewer:approvalSettings(config).reviewer};
@@ -412,6 +413,7 @@ const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.ran
    if(await sessionIsFull(submissionClient,{owner,config:latestConfig,date:b.date,staff:b.staff,services,start:b.start})){
     await submissionClient.query('ROLLBACK');return reply({error:SESSION_FULL_MESSAGE},409);
    }
+   if(membershipCovered)await assertWeeklyMembershipBooking(submissionClient,{owner,memberNumber:issuedMemberNumber,date:b.date,excludeIds:[id]});
    const discount=await bookingDiscount(submissionClient,{businessId:business.id,services,code:b.couponCode,membershipCovered});
    Object.assign(data,discount);Object.assign(details,{quotedPrice:discount.price,paymentLines:discount.paymentLines,coupon:discount.coupon});
    await submissionClient.query('INSERT INTO booking_requests(id,business_id,owner_id,date,staff_id,start_minute,duration,details,reviewer) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',[id,business.id,owner,b.date,b.staff,b.start,duration,JSON.stringify(details),approval.reviewer]);
