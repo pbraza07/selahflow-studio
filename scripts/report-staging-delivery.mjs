@@ -4,6 +4,7 @@ import {deliveryProviderStatusWithConnection} from '../server/notification-deliv
 import {isStaging} from '../server/staging-safety.mjs';
 import {gmailStatus,selectedEmailProvider} from '../server/gmail-delivery.mjs';
 import {getPool} from '../server/database.mjs';
+import {emailReadinessSummary,readClientEmailFailures} from '../server/email-delivery-diagnostics.mjs';
 
 if(isStaging()){
  const pool=getPool();
@@ -21,13 +22,19 @@ if(isStaging()){
    approvedTestEmailCount:String(process.env.STAGING_NOTIFICATION_EMAILS||'').split(',').filter(x=>x.trim()).length,
    approvedTestPhoneCount:String(process.env.STAGING_NOTIFICATION_PHONES||'').split(',').filter(x=>x.trim()).length
   }));
+  console.log('Client email diagnostics:',JSON.stringify({readiness:emailReadinessSummary(await deliveryProviderStatusWithConnection(pool),gmail),failures:await readClientEmailFailures(pool)}));
  }catch{console.error('Staging delivery readiness temporarily unavailable');}
  finally{await pool.end();}
 }
 
 if(!isStaging()){
  const pool=getPool();
- try{const status=await deliveryProviderStatusWithConnection(pool);console.log('Client email readiness:',JSON.stringify({provider:status.emailProvider,configured:status.emailConfigured}));}
+ try{
+  const status=await deliveryProviderStatusWithConnection(pool);
+  const gmail=selectedEmailProvider()==='gmail'?await gmailStatus(pool):null;
+  console.log('Client email readiness:',JSON.stringify(emailReadinessSummary(status,gmail)));
+  console.log('Client email failures (last 7 days):',JSON.stringify(await readClientEmailFailures(pool)));
+ }
  catch{console.error('Client email readiness temporarily unavailable');}
  finally{await pool.end();}
 }
