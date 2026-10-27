@@ -1,4 +1,4 @@
-# v1.3.157 — Discovery business logos
+# v1.3.157 release handoff — Discovery business logos
 
 Discovery cards use saved Branding logos and the official SelahFlow symbol for missing/failed images. Versioned image URLs follow logo updates; full images fit within the card frame. No migrations or provider changes. Validation/deployment pending.
 
