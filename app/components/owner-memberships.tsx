@@ -86,7 +86,7 @@ export default function OwnerMemberships({slug,prefill,onOpenPayments}:{slug:str
  }
  async function deleteMember(m:Member){
   if(busy)return;
-  const confirmation=window.prompt('Delete '+m.customer_name+' ('+(m.member_number||'no number')+') and their membership history? This cannot be undone. Type DELETE to confirm:');
+  const confirmation=window.prompt('Delete '+m.customer_name+' ('+(m.member_number||'no number')+') and their membership history? Unpaid Stripe checkout links are expired first. Existing bookings and required accounting records are retained. This cannot be undone. Type DELETE to confirm:');
   if(confirmation!=='DELETE')return;
   setBusy(true);setError('');setMessage('');
   try{await post('deleteMember',{id:m.id});setMessage('Member deleted.');await load();}

@@ -1,3 +1,9 @@
+## 1.3.149
+
+- Keep membership classifications visible with explicit payment/credit status; preserve credit eligibility rules.
+- Verify and expire unpaid Stripe checkouts during confirmed owner deletion, preserving active-payment/subscription safeguards and retained financial facts.
+- Repair membership-only deletion dependencies while preserving unrelated bookings.
+
 ## 1.3.148
 
 - Optional 1, 2 or 3 membership sessions per week under Memberships, within anniversary-based calendar months including a partial fifth week.

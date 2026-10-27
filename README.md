@@ -1,3 +1,5 @@
+**Release source: v1.3.149 — validation in progress.** Membership classification badges show payment/usage status; confirmed owner deletion expires eligible unpaid Stripe checkouts. See [release evidence](docs/V1_3_149_RELEASE.md).
+
 **Release source: v1.3.148 — verified LIVE in staging and production.** Membership plans support optional weekly allowances within the membership month. See [release evidence](docs/V1_3_148_RELEASE.md).
 
 **Previous release: v1.3.147.** All public-page customization is under Branding, with booking QR downloads/sharing and top-right social links. See [release evidence](docs/V1_3_147_RELEASE.md).

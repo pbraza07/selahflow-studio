@@ -22,7 +22,7 @@ test('editable badge settings validate all styles and inherit type defaults with
  assert.equal(resolveMembershipBadge(null,null),null);
  assert.deepEqual(resolveMembershipBadge({bad:'legacy'},typeBadge),validateMembershipBadge(typeBadge));
 });
-test('actual rendered badge uses saved styles, pure white on black, neutral exhaustion and restored renewal without changing ID',async()=>{
+test('actual rendered badge uses saved styles, pure white on black, explicit payment/credit status and restored renewal without changing ID',async()=>{
  const require=createRequire(import.meta.url);
  let source=await readFile(new URL('../app/components/membership-badge.tsx',import.meta.url),'utf8');
  for(const name of ['member-badge-state','membership-badges','themes'])source=source.replace('../../server/'+name+'.mjs',new URL('../server/'+name+'.mjs',import.meta.url).href);
@@ -31,7 +31,10 @@ test('actual rendered badge uses saved styles, pure white on black, neutral exha
  const {default:Badge}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
  const render=props=>renderToStaticMarkup(React.createElement(Badge,{memberNumber:'AB0101',membershipName:'Gold plan',membershipStatus:'active',sessionsIncluded:2,sessionsUsed:1,badge:planBadge,...props}));
  const active=render({});assert.match(active,/VIP · AB0101/);assert.match(active,/background:#000000/);assert.match(active,/color:#FFFFFF/);assert.match(active,/border-radius:8px/);assert.match(active,/lucide-crown/);
- for(const props of [{sessionsUsed:2},{membershipStatus:'pending_payment'},{membershipStatus:'expired'}]){const html=render(props);assert.match(html,/ID AB0101/);assert.match(html,/background:#f1f2f4/);assert.doesNotMatch(html,/VIP ·|lucide-crown/);}
+ for(const [props,status] of [[{sessionsUsed:2},'Sessions exhausted'],[{membershipStatus:'pending_payment'},'Payment pending'],[{membershipStatus:'expired'},'Expired']]){const html=render(props);assert.match(html,/VIP · AB0101/);assert.match(html,/background:#000000/);assert.match(html,new RegExp(status));}
+ const pending=render({membershipName:'Group Academy',membershipStatus:'pending_payment',sessionsIncluded:0,sessionsUsed:0,badge:null});assert.match(pending,/Group Academy · AB0101/);assert.match(pending,/Payment pending/);assert.match(pending,/background:#44aff5/);
+ const changed=render({membershipName:'Private Elite',membershipStatus:'pending_payment',sessionsIncluded:0,sessionsUsed:0,badge:null});assert.match(changed,/Private Elite · AB0101/);assert.match(changed,/background:#ef4335/);assert.match(changed,/Payment pending/);
+ const regular=render({membershipName:null,badge:null});assert.match(regular,/ID AB0101/);assert.match(regular,/background:#f1f2f4/);
  assert.match(render({sessionsIncluded:4,sessionsUsed:2}),/VIP · AB0101/);
  assert.match(render({badge:null}),/Gold plan · AB0101/);
 });

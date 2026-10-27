@@ -1,8 +1,6 @@
-/**
- * Package colors are eligibility indicators, not permanent attributes of a
- * player. Exhausted packages retain their ledger and renewal eligibility,
- * while the player's stable membership ID falls back to a neutral badge.
- */
+/** Credit eligibility is independent of the visible membership classification.
+ * Unpaid, expired and exhausted memberships cannot use prepaid sessions even
+ * though their badge continues to show the assigned plan/type and status. */
 export function remainingMembershipSessions(included,used){
  const total=Number(included),consumed=Number(used);
  if(!Number.isFinite(total)||!Number.isFinite(consumed))return null;
