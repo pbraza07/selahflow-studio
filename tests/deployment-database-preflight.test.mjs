@@ -12,6 +12,19 @@ test('immutable Render service identity survives renames but never allows unknow
  const db={query:async q=>({rows:[q.includes('current_database')?{database:'selahflow_production',role:'selahflow_production_user',schema_create:true}:{n:0}]})};
  const env={RENDER:'true',RENDER_SERVICE_ID:'srv-db3tokqd0e5s73f31hfg',RENDER_SERVICE_NAME:'legacy-service-name'};
  assert.equal((await verifyDeploymentDatabase(db,env)).database,'selahflow_production');
+ assert.equal((await verifyDeploymentDatabase(db,{...env,RENDER_SERVICE_ID:'srv-dbgbiu0n74is73cglveg',RENDER_SERVICE_NAME:'selahflow'})).database,'selahflow_production');
  await assert.rejects(()=>verifyDeploymentDatabase(db,{...env,RENDER_SERVICE_ID:'srv-unrelated',RENDER_SERVICE_NAME:'selahflow-studio'}));
  await assert.rejects(()=>verifyDeploymentDatabase(db,{...env,RENDER_SERVICE_ID:'srv-db8e9dajnfac73fa0vo0'}));
+});
+test('new canonical service retains database, role, schema and ownership safeguards',async()=>{
+ const env={RENDER:'true',RENDER_SERVICE_ID:'srv-dbgbiu0n74is73cglveg',RENDER_SERVICE_NAME:'selahflow'};
+ for(const row of [
+  {database:'selahflow_staging',role:'selahflow_staging_user',schema_create:true},
+  {database:'selahflow_production',role:'wrong_role',schema_create:true},
+  {database:'selahflow_production',role:'selahflow_production_user',schema_create:false},
+  {database:'selahflow_production',role:'selahflow_production_user',schema_create:true,n:1}
+ ]){
+  const db={query:async q=>({rows:[q.includes('current_database')?row:{n:row.n||0}]})};
+  await assert.rejects(()=>verifyDeploymentDatabase(db,env));
+ }
 });
