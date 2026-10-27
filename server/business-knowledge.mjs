@@ -1,3 +1,4 @@
+import {publicClientGuide,clientGuideIntent} from './client-guides.mjs';
 import {membershipUsageSummary} from './membership-weekly.mjs';
 import {groupAssistantDocuments} from './assistant-sections.mjs';
 import {PAGE_CONTENT_FIELDS} from './page-content.mjs';
@@ -21,6 +22,8 @@ const keywords=value=>{const words=new Set(tokens(value).filter(w=>!stop.has(w))
 export function buildBusinessKnowledge(business,config={},plans=[],now=new Date()){
  const slug=business.slug,home='/'+slug,book='/book/'+slug,membership='/membership/'+slug,documents=[];
  const add=(kind,title,body,href=book)=>{const value=(Array.isArray(body)?body:[body]).map(text).filter(Boolean).join('\n');if(value)documents.push({id:kind+'-'+documents.length,kind,title:text(title),text:value,href});};
+ const guide=publicClientGuide(slug);
+ if(guide)add('guide',guide.title,'Step-by-step instructions with current Arcila Training screenshots: choose services and available times; register a booking; understand approval and payment; join and pay for a membership; recognize SelahFlow confirmation emails; restore saved details with a Membership ID; and check membership or latest booking status. Open the 20-page PDF guide. A booking request is not proof of payment, and membership registration without payment does not activate credits. Status checks need only the ID; opening booking payment from the checker additionally verifies the registration birth date.',guide.href);
  add('overview',business.name,[business.name,business.industry?.replaceAll('-',' '),business.business_model,business.description,config.tagline],home);
  add('contact','Location and contact',[config.address||[business.city,business.region].filter(Boolean).join(', '),config.phone?'Phone: '+config.phone:''],home);
  if(Number.isFinite(config.open)&&Number.isFinite(config.close))add('hours','Opening hours',`${clock(config.open*60)}–${clock(config.close*60)} America/New_York (Eastern time). Check the booking calendar for date-specific availability.`,book);
@@ -95,6 +98,7 @@ export function answerBusinessQuestion(knowledge,question){
  if(/\b(prices?|cost|pricing)\b/i.test(input)&&(!/\b(memberships?|plans?)\b/i.test(input)||matchingServices.length||/\bservices?\b/i.test(input)))desired.push('service');
  const docs=desired.length?knowledge.documents.filter(d=>desired.includes(d.kind)&&(d.kind!=='session'||matchesSession(d))&&(d.kind!=='service'||!matchingServices.length||matchingServices.includes(d))).slice(0,50):selected;
 
- let size=0;const unique=[...new Map(docs.map(d=>[d.id,d])).values()].filter(d=>{size+=d.title.length+d.text.length+3;return size<=18000;});
- return {sections:groupAssistantDocuments(unique),businessName:knowledge.name,answer:unique.length?unique.map(d=>d.title+'\n'+d.text).join('\n\n'):`I couldn’t find a published answer to that question for ${knowledge.name}. Please contact the business or check its booking page. I can help with services, prices, schedules, memberships, policies, waivers and registration questions.`,sources:unique.map(d=>({title:d.title,href:d.href})),links:knowledge.links,updatedAt:knowledge.updatedAt};
+ const instructions=clientGuideIntent(input)?knowledge.documents.filter(d=>d.kind==='guide'):[];
+ let size=0;const unique=[...new Map([...instructions,...docs].map(d=>[d.id,d])).values()].filter(d=>{size+=d.title.length+d.text.length+3;return size<=18000;});
+ return {sections:groupAssistantDocuments(unique),businessName:knowledge.name,answer:unique.length?unique.map(d=>d.title+'\n'+d.text).join('\n\n'):`I couldn’t find a published answer to that question for ${knowledge.name}. Please contact the business or check its booking page. I can help with services, prices, schedules, memberships, policies, waivers and registration questions.`,sources:unique.map(d=>({title:d.title,href:d.href})),links:instructions.length?[{label:'Open step-by-step client guide (PDF)',href:instructions[0].href},...knowledge.links]:knowledge.links,updatedAt:knowledge.updatedAt};
 }

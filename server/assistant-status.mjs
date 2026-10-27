@@ -1,8 +1,10 @@
+import {clientGuideIntent} from './client-guides.mjs';
 /** ID-only status uses the existing limited public booking lookup, never profile prefill. */
 /** @param {string} message @param {'membership'|'booking'|'both'|null} pending */
 export function assistantStatusRequest(message,pending=null){
  const input=String(message||'').trim();
  const id=input.match(/\b[A-Z]{2}(?:\d{6}|\d{4})\b/i)?.[0]?.toUpperCase();
+ if(!id&&clientGuideIntent(input))return null;
  const membership=/\b(memberships?|members?|credits?)\b/i.test(input);
  const booking=/\b(bookings?|appointments?|registrations?)\b/i.test(input);
  const intent=/\b(status|check|lookup|active|inactive|remaining|left)\b/i.test(input)&&(membership||booking);

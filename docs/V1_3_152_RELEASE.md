@@ -1,0 +1,8 @@
+# v1.3.152 release handoff — Arcila client guide and contextual help (validation in progress)
+
+A 20-page public Arcila Training client PDF uses current production-page screenshots captured October 27, 2026. It explains booking, approval vs payment, Stripe payment steps, membership signup/recurring payment, pending registration vs active credits, weekly usage, ID-only saved data, payment birth-date verification, status checks and SelahFlow third-party confirmation emails. Email cards are explicitly illustrative; no real customer data, signature, booking, message or payment was created for screenshots. Screenshot selections and current prices are dated examples.
+
+A shared right-side Request help link opens the guide in a new tab on Arcila public home, booking and membership pages wherever the shared assistant appears. The guide link is hidden while the assistant is open to avoid overlap; Booking instructions (PDF) remains available inside the assistant. Server answers include a Client instructions subsection and PDF link for instruction/how-to queries. How-to status instructions are distinguished from live ID status requests. Existing real status lookup and published-business knowledge remain intact.
+
+The guide registry is business-specific: other existing/future businesses do not receive an Arcila-branded PDF. Additional business guides can use the same shared plumbing. No migration, provider/environment changes or customer mutations. Feature branch `feature/client-guide-help`; final tests, staging and production verification pending. Source v1.3.152; last verified LIVE runtime v1.3.151.
+

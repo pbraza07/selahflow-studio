@@ -1,3 +1,9 @@
+## v1.3.152 — Arcila client guide and help
+
+- Publish a 20-page client PDF with live screenshots and detailed booking, payment, membership, autofill, status and email instructions.
+- Add a right-side Request help link and contextual assistant PDF instructions, scoped to the matching business.
+- Preserve ID-only live status checks and distinguish how-to instructions from an actual status request.
+
 ## v1.3.151 — Consolidated booking history
 
 - Group each explicitly linked booking lifecycle into one expandable entry in client/business history with distinct acceptance and payment status.
