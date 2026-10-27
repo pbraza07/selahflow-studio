@@ -1,3 +1,4 @@
+import {googlePublicAllowed} from '../../../../../server/google-public-limit.mjs';
 import {getPool} from '../../../../../server/database.mjs';
 import {googleGalleryForBusiness,approvedGooglePhotoUri} from '../../../../../server/google-business-gallery.mjs';
 export const runtime='nodejs';export const dynamic='force-dynamic';
@@ -7,9 +8,10 @@ export async function GET(req:Request){
  const key=process.env.GOOGLE_MAPS_API_KEY||process.env.GOOGLE_PLACES_API_KEY;
  if(!key)return new Response(null,{status:404});
  try{
-  const row=(await getPool().query("SELECT name,google_listing_url,city,region FROM businesses WHERE slug=$1 AND status='active'",[slug])).rows[0];
+  if(!await googlePublicAllowed(getPool(),req,slug))return new Response(null,{status:429,headers:{'Cache-Control':'no-store'}});
+  const row=(await getPool().query("SELECT b.name,b.google_listing_url,b.city,b.region,g.place_id AS google_place_id,g.show_reviews AS google_show_reviews,g.show_photos AS google_show_photos FROM businesses b LEFT JOIN business_google_profiles g ON g.business_id=b.id WHERE b.slug=$1 AND b.status='active'",[slug])).rows[0];
   if(!row)return new Response(null,{status:404});
-  const gallery=await googleGalleryForBusiness(row),photo=gallery.photos.find((p:{index:number;resource:string})=>p.index===idx);
+  const gallery=await googleGalleryForBusiness({...row,google_show_reviews:false}),photo=gallery.photos.find((p:{index:number;resource:string})=>p.index===idx);
   if(!photo?.resource)return new Response(null,{status:404});
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);
   try{

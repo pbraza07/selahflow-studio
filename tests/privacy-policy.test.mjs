@@ -17,8 +17,9 @@ test('public privacy page renders accessible section links, current practices an
  const html=renderToStaticMarkup(React.createElement(Policy));
  assert.equal(metadata.title,'Privacy Policy | SelahFlow');
  assert.match(html,/<main id="main-content"/);assert.match(html,/<h1>Privacy Policy<\/h1>/);
- assert.equal((html.match(/<section id=/g)||[]).length,11);
+ assert.equal((html.match(/<section id=/g)||[]).length,12);
  for(const match of html.matchAll(/href="#([^"]+)"/g))assert.ok(html.includes('id="'+match[1]+'"'));
+ assert.match(html,/Google business connections and public content/);assert.match(html,/encrypted authorization token/);assert.match(html,/https:\/\/policies.google.com\/privacy/);
  assert.match(html,/mailto:selahflow7@gmail.com/);
  assert.match(html,/Parents or legal guardians/);assert.match(html,/waivers/i);assert.match(html,/Stripe/);assert.match(html,/unsubscribe/i);assert.match(html,/backup/i);assert.match(html,/client ID alone/);assert.match(html,/Someone with that ID/);
  assert.doesNotMatch(source,/requireOwner|requireAdmin|redirect\(/);
