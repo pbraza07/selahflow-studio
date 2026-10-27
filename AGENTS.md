@@ -1,3 +1,9 @@
+# Legacy service retirement — verified October 27, 2026
+
+The user explicitly approved suspension. Render service selahflow-studio (srv-db3tokqd0e5s73f31hfg) is now suspended by user, with autoDeploy=no and autoDeployTrigger=off, verified by Render API after UI confirmation at 2026-10-27T18:18:54.533907Z. This supersedes prior pending-approval and keep-running notes below. Suspension is reversible; do not resume or re-enable deployment unless requested. No service/database/customer data or credentials were deleted.
+
+Canonical selahflow (srv-dbgbiu0n74is73cglveg), https://selahflow.onrender.com, remains not_suspended with auto-deploy on commit. Post-suspension v1.3.155 health, booking/payment shells, protected APIs and invalid-invitation/no-store smoke checks passed. Previously issued legacy-address links no longer open the app. No actual payment or email was created for QA. Google OAuth callback removal remains unverified because Cloud Console is inaccessible in this browser.
+
 # v1.3.155 release handoff — legacy URL reference cleanup
 
 User authorized retirement on October 27, 2026 after confirming the new Google callback and working integrations. Canonical production is https://selahflow.onrender.com (srv-dbgbiu0n74is73cglveg); staging is unchanged. Legacy service retirement is pending explicit approval after automatic approval review blocked the retirement controls. The old service remains running with its existing deployment setting. No database, customer record or credentials are deleted. Previously sent links remain available while the legacy service is retained. Historical URL examples in documentation now use the canonical address; historical deployment IDs remain evidence, not current deployment instructions.
