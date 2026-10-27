@@ -1,3 +1,7 @@
+# v1.3.157 — Discovery business logos
+
+Discovery cards use saved Branding logos and the official SelahFlow symbol for missing/failed images. Versioned image URLs follow logo updates; full images fit within the card frame. No migrations or provider changes. Validation/deployment pending.
+
 # v1.3.156 release handoff — Google business connection, reviews and photos
 
 Adds tenant-scoped Google Business Profile OAuth under Branding → Google reviews & photos. Owners connect their own account, refresh managed locations, select the exact Google Place ID, control public reviews/photos and disconnect. Dedicated OAuth client configuration keeps platform Gmail authorization separate; encrypted tokens bind to business/purpose, state binds owner/business/session with PKCE and expiry. API actions only read Google data; publication settings affect SelahFlow.
