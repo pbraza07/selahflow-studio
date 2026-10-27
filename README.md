@@ -1,4 +1,4 @@
-**Release source: v1.3.151 — validation in progress.** One expandable entry per linked booking, separate booking/payment status and shared Expand all / Collapse all arrows. See [release evidence](docs/V1_3_151_RELEASE.md).
+**Release source: v1.3.151 — verified LIVE in staging and production.** One expandable entry per linked booking, separate booking/payment status and shared Expand all / Collapse all arrows. See [release evidence](docs/V1_3_151_RELEASE.md).
 
 **Previous release: v1.3.150.** ID-only registration autofill and booked service/type in appointment status. See [release evidence](docs/V1_3_150_RELEASE.md).
 

@@ -1,4 +1,4 @@
-# v1.3.151 release handoff — Consolidated booking history and bulk expansion (validation in progress)
+# v1.3.151 release handoff — Consolidated booking history and bulk expansion — verified LIVE in staging and production
 
 Shared Client History and business History consolidate explicitly linked requests, canonical appointments, booking payments, attendance, ledger use and booking messages into one booking in All activity and Bookings. Independent visits never merge by client/date. The summary separates booking acceptance from recorded payment, pending payment, membership coverage and zero-cost visits. Expand the booking timeline for retained lifecycle records; saved submission/review timestamps and rescheduled canonical visit details remain available. Payment and other category tabs retain their individual source entries.
 
@@ -6,7 +6,11 @@ Grouping happens before search, date filtering, counts, sorting and pagination. 
 
 A shared arrow control expands/collapses all native disclosures in the current history page, Booking Status and individual client Sessions view. Each disclosure can still toggle independently with keyboard support. Business palettes and mobile horizontal scrolling remain.
 
-Feature branch `feature/consolidated-booking-history`. Tests, builds and staged/production verification pending. Source v1.3.151; last verified LIVE runtime v1.3.150. No real customer records are changed for QA.
+Feature branch `feature/consolidated-booking-history`; application head `bf80d92d4154d2df0af01df9060b0b03acd27816`; PR #80 merged as `b48ebb5b9d0e56139d1635708330b054812ffa9c`. Staging `928f33c594a3c2ff15341b9bb45906eb64743729`, deployment `dep-dbg1fkgm7kps73b423tg` LIVE October 26, 2026 at 11:24:46 p.m. EDT. Production deployment `dep-dbg1jg7f3r2c73b4894g` LIVE at 11:27:40 p.m. EDT. Exact application trees match across both environments.
+
+Local full regression, GitHub CI run 40443283412/job 121988429104 and Render staging passed all 420 tests; typecheck and builds passed. Production build/startup passed. Both live v1.3.151 health/version, booking/payment shells, protected grouped-history/client routes, invalid invitation/no-store and foreign-origin rejection passed. Actual runtime preflights confirmed dedicated databases/users, schema CREATE true and zero unowned tables; no error-level startup entries were found in the checked windows. No migration, credentials, payment-provider or environment changes.
+
+Synthetic database fixtures validate canonical request/appointment/payment/message consolidation, separate same-client visits, lifecycle search/date filters, all column sorts and pagination, paid/pending/covered/free labels, hidden payment state, source-key selection and stale selection safeguards, financial retention and business isolation. Actual Booking Status HTML renders the shared bulk control with existing answers/timelines/payment states. Native collapsed disclosure markup and accessible arrow labels are tested. Live checks access no real customer data and mutate no customer records. Phone/browser visual or authenticated owner interaction acceptance was not exercised because the local browser executable remains unavailable. Documentation-only verification commits may follow these LIVE application SHAs.
 
 # v1.3.150 release handoff — ID-only saved details and service-aware status — verified LIVE in staging and production
 
