@@ -1,4 +1,4 @@
-**Release source: v1.3.152 — validation in progress.** Arcila Training client instructions PDF with screenshots, right-side Request help and assistant guide links. See [release evidence](docs/V1_3_152_RELEASE.md).
+**Release source: v1.3.152 — verified LIVE in staging and production.** Arcila Training client instructions PDF with screenshots, right-side Request help and assistant guide links. See [release evidence](docs/V1_3_152_RELEASE.md).
 
 **Previous release: v1.3.151.** One expandable entry per linked booking, separate booking/payment status and shared Expand all / Collapse all arrows. See [release evidence](docs/V1_3_151_RELEASE.md).
 
