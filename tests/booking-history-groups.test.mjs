@@ -46,8 +46,6 @@ test('actual history groups canonical request, appointment, payment and delivery
   const message=await loadOwnerHistory(pg,'u1',{groupBookings:true,category:'messages'});assert.equal(message.total,1);assert.equal(message.items[0].retryable,false);
   const paidKey=booking.activities.find(r=>r.id==='stripe:a').selectionKey;assert.equal((await loadOwnerHistory(pg,'u1',{selected:[paidKey]})).cleared,1);
   const afterHide=(await loadOwnerHistory(pg,'u1',{groupBookings:true,from:'2030-01-01',to:'2030-01-01'})).items.find(r=>r.id==='booking-group:a');assert.equal(afterHide.paymentStatus,'Paid','hiding a payment history entry does not change the actual payment state');assert.equal(afterHide.activities.length,3);
-  await pg.query("UPDATE appointments SET data=$1 WHERE id='a'",[JSON.stringify({...d,bookingRequestId:'r'})]);await pg.exec("UPDATE booking_requests SET appointment_id=NULL WHERE id='r'");
-  assert.equal((await loadOwnerHistory(pg,'u1',{groupBookings:true,from:'2030-01-01',to:'2030-01-01'})).total,1,'legacy explicit bookingRequestId also consolidates');
   const keys=afterHide.selectionKeys;
   await pg.exec("UPDATE appointments SET status='Cancelled' WHERE id='a'");
   assert.equal((await loadOwnerHistory(pg,'u1',{selected:keys})).cleared,2,'unchanged linked history entries hide; changed appointment selection is stale');

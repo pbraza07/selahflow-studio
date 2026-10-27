@@ -38,7 +38,7 @@ export async function loadOwnerHistory(db,owner,filters={}){
  for(const a of appointments)bookings.set(a.id,{...identity(data(a.data)),data:data(a.data),date:a.date});
  for(const r of requests){const context={...identity(data(r.details)),data:data(r.details),date:r.date};bookings.set(r.id,context);if(r.appointment_id&&!bookings.has(r.appointment_id))bookings.set(r.appointment_id,context);}
  const bookingKeys=new Map(appointments.map(a=>[a.id,a.id]));
- for(const r of requests)bookingKeys.set(r.id,r.appointment_id||appointments.find(a=>data(a.data).bookingRequestId===r.id)?.id||r.id);
+ for(const r of requests)bookingKeys.set(r.id,r.appointment_id||r.id);
  const rows=[];
  const formatter=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
  const localKey=at=>{const value=stamp(at);if(!/(?:Z|[+-]\d\d:\d\d)$/.test(value)||Number.isNaN(Date.parse(value)))return value;const p=Object.fromEntries(formatter.formatToParts(new Date(value)).map(v=>[v.type,v.value]));return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`;};
