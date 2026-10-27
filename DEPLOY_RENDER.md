@@ -1,6 +1,6 @@
 # SelahFlow v1.3.2
 
-Deploy the main branch to the existing Render service at https://salonflow-hf3w.onrender.com. Preserve the existing DATABASE_URL, administrator credentials and PostgreSQL database. No new migrations are needed. After the build, check /api/health, /, /crawford, /studio/crawford, and /book/crawford.
+Deploy the main branch to the new selahflow Render service (srv-dbgbiu0n74is73cglveg; migration cutover still pending) at https://selahflow.onrender.com. Preserve the existing DATABASE_URL, administrator credentials and PostgreSQL database. No new migrations are needed. After the build, check /api/health, /, /crawford, /studio/crawford, and /book/crawford.
 
 # Deploy SelahFlow version 1.3.1 with GitHub + Render
 
@@ -57,7 +57,7 @@ The initial sample appointments are clearly labeled and are not database records
 4. Redeploy and use that address for login and normal operations. Once APP_URL is set, the original Render URL will not accept state-changing requests because origin protection only trusts the configured domain.
 
 ## 5. Future releases
-The current release is 1.3.1. Future patches and approved feature milestones will arrive as new ZIPs. Replace the source files in the same GitHub repository and commit the update. Keep the existing Render services, environment settings, and PostgreSQL database. Trigger a deployment or use your configured GitHub automatic deployment setting.
+The current release is 1.3.1. Future patches and approved feature milestones will arrive as new ZIPs. Replace the source files in the same GitHub repository and commit the update. Keep the new selahflow Render service (srv-dbgbiu0n74is73cglveg; migration cutover still pending)s, environment settings, and PostgreSQL database. Trigger a deployment or use your configured GitHub automatic deployment setting.
 
 ## Troubleshooting
 - **Build cannot find package.json:** move the ZIP's inner files to the repository root or set the correct Render root directory.
