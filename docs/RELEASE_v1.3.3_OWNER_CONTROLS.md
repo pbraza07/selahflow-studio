@@ -1,14 +1,14 @@
 # SelahFlow v1.3.3 — Owner Controls
-Live application: https://salonflow-hf3w.onrender.com
+Live application: https://selahflow.onrender.com
 
 ## Function links
-- Platform admin: https://salonflow-hf3w.onrender.com/admin/platform
-- Crawford owner dashboard: https://salonflow-hf3w.onrender.com/studio/crawford
-- Crawford public profile: https://salonflow-hf3w.onrender.com/crawford
-- Crawford booking: https://salonflow-hf3w.onrender.com/book/crawford
-- Owner profile: https://salonflow-hf3w.onrender.com/business
+- Platform admin: https://selahflow.onrender.com/admin/platform
+- Crawford owner dashboard: https://selahflow.onrender.com/studio/crawford
+- Crawford public profile: https://selahflow.onrender.com/crawford
+- Crawford booking: https://selahflow.onrender.com/book/crawford
+- Owner profile: https://selahflow.onrender.com/business
 - Owner **Branding**, **Security** and **Settings**: tabs within /studio/{slug}.
-- New business signup: https://salonflow-hf3w.onrender.com/signup
+- New business signup: https://selahflow.onrender.com/signup
 
 ## New owner controls
 Choose brand colors, upload a 300 KB PNG/JPEG/WebP logo, and describe the business model. Settings lets owners add/remove/edit service types and team members. The server enforces bookable team limits: Free 1, Professional 3, Business 10. Existing team members over the plan limit are grandfathered and not deleted; additional team members cannot be added. Subscription billing is not active, and owners cannot self-select paid plans.

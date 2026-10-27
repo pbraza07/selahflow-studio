@@ -8,7 +8,7 @@ import {configured,sendWebPush} from '../server/push-crypto.mjs';
 const env={APP_ENV:'staging',DATABASE_URL:'postgresql://selahflow_staging_user:test@approved-host/selahflow_staging',STAGING_DATABASE_HOST:'approved-host',RENDER:'true',RENDER_SERVICE_NAME:'selahflow-staging',RENDER_GIT_BRANCH:'staging',RENDER_EXTERNAL_URL:'https://selahflow-staging.onrender.com'};
 test('staging rejects production database, privileged user, wrong host, branch and origin before opening a pool',()=>{
  assert.doesNotThrow(()=>assertStagingDatabase(env));
- for(const change of [{DATABASE_URL:env.DATABASE_URL.replace('/selahflow_staging','/amanda_realtor_db')},{DATABASE_URL:env.DATABASE_URL.replace('selahflow_staging_user','amanda_realtor_db_user')},{STAGING_DATABASE_HOST:'other-host'},{RENDER_GIT_BRANCH:'main'},{APP_URL:'https://salonflow-hf3w.onrender.com'},{APP_URL:'https://selahflow.onrender.com'},{APP_ENV:''}])
+ for(const change of [{DATABASE_URL:env.DATABASE_URL.replace('/selahflow_staging','/amanda_realtor_db')},{DATABASE_URL:env.DATABASE_URL.replace('selahflow_staging_user','amanda_realtor_db_user')},{STAGING_DATABASE_HOST:'other-host'},{RENDER_GIT_BRANCH:'main'},{APP_URL:'https://unapproved-production.onrender.com'},{APP_URL:'https://selahflow.onrender.com'},{APP_ENV:''}])
   assert.throws(()=>assertStagingDatabase({...env,...change}));
  assert.doesNotThrow(()=>assertStagingDatabase({APP_ENV:'production'}));
 });

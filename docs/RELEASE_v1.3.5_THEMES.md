@@ -1,5 +1,5 @@
 # SelahFlow v1.3.5 — Owner Branding / Full Color Editor
-Production: https://salonflow-hf3w.onrender.com
+Production: https://selahflow.onrender.com
 GitHub: https://github.com/pbraza07/selahflow-studio
 
 Business owners visit /studio/{slug}, click Branding, choose one of **20 complete color palettes**, optionally select **12 heading/body font options**, then customize each of 19 page elements with a color picker or hexadecimal code. A live mock booking preview shows changes before choosing Save & publish theme.

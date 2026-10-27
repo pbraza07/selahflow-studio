@@ -4,7 +4,7 @@
 Subscriptions are always tied to **business ID and reviewer**. When a business has booking approvals on and someone submits a new booking request, alerts target (1) that business's signed-in owner and (2) the currently designated staff reviewer, if any. Other business owners or staff cannot subscribe to those alerts.
 
 ## Owner setup
-1. Navigate to the business owner dashboard `https://salonflow-hf3w.onrender.com/studio/{slug}`.
+1. Navigate to the business owner dashboard `https://selahflow.onrender.com/studio/{slug}`.
 2. Under **Settings → Booking requests**, enable booking approval notifications and click **Enable notifications on this device**. Choose whether to allow notification permission. This is separate from Email/SMS checkboxes.
 3. Observe the top-bar bell. It shows unread pending requests; opening it marks visible new requests read. Choose *Open booking approval inbox* to accept/decline.
 4. Repeat the setup on any other device you want to receive pushes. Each has a separate browser permission and server subscription.
