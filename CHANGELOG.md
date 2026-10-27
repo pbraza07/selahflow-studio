@@ -1,3 +1,9 @@
+## v1.3.151 — Consolidated booking history
+
+- Group each explicitly linked booking lifecycle into one expandable entry in client/business history with distinct acceptance and payment status.
+- Keep lifecycle search, dates, counts, pagination and source-selection safeguards consistent; retain individual financial/message tabs.
+- Add shared Expand all / Collapse all arrows to history, Booking Status and client session details.
+
 ## 1.3.150
 
 - Recover saved registration fields using only the business-specific Membership ID in booking, membership signup and owner assignment.

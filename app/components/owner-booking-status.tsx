@@ -1,5 +1,6 @@
 'use client';
 import {useMemo,useState} from 'react';
+import ExpandableDetailsGroup from './expandable-details-group';
 import SortableTable from './sortable-table';
 import type {Visit} from './owner-client-directory';
 import {filterBookingStatusRows} from '../../server/booking-status.mjs';
@@ -25,7 +26,7 @@ export default function OwnerBookingStatus({bookings}:{bookings:Booking[]}){
    <button type="button" className="outline" onClick={()=>{setSearch('');setStatus('');setPayment('');setFrom('');setTo('');setAttendedOnly(false);}}>Clear booking filters</button>
   </div>
   <p role="status">{rows.length} of {bookings.length} bookings · Payment: Pending (red), Completed (green)</p>
-  {rows.length?<div className="sf-client-history-scroll"><SortableTable className="sf-client-history-table">
+  {rows.length?<ExpandableDetailsGroup><div className="sf-client-history-scroll"><SortableTable className="sf-client-history-table">
    <thead><tr><th>Client</th><th>Activity date / time</th><th>Service used</th><th>Service type</th><th>Session</th><th>Team</th><th>Status / booking timeline</th><th>Payment</th><th>Quote</th></tr></thead>
    <tbody>{rows.map(v=><tr key={v.id}>
     <td><b>{v.clientName||'Client'}</b>{v.clientMemberNumber&&<small>ID {v.clientMemberNumber}</small>}{v.clientEmail&&<small>{v.clientEmail}</small>}{v.clientPhone&&<small>{v.clientPhone}</small>}{v.submittedAt&&<small>Submitted {timestamp(v.submittedAt)}</small>}</td>
@@ -35,6 +36,6 @@ export default function OwnerBookingStatus({bookings}:{bookings:Booking[]}){
     <td><span className={'sf-client-visit-status '+(v.attended?'attended':['No-show','Cancelled','Declined'].includes(v.status)?'missed':'scheduled')}>{v.status}{v.attended?' · Attended':''}</span><details><summary>+ Booking timeline</summary>{v.bookingTimeline?.map((entry,i)=><p key={i}>{entry.status}{entry.at?' · '+timestamp(entry.at):''}</p>)}</details></td>
     <td><span className={'sf-booking-payment '+(v.paymentTracking==='completed'?'completed':'pending')}>{v.paymentTracking==='completed'?'Completed':'Pending'}</span></td><td>{money(v.quotedPrice)}</td>
    </tr>)}</tbody>
-  </SortableTable></div>:<p className="sf-client-empty">{bookings.length?'No bookings match these filters.':'Incoming bookings will appear here for all clients.'}</p>}
+  </SortableTable></div></ExpandableDetailsGroup>:<p className="sf-client-empty">{bookings.length?'No bookings match these filters.':'Incoming bookings will appear here for all clients.'}</p>}
  </section>;
 }
