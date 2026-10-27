@@ -1,3 +1,11 @@
+# v1.3.150 release handoff — ID-only saved details and service-aware status (validation in progress)
+
+Returning-client booking and membership forms recover saved names, birth date, email, phone and configured registration answers using only the business-specific membership/client ID. Booking and membership signup load automatically with debounce, cancellation and stale-response guards; owner membership assignment can load by ID alone. New-client identity requirements remain unchanged. Existing optional DOB requests remain compatible and must match if supplied. Profile-only clients are supported. Deleted profiles and inactive businesses are excluded. No private notes, provider records, passwords, signed documents or arbitrary fields are returned. IP/member throttles, same-origin checks, no-store responses and business isolation remain. ID-only recovery intentionally makes saved registration fields accessible to someone holding that business's client ID; IDs must not be treated as secret passwords.
+
+ID-only appointment status returns service name and service type/category, using the current canonical appointment when a request was accepted/rescheduled. Both the customer status card and assistant subsections show these fields. Membership and booking sections remain distinct; assistant answers still exclude contacts, DOB, registration answers, private references and payment links. Payment verification, waiver checks, capacity, approval, credit eligibility and existing records are unchanged. No migration or provider setup is required.
+
+Feature branch `feature/id-only-prefill-service-status`. Tests/builds and staging/production deployment pending. Source v1.3.150; last verified runtime v1.3.149. No real client records are used for QA.
+
 # v1.3.149 release handoff — Membership classification badges and safe checkout expiry — verified LIVE in staging and production
 
 Assigned memberships keep their plan/type classification badge across payment-pending, exhausted, expired and canceled states, with explicit status text. Clients without a membership retain the neutral ID badge. Plan custom badge overrides and membership-type inheritance remain intact. Display changes do not activate credits or change payment/booking eligibility.

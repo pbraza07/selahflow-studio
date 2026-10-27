@@ -24,6 +24,7 @@ export default function MembershipEnrollment(){
  const [error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [result,setResult]=useState<{status:string;plan?:string;paidThrough?:string;memberNumber?:string;sessionsLeft?:number}|null>(null);
  const [requested,setRequested]=useState(false),[registeredNumber,setRegisteredNumber]=useState('');
+ const lookupGeneration=useRef(0);
  const [lookupBusy,setLookupBusy]=useState(false),[lookupMessage,setLookupMessage]=useState('');
  const requestId=useRef('');
  const [checkoutId,setCheckoutId]=useState('');
@@ -71,18 +72,26 @@ export default function MembershipEnrollment(){
    else {setRegisteredNumber(d.memberNumber||'');setRequested(true);}setBusy(false);
   }catch(e){setError((e as Error).message);setBusy(false);}
  }
- async function loadReturningMember(){
-  const id=String(details.memberNumber||'').trim().toUpperCase(),dateOfBirth=String(details.dateOfBirth||'');
-  if(!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(id)||!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)){setLookupMessage('Enter your eight-character Unique ID and date of birth.');return;}
+ async function loadReturningMember(signal?:AbortSignal){
+  const generation=++lookupGeneration.current;
+  const id=String(details.memberNumber||'').trim().toUpperCase();
+  if(!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(id)){setLookupMessage('Enter your Unique ID to load saved details.');return;}
   setLookupBusy(true);setLookupMessage('');
   try{
-   const response=await fetch('/api/public/member-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug,memberNumber:id,dateOfBirth})});
+   const response=await fetch('/api/public/member-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug,memberNumber:id}),signal});
    const result=await response.json();if(!response.ok)throw Error(result.error||'Saved customer not found.');
-   setDetails(old=>({...old,memberNumber:id,dateOfBirth,firstName:result.firstName||'',lastName:result.lastName||'',phone:result.phone||''}));
+   if(signal?.aborted||generation!==lookupGeneration.current)return;
+   setDetails(old=>({...old,memberNumber:id,dateOfBirth:result.dateOfBirth||'',firstName:result.firstName||'',lastName:result.lastName||'',phone:result.phone||''}));
    setName((result.firstName+' '+result.lastName).trim());setEmail(result.email||'');
-   setAnswers(previous=>({...previous,...result.customAnswers}));setLookupMessage('Welcome back! Your saved Unique ID and contact details have been loaded.');
-  }catch(e){setLookupMessage((e as Error).message);}finally{setLookupBusy(false);}
+   setAnswers(result.customAnswers||{});setLookupMessage('Welcome back! Your saved Unique ID and contact details have been loaded.');
+  }catch(e){if(!signal?.aborted&&generation===lookupGeneration.current)setLookupMessage((e as Error).message);}finally{if(!signal?.aborted&&generation===lookupGeneration.current)setLookupBusy(false);}
  }
+ useEffect(()=>{
+  setLookupBusy(false);
+  if(!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(String(details.memberNumber||'').trim().toUpperCase()))return;
+  const controller=new AbortController(),timer=window.setTimeout(()=>void loadReturningMember(controller.signal),400);
+  return()=>{controller.abort();window.clearTimeout(timer);lookupGeneration.current++;};
+ },[details.memberNumber,slug]);
  const theme=data?themeStyles(data.theme,data.brandPrimary,data.brandBackground) as CSSProperties:undefined;
  return <div className="sf-membership-public" data-selah-theme="true" style={theme}>
   <BusinessNavigation slug={slug} name={data?.name||"Memberships"}/>
@@ -115,7 +124,7 @@ export default function MembershipEnrollment(){
     </>:<form onSubmit={pay}><button type="button" className="sf-membership-back" onClick={()=>setStep(1)}><ArrowLeft size={16}/> Choose another plan</button>
      <label>Coupon code (optional)<input maxLength={40} value={coupon} onChange={e=>{setCoupon(e.target.value.toUpperCase());setDiscount(null);}}/></label><button type="button" disabled={busy||!coupon||!plan} onClick={async()=>{try{const r=await fetch('/api/public/memberships',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'quoteCoupon',slug,planId:plan?.id,couponCode:coupon})}),d=await r.json();if(!r.ok)throw Error(d.error);setDiscount(d);}catch(e){setError((e as Error).message);}}}>Apply coupon</button>{discount&&<p>{discount.description} · {discount.duration==='once'?'First payment':'Each payment'}: {price(discount.totalCents)}</p>}<h2>{data.registrationConfig?.pageContent?.membershipDetailsTitle||"Review your membership"}</h2>{plan&&<div className="sf-membership-order"><b>{plan.name}</b><p>{plan.description}</p><p>{plan.usageSummary}</p><p>{plan.creditSummary}</p>
       <div><strong>{price(plan.priceCents)} / {plan.interval}</strong><span>{plan.interval} membership</span></div></div>}
-     <RegistrationFields config={data.registrationConfig||{}} form="membership" values={{...details,email}} answers={answers} onValue={(id,value)=>{if(id==='email')setEmail(value);else setDetails(old=>{const next={...old,[id]:value};setName((next.firstName+' '+next.lastName).trim());return next;});}} onAnswer={(id,value)=>setAnswers(old=>({...old,[id]:value}))} identityHelp={<><p><strong>First membership or first visit?</strong> Leave the ID blank. SelahFlow will assign your permanent business-specific eight-character Unique ID when you register, using the same process as your first booking. First name, last name and date of birth are required to generate the ID.</p>{details.memberNumber&&<><button type="button" className="outline" disabled={lookupBusy||!details.dateOfBirth} onClick={()=>void loadReturningMember()}>{lookupBusy?'Loading customer…':'Load existing customer'}</button>{lookupMessage&&<small role="status">{lookupMessage}</small>}</>}</>}/>
+     <RegistrationFields config={data.registrationConfig||{}} form="membership" values={{...details,email}} answers={answers} onValue={(id,value)=>{if(id==='memberNumber'){lookupGeneration.current++;setLookupMessage('');setName('');setEmail('');setAnswers({});setDetails({memberNumber:value.toUpperCase(),firstName:'',lastName:'',dateOfBirth:'',phone:''});}else if(id==='email')setEmail(value);else setDetails(old=>{const next={...old,[id]:value};setName((next.firstName+' '+next.lastName).trim());return next;});}} onAnswer={(id,value)=>setAnswers(old=>({...old,[id]:value}))} identityHelp={<><p><strong>Returning customer?</strong> Enter only your Membership ID to automatically fill your saved registration details. <strong>First membership or first visit?</strong> Leave the ID blank. SelahFlow will assign your permanent business-specific eight-character Unique ID when you register, using the same process as your first booking. First name, last name and date of birth are required to generate the ID.</p>{details.memberNumber&&<><button type="button" className="outline" disabled={lookupBusy} onClick={()=>void loadReturningMember()}>{lookupBusy?'Loading customer…':'Load existing customer'}</button>{lookupMessage&&<small role="status">{lookupMessage}</small>}</>}</>}/>
      <label className="sf-membership-agree"><input type="checkbox" required checked={accept} onChange={e=>setAccept(e.target.checked)}/>
       <span>{data.canPay&&plan?`I confirm my details. If I choose Make Payment, I authorize recurring billing of ${price(plan.priceCents)} every ${plan.interval} until cancelled through the business. Registration without payment does not activate membership or reserve appointment times.`:'I confirm my details and understand that my membership remains pending payment. No owner approval is required, and registering does not reserve appointment times.'}</span></label>
      <button type="submit" value="online" className="primary sf-membership-next" disabled={!data.canPay||busy||!accept}><CreditCard size={17}/>{busy?'Opening secure checkout…':'Make Payment'}</button>{!data.canPay&&<p role="note">Online payment requires this business to connect and verify Stripe. You may register without payment now; the owner can confirm an offline payment later.</p>}

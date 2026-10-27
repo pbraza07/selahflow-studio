@@ -49,17 +49,18 @@ test('booking defaults place member ID first while the shared form supports conf
  assert.ok(fields.findIndex(f=>f.id==='memberNumber')<fields.findIndex(f=>f.id==='firstName'));
  assert.equal(fields.filter(f=>f.id==='dateOfBirth'&&f.required).length,1);
  assert.match(form,/<RegistrationFields config=\{config\} form="booking"/);
- assert.match(form,/automatically fill your name, email, phone and previous registration answers/);
+ assert.match(form,/automatically fill your name, birth date, email, phone and previous registration answers/);
  assert.match(form,/Leave the ID blank; provide your first name, last name and birth date to receive a new ID when you book/);
  assert.doesNotMatch(form,/Not you\? Clear name.*?Load my saved details/s);
 });
-test('lookup requires birth-date verification, business identity and throttling before returning PII',async()=>{
+test('ID-only lookup retains business scope and throttling and optionally accepts a supplied birth date',async()=>{
  const endpoint=await readFile(new URL('../app/api/public/member-lookup/route.ts',import.meta.url),'utf8');
  assert.match(endpoint,/validOrigin\(req\)/);
  assert.match(endpoint,/member-prefill-ip:/);
  assert.match(endpoint,/member-prefill-id:/);
  assert.match(endpoint,/b\.status='active'|status='active'/);
- assert.match(endpoint,/date_of_birth=\$3::date/);
+ assert.match(endpoint,/\$3::date IS NULL OR date_of_birth=\$3::date/);
+ assert.match(endpoint,/dateOfBirth:String\(identity.dob/);
  assert.match(endpoint,/registration_answers/);
  assert.match(endpoint,/booking_requests/);
  assert.match(endpoint,/appointments/);

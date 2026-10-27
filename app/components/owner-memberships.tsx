@@ -26,6 +26,7 @@ export default function OwnerMemberships({slug,prefill,onOpenPayments}:{slug:str
  const [creditEligibility,setCreditEligibility]=useState<CreditEligibility>({mode:'all',serviceIds:[],sessionIds:[]});
  function toggleCredit(kind:'serviceIds'|'sessionIds',id:string){setCreditEligibility(old=>({...old,[kind]:old[kind].includes(id)?old[kind].filter(v=>v!==id):[...old[kind],id]}));}
  const [manualMemberNumber,setManualMemberNumber]=useState('');
+ const lookupIdentity=useRef('');lookupIdentity.current=manualMemberNumber.trim().toUpperCase();
  const [memberDob,setMemberDob]=useState('');
  const [memberFirst,setMemberFirst]=useState(''),[memberLast,setMemberLast]=useState(''),[memberPhone,setMemberPhone]=useState(''),[memberAnswers,setMemberAnswers]=useState<Record<string,string|boolean>>({}),[bookingFields,setBookingFields]=useState<any[]>([]),[registrationConfig,setRegistrationConfig]=useState<any>({});
  const [renewing,setRenewing]=useState<string|null>(null),[renewPlan,setRenewPlan]=useState(''),[renewNumber,setRenewNumber]=useState('');
@@ -63,11 +64,13 @@ export default function OwnerMemberships({slug,prefill,onOpenPayments}:{slug:str
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function loadExistingMember(){
-  if(!manualMemberNumber.trim()||!memberDob){setError('Enter membership ID and date of birth.');return;}
+  if(!manualMemberNumber.trim()){setError('Enter the membership ID.');return;}
+  const lookupId=manualMemberNumber.trim().toUpperCase();
   setBusy(true);setError('');try{
-   const r=await fetch('/api/public/member-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug,memberNumber:manualMemberNumber,dateOfBirth:memberDob})});
+   const r=await fetch('/api/public/member-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug,memberNumber:manualMemberNumber})});
    const d=await r.json();if(!r.ok)throw Error(d.error||'Member not found.');
-   setMemberFirst(d.firstName||'');setMemberLast(d.lastName||'');setNewMemberEmail(d.email||'');setMemberPhone(d.phone||'');setMemberAnswers(d.customAnswers||{});
+   if(lookupIdentity.current!==lookupId)return;
+   setMemberDob(d.dateOfBirth||'');setMemberFirst(d.firstName||'');setMemberLast(d.lastName||'');setNewMemberEmail(d.email||'');setMemberPhone(d.phone||'');setMemberAnswers(d.customAnswers||{});
    setMessage('Existing member loaded. ID '+d.memberNumber+' will be reused.');
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
@@ -155,7 +158,7 @@ export default function OwnerMemberships({slug,prefill,onOpenPayments}:{slug:str
   {modal==='assign'&&<MembershipModal title="Assign a member to a membership package" busy={busy} onClose={()=>setModal(null)}>{error&&<p className="sf-membership-error" role="alert">{error}</p>}<section className="sf-owner-membership-form sf-membership-assign-form"><p className="muted">Member numbers are unique per business and generated automatically if left blank. The fields below match your membership registration form. Added questions count toward your plan allowance.</p><form onSubmit={assignMember} className="sf-membership-assignment-form"><RegistrationFields config={registrationConfig} form="membership" values={{memberNumber:manualMemberNumber,dateOfBirth:memberDob,firstName:memberFirst,lastName:memberLast,email:newMemberEmail,phone:memberPhone}} answers={memberAnswers}
  onValue={(id,value)=>{if(id==='memberNumber')setManualMemberNumber(value.toUpperCase());else if(id==='dateOfBirth')setMemberDob(value);else if(id==='firstName')setMemberFirst(value);else if(id==='lastName')setMemberLast(value);else if(id==='email')setNewMemberEmail(value);else if(id==='phone')setMemberPhone(value);}}
  onAnswer={(id,value)=>setMemberAnswers(v=>({...v,[id]:value}))}
- identityHelp={<><p>Returning player? Enter the ID and birth date, then load saved details. New players receive a permanent eight-character ID.</p><button type="button" className="outline" disabled={busy||!manualMemberNumber||!memberDob} onClick={()=>void loadExistingMember()}>Load existing member</button></>}/>
+ identityHelp={<><p>Returning player? Enter only the ID, then load all saved registration details. New players receive a permanent eight-character ID.</p><button type="button" className="outline" disabled={busy||!manualMemberNumber} onClick={()=>void loadExistingMember()}>Load existing member</button></>}/>
  <label>Membership package<select required value={newMemberPlan} onChange={e=>setNewMemberPlan(e.target.value)}><option value="">Choose package</option>{data?.plans.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button type="submit" className="primary" disabled={busy}>Assign member</button><button type="button" className="outline" disabled={busy} onClick={()=>setModal(null)}>Cancel</button></form></section></MembershipModal>}
 
   {modal==='groups'&&<MembershipModal title="Membership types" busy={busy} onClose={()=>setModal(null)}>{error&&<p className="sf-membership-error" role="alert">{error}</p>}{message&&<p className="sf-membership-success" role="status">{message}</p>}

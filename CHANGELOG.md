@@ -1,3 +1,9 @@
+## 1.3.150
+
+- Recover saved registration fields using only the business-specific Membership ID in booking, membership signup and owner assignment.
+- Include service name and category/type in ID-only appointment status cards and assistant subsections.
+- Preserve business isolation, throttling, no-store responses and payment/booking safeguards.
+
 ## 1.3.149
 
 - Keep membership classifications visible with explicit payment/credit status; preserve credit eligibility rules.

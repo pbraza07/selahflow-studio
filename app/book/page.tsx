@@ -36,6 +36,8 @@ export default function Booking(){
  const [confirmedPrice,setConfirmedPrice]=useState<number|null>(null);
  const [memberNumber,setMemberNumber]=useState(''),[verifiedIdentity,setVerifiedIdentity]=useState(''),[memberHasCredits,setMemberHasCredits]=useState(false),[creditEligibility,setCreditEligibility]=useState<any>(null);
  const [bookingDob,setBookingDob]=useState('');
+ const lookupGeneration=useRef(0);
+ const [lookupRevision,setLookupRevision]=useState(0);
  const [lookupBusy,setLookupBusy]=useState(false),[lookupMessage,setLookupMessage]=useState('');
  const [customerToken,setCustomerToken]=useState('');
  const [allSessions,setAllSessions]=useState<{date:string;sessions:{id:string;start:number;service:string;staff:string;name:string;staffName:string;staffVisible:boolean;autoAssignStaff:boolean;capacity:number;remaining:number}[]}[]>([]),[sessionsLoading,setSessionsLoading]=useState(false);
@@ -107,11 +109,11 @@ useEffect(()=>{
  return ()=>{cancelled=true;controller.abort();};
 },[calendarAnchor,calendarView,staff,selected.join(','),step,fixedSession]);
 // Automatically recover a returning player's submitted details once the ID
-// and birth date match. Aborting outdated lookups prevents another player's
+// is entered. Aborting outdated lookups prevents another player's
 // response from filling the current form.
 useEffect(()=>{
- const id=memberNumber.trim().toUpperCase(),dob=bookingDob,slug=config?.slug;
- if(!slug||!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(id)||!/^\d{4}-\d{2}-\d{2}$/.test(dob))return;
+ const id=memberNumber.trim().toUpperCase(),slug=config?.slug,generation=++lookupGeneration.current;
+ if(!slug||!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(id))return;
  let cancelled=false;
  const controller=new AbortController();
  const timer=window.setTimeout(async()=>{
@@ -119,37 +121,36 @@ useEffect(()=>{
   try{
    const r=await fetch('/api/public/member-lookup',{
     method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({slug,memberNumber:id,dateOfBirth:dob}),signal:controller.signal
+    body:JSON.stringify({slug,memberNumber:id}),signal:controller.signal
    });
    const d=await r.json();if(!r.ok)throw Error(d.error||'Unable to load saved player details.');
-   if(cancelled)return;
+   if(cancelled||generation!==lookupGeneration.current)return;
    setFirstName(d.firstName||'');setLastName(d.lastName||'');
    setName([d.firstName,d.lastName].filter(Boolean).join(' '));
    setEmail(d.email||'');setPhone(d.phone||'');
    setCustomAnswers(d.customAnswers&&typeof d.customAnswers==='object'&&!Array.isArray(d.customAnswers)?d.customAnswers:{});
    setMemberHasCredits(d.membershipCovered===true);setCreditEligibility(d.membership?.creditEligibility||null);
-   setVerifiedIdentity(id+'|'+dob);
-   setLookupMessage('Membership ID verified! Name, contact details, and saved booking answers have been filled in. Review them before confirming.');
+   setBookingDob(d.dateOfBirth||'');
+   setVerifiedIdentity(id);
+   setLookupMessage('Saved registration loaded. Name, birth date, contact details, and saved booking answers have been filled in. Review them before confirming.');
   }catch(error){
-   if(cancelled||controller.signal.aborted)return;
+   if(cancelled||controller.signal.aborted||generation!==lookupGeneration.current)return;
    setVerifiedIdentity('');
    setLookupMessage((error as Error).message);
-  }finally{if(!cancelled)setLookupBusy(false);}
+  }finally{if(!cancelled&&generation===lookupGeneration.current)setLookupBusy(false);}
  },400);
  return()=>{cancelled=true;window.clearTimeout(timer);controller.abort();};
-},[memberNumber,bookingDob,config?.slug]);
+},[memberNumber,config?.slug,lookupRevision]);
 function updateMembershipId(value:string){
+ lookupGeneration.current++;
  const id=value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8);
  if(verifiedIdentity&&id!==memberNumber){
-  setFirstName('');setLastName('');setName('');setEmail('');setPhone('');setCustomAnswers({});
+  setFirstName('');setLastName('');setName('');setEmail('');setPhone('');setBookingDob('');setCustomAnswers({});
  }
    setVerifiedIdentity('');setLookupBusy(false);setLookupMessage('');setMemberHasCredits(false);setMemberNumber(id);
 }
 function updateBirthDate(value:string){
- if(verifiedIdentity&&value!==bookingDob){
-  setFirstName('');setLastName('');setName('');setEmail('');setPhone('');setCustomAnswers({});
- }
- setVerifiedIdentity('');setLookupBusy(false);setLookupMessage('');setMemberHasCredits(false);setBookingDob(value);
+ setBookingDob(value);
 }
  const needsWaiver=requiresWaiver(services);
  useEffect(()=>{
@@ -160,7 +161,7 @@ function updateBirthDate(value:string){
   return()=>{window.clearTimeout(timer);controller.abort();};
  },[needsWaiver,firstName,lastName,bookingDob,memberNumber,config?.waiver?.hash,waiverRetry]);
  const waiverBlocked=needsWaiver&&(waiverChecking||!!waiverError||!waiverSigned&&(!waiver.accepted||!waiver.signature.trim()||!waiver.role));
- async function confirmBooking(e:React.FormEvent){e.preventDefault();if(couponCode.trim()&&!membershipCovered&&!couponQuote){setError('Apply your coupon or remove it before requesting this booking.');return;}if(waiverBlocked){setError('Please complete the participation waiver before booking.');return;}const online=(e.nativeEvent as SubmitEvent).submitter?.getAttribute('value')==='online';if(time===null||selectedUnavailable){setError(selectedFull?'Session is now full. Please choose another session.':'Please select an available time.');return;}if(memberNumber.trim()&&!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(memberNumber.trim())){setError('Enter a valid 8-character membership ID or leave it blank for your first visit.');return;}if(memberNumber.trim()&&verifiedIdentity!==memberNumber.trim().toUpperCase()+'|'+bookingDob){setError('Please wait for your Membership ID and birth date to be verified before booking.');return;}setBusy(true);setError('');try{const d=await post({action:'book',couponCode,key:key.current,services:selected,staff,date,start:time,sessionId:fixedSession?sessionChoice.id:selectedSessionId,expectedPrice:regularPrice,expectedDuration:duration,name:(firstName.trim()+' '+lastName.trim()),firstName:firstName.trim(),lastName:lastName.trim(),dateOfBirth:bookingDob,email,phone,policyAccepted:accepted,website,customAnswers,waiver:needsWaiver&&!waiverSigned?waiver:null,memberNumber:memberNumber.trim()?memberNumber.trim().toUpperCase():null,notMember:!memberNumber.trim()});setConfirmedPrice(typeof d.chargedPrice==='number'?d.chargedPrice:price);setDone(d.id);setBookingReceipt(d.bookingReceipt||null);setIssuedId(d.memberNumber||memberNumber);setName((firstName.trim()+' '+lastName.trim()).trim());setCustomerToken(d.customerToken||'');setPendingApproval(d.pending===true);if(config?.slug&&(firstName.trim()+' '+lastName.trim()).trim())try{window.localStorage.setItem('selahflow:remembered-booking-name:'+config.slug,(firstName.trim()+' '+lastName.trim()).trim().slice(0,100));}catch{}if(online&&!d.pending&&d.chargedPrice>0&&d.customerToken)await makeBookingPayment(config.slug,d.id,d.customerToken);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+ async function confirmBooking(e:React.FormEvent){e.preventDefault();if(couponCode.trim()&&!membershipCovered&&!couponQuote){setError('Apply your coupon or remove it before requesting this booking.');return;}if(waiverBlocked){setError('Please complete the participation waiver before booking.');return;}const online=(e.nativeEvent as SubmitEvent).submitter?.getAttribute('value')==='online';if(time===null||selectedUnavailable){setError(selectedFull?'Session is now full. Please choose another session.':'Please select an available time.');return;}if(memberNumber.trim()&&!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(memberNumber.trim())){setError('Enter a valid 8-character membership ID or leave it blank for your first visit.');return;}if(memberNumber.trim()&&verifiedIdentity!==memberNumber.trim().toUpperCase()){setError('Load your saved membership details and review them before booking.');return;}setBusy(true);setError('');try{const d=await post({action:'book',couponCode,key:key.current,services:selected,staff,date,start:time,sessionId:fixedSession?sessionChoice.id:selectedSessionId,expectedPrice:regularPrice,expectedDuration:duration,name:(firstName.trim()+' '+lastName.trim()),firstName:firstName.trim(),lastName:lastName.trim(),dateOfBirth:bookingDob,email,phone,policyAccepted:accepted,website,customAnswers,waiver:needsWaiver&&!waiverSigned?waiver:null,memberNumber:memberNumber.trim()?memberNumber.trim().toUpperCase():null,notMember:!memberNumber.trim()});setConfirmedPrice(typeof d.chargedPrice==='number'?d.chargedPrice:price);setDone(d.id);setBookingReceipt(d.bookingReceipt||null);setIssuedId(d.memberNumber||memberNumber);setName((firstName.trim()+' '+lastName.trim()).trim());setCustomerToken(d.customerToken||'');setPendingApproval(d.pending===true);if(config?.slug&&(firstName.trim()+' '+lastName.trim()).trim())try{window.localStorage.setItem('selahflow:remembered-booking-name:'+config.slug,(firstName.trim()+' '+lastName.trim()).trim().slice(0,100));}catch{}if(online&&!d.pending&&d.chargedPrice>0&&d.customerToken)await makeBookingPayment(config.slug,d.id,d.customerToken);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
  const selectedFull=time!==null&&sessionAvailability[time]?.remaining===0;
  const selectedUnavailable=time!==null&&checked&&!times.includes(time);
  useEffect(()=>{
@@ -178,7 +179,7 @@ function updateBirthDate(value:string){
  {step===3&&<form id="public-confirm" onSubmit={confirmBooking}><h2>{config.pageContent?.bookingDetailsTitle||"Review and book."}</h2><p className="muted">{config.pageContent?.bookingDetailsDescription||"Review your visit and add your contact details."}</p><div className="booking-summary">{selectedUnavailable&&<p role="alert"><strong>{selectedFull?'Session is now full.':'This time is no longer available.'}</strong> Please go back and choose another session. Booking and payment are unavailable.</p>}<b>{services.map((s:any)=>s.name).join(' + ')}</b><p>{date} · {timeLabel(time!)} Eastern · {duration} minutes</p><p>{clientTeamLabel}</p><b>{money(price)}</b>{couponQuote?.coupon&&!membershipCovered&&<p>Coupon {couponQuote.coupon.code}: −{money(couponQuote.coupon.discountCents/100)} from {money(regularPrice)}</p>}<p>{price===0?(membershipCovered?'Covered by your membership. No payment due.':'No payment due after discount.'):requiresBookingApproval(services)?'Owner approval is required. After approval, pay through your email or verified membership lookup before attending.':'This service confirms immediately. Complete any payment due before attending; payment details will be emailed.'}</p></div>{!membershipCovered&&<fieldset><legend>Service discount</legend><label>Coupon code<input maxLength={40} value={couponCode} onChange={e=>{couponRequest.current++;setCouponCode(e.target.value.toUpperCase());setCouponQuote(null);setCouponError('');}} autoComplete="off"/></label><button type="button" className="outline" disabled={couponBusy||!couponCode.trim()} onClick={()=>void applyCoupon()}>{couponBusy?'Checking…':'Apply coupon'}</button>{couponError&&<p role="alert">{couponError}</p>}{couponQuote?.coupon&&<p role="status">{couponQuote.coupon.description||'Discount applied'} · Total {money(couponQuote.totalCents/100)}</p>}</fieldset>}<RegistrationFields config={config} form="booking" sessionId={time===null?null:sessionAvailability[time]?.id||null} serviceIds={selected} values={{memberNumber,dateOfBirth:bookingDob,firstName,lastName,email,phone}} answers={customAnswers}
  onValue={(id,value)=>{if(id==='memberNumber')updateMembershipId(value);else if(id==='dateOfBirth')updateBirthDate(value);else if(id==='firstName'){setFirstName(value);}else if(id==='lastName'){setLastName(value);}else if(id==='email')setEmail(value);else if(id==='phone')setPhone(value);}}
  onAnswer={(id,value)=>setCustomAnswers(v=>({...v,[id]:value}))}
- identityHelp={<><p><strong>Already registered?</strong> Enter your Membership ID and verify your birth date to automatically fill your name, email, phone and previous registration answers. <strong>First visit?</strong> Leave the ID blank; provide your first name, last name and birth date to receive a new ID when you book.</p>{memberNumber.trim()&&<div aria-live="polite" role="status">{lookupBusy?'Loading your saved details…':lookupMessage||(bookingDob?'Ready to verify your membership ID.':'Enter your birth date to load saved details.')}</div>}</>}/>
+ identityHelp={<><p><strong>Already registered?</strong> Enter only your Membership ID to automatically fill your name, birth date, email, phone and previous registration answers. <strong>First visit?</strong> Leave the ID blank; provide your first name, last name and birth date to receive a new ID when you book.</p>{memberNumber.trim()&&<><button type="button" className="outline" disabled={lookupBusy} onClick={()=>setLookupRevision(v=>v+1)}>Reload saved details</button><div aria-live="polite" role="status">{lookupBusy?'Loading your saved details…':lookupMessage||'Enter your membership ID to load saved details.'}</div></>}</>}/>
  {needsWaiver&&config.waiver&&<ParticipationWaiver document={config.waiver} dob={bookingDob} participantName={[firstName,lastName].filter(Boolean).join(" ")} value={waiver} onChange={setWaiver} signed={waiverSigned} checking={waiverChecking} error={waiverError} onRetry={()=>setWaiverRetry(n=>n+1)}/>}
  <div className="honeypot" aria-hidden="true"><label>Leave blank<input tabIndex={-1} autoComplete="off" value={website} onChange={e=>setWebsite(e.target.value)}/></label></div><label className="consent"><input type="checkbox" required checked={accepted} onChange={e=>setAccepted(e.target.checked)}/><span>I confirm these appointment details and agree to the policy: {config.policy}</span></label><p className="muted">Your details will be shared with this business to manage your appointment. After a successful booking, only your name is saved on this device for faster future bookings; email, phone and other answers are never stored by this feature. This does not sign you up for marketing.</p></form>}
  </div>{step<3&&<p className="sf-booking-next-hint" role="status">{!selected.length?'Select at least one service to continue.':step===1?'Your choices stay selected when you go back.':!staff?'Choose a team member or a scheduled session.':time===null?'Select an available time to continue.':selectedUnavailable?'This time is no longer available. Please choose another.':'Selected: '+date+' · '+timeLabel(time!)+' Eastern'}</p>}<div className="modal-footer" style={{flexWrap:'wrap'}}><div><b>{money(price)}</b><small>{duration} minutes</small></div><div className="button-row" style={{flexWrap:'wrap',justifyContent:'flex-end'}}>{step>1&&<button disabled={busy} className="outline" onClick={()=>{setStep(step-1);setError('');}}><ChevronLeft size={16}/>Back</button>}{step<3?<button className="primary" disabled={busy||!selected.length||(step===2&&(time===null||selectedUnavailable))} onClick={()=>{setStep(step+1);setError('');}}>{config.pageContent?.bookingContinue||"Continue"}</button>:<><button className="outline" form="public-confirm" type="submit" value="business" disabled={busy||!accepted||selectedUnavailable||waiverBlocked}>{busy?'Booking…':config.pageContent?.bookingConfirm||'Request booking'}</button></>}</div></div></>}
