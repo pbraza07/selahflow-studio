@@ -35,8 +35,8 @@ The API, authentication, business logic, defaults, migrations, scripts, environm
 
 Keep the same GitHub repository, Render service, database and environment settings. Do not provision a replacement service or database. The application URLs remain:
 
-- https://salonflow-hf3w.onrender.com
-- https://salonflow-hf3w.onrender.com/book/crawford
+- https://selahflow.onrender.com
+- https://selahflow.onrender.com/book/crawford
 
 The branding and favicon changes are deployed to the existing service, now named `selahflow-studio`. This patch corrects release labels to 1.3.1. The v1.4 security/billing milestone remains planned. Existing startup behavior is unchanged.
 

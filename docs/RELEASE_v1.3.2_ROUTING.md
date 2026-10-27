@@ -1,12 +1,12 @@
 # SelahFlow v1.3.2 role-specific URLs
 
-Platform homepage: https://salonflow-hf3w.onrender.com/
-Platform administrator: https://salonflow-hf3w.onrender.com/admin/platform
-Owner login: https://salonflow-hf3w.onrender.com/login
-Registration: https://salonflow-hf3w.onrender.com/signup
-Crawford public business page: https://salonflow-hf3w.onrender.com/crawford
-Crawford owner dashboard: https://salonflow-hf3w.onrender.com/studio/crawford
-Crawford booking: https://salonflow-hf3w.onrender.com/book/crawford
+Platform homepage: https://selahflow.onrender.com/
+Platform administrator: https://selahflow.onrender.com/admin/platform
+Owner login: https://selahflow.onrender.com/login
+Registration: https://selahflow.onrender.com/signup
+Crawford public business page: https://selahflow.onrender.com/crawford
+Crawford owner dashboard: https://selahflow.onrender.com/studio/crawford
+Crawford booking: https://selahflow.onrender.com/book/crawford
 Business public page: /{slug}
 Business owner dashboard: /studio/{slug}
 Business booking: /book/{slug}

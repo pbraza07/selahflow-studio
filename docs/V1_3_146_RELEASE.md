@@ -10,7 +10,7 @@ Authenticated production browser verified v1.3.146, all eight per-business contr
 
 - [Merged PR #73](https://github.com/pbraza07/selahflow-studio/pull/73)
 - [GitHub CI](https://github.com/pbraza07/selahflow-studio/actions/runs/40091867155)
-- [Production admin controls](https://salonflow-hf3w.onrender.com/admin/platform#platform-commissions)
+- [Production admin controls](https://selahflow.onrender.com/admin/platform#platform-commissions)
 - Local production screenshot: selahflow-platform-commission-controls-146-1792843793473.jpg
 
 ## Using the controls

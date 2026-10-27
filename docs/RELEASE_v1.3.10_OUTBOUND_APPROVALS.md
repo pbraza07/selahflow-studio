@@ -2,7 +2,7 @@
 
 ## Business owner setup
 
-1. Sign in at `https://salonflow-hf3w.onrender.com/studio/{slug}`, then open **Settings**.
+1. Sign in at `https://selahflow.onrender.com/studio/{slug}`, then open **Settings**.
 2. Enable **Booking approval notifications** and choose the reviewer (**Business owner** or a specific team member).
 3. Tick **Email** and/or **SMS**. For owner delivery, account email is the default unless replaced in the notification email field. Enter owner mobile in international E.164 format (US example `+18135550123`).
 4. For staff delivery, enter the selected staff member's notification email/phone in **Your team**.
@@ -19,7 +19,7 @@ Configure the following **secret** environment variables in the **SelahFlow Rend
 | --- | --- | --- |
 | Email (Resend) | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | HTTPS POST to `https://api.resend.com/emails`; sender must be verified |
 | SMS (Twilio) | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` | HTTPS POST to Twilio Messages API; sender must support SMS |
-| Application URL | `APP_URL=https://salonflow-hf3w.onrender.com` or Render-provided `RENDER_EXTERNAL_URL` | Produces trusted HTTPS review links |
+| Application URL | `APP_URL=https://selahflow.onrender.com` or Render-provided `RENDER_EXTERNAL_URL` | Produces trusted HTTPS review links |
 
 The backend **never stores raw provider credentials**, and API responses show configuration readiness only. If keys are missing, the message is **not sent** and the UI says `not_configured`. No fabricated delivery success, and no blocking of in-app approvals. Email/SMS provider responses of 2xx are recorded as **submitted**, which is not verified device delivery. Delivery receipts/webhooks are not included in this release. SMS consent and U.S. A2P 10DLC registration may be required.
 

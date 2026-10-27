@@ -13,4 +13,4 @@ Passwords are stored as salted scrypt hashes, never as plaintext. There are no a
 
 Security guidance: Six characters is the allowed **minimum**; a longer, unique password with a password manager is strongly recommended. The primary administrator's password is not hardcoded.
 
-Live deployment URL: https://salonflow-hf3w.onrender.com
+Live deployment URL: https://selahflow.onrender.com

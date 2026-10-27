@@ -12,7 +12,7 @@ Render service environment is the source of truth for VAPID_PUBLIC_KEY, VAPID_PR
 
 Use iOS 16.4 or later. Open the correct business page in Safari, Share → Add to Home Screen, then launch the icon. Sign in, open Settings → Device push notifications, tap Enable notifications on this device and Allow. Tap Send test notification and inspect Notification Center. Enable booking approval notifications and save business settings for booking-request push delivery. Each business/reviewer and device opts in independently. If permission is denied, change it in iOS notification settings; Focus can silence delivery. Server acceptance of a test does not prove device display.
 
-Production: https://salonflow-hf3w.onrender.com. Staging: https://selahflow-staging.onrender.com. Do not remove/reinstall an existing working icon unless needed to update its name; reinstalling requires permission/registration again.
+Production: https://selahflow.onrender.com. Staging: https://selahflow-staging.onrender.com. Do not remove/reinstall an existing working icon unless needed to update its name; reinstalling requires permission/registration again.
 
 ## Validation
 

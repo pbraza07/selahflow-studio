@@ -15,7 +15,7 @@ import {validateSocialLinks,publicSocialLinks} from '../server/business-social-l
 import {validatePageContent} from '../server/page-content.mjs';
 const decode=buffer=>{const png=PNG.sync.read(buffer);return jsQR(new Uint8ClampedArray(png.data),png.width,png.height)?.data;};
 test('downloadable booking QR codes independently decode to the correct business and environment, with no external QR service',async()=>{
- for(const origin of ['https://selahflow-staging.onrender.com','https://salonflow-hf3w.onrender.com']){
+ for(const origin of ['https://selahflow-staging.onrender.com','https://selahflow.onrender.com']){
   const qr=await bookingQr({slug:'example-business',origin,format:'png'});assert.equal(qr.type,'image/png');assert.equal(decode(qr.body),origin+'/book/example-business');
   const png=PNG.sync.read(qr.body);assert.equal(png.width,1024);assert.deepEqual([...png.data.subarray(0,4)],[255,255,255,255]);
   const svg=await bookingQr({slug:'example-business',origin});assert.equal(svg.type,'image/svg+xml');assert.match(svg.body,/<svg[^>]+viewBox/);assert.doesNotMatch(svg.body,/<script|https?:\/\/(?!www.w3.org)/);
