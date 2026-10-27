@@ -79,13 +79,14 @@ test('all-client table renders screenshot columns, expandable answers, timelines
  const react=pathToFileURL(require.resolve('react')).href,jsx=pathToFileURL(require.resolve('react/jsx-runtime')).href;
  const transpile=source=>compile(source).replaceAll('"react"',JSON.stringify(react)).replaceAll("'react'",JSON.stringify(react)).replaceAll('"react/jsx-runtime"',JSON.stringify(jsx));
  const sortable=url(transpile(await readFile(new URL('../app/components/sortable-table.tsx',import.meta.url),'utf8')));
+ const expandable=url(transpile(await readFile(new URL('../app/components/expandable-details-group.tsx',import.meta.url),'utf8')));
  const defaults=url(compile(await readFile(new URL('../lib/defaults.ts',import.meta.url),'utf8')));
  let source=await readFile(new URL('../app/components/owner-booking-status.tsx',import.meta.url),'utf8');
- for(const [from,to] of [['./sortable-table',sortable],['../../lib/defaults',defaults],['../../server/booking-status.mjs',new URL('../server/booking-status.mjs',import.meta.url).href],['../../server/client-registration-fields.mjs',new URL('../server/client-registration-fields.mjs',import.meta.url).href]])source=source.replace("'"+from+"'",JSON.stringify(to));
+ for(const [from,to] of [['./expandable-details-group',expandable],['./sortable-table',sortable],['../../lib/defaults',defaults],['../../server/booking-status.mjs',new URL('../server/booking-status.mjs',import.meta.url).href],['../../server/client-registration-fields.mjs',new URL('../server/client-registration-fields.mjs',import.meta.url).href]])source=source.replace("'"+from+"'",JSON.stringify(to));
  const {default:Component}=await import(url(transpile(source)));
  const rows=allBookingStatusRows(buildClientDirectory([...decorateBookingTimeline([appointment('a','Alex')],[],[{booking_id:'a',status:'paid',paid_at:'2026-10-22T13:00:00Z'}]),pendingBookingAsAppointment(pending)],settings,'owner-a'));
  const html=renderToStaticMarkup(React.createElement(Component,{bookings:rows}));
  for(const label of ['Booking Status','Activity date / time','Service used','Service type','Session','Team','Status / booking timeline','Payment','Quote','Alex','Blair','Booking answers (1)','Player Position','Goalkeeper','+ Booking timeline','Payment completed','Pending approval','$67.50'])assert.ok(html.includes(label),label);
- assert.match(html,/sf-booking-payment completed/);assert.match(html,/sf-booking-payment pending/);assert.match(html,/Search all bookings/);assert.match(html,/2 of 2 bookings/);
+ assert.match(html,/Expand all booking details/);assert.match(html,/sf-booking-payment completed/);assert.match(html,/sf-booking-payment pending/);assert.match(html,/Search all bookings/);assert.match(html,/2 of 2 bookings/);
  const empty=renderToStaticMarkup(React.createElement(Component,{bookings:[]}));assert.match(empty,/Incoming bookings will appear here for all clients/);
 });
