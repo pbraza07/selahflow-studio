@@ -21,7 +21,7 @@ export function assertStagingDatabase(env=process.env){
  if(!env.STAGING_DATABASE_HOST||url.hostname!==env.STAGING_DATABASE_HOST)throw Error('Staging database host does not match the approved instance.');
  if(env.RENDER==='true'&&(env.RENDER_GIT_BRANCH!=='staging'||env.RENDER_SERVICE_NAME!=='selahflow-staging'))throw Error('Staging must deploy the staging branch to selahflow-staging.');
  const origin=new URL(env.APP_URL||env.RENDER_EXTERNAL_URL||'http://localhost:3000');
- if(origin.hostname==='salonflow-hf3w.onrender.com'||(env.RENDER==='true'&&(!origin.hostname.startsWith('selahflow-staging')||!origin.hostname.endsWith('.onrender.com')||origin.protocol!=='https:')))
+ if(['salonflow-hf3w.onrender.com','selahflow.onrender.com'].includes(origin.hostname)||(env.RENDER==='true'&&(!origin.hostname.startsWith('selahflow-staging')||!origin.hostname.endsWith('.onrender.com')||origin.protocol!=='https:')))
   throw Error('Staging must use its own HTTPS origin.');
  assertSandboxPayments(env);
 }
