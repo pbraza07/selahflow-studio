@@ -1,9 +1,10 @@
+import {expireClientCheckouts} from './client-checkout-expiry.mjs';
 import {retainDeletedClientFinancials} from './client-financial-retention.mjs';
 const object=x=>{try{return typeof x==='string'?JSON.parse(x):x||{};}catch{return {};}};
 const day=x=>x instanceof Date?x.toISOString().slice(0,10):String(x||'').slice(0,10);
 const identity=(name,dob)=>String(name||'').trim().replace(/\s+/g,' ').toLowerCase()+'|'+day(dob);
 /** Caller owns transaction. Match the member identity, never a shared family email alone. */
-export async function deleteClientPermanently(db,{owner,businessId,client}){
+export async function deleteClientPermanently(db,{owner,businessId,client,closeOpenCheckouts=false,api=undefined}){
  const business=(await db.query("SELECT id,owner_id FROM businesses WHERE id=$1 AND owner_id=$2 AND status='active'",[businessId,owner])).rows[0];
  if(!business||!client?.id)throw Error('Client not found in this business.');
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[business.id+':member-id-allocation']);
@@ -68,7 +69,8 @@ export async function deleteClientPermanently(db,{owner,businessId,client}){
   for(const s of specs)s.rows??=await read(s.table,s.where,s.args);
   const rowsFor=table=>specs.find(s=>s.table===table).rows;
   if(['business_communication_recipients','booking_client_messages','booking_receipt_emails','membership_payment_emails','membership_payment_invitations','owner_form_notifications'].some(table=>rowsFor(table).some(m=>m.status==='processing')))throw Error('A related email is currently being sent. Retry reset after delivery finishes.');
-  if(rowsFor('booking_payments').some(p=>p.status==='pending'&&p.stripe_checkout_session_id))throw Error('Expire this registration open Stripe Checkout before reset.');
+  if(closeOpenCheckouts)await expireClientCheckouts(db,{businessId:business.id,bookingKeys,members,bookingPayments:rowsFor('booking_payments')},api);
+  if(!closeOpenCheckouts&&rowsFor('booking_payments').some(p=>p.status==='pending'&&p.stripe_checkout_session_id))throw Error('Expire this registration open Stripe Checkout before reset.');
   if((await db.query("SELECT 1 FROM first_customer_commissions WHERE business_id=$1 AND source_id=ANY($2::text[]) AND kind='membership' AND status='reserved' AND stripe_checkout_session_id IS NOT NULL",[business.id,memberIds])).rows.length)throw Error('Expire this membership open Stripe Checkout before reset.');
   await db.query("UPDATE first_customer_commissions SET source_id=NULL WHERE business_id=$1 AND ((kind='booking' AND source_id=ANY($2::text[])) OR (kind='membership' AND source_id=ANY($3::text[])))",[business.id,bookingKeys,memberIds]);
   const retainedFinancialRecords=await retainDeletedClientFinancials(db,{businessId:business.id,specs});

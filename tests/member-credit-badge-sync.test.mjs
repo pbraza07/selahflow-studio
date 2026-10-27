@@ -87,7 +87,7 @@ test('legacy appointment is linked permanently to same player on Check in and de
  }finally{await db.close();}
 });
 
-test('exhausted membership uses neutral ID badge and reverts to Gold after renewal, preserving ledger history',async()=>{
+test('exhausted membership retains classification data without credits; renewal restores credits and preserves history',async()=>{
  const db=await fixture();
  try{
   const before={status:'active',sessions_included:2,sessions_used:1};
