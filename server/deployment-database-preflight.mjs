@@ -2,7 +2,7 @@
 export async function verifyDeploymentDatabase(db,env=process.env){
  if(env.RENDER!=='true')return null;
  // Render's immutable ID survives service renames and legacy runtime names.
- const knownServices={'srv-db8e9dajnfac73fa0vo0':'staging','srv-db3tokqd0e5s73f31hfg':'production'};
+ const knownServices={'srv-db8e9dajnfac73fa0vo0':'staging','srv-db3tokqd0e5s73f31hfg':'production','srv-dbgbiu0n74is73cglveg':'production'};
  const environment=env.RENDER_SERVICE_ID?knownServices[env.RENDER_SERVICE_ID]:({'selahflow-staging':'staging','selahflow-studio':'production'})[env.RENDER_SERVICE_NAME];
  if(!environment)throw Error('Unexpected deployment service; database migration stopped.');
  const staging=environment==='staging';
