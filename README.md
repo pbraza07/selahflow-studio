@@ -1,3 +1,5 @@
+**Release source: v1.3.150 — validation in progress.** ID-only registration autofill and booked service/type in appointment status. See [release evidence](docs/V1_3_150_RELEASE.md).
+
 **Release source: v1.3.149 — verified LIVE in staging and production.** Membership classification badges show payment/usage status; confirmed owner deletion expires eligible unpaid Stripe checkouts. See [release evidence](docs/V1_3_149_RELEASE.md).
 
 **Previous release: v1.3.148.** Membership plans support optional weekly allowances within the membership month. See [release evidence](docs/V1_3_148_RELEASE.md).

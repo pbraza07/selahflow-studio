@@ -37,6 +37,8 @@ export function formatAssistantStatus(data,mode='both'){
   if(!b)lines.push('Booking status: no booking found for this ID at this business.');
   else{
    lines.push('Latest booking status: '+label(b.status));
+   if(typeof b.service==='string'&&b.service.trim())lines.push('Service: '+b.service.trim().slice(0,500));
+   if(typeof b.serviceType==='string'&&b.serviceType.trim())lines.push('Service type: '+b.serviceType.trim().slice(0,200));
    if(typeof b.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(b.date))lines.push('Booking date: '+b.date);
    const payment={paid:'Completed',covered:'Covered by membership or no charge',awaiting_approval:'Pending approval',due:'Pending payment',contact_business:'Contact the business for payment',unavailable:'Not available'}[data?.payment?.state];
    if(payment)lines.push('Payment status: '+payment);
