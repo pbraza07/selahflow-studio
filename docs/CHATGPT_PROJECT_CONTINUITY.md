@@ -1,16 +1,18 @@
-# v1.3.154 release handoff — new production service preflight (prepared)
+# v1.3.154 release handoff — canonical URL deployment verified LIVE
 
-Allow the exact new Render service ID srv-dbgbiu0n74is73cglveg to use the existing selahflow_production database and dedicated role. Unknown service IDs, staging database connections, incorrect roles, missing schema CREATE and unowned tables remain rejected. No schema/data changes or new credentials.
+Primary production is https://selahflow.onrender.com, Render service selahflow (srv-dbgbiu0n74is73cglveg), workspace tea-da643qgu01pc73951gdg. It reuses the existing selahflow_production database and selahflow_production_user. No customer-data copy, reset or credential rotation. Original selahflow-studio (srv-db3tokqd0e5s73f31hfg) remains available at the old hostname for existing links/callbacks. No automatic redirect is installed.
 
-v1.3.153 passed 423 tests, typecheck/build and live staging checks; PR #82 merged e8387c618a81a498d64a3659f2275870ea6114a9. Old production reached v1.3.153. New service deployment dep-dbgc1rqfngtc7399l870 failed safely before migration because its immutable service ID was absent from the allowlist. The previous v1.3.152 app remains live there. Old email worker was restored while this correction is tested. Stripe's existing live Connect endpoint now targets https://selahflow.onrender.com/api/stripe/webhook with its ID/events/API version unchanged. Google OAuth reconnect allowlisting and real email/payment verification remain pending.
+PR #82 added canonical PDF/current-documentation links, a configurable message worker and staging-host protection. PR #83 added the exact new immutable Render service ID to database preflight without weakening database, role, schema or ownership checks. Application merge bca27a11a9a05e60dc020b3d981345256756528a; source tree 1acbab4fb9c019da67a17d04eb751daf52a87437. Staging commit 1ca857482b9f86c2130f7587a0e97070ce4ca055 has the identical tree.
 
-# v1.3.153 release handoff — URL migration follow-up (prepared; not deployed)
+Staging dep-dbgc4hg473hc73b2di70 LIVE 2026-10-27T15:33:36.645549Z. Old production dep-dbgc90ks728c73f7jpdg LIVE 15:36:15.075160Z. New production dep-dbgc9tnavr4c73dkc15g LIVE 15:38:03.475253Z. Normal npm run start is restored on the new service; APP_URL is the new origin, SELAHFLOW_MESSAGE_WORKER=true, and main auto-deploy is On Commit. Old worker flag is false, verified in Render. Do not set the old service APP_URL to the new origin: that would reject old-origin mutations.
 
-The new service at https://selahflow.onrender.com already runs unchanged v1.3.152 against the existing production database. See docs/URL_MIGRATION_2026_10_27.md for exact service/deploy IDs and remaining cutover tasks.
+Local, GitHub CI 40530704751/job 122282381795 and Render staging passed 424 tests, typecheck and builds. Both production services passed live version/booking/payment-shell/protected-API/no-store checks. New production preflight confirms intended database/role, schema CREATE true and zero unowned tables. Gmail readiness is configured/setupComplete true, needsReconnect false, missingConfiguration empty; authorization remains stored_connection_not_live_verified. No error-level entries in the checked successful cutover window.
 
-This follow-up updates the Arcila client PDF links and current deployment/README/smoke references to the new hostname. The 20-page guide retains its reviewed screenshots, instructions and layout; revision 1.1 updates links. scripts/start.mjs now honors an explicitly configured SELAHFLOW_MESSAGE_WORKER=false instead of overriding it; default remains true for existing deployments. Staging rejects both production hostnames. No payment, email contents, database schema or customer records change.
+New-host PDF exact-byte and business-scoped assistant checks passed; staging and new production passed public assistant and ID-only unknown-status checks. The older GitHub live-smoke run exposed a stale hardcoded four-session assertion after successful deployment checks. The verification script now compares the mixed answer against published weekly/monthly plan data and current price; its corrected live checks passed in both environments. This verification-only correction does not alter the deployed app.
 
-Local typecheck passed; all 422 functional regressions passed. The remaining documentation-marker check was corrected and rerun. Build validation recorded in PR. Stripe installation confirmed by user, but no Stripe account tools are currently exposed to this executor. Provider webhook/reconnect verification, final worker transfer, compatibility redirects and auto-deploy settings remain pending. Do not claim full migration or delivered email/charge verification.
+Stripe live SelahFlow LLC endpoint we_1UTjvl3btxSEZmvTRMc6CG0l was updated and read back at https://selahflow.onrender.com/api/stripe/webhook. Its endpoint ID, API version and eight event subscriptions were retained; no secret rotation or charge. The unsigned endpoint rejects invalid signatures. Existing Gmail connection and credentials are retained. Still pending: Google OAuth allowlisting of https://selahflow.onrender.com/api/platform/gmail/callback for future reconnection, and authorized real payment/email-delivery verification. No real client booking, signature, payment, test email or customer-data retrieval was used for QA.
+
+The 20-page Arcila guide revision 1.1 has eight new-host links, SHA-256 d3132806a98f0c1610e965323181bda22bde0a85ab67e172ceb3b94f4b731035, 1,388,112 bytes. Rendered pages were visually checked. Public Arcila navigation and Request help were verified in the browser at the new host. New-origin sign-in/notification permission is separate from the old origin. See docs/URL_MIGRATION_2026_10_27.md for operational details.
 
 # v1.3.152 release handoff — Arcila client guide and contextual help — verified LIVE in staging and production
 
@@ -570,7 +572,7 @@ This document is a durable **handoff** for new ChatGPT conversations in the **Se
 
 **Project:** SelahFlow Booking App. Continue work on the existing **SelahFlow** platform. Do not rebuild from scratch and do not confuse it with the separate ArcilaTrainingBooking service. Default all changes to **every existing and future business**, not just an example business, unless I explicitly request a business-only customization.
 
-**GitHub production:** `pbraza07/selahflow-studio`, branch `main`. **Render production service:** `selahflow-studio` (`srv-db3tokqd0e5s73f31hfg`), public URL `https://salonflow-hf3w.onrender.com`. **Admin:** `/admin/platform`.
+**GitHub production:** `pbraza07/selahflow-studio`, branch `main`. **Render production service:** `selahflow` (`srv-dbgbiu0n74is73cglveg`), public URL `https://selahflow.onrender.com`. **Admin:** `/admin/platform`.
 
 **At the start of every new conversation involving a version, implementation, bug or deployment:** consult `AGENTS.md` and `docs/CHATGPT_PROJECT_CONTINUITY.md` in that GitHub repository; then check **the latest Render LIVE deploy and commit SHA** against **`package.json` on the GitHub `main` branch**. Do not infer the live version from old chat messages, the README, stale feature branches, or a local `VERSION` file alone. Identify already shipped features, outstanding asks and unmerged PRs before making changes. As of 2026-10-11 the confirmed live version is **v1.3.30**, but **verify afresh**.
 
@@ -582,7 +584,7 @@ This document is a durable **handoff** for new ChatGPT conversations in the **Se
 
 **Known distinctions:** Free/Professional/Business benefit limits were deployed in v1.3.29, but paid platform-subscription checkout is not configured. Owners' private session roster from daily/weekly/monthly calendar was deployed in v1.3.30. Google Places photos, merchant Stripe membership payments, provider SMS and generative AI require separately configured integrations. Historic roadmap text may be stale.
 
-## Current production snapshot (2026-10-11)
+## Historical production snapshot (2026-10-11)
 
 | Field | Verified value |
 |---|---|

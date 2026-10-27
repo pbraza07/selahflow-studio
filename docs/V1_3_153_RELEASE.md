@@ -1,8 +1,5 @@
-# v1.3.153 release handoff — URL migration follow-up (prepared; not deployed)
+# v1.3.153 — canonical links and configurable email worker
 
-The new service at https://selahflow.onrender.com already runs unchanged v1.3.152 against the existing production database. See docs/URL_MIGRATION_2026_10_27.md for exact service/deploy IDs and remaining cutover tasks.
+PR #82 merged e8387c618a81a498d64a3659f2275870ea6114a9. Updated eight PDF links/current deployment references, honored an explicit SELAHFLOW_MESSAGE_WORKER=false at startup and rejected both production hostnames in staging safety checks. 423 tests, typecheck and builds passed. Staging and old production reached this version.
 
-This follow-up updates the Arcila client PDF links and current deployment/README/smoke references to the new hostname. The 20-page guide retains its reviewed screenshots, instructions and layout; revision 1.1 updates links. scripts/start.mjs now honors an explicitly configured SELAHFLOW_MESSAGE_WORKER=false instead of overriding it; default remains true for existing deployments. Staging rejects both production hostnames. No payment, email contents, database schema or customer records change.
-
-Local typecheck passed; all 422 functional regressions passed. The remaining documentation-marker check was corrected and rerun. Build validation recorded in PR. Stripe installation confirmed by user, but no Stripe account tools are currently exposed to this executor. Provider webhook/reconnect verification, final worker transfer, compatibility redirects and auto-deploy settings remain pending. Do not claim full migration or delivered email/charge verification.
-
+The new service's normal startup stopped before migrations because its immutable ID was absent from the database preflight allowlist. The previous v1.3.152 deployment remained serving. v1.3.154 corrects this exact-ID allowlist and is the verified final cutover; see V1_3_154_RELEASE.md. No data reset, secret rotation or protection bypass.

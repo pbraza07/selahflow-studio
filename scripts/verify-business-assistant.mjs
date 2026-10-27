@@ -25,7 +25,13 @@ for(const {url:base,version} of targets){
   const schedule=await ask(b.slug,'Upcoming session schedule');assert.ok(schedule.answer.length);
   const nextDate=schedule.sources[0]?.title.match(/20\d{2}-\d{2}-\d{2}/)?.[0];
   if(nextDate){const dated=await ask(b.slug,'Sessions on '+nextDate);assert.ok(dated.sources.length);assert.ok(dated.sources.every(s=>s.title.includes(nextDate)));}else assert.match(schedule.answer,/couldn’t find a published answer/);
-  if(b.slug==='arcillatrng'){const mixed=await ask(b.slug,'Private Session price and membership credits?');assert.match(mixed.answer,/\$90\.00/);assert.match(mixed.answer,/Included sessions: 4/);}
+  if(b.slug==='arcillatrng'){
+   const mixed=await ask(b.slug,'Private Session price and membership credits?');
+   const service=config.services.find(s=>s.name==='Private Session');assert.ok(service);
+   assert.ok(mixed.answer.includes(new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(service.price)));
+   const plan=m.plans.find(p=>mixed.answer.includes(p.name));assert.ok(plan,'Mixed answer includes a published membership');
+   assert.ok(mixed.answer.includes(plan.weeklySessions?plan.usageSummary:'Included sessions: '+plan.sessionsIncluded),'Mixed answer matches the published weekly or monthly allowance');
+  }
   console.log(JSON.stringify({business:b.name,slug:b.slug,services:config.services.length,memberships:m.plans.length,priceSources:prices.sources.length,scheduleSources:schedule.sources.length,checks:'PASS'}));
  }
  await ask('not-a-real-business','Hours',404);await ask(businesses[0].slug,'Hours',403,'https://evil.test');
