@@ -1,41 +1,30 @@
 'use client';
-import {useEffect,useState} from 'react';
-import {ArrowUpRight,ChevronLeft,ChevronRight,Images} from 'lucide-react';
-type Credit={name:string;url:string};
-type Photo={index:number;attributions:Credit[]};
-export default function GoogleBusinessGallery({slug,compact=false}:{slug:string;compact?:boolean}){
- const [photos,setPhotos]=useState<Photo[]>([]),[index,setIndex]=useState(0),[link,setLink]=useState('');
- const [loaded,setLoaded]=useState(false),[failed,setFailed]=useState(false);
+import {useEffect,useRef,useState} from 'react';
+import {ArrowUpRight,ChevronLeft,ChevronRight,Images,Star} from 'lucide-react';
+type Credit={name:string;url:string;avatar?:string};type Photo={index:number;attributions:Credit[];sourceUrl?:string};
+type Review={author:string;authorUrl:string;authorPhoto:string;rating:number;text:string;language:string;time:string;url:string};
+type Listing={photos:Photo[];reviews?:Review[];link:string;rating?:number|null;reviewCount?:number|null};
+export default function GoogleBusinessGallery({slug,compact=false,summary=false}:{slug:string;compact?:boolean;summary?:boolean}){
+ const [data,setData]=useState<Listing|null>(null),[index,setIndex]=useState(0),[failed,setFailed]=useState(false),[visible,setVisible]=useState(!summary);const root=useRef<HTMLDivElement>(null);
+ useEffect(()=>{if(!summary||!root.current)return;const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){setVisible(true);observer.disconnect();}},{rootMargin:'150px'});observer.observe(root.current);return()=>observer.disconnect();},[summary]);
  useEffect(()=>{
-  let cancelled=false;
-  setPhotos([]);setIndex(0);setLoaded(false);setFailed(false);
-  if(!slug)return;
-  fetch('/api/public/google-gallery?slug='+encodeURIComponent(slug),{cache:'no-store'}).then(r=>r.json()).then(data=>{
-   if(cancelled)return;
-   setPhotos(Array.isArray(data.photos)?data.photos:[]);
-   setLink(typeof data.link==='string'?data.link:'');
-  }).catch(()=>{}).finally(()=>{if(!cancelled)setLoaded(true);});
-  return ()=>{cancelled=true;};
- },[slug]);
- if(!loaded||!link)return null;
- if(!photos.length)return <aside className="sf-google-gallery-empty"><Images size={17}/><span>Explore this business on <a href={link} target="_blank" rel="noopener noreferrer">Google Maps <ArrowUpRight size={13}/></a></span></aside>;
- const photo=photos[index]||photos[0];
- const next=()=>{setFailed(false);setIndex(n=>(n+1)%photos.length);};
- const previous=()=>{setFailed(false);setIndex(n=>(n-1+photos.length)%photos.length);};
- const src='/api/public/google-gallery/photo?slug='+encodeURIComponent(slug)+'&index='+photo.index;
- return <section className={'sf-google-gallery'+(compact?' compact':'')} aria-label="Photos from this business on Google Maps">
-  <div className="sf-google-gallery-head"><div><span className="sf-google-gallery-kicker">FROM GOOGLE MAPS</span><h3>Explore the business</h3></div>
-   <a href={link} target="_blank" rel="noopener noreferrer">View on Google <ArrowUpRight size={15}/></a></div>
-  <div className="sf-google-gallery-stage">
-   {failed?<div className="sf-google-gallery-error"><Images size={24}/><span>Photo is temporarily unavailable. Try the next photo or view it on Google.</span></div>:
-    <img key={src} src={src} loading="lazy" alt={'Business gallery photo '+(index+1)+' of '+photos.length} onError={()=>setFailed(true)}/>}
-   {photos.length>1&&<><button type="button" className="sf-google-gallery-prev" onClick={previous} aria-label="Previous photo"><ChevronLeft size={23}/></button>
-    <button type="button" className="sf-google-gallery-next" onClick={next} aria-label="Next photo"><ChevronRight size={23}/></button></>}
-   <span className="sf-google-gallery-count">{index+1} / {photos.length}</span>
-  </div>
-  <div className="sf-google-gallery-footer">
-   <span>Photos supplied by Google Maps</span>
-   <div className="sf-google-gallery-credits">{photo.attributions?.map((a,i)=><span key={i}>Photo: {a.url?<a href={a.url} target="_blank" rel="noopener noreferrer">{a.name}</a>:a.name}</span>)}</div>
-  </div>
+  setData(null);setIndex(0);setFailed(false);if(!slug||!visible)return;const controller=new AbortController();
+  fetch('/api/public/google-gallery?slug='+encodeURIComponent(slug)+(summary?'&summary=1':''),{cache:'no-store',signal:controller.signal}).then(r=>r.ok?r.json():null).then(d=>{if(!controller.signal.aborted&&d&&Array.isArray(d.photos)&&typeof d.link==='string')setData(d);}).catch(()=>{});return()=>controller.abort();
+ },[slug,summary,visible]);
+ const photos=data?.photos||[],reviews=data?.reviews||[],photo=photos[index]||photos[0],link=data?.link||'';
+ const rating=data?.rating;
+ const ratingLine=typeof rating==='number'&&<div className="sf-google-rating"><Star size={17} aria-hidden="true"/><strong>{rating.toFixed(1)} / 5</strong><span>{typeof data?.reviewCount==='number'?data.reviewCount.toLocaleString()+' Google reviews':'Google rating'}</span></div>;
+ if(summary)return <div ref={root} className="sf-google-summary">{link&&<>{photo&&!failed&&<a href={photo.sourceUrl||link} target="_blank" rel="noopener noreferrer" aria-label="View business photos on Google Maps"><img src={'/api/public/google-gallery/photo?slug='+encodeURIComponent(slug)+'&index='+photo.index} loading="lazy" alt="Business photo from Google Maps" onError={()=>setFailed(true)}/></a>}{photo&&<div className="sf-google-gallery-credits">{photo.attributions?.map((a,i)=><span key={i}>Photo: {a.avatar&&<img className="sf-google-credit-avatar" src={a.avatar} alt="" loading="lazy" referrerPolicy="no-referrer"/>}{a.url?<a href={a.url} target="_blank" rel="noopener noreferrer">{a.name}</a>:a.name}</span>)}</div>}{ratingLine}<span className="sf-google-attribution"><img src="/brand/google-maps-attribution.svg" alt="Google Maps"/></span><a href={link} target="_blank" rel="noopener noreferrer">View on Google Maps ↗</a>{ratingLine&&<a className="sf-google-policy" href="https://support.google.com/contributionpolicy/answer/7400114" target="_blank" rel="noopener noreferrer">Google review policy</a>}</>}</div>;
+ if(!link)return null;
+ if(!photos.length&&!reviews.length&&!ratingLine)return <aside className="sf-google-gallery-empty"><Images size={17}/><span>Explore this business on <a href={link} target="_blank" rel="noopener noreferrer">Google Maps <ArrowUpRight size={13}/></a></span></aside>;
+ const move=(delta:number)=>{setFailed(false);setIndex(n=>(n+delta+photos.length)%photos.length);};
+ return <section className={'sf-google-gallery'+(compact?' compact':'')} aria-label="Google business reviews and photos">
+  <div className="sf-google-gallery-head"><div><span className="sf-google-attribution"><img src="/brand/google-maps-attribution.svg" alt="Google Maps"/></span><h3>Reviews &amp; business photos</h3></div><a href={link} target="_blank" rel="noopener noreferrer">View on Google <ArrowUpRight size={15}/></a></div>
+  {ratingLine}
+  {photo&&<><div className="sf-google-gallery-stage">{failed?<div className="sf-google-gallery-error"><Images size={24}/><span>Photo is temporarily unavailable. Try the next photo or view it on Google.</span></div>:<img key={photo.index} src={'/api/public/google-gallery/photo?slug='+encodeURIComponent(slug)+'&index='+photo.index} loading="lazy" alt={'Business gallery photo '+(index+1)+' of '+photos.length} onError={()=>setFailed(true)}/>} {photos.length>1&&<><button type="button" className="sf-google-gallery-prev" onClick={()=>move(-1)} aria-label="Previous photo"><ChevronLeft size={23}/></button><button type="button" className="sf-google-gallery-next" onClick={()=>move(1)} aria-label="Next photo"><ChevronRight size={23}/></button></>}<span className="sf-google-gallery-count">{index+1} / {photos.length}</span></div><div className="sf-google-gallery-footer"><span>Photos supplied by Google Maps</span><div className="sf-google-gallery-credits">{photo.attributions?.map((a,i)=><span key={i}>Photo: {a.avatar&&<img className="sf-google-credit-avatar" src={a.avatar} alt="" loading="lazy" referrerPolicy="no-referrer"/>}{a.url?<a href={a.url} target="_blank" rel="noopener noreferrer">{a.name}</a>:a.name}</span>)}</div><a href={photo.sourceUrl||link} target="_blank" rel="noopener noreferrer">View source on Google Maps ↗</a></div></>}
+  {reviews.length>0&&<div className="sf-google-reviews"><p className="muted">A selection of reviews supplied by Google, ordered by relevance. <a href={link} target="_blank" rel="noopener noreferrer">Read all reviews on Google Maps ↗</a></p>{reviews.map((r,i)=><GoogleReviewCard key={i} review={r}/>)}</div>}
+  {ratingLine&&<p className="sf-google-policy">Ratings and reviews provided by Google Maps. <a href="https://support.google.com/contributionpolicy/answer/7400114" target="_blank" rel="noopener noreferrer">Google’s review policy</a></p>}
  </section>;
 }
+
+export function GoogleReviewCard({review:r}:{review:Review}){return <article className="sf-google-review"><header>{r.authorPhoto&&<img src={r.authorPhoto} alt="" loading="lazy" referrerPolicy="no-referrer"/>}<div>{r.authorUrl?<a href={r.authorUrl} target="_blank" rel="noopener noreferrer">{r.author}</a>:<strong>{r.author}</strong>}<p>{r.rating} / 5 · {r.time}</p></div></header>{r.text&&<details><summary>Read review</summary><p lang={r.language||undefined} className="sf-google-review-text">{r.text}</p></details>}<a href={r.url} target="_blank" rel="noopener noreferrer">View review on Google Maps ↗</a></article>;}
