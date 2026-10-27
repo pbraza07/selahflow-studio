@@ -1,4 +1,4 @@
-# v1.3.149 release handoff — Membership classification badges and safe checkout expiry (validation in progress)
+# v1.3.149 release handoff — Membership classification badges and safe checkout expiry — verified LIVE in staging and production
 
 Assigned memberships keep their plan/type classification badge across payment-pending, exhausted, expired and canceled states, with explicit status text. Clients without a membership retain the neutral ID badge. Plan custom badge overrides and membership-type inheritance remain intact. Display changes do not activate credits or change payment/booking eligibility.
 
@@ -6,7 +6,11 @@ Confirmed owner deletion now verifies the exact business/source/account with Str
 
 Membership-only deletion now retains settled financial facts, detaches provider receipt/commission references and membership request links, and preserves unrelated bookings. Full client deletion retains its existing explicit confirmation, business scope, email-processing lock, accounting retention, signed-waiver separation, tombstones and ID release. No actual client is deleted for QA.
 
-Feature branch `fix/membership-classification-delete`. Tests/builds and staging/production promotion pending. Source v1.3.149; prior verified runtime v1.3.148.
+Feature branch `fix/membership-classification-delete`; application head `d859605735565de7d003c9e2fa5713ed2f81ba6d`; PR #78 merged as `eafea7b8f5425dcb6885d2aa24bb49e12b9d7010`. Staging `53f9c256948cd66da11eb6bf49b4c62ef99ccd44`, deployment `dep-dbg0kf2fngtc738al8e0` LIVE October 26, 2026 at 10:27:49 p.m. EDT. Production deployment `dep-dbg0okbbc2fs739nkr7g` LIVE at 10:30:25 p.m. EDT. Application trees match across both environments.
+
+Local and GitHub CI run 40437711279/job 121970293743 and Render staging passed all 414 tests; local/GitHub/staging typecheck and builds passed. Production build/startup passed. Both live v1.3.149 health/version, booking/payment shells, protected client/membership deletion endpoints, invalid invitations/no-store, origin protection and all-tenant public membership summaries passed. Runtime preflights confirmed dedicated databases/users, schema CREATE true and zero unowned tables. No error-level startup entries were found in the checked windows. No migration, credentials, environment or business-plan settings changed.
+
+Actual badge HTML rendering verifies Group Academy/Private Elite and saved custom designs across pending/expired/exhausted states. Synthetic database/provider fixtures verify unpaid and already-expired checkouts, booking/membership/commission references, payment/expiry races, mismatched identity, provider outages, retries, subscription checks, financial retention and tenant isolation. No real client was deleted, paid transaction created or Stripe checkout expired for QA. Live owner/phone visual acceptance was not exercised; the prior local browser executable remains unavailable. Owners must refresh the app before retrying the deletion. Documentation-only verification commits may follow these LIVE application SHAs.
 
 # v1.3.148 release handoff — Weekly membership allowances — verified LIVE in staging and production
 
