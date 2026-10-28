@@ -1,6 +1,6 @@
 /** Stable field IDs preserve membership identity and historical answers. */
 export const STANDARD_REGISTRATION_FIELDS=Object.freeze([
- {id:'memberNumber',label:'Membership ID (returning players)',type:'text',required:false,placeholder:'e.g. LA110313'},
+ {id:'memberNumber',label:'Client ID (returning clients)',type:'text',required:false,placeholder:'e.g. AB031513'},
  {id:'dateOfBirth',label:'Date of birth',type:'date',required:true},
  {id:'firstName',label:'First name',type:'text',required:true},
  {id:'lastName',label:'Last name',type:'text',required:true},

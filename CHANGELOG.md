@@ -1,3 +1,12 @@
+# v1.3.166 release handoff — Business-neutral language and clearer navigation
+
+Shared platform wording uses business, client, service, team member and booking in place of salon/studio/player/coach assumptions. Generic fallback catalogs and sign-up default to a neutral business category; industry-selected catalog examples and all saved business branding, service names and custom question/page wording remain intact. Client ID is explained as the same identifier used for memberships; booking status does not imply that a membership is required. Shared errors, membership forms, page-editor previews, payment guidance and preparation-time labels are updated.
+
+Public desktop/mobile navigation shares the same destinations, with Find a business and Client help distinct from Business sign in, business information and SelahFlow business plans. Business pages distinguish Business home, Book a service, Memberships and Booking & membership status, with separate owner access and business discovery. Status navigation returns to the status panel even from later booking steps. Owner navigation has four task groups and clearer labels while preserving all 12 internal destinations, search aliases and unsaved-change protections. Edit services opens the correct catalog settings, and the profile shortcut stays within the current owner/support workspace. A booking-status page without a selected booking has a recoverable empty state instead of indefinite loading.
+
+Source validation and deployment in progress. No database migration, provider/authentication changes, customer mutation, booking, payment or outgoing email for QA. Language/navigation audit: docs/BUSINESS_LANGUAGE_NAVIGATION_AUDIT.md. Business-authored industry content and business-specific client PDFs are intentionally retained.
+
+
 # v1.3.165 release handoff — Proxied workspace access and unlimited support
 
 Fixes valid owner and administrator support workspace requests being rejected when the browser uses the public HTTPS app URL but the server receives an internal proxy URL. Workspace referrer validation uses the existing trustedOrigin configuration (APP_URL / RENDER_EXTERNAL_URL), retaining exact business scope, stale-tab rejection and trusted-origin write checks. A regression first reproduced the previous AUTH_REQUIRED failure with an internal localhost request, then passed for ordinary-owner and support GET/POST requests. The actual requireOwner helper was also tested with an internal 0.0.0.0 request URL and public workspace referrer.

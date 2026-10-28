@@ -122,7 +122,7 @@ export function validateBookableSessions(config) {
       const duration=config.services.find(s=>s.id===previous.service).duration+config.buffer;
       if(overlaps(previous.start,duration,current.start,
         config.services.find(s=>s.id===current.service).duration+config.buffer))
-        throw Error('Sessions for the same team member cannot overlap, including cleanup time.');
+        throw Error('Sessions for the same team member cannot overlap, including preparation time.');
     }
   }
   return sessions;

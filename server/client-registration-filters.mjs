@@ -15,7 +15,7 @@ const STANDARD_FILTERS=Object.freeze([
  {key:'membershipInterval',label:'Membership billing interval',type:'select'},
  {key:'services',label:'Booked service',type:'select'},
  {key:'serviceTypes',label:'Service category',type:'select'},
- {key:'staff',label:'Team member / coach',type:'select'},
+ {key:'staff',label:'Team member',type:'select'},
  {key:'bookingStatus',label:'Appointment status',type:'select'},
  {key:'bookingDate',label:'Appointment date',type:'date'},
  {key:'policyAccepted',label:'Booking policy accepted',type:'select'}

@@ -109,7 +109,7 @@ export async function rescheduleSessionForOwner({owner,input,pool=getPool()}){
   const cutoff=new Date(Date.now()+366*86400000).toISOString().slice(0,10);
   if(move.date>cutoff)throw Error('The rescheduled date must be within the next year.');
   if(move.start<config.open*60||move.start+service.duration+(config.buffer||0)>config.close*60)
-   throw Error('Session must fit the selected business hours, including cleanup time.');
+   throw Error('Session must fit the selected business hours, including preparation time.');
 
   const next=rescheduledConfig(config,current,move);
   const instances=sessionsForDate(next,move.date,move.staff);

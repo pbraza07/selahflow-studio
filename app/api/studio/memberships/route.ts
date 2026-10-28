@@ -162,7 +162,7 @@ export async function POST(req:Request){
     const member=(await client.query("SELECT m.*,p.interval_unit,p.interval_count,p.sessions_included AS plan_sessions,p.price_cents FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 AND m.id=$2 FOR UPDATE",[business.id,id])).rows[0];
     if(!member)throw Error('Member not found.');
     if(member.stripe_account_id?.startsWith('acct_'))throw Error('Stripe manages this membership payment and renewal. Do not confirm it manually.');
-    if(input.action==='renewMembership'&&String(input.memberNumber||'').trim().toUpperCase()!==String(member.member_number||'').toUpperCase())throw Error('Enter the player membership number to renew.');
+    if(input.action==='renewMembership'&&String(input.memberNumber||'').trim().toUpperCase()!==String(member.member_number||'').toUpperCase())throw Error('Enter the client membership number to renew.');
     if(input.action==='renewMembership'&&member.status!=='active')throw Error('Confirm the initial payment before renewing this membership.');
     if(input.action==='confirmManualPayment'&&member.status==='active')throw Error('This membership is already active. Use Renew to add another package of sessions.');
     if(!member.member_number)throw Error('Assign a member number before confirming payment.');
@@ -240,7 +240,7 @@ export async function POST(req:Request){
    const parts=name.split(/\s+/),initials=(parts[0][0]+(parts.length>1?parts[parts.length-1][0]:'X')).toUpperCase().replace(/[^A-Z]/g,'X');
    const plan=(await pool.query('SELECT id,price_cents,sessions_included FROM membership_plans WHERE business_id=$1 AND id=$2',[business.id,planId])).rows[0];
    if(!plan)throw Error('Choose a membership package for this business.');
-   // A player has one permanent ID per business, independent of their membership package.
+   // A client has one permanent ID per business, independent of their membership package.
    // Serialize enrollment checks by business and normalized identity to avoid concurrent duplicate IDs.
    const normalizedName=name.normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
    const identityKey=business.id+'|'+normalizedName+'|'+dob;
@@ -253,7 +253,7 @@ export async function POST(req:Request){
      if(prior.rows[0].date_of_birth&&new Date(prior.rows[0].date_of_birth).toISOString().slice(0,10)!==dob)throw Error('A member with this name and email already exists with a different birth date. Review the existing profile.');
      await identityLock.query("UPDATE customer_memberships SET customer_phone=CASE WHEN $1<>'' THEN $1 ELSE customer_phone END,registration_answers=CASE WHEN registration_answers='{}'::jsonb THEN $2::jsonb ELSE registration_answers END,registration_field_labels=CASE WHEN registration_field_labels='{}'::jsonb THEN $3::jsonb ELSE registration_field_labels END,updated_at=now() WHERE id=$4 AND business_id=$5",[phone,JSON.stringify(customAnswers),JSON.stringify(fieldLabels),prior.rows[0].id,business.id]);
      await identityLock.query('COMMIT');
-     return Response.json({ok:true,existingMember:true,memberNumber:prior.rows[0].member_number,paymentStatus:prior.rows[0].status,message:'This player is already registered. Use their existing membership ID for activation or renewal.'},{headers});
+     return Response.json({ok:true,existingMember:true,memberNumber:prior.rows[0].member_number,paymentStatus:prior.rows[0].status,message:'This client is already registered. Use their existing membership ID for activation or renewal.'},{headers});
     }
    for(let attempt=0;attempt<1;attempt++){
     const requested=String(input.memberNumber||'').trim().toUpperCase();

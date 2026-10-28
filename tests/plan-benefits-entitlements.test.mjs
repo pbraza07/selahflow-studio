@@ -85,7 +85,7 @@ test('audience pages separate customer booking from the shared business plan cat
  assert.doesNotMatch(home,/Meet Crawford|Book Crawford|ORIGINAL BUSINESS|\/book\/crawford/);
  assert.match(businesses,/PlanBenefitCards placement="home"/);
  assert.doesNotMatch(home+customers,/PlanBenefitCards|RevenueExplainer|PartnerValue/);
- for(const route of ["customers","businesses"])assert.ok(navigation.includes('href="/'+route+'"'));
+ for(const route of ["customers#visit-help","businesses"])assert.ok(navigation.includes('href="/'+route+'"'));
  assert.match(customers,/action="\/discover" method="get"/);
  assert.match(pricing,/PlanBenefitCards placement="pricing"/);
  assert.match(cards,/aria-expanded=\{opened\}/);

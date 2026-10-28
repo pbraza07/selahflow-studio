@@ -45,7 +45,7 @@ export default function OwnerStripePayments(){
    <h3 id="sf-stripe-help-title">Set up your business Stripe account</h3>
    <p>Start here in SelahFlow. Stripe securely collects your business, identity and bank information.</p>
    <ol>
-    <li><strong>Confirm your business.</strong> Make sure you are in the correct business workspace, then open Settings → Stripe payments.</li>
+    <li><strong>Confirm your business.</strong> Make sure you are in the correct business workspace, then open Business settings → Stripe payments.</li>
     <li><strong>Start onboarding.</strong> Select Connect Stripe payments. If you already started, select Complete Stripe setup to resume. You will be redirected to Stripe.</li>
     <li><strong>Follow Stripe’s account prompts.</strong> Use an email address you control for this business. If Stripe offers sign-in or reuse of existing business details, follow the options shown.</li>
     <li><strong>Complete business verification.</strong> Have your legal business name, business type, address, tax details, website or service description, representative details and payout bank information available. Stripe tells you which information and documents are required.</li>

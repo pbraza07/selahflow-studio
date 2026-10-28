@@ -103,5 +103,5 @@ test('service questions are managed only in the question center, and membership 
  const membership=await readFile(new URL('app/membership/[slug]/page.tsx',root),'utf8');
  assert.doesNotMatch(dash,/Edit service questions|serviceQuestionEditor/);assert.equal((dash.match(/<RegistrationQuestionSettings /g)||[]).length,1);assert.match(dash,/Add service type/);
  assert.match(editor,/serviceIds:\[serviceId\]/);assert.match(editor,/Apply to booking services/);assert.match(editor,/Remove question from this service/);
- assert.match(booking,/serviceIds=\{selected\}/);assert.match(membership,/Your Unique Membership ID/);
+ assert.match(booking,/serviceIds=\{selected\}/);assert.match(membership,/Your client \/ membership ID/);
 });

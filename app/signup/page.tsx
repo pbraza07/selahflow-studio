@@ -6,7 +6,7 @@ import {BUSINESS_INDUSTRIES,US_STATES} from '../../lib/business-options';
 
 export default function Signup(){
  const industriesAlphabetized=[...BUSINESS_INDUSTRIES].sort((a,b)=>a[1].localeCompare(b[1],'en',{sensitivity:'base'}));
- const [name,setName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[slug,setSlug]=useState(''),[industry,setIndustry]=useState('barber'),[city,setCity]=useState(''),[region,setRegion]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [name,setName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[slug,setSlug]=useState(''),[industry,setIndustry]=useState('other'),[city,setCity]=useState(''),[region,setRegion]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');
   try{const response=await fetch('/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({businessName:name,email,password,slug,industry,city,region,website:''})});const data=await response.json();if(!response.ok)throw Error(data.error||'Registration failed.');window.location.assign('/registration-status');}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}

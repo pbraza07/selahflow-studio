@@ -14,7 +14,7 @@ test('owner business workspace card opens the matching tenant public homepage, n
  assert.match(card,/title=\{"View "\+config\.name\+" business homepage"\}/);
  assert.match(card,/onClick=\{\(\)=>setMobile\(false\)\}/);
  assert.match(card,/<b>\{config\.name\}<\/b>/);
- assert.match(card,/Business workspace · View home/);
+ assert.match(card,/Client website · View home/);
  assert.match(card,/className="studio-switch-go"/);
  assert.match(card,/encodeURIComponent\(publicSlug\|\|businessSlug\)/);
  assert.doesNotMatch(card,/target="_blank"/,'Opens the business page in the same tab');
