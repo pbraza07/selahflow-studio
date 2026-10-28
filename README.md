@@ -1,3 +1,11 @@
+# v1.3.168 release handoff — Industry-specific waiver generation
+
+PR #99 implements opt-in category waivers across businesses. Owners select a category (suggested from their registered industry), add business and service terms, preview the complete document and record a completed legal review before saving activation. The document explicitly lists all waiver-required services; it is a business-wide scope, not a separate signature per booking. Medical, veterinary and other specialized/unknown industries default to general and require their own tailored review.
+
+Category consent is bound to business/client identity, template version, category and SHA-256 of legal content. Service names, descriptions, scope and custom terms affect the fingerprint; palette-only changes do not. Optional media permission starts unchecked. Existing legacy documents, signatures and their compatibility rules remain unchanged until explicit activation. Migrations 066–067 retain signed content revisions while preserving legacy per-version uniqueness. No actual business template or legal review is activated by deployment.
+
+Source implementation; validation and deployment status pending. Production last independently verified on v1.3.167, deployment dep-dbh4kjh5efls73ar1d70. No legal review has been performed by this implementation. No customer signature, booking, payment or outgoing message is created for verification.
+
 # v1.3.167 release handoff — Deduplicate business introductions
 
 All tenant business landing pages render their introduction through shared businessIntroLines. Matching tagline and business-model/description text appears once, comparing case, whitespace and Unicode compatibility forms. Distinct wording remains visible in its original form. A tagline-only business displays it once; empty introductions retain the generic fallback. Description precedence and saved business records remain unchanged. Discovery, booking and membership surfaces were reviewed for the same repeated-field pattern; they do not render this pair twice.
@@ -172,7 +180,7 @@ Verified LIVE: staging dep-dbgdbgui0phs73c6n7rg (c66e66a93022cf16aea5a0eba171871
 
 Local, GitHub validation 40544366209/job 122330868733 and Render staging passed all 424 tests, typecheck and builds. Live workflow 40544366309 rerun/job 122338369953 passed after deployment, including first-customer-commission read-only checks; its initial pre-deployment attempt had correctly reported the expected staging version not ready. Staging and canonical production passed health/version, booking/payment-shell, protected-API, invalid invitation/no-store, exact PDF bytes, tenant-scoped assistant instructions/published knowledge and synthetic unknown-ID status checks. Startup preflights verify dedicated database/role, schema CREATE true and zero unowned tables; canonical Gmail readiness remains configured/setupComplete true, needsReconnect false, authorization stored_connection_not_live_verified. No error-level entries in the checked canonical startup window. APP_URL and live Stripe webhook were read back at the canonical origin. Google Cloud remains Site Unavailable in this browser; the new callback is user-confirmed, obsolete callbacks have not been inspected/removed. Saved historical messages/previously issued provider sessions were not rewritten. No real booking, charge or outbound test email was created for verification.
 
-**Release source: v1.3.167 — verified LIVE in staging and production.**
+**Release source: v1.3.168 — implementation in PR #99; deployment pending.**
 
 # v1.3.154 release handoff — canonical URL deployment verified LIVE
 

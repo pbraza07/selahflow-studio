@@ -174,3 +174,41 @@ test('waiver form places media release in numbered text with only the signature 
  assert.match(html,/6\. Media release/);assert.equal((html.match(/type="checkbox"/g)||[]).length,1);
  assert.doesNotMatch(html,/I give the optional media permission/);
 });
+
+test('category waiver revisions bind consent to category, service wording and hash while retaining historical consent',async()=>{
+ const {waiverDocumentHash,validateCategoryWaiverSettings}=await import('../server/participation-waivers.mjs');
+ const pg=await fixture();try{
+  const reviewed=(category='beauty_wellness',terms='Discuss sensitivities before treatment')=>{
+   const c={name:'Example Beauty',services:[{id:'treatment',name:'Skin treatment',description:'A gentle facial',requiresWaiver:true}],categoryWaiver:{enabled:true,category,additionalTerms:terms,serviceTerms:{treatment:'Tell us about product allergies.'}}};
+   c.categoryWaiver.review={hash:waiverDocumentHash(waiverDocument(c)),reference:'Fixture review',reviewedAt:'2026-10-01'};return c;
+  };
+  let c=reviewed(),document=publicWaiverDocument(c);
+  validateCategoryWaiverSettings(c);
+  assert.equal(document.acceptingSignatures,true);
+  const input={...signature(),version:document.version,documentHash:document.hash,mediaConsent:false};
+  const args={businessId:'owner-a',memberNumber:'JD010190',config:c,services:c.services,input};
+  const legacy=await ensureParticipationWaiver(pg,{...args,config,services,input:signature()});
+  await assert.rejects(ensureParticipationWaiver(pg,{...args,input:null}),/sign/);
+  const id=await ensureParticipationWaiver(pg,args);assert.notEqual(id,legacy);
+  assert.equal(await ensureParticipationWaiver(pg,{...args,input:null}),id);
+  await assertBookingWaiver(pg,{owner:'owner-a',config:c,serviceIds:['treatment'],memberNumber:'JD010190'});
+  await assert.rejects(assertBookingWaiver(pg,{owner:'owner-b',config:c,serviceIds:['treatment'],memberNumber:'JD010190'}),/required/);
+  const saved=(await pg.query('SELECT * FROM participation_waivers WHERE id=$1',[id])).rows[0];
+  assert.equal(saved.document.category,'beauty_wellness');assert.equal(saved.media_consent,false);
+  assert.doesNotMatch(JSON.stringify(saved.document),/soccer|birthday parties/);
+  assert.equal(publicWaiverDocument(c,'#123456','#abcdef').hash,document.hash,'Brand colors do not invalidate legal consent');
+  const changed=reviewed('professional_services','Access is restricted to the agreed work area.');
+  await assert.rejects(assertBookingWaiver(pg,{owner:'owner-a',config:changed,serviceIds:['treatment'],memberNumber:'JD010190'}),/required/);
+  await assert.rejects(ensureParticipationWaiver(pg,{...args,config:changed}),/changed/);
+  document=publicWaiverDocument(changed);
+  const next=await ensureParticipationWaiver(pg,{...args,config:changed,input:{...input,documentHash:document.hash}});assert.notEqual(next,id);
+  assert.equal((await pg.query('SELECT count(*)::int AS n FROM participation_waivers')).rows[0].n,3);
+  const stale={...changed,services:[{...changed.services[0],description:'Different treatment'}]};
+  assert.throws(()=>validateCategoryWaiverSettings(stale),/legal review/);
+  assert.equal(publicWaiverDocument(stale).acceptingSignatures,false);
+  assert.throws(()=>validateCategoryWaiverSettings({...changed,categoryWaiver:{...changed.categoryWaiver,additionalTerms:false}}),/text/);
+  await assert.rejects(ensureParticipationWaiver(pg,{...args,config:stale}),/legal review/);
+  assert.throws(()=>validateCategoryWaiverSettings({...changed,categoryWaiver:{...changed.categoryWaiver,category:'unknown'}}),/category/);
+  assert.throws(()=>validateCategoryWaiverSettings({...changed,categoryWaiver:{...changed.categoryWaiver,review:{...changed.categoryWaiver.review,reviewedAt:'2026-02-30'}}}),/legal review/);
+ }finally{await pg.close();}
+});
