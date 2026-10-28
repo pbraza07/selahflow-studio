@@ -1,6 +1,15 @@
 # v1.3.161 release handoff — PDF Back to app button
 
-The published Arcila Training client guide includes a visible, clickable Back to app button in the footer of every one of its 20 pages. Each points to https://selahflow.onrender.com/arcillatrng. Original guide text, original link annotations and bookmarks are preserved. Help and assistant instruction links continue using the same business-specific PDF. No provider, schema, booking, membership, payment or email changes. Validation/deployment pending.
+The published Arcila Training client guide includes a visible, clickable Back to app button in the footer of every one of its 20 pages. Each points to https://selahflow.onrender.com/arcillatrng. Original guide text, original link annotations and bookmarks are preserved. Help and assistant instruction links continue using the same business-specific PDF. No provider, schema, booking, membership, payment or email changes.
+
+Verified LIVE in canonical production: PR #91, merge f4d6f4dcf310f3965ccc566c68f48acc342a4246, deployment dep-dbgu5tajnfac739nqmr0 at 2026-10-28T11:58:14.635294Z (October 28, 7:58 a.m. EDT). Staging e701e9553ecf22bb0c587ba1279e48c576b9a0e3, deployment dep-dbgu5fmk1f9s73963f6g LIVE 2026-10-28T12:03:38.344458Z. Identical application tree 2f3a12397e51e4d1f0b088bb408d0eb26251b2c5.
+
+All 439 local tests, final typecheck and production build passed; GitHub validation 40683727495/job 122800667034 also passed tests/typecheck/build/asset measurements. An initial local typecheck overlapped the Next build's generated-file replacement; the sequential rerun after the build passed. Do not run these two checks concurrently against the same .next directory.
+
+PDF validation confirms exactly one Back to app label and canonical business URI annotation on each of 20 pages, with original page text, original annotation counts plus one button per page, and bookmarks preserved. All 20 page footers were rendered and visually inspected, with full-page checks on pages 1, 8 and 20. Final PDF SHA-256 829fa16cfe481087c3c5d3c595f48e9a20dab17123d98e3c34bd92b352e454d7; 1,452,016 bytes. Production serves these exact bytes. Actual Chrome PDF viewer click on page 1 returned to https://selahflow.onrender.com/arcillatrng. No physical iPhone acceptance is claimed. Future business guides should include the same navigation pattern pointed to their own business page, never another tenant's guide/URL.
+
+Production read-only health/version, booking/payment shells, protected owner APIs and invalid invitation/no-store smoke passed; no error-level startup entries in the checked window. Final staging verification: all 439 tests, typecheck/build, live endpoint smoke and exact PDF byte checks passed; no error-level startup entries in the checked window. Live workflow 40683727568/job 122804160932 passed after rollout; its initial attempt had run before staging was ready. No customer data, booking, consent, signature, payment, email or provider setting was changed for QA. Old service was not resumed. Google UI Kit provider activation remains separate and pending its dedicated browser key.
+
 
 # v1.3.160 release handoff — Booking warning placement and larger discovery logos
 
