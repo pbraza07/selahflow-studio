@@ -43,7 +43,7 @@ export function buildBusinessKnowledge(business,config={},plans=[],now=new Date(
  for(const form of ['booking','membership'])for(const field of registrationQuestions(config,form))add('question',`${form==='booking'?'Booking':'Membership'} question: ${field.label}`,[field.required?'Required by default; selected service/session overrides may apply.':'Optional by default; selected service/session overrides may apply.',...(field.type==='select'?field.options||[]:[])],form==='membership'?membership:book);
  if(services.some(s=>s.requiresWaiver===true)){
   add('waiver','Participation waiver and returning clients','A waiver is required for services marked waiver-required. Existing valid consent is reused for the same verified business/client identity. A parent or legal guardian signs for a minor. Review the actual document in the booking form.');
-  const waiver=waiverDocument(config),review=config.waiverLegalReview;
+  const waiver=waiverDocument(config),review=config.categoryWaiver?.enabled?null:config.waiverLegalReview;
   if(review?.version===waiver.version&&text(review.reference)&&Number.isFinite(Date.parse(review.reviewedAt||'')))for(const [title,body] of waiver.sections)add('waiver',title,body);
  }
  const start=day(now),localClock=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(now).split(':').map(Number),currentMinute=localClock[0]*60+localClock[1];

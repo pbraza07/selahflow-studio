@@ -1,9 +1,11 @@
+import {categoryWaiverContent} from './waiver-category-templates.mjs';
 import {resolveTheme} from './themes.mjs';
 export const WAIVER_VERSION='participation-2';
 export function requiresWaiver(services=[]){return services.some(service=>service.requiresWaiver===true);}
 export const LEGACY_WAIVER_VERSION='participation-1';
-export function acceptedWaiverVersions(config={}){return waiverDocument(config).version===LEGACY_WAIVER_VERSION?[LEGACY_WAIVER_VERSION]:[WAIVER_VERSION,LEGACY_WAIVER_VERSION];}
+export function acceptedWaiverVersions(config={}){if(config.categoryWaiver?.enabled===true)return ['category-1'];return waiverDocument(config).version===LEGACY_WAIVER_VERSION?[LEGACY_WAIVER_VERSION]:[WAIVER_VERSION,LEGACY_WAIVER_VERSION];}
 export function waiverDocument(config={},primary,background){
+ if(config.categoryWaiver?.enabled===true)return {...categoryWaiverContent(config),colors:resolveTheme(config.theme,primary,background).colors};
  // Keep the already reviewed wording active until the owner records review of v2.
  const version=config.waiverLegalReview?.version===LEGACY_WAIVER_VERSION?LEGACY_WAIVER_VERSION:WAIVER_VERSION;
  const name=String(config.name||'Business').trim();

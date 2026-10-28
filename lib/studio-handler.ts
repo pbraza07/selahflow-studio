@@ -5,7 +5,7 @@ import {cleanRemovedBookableSessions} from '../server/remove-bookable-session.mj
 import {publicTeamMembers,publicSessionTeam,publicBookingStaff,sessionTeamDefaults,validateTeamBookingPolicy} from '../server/team-booking-policy.mjs';
 import {bookingDiscount} from '../server/booking-discounts.mjs';
 import {membershipAllows} from '../server/membership-eligibility.mjs';
-import {ensureParticipationWaiver,assertBookingWaiver,publicWaiverDocument} from '../server/participation-waivers.mjs';
+import {ensureParticipationWaiver,assertBookingWaiver,publicWaiverDocument,validateCategoryWaiverSettings} from '../server/participation-waivers.mjs';
 import {recordCashSale} from '../server/record-cash-sale.mjs';
 import {queueBookingReceipt} from '../server/booking-receipts.mjs';
 import {issueMemberId} from '../server/member-id-policy.mjs';
@@ -52,13 +52,13 @@ export async function ownerGet(req:Request){
    db().prepare("SELECT * FROM events WHERE owner=? AND kind<>'membership_payment' ORDER BY created DESC").bind(owner).all(),
    loadOwnerMemberRoster(getPool(),owner),
    loadMembershipReportPayments(getPool(),owner),
-   getPool().query("SELECT name,business_model FROM businesses WHERE owner_id=$1 AND status='active'",[owner])
+   getPool().query("SELECT name,business_model,industry FROM businesses WHERE owner_id=$1 AND status='active'",[owner])
   ]);
   const visits=a.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   const activityEvents=e.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   const paidBookingFallback=await reconcileStripeBookingReceipts(getPool(),owner,activityEvents);
   return reply({
-   config:{...config,business_model:businessDetails.rows[0]?.business_model??config.business_model},reportBusinessName:businessDetails.rows[0]?.name,appointments:decorateOwnerAppointments(visits,roster),
+   config:{...config,industry:businessDetails.rows[0]?.industry,business_model:businessDetails.rows[0]?.business_model??config.business_model},reportBusinessName:businessDetails.rows[0]?.name,appointments:decorateOwnerAppointments(visits,roster),
    events:await visibleReportPayments(getPool(),owner,[...reportSaleEvents([...activityEvents,...paidBookingFallback],config.services),...membershipPayments])
   });
  }catch(e){
@@ -77,7 +77,8 @@ if(b.action==='waiver_status'){
  if(!first||!last||first.length>100||last.length>100||!/^\d{4}-\d{2}-\d{2}$/.test(dob)||Number.isNaN(Date.parse(dob)))return reply({signed:false});
  const ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();
  if(!await takeLimit('waiver-lookup:'+owner+':'+tokenHash(ip),30))return reply({error:'Too many waiver checks. Please try again later.'},429);
- const signed=await getPool().query("SELECT w.id FROM participation_waivers w JOIN businesses biz ON biz.id=w.business_id JOIN customer_booking_ids c ON c.id=w.customer_id AND c.business_id=biz.id WHERE biz.owner_id=$1 AND lower(c.first_name)=lower($2) AND lower(c.last_name)=lower($3) AND c.date_of_birth=$4::date AND ($5='' OR c.member_number=$5) AND w.document_version=ANY($6::text[]) AND w.deleted_at IS NULL LIMIT 1",[owner,first,last,dob,number,acceptedWaiverVersions(config)]);
+ const document=publicWaiverDocument(config);
+ const signed=await getPool().query("SELECT w.id FROM participation_waivers w JOIN businesses biz ON biz.id=w.business_id JOIN customer_booking_ids c ON c.id=w.customer_id AND c.business_id=biz.id WHERE biz.owner_id=$1 AND lower(c.first_name)=lower($2) AND lower(c.last_name)=lower($3) AND c.date_of_birth=$4::date AND ($5='' OR c.member_number=$5) AND w.document_version=ANY($6::text[]) AND ($7::text IS NULL OR w.document_hash=$7 AND w.document->>'category'=$8) AND w.deleted_at IS NULL LIMIT 1",[owner,first,last,dob,number,acceptedWaiverVersions(config),config.categoryWaiver?.enabled===true?document.hash:null,('category' in document?document.category:null)]);
  return reply({signed:!!signed.rows[0]});
 }
 if(b.action==='waiver_records'){
@@ -86,6 +87,7 @@ if(b.action==='waiver_records'){
  return reply({waivers:records.rows});
 }
 if(b.action==='settings'){const c=cleanRemovedBookableSessions(config,b.config);
+ validateCategoryWaiverSettings(c);
  if(c?.waiverLegalReview!=null){const review=c.waiverLegalReview;
   if(typeof review!=='object'||![WAIVER_VERSION,LEGACY_WAIVER_VERSION].includes(review.version)||typeof review.reference!=='string'||review.reference.length>200||typeof review.reviewedAt!=='string'||review.reviewedAt&&!/^\d{4}-\d{2}-\d{2}$/.test(review.reviewedAt)||review.reviewedAt>new Date().toISOString().slice(0,10))throw Error('Enter a valid current waiver legal-review reference and date.');
  }
@@ -174,6 +176,7 @@ try{
       Number(a.start),Number(a.duration)+c.buffer)))
     throw Error('A scheduled or recurring session overlaps an existing confirmed appointment for the selected team member.');
  }
+ if(JSON.stringify(oldConfig.categoryWaiver||null)!==JSON.stringify(c.categoryWaiver||null))await client.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5)',[crypto.randomUUID(),owner,new Date().toISOString(),'category_waiver_review',JSON.stringify({category:c.categoryWaiver?.category,enabled:c.categoryWaiver?.enabled,review:c.categoryWaiver?.review||null})]);
  if(JSON.stringify(oldConfig.waiverLegalReview||null)!==JSON.stringify(c.waiverLegalReview||null))await client.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5)',[crypto.randomUUID(),owner,new Date().toISOString(),'waiver_legal_review',JSON.stringify({review:c.waiverLegalReview||null})]);
  await client.query('INSERT INTO settings(owner,data) VALUES($1,$2) ON CONFLICT(owner) DO UPDATE SET data=excluded.data',[owner,JSON.stringify(c)]);
  await client.query('UPDATE businesses SET name=$1,city=COALESCE($2,city),region=COALESCE($3,region),business_model=COALESCE($5,business_model),brand_primary=COALESCE($6,brand_primary),brand_background=COALESCE($7,brand_background),updated_at=now() WHERE owner_id=$4',

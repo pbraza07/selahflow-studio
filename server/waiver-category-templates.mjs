@@ -26,3 +26,29 @@ export function waiverTemplateForCategory(category,{businessName='Business',serv
   mediaConsentDefault:false
  };
 }
+
+export const CATEGORY_WAIVER_VERSION='category-1';
+export function suggestedWaiverCategory(industry=''){
+ if(['fitness','yoga','sports-coaching','dance','martial-arts','swimming'].includes(industry))return 'sports_fitness';
+ if(['barber','hair','nails','lashes','brows','makeup','skin-care','spa','massage','wellness','tattoo','piercing','tanning','waxing'].includes(industry))return 'beauty_wellness';
+ if(['tutoring','music-lessons','art-lessons','language-lessons','test-prep','career-coaching'].includes(industry))return 'education_tutoring';
+ if(['photography','videography','event-planning','wedding-services','florist','catering','personal-chef','rentals'].includes(industry))return 'events_entertainment';
+ if(['cleaning','housekeeping','landscaping','handyman','plumbing','electrical','hvac','painting','pest-control','pool-service','home-organizing','moving','auto-detailing','auto-repair','car-wash','mobile-mechanic','bike-repair','accounting','tax-preparation','financial-planning','legal','notary','insurance','real-estate','property-management','consulting','it-support','cybersecurity','marketing','web-design','graphic-design','virtual-assistant','translation','travel-planning'].includes(industry))return 'professional_services';
+ return 'general';
+}
+export function categoryWaiverContent(config={}){
+ const options=config.categoryWaiver||{};
+ const services=(config.services||[]).filter(s=>s.requiresWaiver===true).slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+ const template=waiverTemplateForCategory(options.category,{businessName:config.name,serviceName:services.map(s=>s.name).join(', ')||'the services listed below'});
+ return {version:CATEGORY_WAIVER_VERSION,category:template.category,businessName:String(config.name||'Business').trim(),title:template.title,
+  serviceIds:services.map(s=>s.id),sections:[...template.sections.map(s=>[s.heading,s.text]),
+   ...services.map(s=>['Service: '+s.name,[s.description,options.serviceTerms?.[s.id]].filter(Boolean).join('\n')||'Scope: '+s.name]),
+   ...(options.additionalTerms?.trim()?[['Business-specific terms',options.additionalTerms.trim()]]:[]),
+   ['Electronic signature','My typed full name is my electronic signature. This consent applies only to the listed services at this business. A parent or legal guardian must sign for a participant under 18. Changes to this document require new consent.']],
+  mediaReleaseIncluded:false,
+  mediaRelease:'Optional media permission: I permit this business to use photographs or recordings of the participant in its publicity, website and social media. Declining does not affect service eligibility. I may withdraw permission for future use by contacting the business. For a minor, this permission is given by a parent or legal guardian.'};
+}
+export function waiverContentPayload(document){
+ const {colors,hash,...content}=document;
+ return JSON.stringify(content);
+}
