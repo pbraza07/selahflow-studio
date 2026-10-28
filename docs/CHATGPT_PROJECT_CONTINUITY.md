@@ -1,3 +1,10 @@
+# v1.3.167 release handoff — Deduplicate business introductions
+
+All tenant business landing pages render their introduction through shared businessIntroLines. Matching tagline and business-model/description text appears once, comparing case, whitespace and Unicode compatibility forms. Distinct wording remains visible in its original form. A tagline-only business displays it once; empty introductions retain the generic fallback. Description precedence and saved business records remain unchanged. Discovery, booking and membership surfaces were reviewed for the same repeated-field pattern; they do not render this pair twice.
+
+Validation and deployment in progress. No database migration or authentication, payment, email or customer-data changes.
+
+
 # v1.3.166 release handoff — Business-neutral language and clearer navigation
 
 Shared platform wording uses business, client, service, team member and booking in place of salon/studio/player/coach assumptions. Generic fallback catalogs and sign-up default to a neutral business category; industry-selected catalog examples and all saved business branding, service names and custom question/page wording remain intact. Client ID is explained as the same identifier used for memberships; booking status does not imply that a membership is required. Shared errors, membership forms, page-editor previews, payment guidance and preparation-time labels are updated.
