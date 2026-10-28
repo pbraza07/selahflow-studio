@@ -184,6 +184,7 @@ test('category waiver revisions bind consent to category, service wording and ha
   };
   let c=reviewed(),document=publicWaiverDocument(c);
   validateCategoryWaiverSettings(c);
+  assert.equal(document.acceptingSignatures,true);
   const input={...signature(),version:document.version,documentHash:document.hash,mediaConsent:false};
   const args={businessId:'owner-a',memberNumber:'JD010190',config:c,services:c.services,input};
   const legacy=await ensureParticipationWaiver(pg,{...args,config,services,input:signature()});
@@ -204,6 +205,8 @@ test('category waiver revisions bind consent to category, service wording and ha
   assert.equal((await pg.query('SELECT count(*)::int AS n FROM participation_waivers')).rows[0].n,3);
   const stale={...changed,services:[{...changed.services[0],description:'Different treatment'}]};
   assert.throws(()=>validateCategoryWaiverSettings(stale),/legal review/);
+  assert.equal(publicWaiverDocument(stale).acceptingSignatures,false);
+  assert.throws(()=>validateCategoryWaiverSettings({...changed,categoryWaiver:{...changed.categoryWaiver,additionalTerms:false}}),/text/);
   await assert.rejects(ensureParticipationWaiver(pg,{...args,config:stale}),/legal review/);
   assert.throws(()=>validateCategoryWaiverSettings({...changed,categoryWaiver:{...changed.categoryWaiver,category:'unknown'}}),/category/);
   assert.throws(()=>validateCategoryWaiverSettings({...changed,categoryWaiver:{...changed.categoryWaiver,review:{...changed.categoryWaiver.review,reviewedAt:'2026-02-30'}}}),/legal review/);

@@ -4,7 +4,7 @@ import {isIP} from 'node:net';
 import {isStaging} from './staging-safety.mjs';
 import {requiresWaiver,waiverDocument,validateWaiverSignature,acceptedWaiverVersions} from './waiver-content.mjs';
 export function waiverDocumentHash(document){return createHash('sha256').update(document.version===CATEGORY_WAIVER_VERSION?waiverContentPayload(document):JSON.stringify(document)).digest('hex');}
-export function publicWaiverDocument(config,primary,background){const document=waiverDocument(config,primary,background);return {...document,hash:waiverDocumentHash(document)};}
+export function publicWaiverDocument(config,primary,background){const document=waiverDocument(config,primary,background);let acceptingSignatures=true;if(document.version===CATEGORY_WAIVER_VERSION){try{assertWaiverLegalReview(config,document.version);}catch{acceptingSignatures=false;}}return {...document,hash:waiverDocumentHash(document),...(document.version===CATEGORY_WAIVER_VERSION?{acceptingSignatures}:{})};}
 /** Run inside the business/customer identity transaction. Never trust a client signed flag. */
 export async function ensureParticipationWaiver(db,{businessId,memberNumber,config,services,input,primary,background,audit={}}){
  if(!requiresWaiver(services))return null;
@@ -41,13 +41,14 @@ export function assertWaiverLegalReview(config,version,env=process.env){
  }
  if(env.NODE_ENV!=='production'||isStaging(env))return;
  const review=config.waiverLegalReview;
- if(review?.version!==version||!review.reference?.trim()||!Number.isFinite(Date.parse(review.reviewedAt||'')))throw Error('This business must complete legal review of the current waiver before accepting signatures. Contact the business.');
+ if(review?.version!==version||typeof review.reference!=='string'||!review.reference.trim()||review.reference.length>200||!Number.isFinite(Date.parse(review.reviewedAt||'')))throw Error('This business must complete legal review of the current waiver before accepting signatures. Contact the business.');
 }
 
 function validReviewDate(value){return typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value&&value<=new Date().toISOString().slice(0,10);}
 export function validateCategoryWaiverSettings(config){
  const options=config.categoryWaiver;if(options==null)return;
  if(typeof options!=='object'||Array.isArray(options)||typeof options.enabled!=='boolean'||!Object.hasOwn(WAIVER_CATEGORIES,options.category))throw Error('Choose a valid waiver category.');
+ if(options.additionalTerms!==undefined&&typeof options.additionalTerms!=='string')throw Error('Business waiver terms must be text.');
  for(const value of [options.additionalTerms||'',...Object.values(options.serviceTerms||{})])if(typeof value!=='string'||value.length>4000)throw Error('Waiver terms must contain at most 4,000 characters per field.');
  if(options.serviceTerms&&(typeof options.serviceTerms!=='object'||Array.isArray(options.serviceTerms)))throw Error('Invalid service waiver terms.');
  if(options.enabled)assertWaiverLegalReview(config,CATEGORY_WAIVER_VERSION);
