@@ -9,7 +9,7 @@ import {assistantStatusRequest,assistantStatusUrl,assistantStatusPrompt,assistan
 type StatusMode='membership'|'booking'|'both';
 type Source={title:string;href:string};
 type Message={from:'you'|'bot';text:string;sections?:AnswerSection[];sources?:Source[];links?:{label:string;href:string}[]};
-export default function BusinessAssistant({slug,name,open:controlled,onOpenChange,onHandoff}:{slug:string;name?:string;open?:boolean;onOpenChange?:(open:boolean)=>void;onHandoff?:(message:string)=>Promise<boolean>}){
+export default function BusinessAssistant({slug,name,open:controlled,onOpenChange,onHandoff,hidden=false}:{slug:string;name?:string;open?:boolean;hidden?:boolean;onOpenChange?:(open:boolean)=>void;onHandoff?:(message:string)=>Promise<boolean>}){
  const [localOpen,setLocalOpen]=useState(false),[messages,setMessages]=useState<Message[]>([]),[query,setQuery]=useState(''),[busy,setBusy]=useState(false);
  const [statusMode,setStatusMode]=useState<StatusMode|null>(null);
  const list=useRef<HTMLDivElement>(null),request=useRef<AbortController|null>(null),generation=useRef(0);
@@ -41,7 +41,7 @@ export default function BusinessAssistant({slug,name,open:controlled,onOpenChang
   }catch(e){if(version===generation.current)setMessages(old=>[...old,{from:'bot',text:(e as Error).name==='AbortError'?'The request took too long. Please try again or contact the business.':(e as Error).message}]);}
   finally{clearTimeout(timer);if(version===generation.current)setBusy(false);}
  }
- return <div className={styles.root}>
+ return <div className={styles.root} hidden={hidden} inert={hidden}>
   {!open&&<ClientGuideHelp slug={slug}/>}
   <button type="button" className={styles.launcher} onClick={()=>toggle(!open)} aria-label={open?'Close business assistant':'Open business assistant'} aria-expanded={open} aria-controls="sf-business-assistant">{open?<X/>:<MessageCircle/>}</button>
   {open&&<section id="sf-business-assistant" className={styles.panel} aria-label={'Business assistant for '+(name||'this business')}>
