@@ -227,3 +227,7 @@
 .discoveryBusinessLogo img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain}
 .discoveryBusinessLogo img[data-placeholder="true"]{padding:12px}
 .businessCardTop>span:last-child{min-width:0;overflow-wrap:anywhere}
+
+.businessGoogleSection{max-width:1120px;margin:44px auto;padding:0 24px;min-width:0}
+.businessGoogleSection:empty{display:none}
+@media(max-width:700px){.businessGoogleSection{margin:28px auto;padding:0 20px}}

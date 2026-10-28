@@ -19,7 +19,7 @@ export default function GooglePlacesWidget({config,summary=false}:{config:Places
   const container=root.current;if(!container)return;let stopped=false,started=false;
   const load=async()=>{if(started)return;started=true;setFailed(false);try{await loadPlaces(config.key);if(stopped)return;const widget=document.createElement(summary?'gmp-place-details-compact':'gmp-place-details');widget.setAttribute('aria-label','Google business reviews and photos');if(summary)widget.setAttribute('orientation','vertical');
    const request=document.createElement('gmp-place-details-place-request');request.setAttribute('place',config.placeId);widget.append(request);
-   const content=['gmp-place-name',...(config.showPhotos?['gmp-place-media']:[]),...(config.showReviews?['gmp-place-rating',...(!summary?['gmp-place-reviews']:[])]:[]),'gmp-place-attribution'];for(const tag of content)widget.append(document.createElement(tag));
+   const content=['gmp-place-name',...(config.showPhotos?['gmp-place-media']:[]),...(config.showReviews?['gmp-place-rating',...(!summary?['gmp-place-reviews']:[])]:[]),'gmp-place-attribution'];for(const tag of content){const element=document.createElement(tag);if(tag==='gmp-place-media'&&!summary)element.setAttribute('lightbox-preferred','');widget.append(element);}
    widget.addEventListener('gmp-error',()=>{if(!stopped){container.replaceChildren();setFailed(true);}});container.replaceChildren(widget);
   }catch{if(!stopped)setFailed(true);}};
   const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){observer.disconnect();void load();}},{rootMargin:'100px'});observer.observe(container);return()=>{stopped=true;observer.disconnect();container.replaceChildren();};
