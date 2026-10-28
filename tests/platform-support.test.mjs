@@ -31,6 +31,8 @@ test('support authenticates the administrator independently of owner passwords, 
  assert.equal((await pg.query("SELECT count(*)::int n FROM platform_support_audit WHERE action='end'")).rows[0].n,2);
  }finally{await pg.close();}});
 test('support denies ordinary owners, expired/revoked admin sessions, inactive businesses and cross-origin or stale tabs',async()=>{const pg=await fixture();try{
+ assert.equal(await supportOwner(pg,new Request(origin+'/api/studio/waivers/fixture-waiver',{headers:{referer:origin+'/studio/waiver/fixture-waiver'}}),{id:'one',hash:tokenHash('b'.repeat(64))}),'one');
+ assert.equal(await supportOwner(pg,req(),{id:'one',hash:tokenHash('b'.repeat(64))}),'one');
  await assert.rejects(startSupport(pg,{id:'one',hash:tokenHash('b'.repeat(64))},'b2'),/FORBIDDEN/);
  await assert.rejects(supportActor(pg,new Request(origin)),/AUTH_REQUIRED/);
  await pg.query("UPDATE users SET must_change_password=true WHERE id='admin'");await assert.rejects(supportActor(pg,req()),/PASSWORD_CHANGE_REQUIRED/);await pg.query("UPDATE users SET must_change_password=false WHERE id='admin'");

@@ -45,7 +45,7 @@ export async function supportOwner(pool,req,actor){
   // After exit, an old support tab must never act against the admin's own business.
   const ref=req.headers.get('referer');
   if(ref){let url;try{url=new URL(ref);}catch{throw Error('AUTH_REQUIRED');}
-   if(url.pathname.startsWith('/studio/')){const owned=(await pool.query('SELECT slug FROM businesses WHERE owner_id=$1',[actor.id])).rows[0];if(url.origin!==new URL(req.url).origin||url.pathname!=='/studio/'+owned?.slug)throw Error('AUTH_REQUIRED');}
+   if(/^\/studio\/[^/]+$/.test(url.pathname)){const owned=(await pool.query('SELECT slug FROM businesses WHERE owner_id=$1',[actor.id])).rows[0];if(url.origin!==new URL(req.url).origin||url.pathname!=='/studio/'+owned?.slug)throw Error('AUTH_REQUIRED');}
   }
   return actor.id;
  }
