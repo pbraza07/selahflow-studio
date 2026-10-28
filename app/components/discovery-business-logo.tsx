@@ -6,5 +6,5 @@ export default function DiscoveryBusinessLogo({slug,name,hasLogo=false,logoVersi
  const [failedSource,setFailedSource]=useState('');
  const source=hasLogo?'/api/branding/logo?'+new URLSearchParams({slug,...(logoVersion?{v:logoVersion}:{})}).toString():placeholder;
  const fallback=source===placeholder||source===failedSource;
- return <span className={styles.discoveryBusinessLogo}><img src={fallback?placeholder:source} alt={fallback?'SelahFlow':name+' logo'} width={50} height={50} loading="lazy" data-placeholder={fallback?'true':undefined} onError={()=>{if(!fallback)setFailedSource(source);}}/></span>;
+ return <span className={styles.discoveryBusinessLogo}><img src={fallback?placeholder:source} alt={fallback?'SelahFlow':name+' logo'} width={180} height={120} loading="lazy" data-placeholder={fallback?'true':undefined} onError={()=>{if(!fallback)setFailedSource(source);}}/></span>;
 }
