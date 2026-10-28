@@ -65,7 +65,7 @@ test('rendered Google review cards escape provider text, preserve low ratings an
  const {createRequire}=await import('node:module'),ts=(await import('typescript')).default,React=await import('react'),{renderToStaticMarkup}=await import('react-dom/server'),require=createRequire(import.meta.url);
  const source=await readFile(new URL('../app/components/google-business-gallery.tsx',import.meta.url),'utf8');
  const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true,target:ts.ScriptTarget.ES2022}}).outputText,m={exports:{}};
- new Function('require','module','exports',js)(require,m,m.exports);
+ new Function('require','module','exports',js)(path=>path==='./google-places-widget'?{__esModule:true,default:()=>null}:require(path),m,m.exports);
  const html=renderToStaticMarkup(React.createElement(m.exports.GoogleReviewCard,{review:{author:'<img onerror=bad>',authorUrl:'https://www.google.com/maps/contrib/123',authorPhoto:'',rating:1,text:'<script>bad()</script> Original criticism',language:'en',time:'Yesterday',url:'https://www.google.com/maps/reviews/123'}}));
  assert.ok(!html.includes('<script>'));assert.ok(html.includes('&lt;script&gt;bad()&lt;/script&gt; Original criticism'));assert.ok(html.includes('1 / 5'));assert.ok(html.includes('https://www.google.com/maps/reviews/123'));assert.ok(html.includes('https://www.google.com/maps/contrib/123'));
 });
