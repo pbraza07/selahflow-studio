@@ -29,7 +29,14 @@ test('right-side help renders an accessible PDF link only for the matching busin
  const require=createRequire(import.meta.url),url=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');
  let source=await readFile(new URL('../app/components/client-guide-help.tsx',import.meta.url),'utf8');source=source.replace("'../../server/client-guides.mjs'",JSON.stringify(new URL('../server/client-guides.mjs',import.meta.url).href)).replace(/import styles[^\n]+;/,'const styles={guideHelp:"guideHelp"};');
  let js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;js=js.replaceAll('"react/jsx-runtime"',JSON.stringify(pathToFileURL(require.resolve('react/jsx-runtime')).href));const {default:Help}=await import(url(js));
- const html=renderToStaticMarkup(React.createElement(Help,{slug:'arcillatrng'}));assert.match(html,/Request help/);assert.match(html,/target="_blank"/);assert.match(html,/noopener noreferrer/);assert.match(html,/Step-by-step client guide/);assert.match(html,/href="\/guides\/arcila-training-client-guide.pdf"/);
+ const html=renderToStaticMarkup(React.createElement(Help,{slug:'arcillatrng'}));assert.match(html,/Request help/);assert.match(html,/target="_blank"/);assert.match(html,/noopener noreferrer/);assert.match(html,/<span aria-hidden="true">\?<\/span>/);assert.doesNotMatch(html,/<strong>|<small>/);assert.match(html,/href="\/guides\/arcila-training-client-guide.pdf"/);
  assert.equal(renderToStaticMarkup(React.createElement(Help,{slug:'another-business'})),'');
  const ui=await readFile(new URL('../app/components/business-assistant.tsx',import.meta.url),'utf8');assert.match(ui,/!open&&<ClientGuideHelp/);assert.match(ui,/Booking instructions \(PDF\)/);
+});
+
+test('floating help has a compact touch target and owner menus suppress both floating controls',async()=>{
+ const css=await readFile(new URL('../app/components/business-assistant.module.css',import.meta.url),'utf8');
+ assert.match(css,/\.guideHelp\{[^}]*width:44px;height:44px/);assert.match(css,/\.guideHelp\{[^}]*border-radius:50%/);assert.match(css,/\.root\{[^}]*pointer-events:none/);assert.match(css,/\.root\[hidden\]\{display:none\}/);
+ const ui=await readFile(new URL('../app/components/business-assistant.tsx',import.meta.url),'utf8'),owner=await readFile(new URL('../app/studio/owner-dashboard.tsx',import.meta.url),'utf8');
+ assert.match(ui,/className=\{styles.root\} hidden=\{hidden\} inert=\{hidden\}/);assert.match(owner,/<BusinessAssistant hidden=\{mobile\|\|modal\}/);
 });
