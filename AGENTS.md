@@ -1,3 +1,11 @@
+# v1.3.164 release handoff — Administrator owner-workspace support access
+
+Platform Admin → All registered businesses → select an active business → Open owner workspace for support. Uses the administrator's own session; owner passwords and forced password changes remain independent. Full business workspace data and edits follow the selected owner ID. A visible banner identifies the business, notes real changes and one-hour expiry, and provides Exit support. Platform Admin also offers End any active support session. Switching businesses replaces support for that browser login; stale workspace tabs are rejected server-side, including after exit.
+
+New additive migration 063 adds session-bound support selections and a separate audit trail for starts, explicit exits and authorized workspace requests (actor, business, method and path only; no bodies, credentials or customer details). Expired login, support timeout, admin-role revocation, business suspension/archive and logout invalidate support. Platform administration and account/password endpoints always use the original actor. Google owner OAuth is excluded; device notification controls are hidden during support to avoid enrolling the administrator as the owner. Existing permission/entitlement and business validation still run.
+
+Local full suite, focused support fixtures, typecheck and production build passed. Deployment not yet verified. No real customer booking, membership change, charge or outgoing email is used for QA.
+
 # v1.3.163 release handoff — Bottom View all Google reviews control
 
 Full Google review panels now have an explicit View all Google reviews footer button immediately below the Google-rendered content. UI Kit uses the loaded widget's documented place.googleMapsLinks.reviewsURI after gmp-load, validated as an HTTPS Google URL, without extra provider requests. Missing/invalid links retain the exact-Place-ID Maps fallback. Direct Places mode also has the bottom control. Complete history opens on Google Maps; the public widget's inline selection is not represented as all reviews. Google attribution and display toggles remain intact. No Pro widgets, provider configuration, schema, customer, booking, payment or email changes.

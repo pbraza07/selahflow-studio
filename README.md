@@ -1,3 +1,11 @@
+# v1.3.164 release handoff — Administrator owner-workspace support access
+
+Platform Admin → All registered businesses → select an active business → Open owner workspace for support. Uses the administrator's own session; owner passwords and forced password changes remain independent. Full business workspace data and edits follow the selected owner ID. A visible banner identifies the business, notes real changes and one-hour expiry, and provides Exit support. Platform Admin also offers End any active support session. Switching businesses replaces support for that browser login; stale workspace tabs are rejected server-side, including after exit.
+
+New additive migration 063 adds session-bound support selections and a separate audit trail for starts, explicit exits and authorized workspace requests (actor, business, method and path only; no bodies, credentials or customer details). Expired login, support timeout, admin-role revocation, business suspension/archive and logout invalidate support. Platform administration and account/password endpoints always use the original actor. Google owner OAuth is excluded; device notification controls are hidden during support to avoid enrolling the administrator as the owner. Existing permission/entitlement and business validation still run.
+
+Local full suite, focused support fixtures, typecheck and production build passed. Deployment not yet verified. No real customer booking, membership change, charge or outgoing email is used for QA.
+
 # v1.3.163 release handoff — Bottom View all Google reviews control
 
 Full Google review panels now have an explicit View all Google reviews footer button immediately below the Google-rendered content. UI Kit uses the loaded widget's documented place.googleMapsLinks.reviewsURI after gmp-load, validated as an HTTPS Google URL, without extra provider requests. Missing/invalid links retain the exact-Place-ID Maps fallback. Direct Places mode also has the bottom control. Complete history opens on Google Maps; the public widget's inline selection is not represented as all reviews. Google attribution and display toggles remain intact. No Pro widgets, provider configuration, schema, customer, booking, payment or email changes.
@@ -108,7 +116,7 @@ Verified LIVE: staging dep-dbgdbgui0phs73c6n7rg (c66e66a93022cf16aea5a0eba171871
 
 Local, GitHub validation 40544366209/job 122330868733 and Render staging passed all 424 tests, typecheck and builds. Live workflow 40544366309 rerun/job 122338369953 passed after deployment, including first-customer-commission read-only checks; its initial pre-deployment attempt had correctly reported the expected staging version not ready. Staging and canonical production passed health/version, booking/payment-shell, protected-API, invalid invitation/no-store, exact PDF bytes, tenant-scoped assistant instructions/published knowledge and synthetic unknown-ID status checks. Startup preflights verify dedicated database/role, schema CREATE true and zero unowned tables; canonical Gmail readiness remains configured/setupComplete true, needsReconnect false, authorization stored_connection_not_live_verified. No error-level entries in the checked canonical startup window. APP_URL and live Stripe webhook were read back at the canonical origin. Google Cloud remains Site Unavailable in this browser; the new callback is user-confirmed, obsolete callbacks have not been inspected/removed. Saved historical messages/previously issued provider sessions were not rewritten. No real booking, charge or outbound test email was created for verification.
 
-**Release source: v1.3.163 — validation and deployment pending.**
+**Release source: v1.3.164 — validation and deployment pending.**
 
 # v1.3.154 release handoff — canonical URL deployment verified LIVE
 
