@@ -1,3 +1,7 @@
+# v1.3.169 release handoff — Administrator waiver activation
+
+Platform administrators manage template selection, legal-review records and activation through Platform Admin → business directory → Open owner workspace for support → Settings → Service catalog → Participation waivers. Ordinary owners cannot change category templates or either legal-review record. The settings transaction rechecks the actual authenticated account role against the persisted settings; forged browser flags and stale owner submissions do not grant approval authority. Existing signed records remain intact. Source implementation; deployment pending.
+
 # v1.3.168 release handoff — Industry-specific waiver generation
 
 PR #99 implements opt-in category waivers across businesses. Owners select a category (suggested from their registered industry), add business and service terms, preview the complete document and record a completed legal review before saving activation. The document explicitly lists all waiver-required services; it is a business-wide scope, not a separate signature per booking. Medical, veterinary and other specialized/unknown industries default to general and require their own tailored review.
@@ -184,7 +188,7 @@ Verified LIVE: staging dep-dbgdbgui0phs73c6n7rg (c66e66a93022cf16aea5a0eba171871
 
 Local, GitHub validation 40544366209/job 122330868733 and Render staging passed all 424 tests, typecheck and builds. Live workflow 40544366309 rerun/job 122338369953 passed after deployment, including first-customer-commission read-only checks; its initial pre-deployment attempt had correctly reported the expected staging version not ready. Staging and canonical production passed health/version, booking/payment-shell, protected-API, invalid invitation/no-store, exact PDF bytes, tenant-scoped assistant instructions/published knowledge and synthetic unknown-ID status checks. Startup preflights verify dedicated database/role, schema CREATE true and zero unowned tables; canonical Gmail readiness remains configured/setupComplete true, needsReconnect false, authorization stored_connection_not_live_verified. No error-level entries in the checked canonical startup window. APP_URL and live Stripe webhook were read back at the canonical origin. Google Cloud remains Site Unavailable in this browser; the new callback is user-confirmed, obsolete callbacks have not been inspected/removed. Saved historical messages/previously issued provider sessions were not rewritten. No real booking, charge or outbound test email was created for verification.
 
-**Release source: v1.3.168 — verified LIVE in staging and production.**
+**Release source: v1.3.169 — verified LIVE in staging and production.**
 
 # v1.3.154 release handoff — canonical URL deployment verified LIVE
 
