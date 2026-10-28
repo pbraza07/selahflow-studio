@@ -2,7 +2,13 @@
 
 All tenant business landing pages render their introduction through shared businessIntroLines. Matching tagline and business-model/description text appears once, comparing case, whitespace and Unicode compatibility forms. Distinct wording remains visible in its original form. A tagline-only business displays it once; empty introductions retain the generic fallback. Description precedence and saved business records remain unchanged. Discovery, booking and membership surfaces were reviewed for the same repeated-field pattern; they do not render this pair twice.
 
-Validation and deployment in progress. No database migration or authentication, payment, email or customer-data changes.
+Production verified LIVE: PR #98, merge fa81b0bd1506fd22131f5ab22d3dea7acb43a643, deployment dep-dbh4kjh5efls73ar1d70 at 2026-10-28T19:19:32.312924Z (October 28, 3:19 p.m. EDT). Staging commit 57e5424fdacca5e10ad38f1b3bb9a79d7180f141, deployment dep-dbh4i4flk1mc73f0ihd0 LIVE 2026-10-28T19:20:04.264674Z (October 28, 3:20 p.m. EDT). Identical application tree f1f80dde49ffd2561a0b0a7ec96e6095bba1839e. Both startup logs confirm database readiness and Next ready; no error-level entries appeared in the checked rollout windows.
+
+All 454 local tests, typecheck and production build passed. GitHub validation 40752124356/job 123041306266 passed tests/typecheck/build/assets. Regression coverage renders the actual tenant landing page for two businesses and checks duplicate versus distinct text, case/spacing, tagline-only profiles, description fallback and empty content. Both live environments passed health/version, booking/payment shells, protected-owner API and invalid-invitation/no-store smoke checks. Read-only live workflow 40752124337/job 123046035893 passed after rollout, including assistant/status and commission safeguards; its initial attempt preceded deployment.
+
+Browser acceptance reproduced the old duplicate on production Capstone, then verified exactly one landscaping introduction after deployment. Production Arcila likewise displays one fitness introduction. Staging Capstone also displays the introduction once. Distinct descriptions remain covered by rendered fixture tests without changing real business settings. Physical-phone and private authenticated owner-browser acceptance were not performed for this display-only change.
+
+No database migration or authentication, payment, email or customer-data changes. No real booking, charge, outgoing email or settings mutation was made for QA. The retired service was untouched. Documentation-only [skip render] commits may follow the running application SHA.
 
 
 # v1.3.166 release handoff — Business-neutral language and clearer navigation
@@ -166,7 +172,7 @@ Verified LIVE: staging dep-dbgdbgui0phs73c6n7rg (c66e66a93022cf16aea5a0eba171871
 
 Local, GitHub validation 40544366209/job 122330868733 and Render staging passed all 424 tests, typecheck and builds. Live workflow 40544366309 rerun/job 122338369953 passed after deployment, including first-customer-commission read-only checks; its initial pre-deployment attempt had correctly reported the expected staging version not ready. Staging and canonical production passed health/version, booking/payment-shell, protected-API, invalid invitation/no-store, exact PDF bytes, tenant-scoped assistant instructions/published knowledge and synthetic unknown-ID status checks. Startup preflights verify dedicated database/role, schema CREATE true and zero unowned tables; canonical Gmail readiness remains configured/setupComplete true, needsReconnect false, authorization stored_connection_not_live_verified. No error-level entries in the checked canonical startup window. APP_URL and live Stripe webhook were read back at the canonical origin. Google Cloud remains Site Unavailable in this browser; the new callback is user-confirmed, obsolete callbacks have not been inspected/removed. Saved historical messages/previously issued provider sessions were not rewritten. No real booking, charge or outbound test email was created for verification.
 
-**Release source: v1.3.167 — validation and deployment pending.**
+**Release source: v1.3.167 — verified LIVE in staging and production.**
 
 # v1.3.154 release handoff — canonical URL deployment verified LIVE
 
