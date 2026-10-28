@@ -1,0 +1,9 @@
+import {getPool} from '../../../../server/database.mjs';
+import {requireGmailAdmin} from '../../../../lib/platform-gmail-auth';
+import {validOrigin} from '../../../../server/security.mjs';
+import {searchGoogleListings,savePlatformGoogleListing,publicPlacesWidget} from '../../../../server/platform-google-listings.mjs';
+export const runtime='nodejs';export const dynamic='force-dynamic';
+const headers={'Cache-Control':'private, no-store'};
+function failure(e:unknown){const m=(e as Error).message;return Response.json({error:m==='AUTH_REQUIRED'?'Sign in to continue.':m==='FORBIDDEN'?'Primary platform administrator required.':m},{status:m==='AUTH_REQUIRED'?401:m==='FORBIDDEN'?403:400,headers});}
+export async function GET(req:Request){try{await requireGmailAdmin(req);return Response.json({serverConfigured:!!(process.env.GOOGLE_MAPS_API_KEY||process.env.GOOGLE_PLACES_API_KEY),widgetConfigured:!!publicPlacesWidget({google_place_id:'ChIJ_config_check'}),businesses:(await getPool().query("SELECT b.id,b.name,b.slug,b.city,b.region,g.place_id,g.show_reviews,g.show_photos FROM businesses b LEFT JOIN business_google_profiles g ON g.business_id=b.id WHERE b.status='active' ORDER BY b.name,b.id")).rows},{headers});}catch(e){return failure(e);}}
+export async function POST(req:Request){if(!validOrigin(req))return Response.json({error:'Invalid origin.'},{status:403,headers});try{const actor=await requireGmailAdmin(req),raw=await req.text();if(raw.length>2000)throw Error('Request too large.');const body=JSON.parse(raw);if(!/^[a-f0-9-]{36}$/i.test(body.businessId||''))throw Error('Choose a business.');if(body.action==='search')return Response.json({results:await searchGoogleListings(getPool(),body)},{headers});if(body.action==='save')return Response.json(await savePlatformGoogleListing(getPool(),{...body,actor}),{headers});throw Error('Choose a valid action.');}catch(e){return failure(e);}}
