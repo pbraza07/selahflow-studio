@@ -1,0 +1,3 @@
+# v1.3.163 release handoff — Bottom View all Google reviews control
+
+Full Google review panels now have an explicit View all Google reviews footer button immediately below the Google-rendered content. UI Kit uses the loaded widget's documented place.googleMapsLinks.reviewsURI after gmp-load, validated as an HTTPS Google URL, without extra provider requests. Missing/invalid links retain the exact-Place-ID Maps fallback. Direct Places mode also has the bottom control. Complete history opens on Google Maps; the public widget's inline selection is not represented as all reviews. Google attribution and display toggles remain intact. No Pro widgets, provider configuration, schema, customer, booking, payment or email changes. Validation/deployment pending.
