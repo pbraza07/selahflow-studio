@@ -4,7 +4,11 @@ PR #99 implements opt-in category waivers across businesses. Owners select a cat
 
 Category consent is bound to business/client identity, template version, category and SHA-256 of legal content. Service names, descriptions, scope and custom terms affect the fingerprint; palette-only changes do not. Optional media permission starts unchecked. Existing legacy documents, signatures and their compatibility rules remain unchanged until explicit activation. Migrations 066–067 retain signed content revisions while preserving legacy per-version uniqueness. No actual business template or legal review is activated by deployment.
 
-Source implementation; validation and deployment status pending. Production last independently verified on v1.3.167, deployment dep-dbh4kjh5efls73ar1d70. No legal review has been performed by this implementation. No customer signature, booking, payment or outgoing message is created for verification.
+Verified LIVE in production: PR #99 merged as af2e874d7a85e5026b40f533f6a11ae0ae6fa05c; deployment dep-dbh7bqvb9u1s73an0f0g LIVE 2026-10-28T22:25:18.032863Z (October 28, 6:25 p.m. EDT). Final staging commit 9c8d90f75e3064e8d6e89226f760eb4de068e99e, deployment dep-dbh74m6o6a2s738bq6tg LIVE 22:23:10.048889Z. Both share source tree 68dbe523ab69a8ec4c8cb8f59c4a65c1b26e50ae. Production applied migrations 066 and 067; staging applied 067 after its earlier queued revision. Both startup logs confirm database readiness; checked final startup windows contain no error-level entries.
+
+All 458 local and Render staging tests passed; TypeScript and production builds passed. Final-head GitHub validation jobs 123130592196 and 123130558170 passed. Actual booking-handler tests cover category signing and status, stale review rejection, retained legacy evidence and fresh consent after content changes. Rendered UI coverage checks owner/client wording and optional unchecked media consent. Initial validation found two outdated test harness/assertion dependencies, corrected before final checks. Both live environments passed health/version, booking/payment shells, protected owner API and invalid-invitation/no-store checks.
+
+No actual business template or legal review was activated. No legal review has been performed by this implementation. Physical-phone and authenticated owner-browser acceptance were not performed. No real customer signature, booking, charge or outgoing message was created for QA. The retired service was untouched. Documentation-only [skip render] commits may follow the running application SHA.
 
 # v1.3.167 release handoff — Deduplicate business introductions
 
@@ -180,7 +184,7 @@ Verified LIVE: staging dep-dbgdbgui0phs73c6n7rg (c66e66a93022cf16aea5a0eba171871
 
 Local, GitHub validation 40544366209/job 122330868733 and Render staging passed all 424 tests, typecheck and builds. Live workflow 40544366309 rerun/job 122338369953 passed after deployment, including first-customer-commission read-only checks; its initial pre-deployment attempt had correctly reported the expected staging version not ready. Staging and canonical production passed health/version, booking/payment-shell, protected-API, invalid invitation/no-store, exact PDF bytes, tenant-scoped assistant instructions/published knowledge and synthetic unknown-ID status checks. Startup preflights verify dedicated database/role, schema CREATE true and zero unowned tables; canonical Gmail readiness remains configured/setupComplete true, needsReconnect false, authorization stored_connection_not_live_verified. No error-level entries in the checked canonical startup window. APP_URL and live Stripe webhook were read back at the canonical origin. Google Cloud remains Site Unavailable in this browser; the new callback is user-confirmed, obsolete callbacks have not been inspected/removed. Saved historical messages/previously issued provider sessions were not rewritten. No real booking, charge or outbound test email was created for verification.
 
-**Release source: v1.3.168 — implementation in PR #99; deployment pending.**
+**Release source: v1.3.168 — verified LIVE in staging and production.**
 
 # v1.3.154 release handoff — canonical URL deployment verified LIVE
 
