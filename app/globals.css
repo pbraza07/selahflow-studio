@@ -2053,3 +2053,9 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 .sf-google-landing-heading h2{font-size:clamp(24px,3vw,34px);margin:0 0 10px}
 .sf-google-landing-heading p{font-size:15px;line-height:1.6}
 .sf-google-card-reviews .sf-google-ui-kit{max-height:520px;overflow:auto;overscroll-behavior:contain}
+
+.sf-google-reviews-footer{padding:16px 20px;border:1px solid var(--sf-border,#dce5d9);border-radius:10px;background:var(--sf-surface,#fff);color:var(--sf-on-surface,#183d32)}
+.sf-google-reviews-footer>a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 16px;border:1px solid currentColor;border-radius:8px;color:var(--sf-link-on-surface,#184e49);font-weight:700;text-decoration:none;line-height:1.5}
+.sf-google-reviews-footer>a:hover{text-decoration:underline;text-underline-offset:3px}
+.sf-google-reviews-footer>a:focus-visible{outline:3px solid currentColor;outline-offset:3px}
+.sf-google-reviews-footer>p{font-size:13px;line-height:1.6;margin:10px 0 0}
