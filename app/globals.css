@@ -2032,3 +2032,5 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 .sf-google-attribution{display:inline-block;background:#fff;padding:10px 10px 5px;margin:0 4px;line-height:1}.sf-google-attribution img{height:18px;width:auto;max-width:none;display:block}.sf-google-credit-avatar{width:20px;height:20px;border-radius:50%;vertical-align:middle;margin:0 4px}.sf-google-summary{border:1px solid var(--sf-border,#ddd);border-radius:10px;padding:10px}
 
 .sf-google-summary:empty{border:0;padding:0;margin:0}
+
+.sf-google-ui-kit{width:100%;max-width:400px;margin:16px 0;min-height:1px}.sf-google-ui-kit gmp-place-details,.sf-google-ui-kit gmp-place-details-compact{display:block;width:100%;max-width:100%}

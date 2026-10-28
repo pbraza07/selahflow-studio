@@ -1,9 +1,10 @@
 'use client';
+import GooglePlacesWidget,{type PlacesWidgetConfig} from './google-places-widget';
 import {useEffect,useRef,useState} from 'react';
 import {ArrowUpRight,ChevronLeft,ChevronRight,Images,Star} from 'lucide-react';
 type Credit={name:string;url:string;avatar?:string};type Photo={index:number;attributions:Credit[];sourceUrl?:string};
 type Review={author:string;authorUrl:string;authorPhoto:string;rating:number;text:string;language:string;time:string;url:string};
-type Listing={photos:Photo[];reviews?:Review[];link:string;rating?:number|null;reviewCount?:number|null};
+type Listing={uiKit?:PlacesWidgetConfig;photos:Photo[];reviews?:Review[];link:string;rating?:number|null;reviewCount?:number|null};
 export default function GoogleBusinessGallery({slug,compact=false,summary=false}:{slug:string;compact?:boolean;summary?:boolean}){
  const [data,setData]=useState<Listing|null>(null),[index,setIndex]=useState(0),[failed,setFailed]=useState(false),[visible,setVisible]=useState(!summary);const root=useRef<HTMLDivElement>(null);
  useEffect(()=>{if(!summary||!root.current)return;const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){setVisible(true);observer.disconnect();}},{rootMargin:'150px'});observer.observe(root.current);return()=>observer.disconnect();},[summary]);
@@ -14,6 +15,7 @@ export default function GoogleBusinessGallery({slug,compact=false,summary=false}
  const photos=data?.photos||[],reviews=data?.reviews||[],photo=photos[index]||photos[0],link=data?.link||'';
  const rating=data?.rating;
  const ratingLine=typeof rating==='number'&&<div className="sf-google-rating"><Star size={17} aria-hidden="true"/><strong>{rating.toFixed(1)} / 5</strong><span>{typeof data?.reviewCount==='number'?data.reviewCount.toLocaleString()+' Google reviews':'Google rating'}</span></div>;
+ if(data?.uiKit)return <GooglePlacesWidget config={data.uiKit} summary={summary}/>;
  if(summary)return <div ref={root} className="sf-google-summary">{link&&<>{photo&&!failed&&<a href={photo.sourceUrl||link} target="_blank" rel="noopener noreferrer" aria-label="View business photos on Google Maps"><img src={'/api/public/google-gallery/photo?slug='+encodeURIComponent(slug)+'&index='+photo.index} loading="lazy" alt="Business photo from Google Maps" onError={()=>setFailed(true)}/></a>}{photo&&<div className="sf-google-gallery-credits">{photo.attributions?.map((a,i)=><span key={i}>Photo: {a.avatar&&<img className="sf-google-credit-avatar" src={a.avatar} alt="" loading="lazy" referrerPolicy="no-referrer"/>}{a.url?<a href={a.url} target="_blank" rel="noopener noreferrer">{a.name}</a>:a.name}</span>)}</div>}{ratingLine}<span className="sf-google-attribution"><img src="/brand/google-maps-attribution.svg" alt="Google Maps"/></span><a href={link} target="_blank" rel="noopener noreferrer">View on Google Maps ↗</a>{ratingLine&&<a className="sf-google-policy" href="https://support.google.com/contributionpolicy/answer/7400114" target="_blank" rel="noopener noreferrer">Google review policy</a>}</>}</div>;
  if(!link)return null;
  if(!photos.length&&!reviews.length&&!ratingLine)return <aside className="sf-google-gallery-empty"><Images size={17}/><span>Explore this business on <a href={link} target="_blank" rel="noopener noreferrer">Google Maps <ArrowUpRight size={13}/></a></span></aside>;
