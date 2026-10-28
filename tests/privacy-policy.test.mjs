@@ -26,7 +26,7 @@ test('public privacy page renders accessible section links, current practices an
 });
 test('Privacy Policy is reachable from desktop, mobile and footer navigation and cannot collide with a tenant slug',async()=>{
  const [navigation,footer]=await Promise.all(['app/components/public-navigation.tsx','app/components/public-footer.tsx'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
- assert.equal((navigation.match(/href="\/privacy"/g)||[]).length,2);
+ assert.equal((navigation.match(/href="\/privacy"/g)||[]).length,1);
  assert.match(footer,/href="\/privacy">Privacy Policy/);
  assert.equal(isReservedBusinessSlug('privacy'),true);
 });

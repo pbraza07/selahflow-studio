@@ -37,7 +37,7 @@ export const PLAN_CATALOG=Object.freeze({
  }),
  business:Object.freeze({
   name:'Business',monthlyCents:6999,bookableStaff:10,
-  summary:'Room for multiple professionals, programs and a larger catalog.',
+  summary:'Room for larger teams, programs and a larger catalog.',
   limits:Object.freeze({services:150,bookingFields:25,sessionSeries:200,membershipPlans:25}),
   included:Object.freeze([
    'Up to 10 bookable team members',

@@ -84,6 +84,6 @@ export async function POST(req:Request){
   return Response.json({...contact,dateOfBirth:String(identity.dob||''),memberNumber,customAnswers,membership:membershipRow?{creditEligibility:membershipRow.credit_eligibility,name:membershipRow.membership_name,status:membershipRow.status,sessionsIncluded,sessionsUsed,sessionsLeft,membershipCovered}:null,membershipCovered},{headers});
  }catch(error){
   console.error('Member prefill lookup failed:',error);
-  return Response.json({error:'Saved player details are temporarily unavailable. Please retry.'},{status:503,headers});
+  return Response.json({error:'Saved client details are temporarily unavailable. Please retry.'},{status:503,headers});
  }
 }

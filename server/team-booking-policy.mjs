@@ -1,7 +1,7 @@
 import {sessionsForDate} from './session-scheduling.mjs';
 /** Hidden members remain owner records; never create anonymous dropdown options. */
 export function publicTeamMembers(config={}){
- return (config.staff||[]).filter(s=>s.bookingVisible!==false).map(s=>({id:s.id,name:config.hideTeamNames?'Session team':s.name,role:config.hideTeamNames?'Assigned professional':s.role,initials:config.hideTeamNames?'ST':s.initials,services:s.services}));
+ return (config.staff||[]).filter(s=>s.bookingVisible!==false).map(s=>({id:s.id,name:config.hideTeamNames?'Session team':s.name,role:config.hideTeamNames?'Assigned team member':s.role,initials:config.hideTeamNames?'ST':s.initials,services:s.services}));
 }
 export function clientTeamName(config,staffId){
  const member=(config.staff||[]).find(s=>s.id===staffId);
