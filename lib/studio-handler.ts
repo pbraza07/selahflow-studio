@@ -1,3 +1,4 @@
+import {canReviewWaivers,assertWaiverAuthority} from '../server/waiver-authority.mjs';
 import {publicBookingServiceSummary} from '../server/public-booking-service.mjs';
 import {assertWeeklyMembershipBooking,membershipBookingActive} from '../server/membership-weekly.mjs';
 import {acceptedWaiverVersions,WAIVER_VERSION,LEGACY_WAIVER_VERSION} from '../server/waiver-content.mjs';
@@ -58,7 +59,7 @@ export async function ownerGet(req:Request){
   const activityEvents=e.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   const paidBookingFallback=await reconcileStripeBookingReceipts(getPool(),owner,activityEvents);
   return reply({
-   config:{...config,industry:businessDetails.rows[0]?.industry,business_model:businessDetails.rows[0]?.business_model??config.business_model},reportBusinessName:businessDetails.rows[0]?.name,appointments:decorateOwnerAppointments(visits,roster),
+   canReviewWaivers:await canReviewWaivers(getPool(),req),config:{...config,industry:businessDetails.rows[0]?.industry,business_model:businessDetails.rows[0]?.business_model??config.business_model},reportBusinessName:businessDetails.rows[0]?.name,appointments:decorateOwnerAppointments(visits,roster),
    events:await visibleReportPayments(getPool(),owner,[...reportSaleEvents([...activityEvents,...paidBookingFallback],config.services),...membershipPayments])
   });
  }catch(e){
@@ -134,6 +135,7 @@ try{
  await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
  const persisted=(await client.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0];
  const oldConfig=persisted?JSON.parse(persisted.data):config;
+ await assertWaiverAuthority(client,req,oldConfig,c);
  const planRow=(await client.query(
   "SELECT s.plan_code,s.status,(SELECT COUNT(*)::int FROM business_team_seat_requests r WHERE r.business_id=b.id AND r.status='approved') AS approved_seats FROM businesses b LEFT JOIN business_subscriptions s ON s.business_id=b.id WHERE b.owner_id=$1",
   [owner])).rows[0];
