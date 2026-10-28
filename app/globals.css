@@ -2059,3 +2059,6 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 .sf-google-reviews-footer>a:hover{text-decoration:underline;text-underline-offset:3px}
 .sf-google-reviews-footer>a:focus-visible{outline:3px solid currentColor;outline-offset:3px}
 .sf-google-reviews-footer>p{font-size:13px;line-height:1.6;margin:10px 0 0}
+
+.sf-support-banner{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:16px;margin-bottom:20px;border:2px solid currentColor;border-radius:12px;background:var(--surface,#fff);color:var(--text,#173f3a)}
+.sf-support-banner span{flex:1 1 240px}.sf-support-banner button{min-height:44px}
