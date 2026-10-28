@@ -64,3 +64,16 @@ test('actual requireOwner preserves account identity, selects support owner and 
   await pg.query('DELETE FROM sessions WHERE token_hash=$1',[hash]);await assert.rejects(requireOwner(req()),/AUTH_REQUIRED/);
  }finally{delete globalThis.__supportAuthFixture;await pg.close();}
 });
+test('support metadata does not block explicit business/account purges and preserves original audit attribution',async()=>{
+ const pg=await fixture();try{
+  await pg.exec(await read('migrations/064_support_audit_retention.sql'));
+  await startSupport(pg,actor,'b1');await supportOwner(pg,req(),actor);
+  await pg.query("DELETE FROM businesses WHERE id='b1'");
+  assert.equal((await pg.query('SELECT count(*)::int n FROM platform_support_sessions')).rows[0].n,0);
+  const audits=(await pg.query('SELECT actor_id,business_id,action FROM platform_support_audit ORDER BY action')).rows;
+  assert.equal(audits.length,2);assert.ok(audits.every(x=>x.actor_id==='admin'&&x.business_id==='b1'));
+  await pg.query("DELETE FROM users WHERE id='admin'");
+  assert.equal((await pg.query("SELECT count(*)::int n FROM platform_support_audit WHERE actor_id='admin' AND business_id='b1'")).rows[0].n,2);
+  assert.equal((await pg.query("SELECT owner_id FROM businesses WHERE id='b2'")).rows[0].owner_id,'two');
+ }finally{await pg.close();}
+});
