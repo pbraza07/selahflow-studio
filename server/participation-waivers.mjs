@@ -36,7 +36,7 @@ export async function assertBookingWaiver(db,{owner,config,serviceIds,memberNumb
 export function assertWaiverLegalReview(config,version,env=process.env){
  if(version===CATEGORY_WAIVER_VERSION){
   const review=config.categoryWaiver?.review;
-  if(!review||review.hash!==waiverDocumentHash(waiverDocument(config))||!review.reference?.trim()||!validReviewDate(review.reviewedAt))throw Error('Complete legal review of this exact category waiver before accepting signatures.');
+  if(!review||review.hash!==waiverDocumentHash(waiverDocument(config))||typeof review.reference!=='string'||!review.reference.trim()||review.reference.length>200||!validReviewDate(review.reviewedAt))throw Error('Complete legal review of this exact category waiver before accepting signatures.');
   return;
  }
  if(env.NODE_ENV!=='production'||isStaging(env))return;

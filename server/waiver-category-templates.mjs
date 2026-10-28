@@ -38,7 +38,7 @@ export function suggestedWaiverCategory(industry=''){
 }
 export function categoryWaiverContent(config={}){
  const options=config.categoryWaiver||{};
- const services=(config.services||[]).filter(s=>s.requiresWaiver===true).slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+ const services=(config.services||[]).filter(s=>s.requiresWaiver===true).slice().sort((a,b)=>String(a.id)<String(b.id)?-1:String(a.id)>String(b.id)?1:0);
  const template=waiverTemplateForCategory(options.category,{businessName:config.name,serviceName:services.map(s=>s.name).join(', ')||'the services listed below'});
  return {version:CATEGORY_WAIVER_VERSION,category:template.category,businessName:String(config.name||'Business').trim(),title:template.title,
   serviceIds:services.map(s=>s.id),sections:[...template.sections.map(s=>[s.heading,s.text]),
