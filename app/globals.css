@@ -2034,3 +2034,5 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 .sf-google-summary:empty{border:0;padding:0;margin:0}
 
 .sf-google-ui-kit{width:100%;max-width:400px;margin:16px 0;min-height:1px}.sf-google-ui-kit gmp-place-details,.sf-google-ui-kit gmp-place-details-compact{display:block;width:100%;max-width:100%}
+
+.public-booking .sf-booking-submit-feedback{margin:0 24px 24px;overflow-wrap:anywhere}
