@@ -1,6 +1,6 @@
 /** Published, business-specific client guides. Never infer a guide from another tenant. */
 const guides=new Map([
- ['arcillatrng',Object.freeze({title:'Arcila Training client guide (PDF)',href:'/guides/arcila-training-client-guide.pdf',updatedAt:'2026-10-27',pages:20})]
+ ['arcillatrng',Object.freeze({title:'Arcila Training client guide (PDF)',href:'/guides/arcila-training-client-guide.pdf',updatedAt:'2026-10-28',pages:20})]
 ]);
 export function publicClientGuide(slug){return typeof slug==='string'?guides.get(slug)||null:null;}
 export function clientGuideIntent(message){
