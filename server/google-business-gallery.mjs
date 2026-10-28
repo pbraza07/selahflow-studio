@@ -25,7 +25,7 @@ export async function googleGalleryForBusiness(business,env=process.env,fetcher=
   // another business's photos when a Maps link has an ambiguous short URL.
   const r=await fetcher(selected?'https://places.googleapis.com/v1/places/'+encodeURIComponent(business.google_place_id):'https://places.googleapis.com/v1/places:searchText',{
    method:selected?'GET':'POST',headers:{'Content-Type':'application/json','X-Goog-Api-Key':key,
-    'X-Goog-FieldMask':selected?'id,displayName,googleMapsUri,photos'+(business.google_show_reviews!==false?',rating,userRatingCount'+(business.google_reviews_summary?'':',reviews'):''):'places.id,places.displayName,places.googleMapsUri,places.photos,places.formattedAddress'},
+    'X-Goog-FieldMask':selected?'id,displayName,googleMapsUri,photos'+(business.google_show_reviews!==false?',rating,userRatingCount,googleMapsLinks.reviewsUri'+(business.google_reviews_summary?'':',reviews'):''):'places.id,places.displayName,places.googleMapsUri,places.photos,places.formattedAddress'},
    ...(selected?{}:{body:JSON.stringify({textQuery:query,pageSize:4})}),cache:'no-store',signal:controller.signal});
   if(!r.ok)throw Error('Google Places lookup unavailable');
   const data=await r.json();
@@ -37,7 +37,7 @@ export async function googleGalleryForBusiness(business,env=process.env,fetcher=
     url:safeGoogleLink(a.uri)
    }))}));
   const reviews=selected&&business.google_show_reviews!==false&&!business.google_reviews_summary?(match.reviews||[]).slice(0,5).map(r=>({author:String(r.authorAttribution?.displayName||'Google reviewer').slice(0,150),authorUrl:safeGoogleLink(r.authorAttribution?.uri),authorPhoto:approvedGooglePhotoUri(r.authorAttribution?.photoUri)||'',rating:Number.isFinite(r.rating)?Math.max(0,Math.min(5,r.rating)):0,text:String(r.originalText?.text||r.text?.text||''),language:String(r.originalText?.languageCode||r.text?.languageCode||''),time:String(r.relativePublishTimeDescription||''),url:safeGoogleLink(r.googleMapsUri)||link})):[];
-  return {link:safeGoogleLink(match.googleMapsUri)||link,photos,reviews,rating:selected&&business.google_show_reviews!==false&&Number.isFinite(match.rating)?match.rating:null,reviewCount:selected&&business.google_show_reviews!==false&&Number.isInteger(match.userRatingCount)?match.userRatingCount:null,enabled:true,placeName:match.displayName?.text||businessName};
+  return {link:safeGoogleLink(match.googleMapsUri)||link,reviewsLink:selected&&business.google_show_reviews!==false?safeGoogleLink(match.googleMapsLinks?.reviewsUri)||safeGoogleLink(match.googleMapsUri)||link:'',photos,reviews,rating:selected&&business.google_show_reviews!==false&&Number.isFinite(match.rating)?match.rating:null,reviewCount:selected&&business.google_show_reviews!==false&&Number.isInteger(match.userRatingCount)?match.userRatingCount:null,enabled:true,placeName:match.displayName?.text||businessName};
  }finally{clearTimeout(timeout);}
 }
 export function approvedGooglePhotoUri(value){

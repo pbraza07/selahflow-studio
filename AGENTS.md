@@ -1,3 +1,9 @@
+# v1.3.162 release handoff — Card reviews and centered photo gallery
+
+Discovery cards provide View all Google reviews and a lazy Read Google reviews here disclosure. UI Kit mode uses native Google reviews on expansion; direct Places mode requests review text only after expansion and uses Google's reviewsUri when supplied. Complete review history opens on Google Maps; Places API only supplies a selection. Google review/photo display settings and tenant isolation remain respected.
+
+Business landing pages center the gallery between Services & prices and the final booking CTA. Native Essentials media enables Google's photo lightbox viewer; existing direct Places carousel supports previous/next, keyboard arrows and touch swipes. No Advanced/Pro widgets, scraping, persistent Google content cache, provider credentials, schema or booking/payment/email changes. Validation/deployment pending.
+
 # v1.3.161 release handoff — PDF Back to app button
 
 The published Arcila Training client guide includes a visible, clickable Back to app button in the footer of every one of its 20 pages. Each points to https://selahflow.onrender.com/arcillatrng. Original guide text, original link annotations and bookmarks are preserved. Help and assistant instruction links continue using the same business-specific PDF. No provider, schema, booking, membership, payment or email changes.
