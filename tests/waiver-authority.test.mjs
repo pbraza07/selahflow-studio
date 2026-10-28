@@ -6,7 +6,7 @@ import {tokenHash} from '../server/security.mjs';
 import {canReviewWaivers,assertWaiverAuthority} from '../server/waiver-authority.mjs';
 test('waiver activation and legal review require a current platform administrator session',async()=>{
  const db=new PGlite();try{
- for(const file of ['001_initial.sql','003_platform_foundation.sql'])await db.exec(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8'));
+ for(const file of ['001_initial.sql','002_public_booking.sql','003_platform_foundation.sql','004_business_customization.sql'])await db.exec(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8'));
  await db.exec('ALTER TABLE users ADD COLUMN must_change_password boolean NOT NULL DEFAULT false');
  await db.query("INSERT INTO users(id,email,password_hash) VALUES('admin','pbraza@gmail.com','hash'),('owner','owner@example.test','hash')");
  await db.query("INSERT INTO platform_admins(user_id,role) VALUES('admin','primary')");
