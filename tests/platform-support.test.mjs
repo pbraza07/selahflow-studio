@@ -40,7 +40,8 @@ test('support denies ordinary owners, expired/revoked admin sessions, inactive b
  await startSupport(pg,actor,'b1');
  for(const headers of [{referer:origin+'/studio/second-business',origin},{referer:'https://foreign.test/studio/first-business',origin:'https://foreign.test'},{referer:origin+'/studio/first-business',origin:'https://foreign.test'},{}])await assert.rejects(supportOwner(pg,new Request(origin+'/api/studio',{method:'POST',headers}),actor),/AUTH_REQUIRED/);
  await assert.rejects(supportOwner(pg,req('/api/business/google','POST'),actor),/requires the business owner/);
- await pg.query("UPDATE platform_support_sessions SET expires_at=now()-interval '1 minute'");await assert.rejects(supportOwner(pg,req(),actor),/AUTH_REQUIRED/);await endSupport(pg,actor);
+ await pg.query("UPDATE platform_support_sessions SET expires_at=now()-interval '1 minute'");assert.equal(await supportOwner(pg,req(),actor),'one');await endSupport(pg,actor);
+ await pg.query("UPDATE sessions SET expires_at=now()-interval '1 minute' WHERE token_hash=$1",[hash]);await assert.rejects(supportActor(pg,req()),/AUTH_REQUIRED/);await pg.query("UPDATE sessions SET expires_at=now()+interval '12 hours' WHERE token_hash=$1",[hash]);
  await startSupport(pg,actor,'b1');await pg.query("DELETE FROM platform_admins WHERE user_id='admin'");await assert.rejects(supportOwner(pg,req(),actor),/AUTH_REQUIRED/);
  await pg.query('DELETE FROM sessions WHERE token_hash=$1',[hash]);assert.equal((await pg.query('SELECT count(*)::int n FROM platform_support_sessions')).rows[0].n,0);await assert.rejects(supportActor(pg,req()),/AUTH_REQUIRED/);
  }finally{await pg.close();}});
@@ -61,6 +62,9 @@ test('actual requireOwner preserves account identity, selects support owner and 
   globalThis.__supportAuthFixture=pg;const {requireOwner}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
   await assert.rejects(requireOwner(new Request(origin+'/api/studio')),/AUTH_REQUIRED/);
   await startSupport(pg,actor,'b1');assert.equal(await requireOwner(req()),'one');assert.equal(await requireOwner(req('/api/account/password','POST')),'admin');
+  const previousOrigin=process.env.APP_URL;process.env.APP_URL=origin;
+  try{assert.equal(await requireOwner(new Request('http://0.0.0.0:10000/api/studio',{headers:{cookie:'salonflow_session='+token,referer:origin+'/studio/first-business'}})),'one');}finally{if(previousOrigin===undefined)delete process.env.APP_URL;else process.env.APP_URL=previousOrigin;}
+
   await pg.query('DELETE FROM sessions WHERE token_hash=$1',[hash]);await assert.rejects(requireOwner(req()),/AUTH_REQUIRED/);
  }finally{delete globalThis.__supportAuthFixture;await pg.close();}
 });
@@ -75,5 +79,33 @@ test('support metadata does not block explicit business/account purges and prese
   await pg.query("DELETE FROM users WHERE id='admin'");
   assert.equal((await pg.query("SELECT count(*)::int n FROM platform_support_audit WHERE actor_id='admin' AND business_id='b1'")).rows[0].n,2);
   assert.equal((await pg.query("SELECT owner_id FROM businesses WHERE id='b2'")).rows[0].owner_id,'two');
+ }finally{await pg.close();}
+});
+test('proxied workspace requests use the public app origin for owner and support access',async t=>{
+ const pg=await fixture(),old=process.env.APP_URL;process.env.APP_URL=origin;t.after(()=>{if(old===undefined)delete process.env.APP_URL;else process.env.APP_URL=old;});
+ try{
+  const proxied=(slug='first-business',method='GET',refOrigin=origin)=>new Request('http://localhost:10000/api/studio',{method,headers:{cookie:'salonflow_session='+token,referer:refOrigin+'/studio/'+slug,origin}});
+  assert.equal(await supportOwner(pg,proxied(),{id:'one',hash:tokenHash('b'.repeat(64))}),'one');
+  await startSupport(pg,actor,'b1');
+  assert.equal(await supportOwner(pg,proxied(),actor),'one');
+  assert.equal(await supportOwner(pg,proxied('first-business','POST'),actor),'one');
+  await assert.rejects(supportOwner(pg,proxied('second-business','POST'),actor),/AUTH_REQUIRED/);
+  await assert.rejects(supportOwner(pg,proxied('first-business','GET','https://foreign.test'),actor),/AUTH_REQUIRED/);
+ }finally{await pg.close();}
+});
+test('support has no separate time limit and existing timed selections migrate without changing login expiry',async()=>{
+ const pg=await fixture();try{
+  await startSupport(pg,actor,'b1');
+  const loginExpiry=(await pg.query('SELECT expires_at::text value FROM sessions WHERE token_hash=$1',[hash])).rows[0].value;
+  await pg.query("UPDATE platform_support_sessions SET expires_at=now()-interval '1 year'");
+  await pg.exec(await read('migrations/065_unlimited_platform_support.sql'));
+  assert.equal((await pg.query("SELECT expires_at='infinity'::timestamptz AS unlimited FROM platform_support_sessions")).rows[0].unlimited,true);
+  assert.equal((await pg.query('SELECT expires_at::text value FROM sessions WHERE token_hash=$1',[hash])).rows[0].value,loginExpiry);
+  // Even legacy timestamps are no longer an access cutoff in the new resolver.
+  await pg.query("UPDATE platform_support_sessions SET expires_at=now()-interval '1 year'");
+  assert.equal(await supportOwner(pg,req(),actor),'one');
+  await startSupport(pg,actor,'b2');
+  assert.equal((await pg.query("SELECT expires_at='infinity'::timestamptz AS unlimited FROM platform_support_sessions")).rows[0].unlimited,true);
+  await endSupport(pg,actor);assert.equal(await supportSelection(pg,actor),null);
  }finally{await pg.close();}
 });

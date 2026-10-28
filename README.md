@@ -1,3 +1,12 @@
+# v1.3.165 release handoff — Proxied workspace access and unlimited support
+
+Fixes valid owner and administrator support workspace requests being rejected when the browser uses the public HTTPS app URL but the server receives an internal proxy URL. Workspace referrer validation uses the existing trustedOrigin configuration (APP_URL / RENDER_EXTERNAL_URL), while retaining exact business scope, stale-tab rejection and trusted-origin write checks. Regression reproduces the previous AUTH_REQUIRED failure with an internal localhost request, then verifies ordinary-owner and support GET/POST requests plus the actual requireOwner helper.
+
+Removes the separate one-hour support timer. A selected business remains available while the administrator's normal login is valid, until explicit exit, switch, logout, role revocation or business deactivation. Migration 065 changes legacy support expiry defaults/existing values to infinity, retaining the column for compatibility with the previous running instance. New selections are unlimited; the resolver no longer treats old support timestamps as an access cutoff. Ordinary login expiration and password requirements remain enforced. Directory and workspace copy describe no separate support limit. No owner password, login lifetime, provider settings or customer records changed.
+
+Source validation and deployment in progress. Tests cover the reproduced proxy mismatch, ordinary-owner and support access, exact tenant scope/foreign-origin rejection, existing timed selection migration and unchanged login expiry. Actual authenticated browser acceptance has not yet been performed.
+
+
 # v1.3.164 release handoff — Administrator owner-workspace support
 
 Platform Admin → All registered businesses → select an active business → Open owner workspace for support. The administrator uses their own login, independently of the owner's password or forced password change. The selected business's normal workspace and existing permissions/entitlements apply. A banner identifies support mode, its real edits and one-hour expiry, with Exit support. The directory also provides End any active support session. One business is selected per login/browser; stale workspace tabs are rejected after a switch or exit.
@@ -127,7 +136,7 @@ Verified LIVE: staging dep-dbgdbgui0phs73c6n7rg (c66e66a93022cf16aea5a0eba171871
 
 Local, GitHub validation 40544366209/job 122330868733 and Render staging passed all 424 tests, typecheck and builds. Live workflow 40544366309 rerun/job 122338369953 passed after deployment, including first-customer-commission read-only checks; its initial pre-deployment attempt had correctly reported the expected staging version not ready. Staging and canonical production passed health/version, booking/payment-shell, protected-API, invalid invitation/no-store, exact PDF bytes, tenant-scoped assistant instructions/published knowledge and synthetic unknown-ID status checks. Startup preflights verify dedicated database/role, schema CREATE true and zero unowned tables; canonical Gmail readiness remains configured/setupComplete true, needsReconnect false, authorization stored_connection_not_live_verified. No error-level entries in the checked canonical startup window. APP_URL and live Stripe webhook were read back at the canonical origin. Google Cloud remains Site Unavailable in this browser; the new callback is user-confirmed, obsolete callbacks have not been inspected/removed. Saved historical messages/previously issued provider sessions were not rewritten. No real booking, charge or outbound test email was created for verification.
 
-**Release source: v1.3.164 — verified LIVE in staging and production.**
+**Release source: v1.3.165 — validation and deployment pending.**
 
 # v1.3.154 release handoff — canonical URL deployment verified LIVE
 
