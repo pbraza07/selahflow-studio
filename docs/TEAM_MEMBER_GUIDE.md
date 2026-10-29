@@ -32,3 +32,7 @@ All times use SelahFlow's existing Eastern Time scheduling. Availability and fin
 The shared page shows the team member's public profile, portrait, social links and available service times. Selecting a time opens the normal booking flow with the member, service, date and time preselected; clients still complete required details, waivers and any approval/payment steps. Availability is rechecked before confirmation. Client names, service photos, notes, private appointment details and time-off reasons are not published.
 
 Members hidden from client booking do not have an accessible public team page. Team login pages are separate from Business sign in; team credentials cannot open owner settings, reports, payments or other team members' private workspaces.
+
+## Team booking notifications
+
+Open My profile → Enable booking notifications and grant permission on each device. On iPhone, first add SelahFlow to the Home Screen in Safari, then open that installed app. Scheduled appointments and newly assigned appointments can notify the member’s registered devices. Creating time off does not send a booking alert. Send test notification and Disable on this device are available after enabling. Delivery depends on configured push keys, device/browser support, permission and Focus settings. Client details remain inside the private calendar.

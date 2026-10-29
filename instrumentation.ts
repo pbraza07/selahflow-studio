@@ -4,5 +4,7 @@ export async function register(){
   startClientMessageWorker();
   const {startDiscoveryLocationWorker}=await import('./server/discovery-locations.mjs');
   startDiscoveryLocationWorker();
+  const {startTeamBookingPushWorker}=await import('./server/team-booking-push.mjs');
+  startTeamBookingPushWorker();
  }
 }

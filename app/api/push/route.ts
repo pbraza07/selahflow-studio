@@ -22,7 +22,7 @@ export async function POST(req:Request){
    if(!configured())return Response.json({error:'Push notification service is unavailable.'},{status:503,headers});
    const sub=(await c.pool.query('SELECT endpoint,p256dh,auth FROM business_push_subscriptions WHERE business_id=$1 AND reviewer=$2 AND endpoint=$3',[c.businessId,c.reviewer,String(data.endpoint||'').slice(0,2048)])).rows[0];
    if(!sub)return Response.json({error:'This device is not registered for this business and reviewer. Enable it again.'},{status:404,headers});
-   const result=await sendWebPush({endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth}},{title:'SelahFlow · '+c.businessName,body:'Device notifications are connected for this business.',url:'/studio/'+encodeURIComponent(c.businessSlug),tag:'selahflow-device-test'});
+   const result=await sendWebPush({endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth}},{title:'SelahFlow · '+c.businessName,body:'Device notifications are connected for this business.',url:c.workspacePath||'/studio/'+encodeURIComponent(c.businessSlug),tag:'selahflow-device-test'});
    if(result.status==='gone'||result.status==='invalid_subscription'){
     await c.pool.query('DELETE FROM business_push_subscriptions WHERE business_id=$1 AND reviewer=$2 AND endpoint=$3',[c.businessId,c.reviewer,sub.endpoint]);
     return Response.json({error:'This device subscription expired. Enable notifications again.'},{status:410,headers});

@@ -1,8 +1,10 @@
+import {teamIdentity} from './team-portal.mjs';
 import {getPool} from './database.mjs';
 import {tokenHash,sessionToken} from './security.mjs';
 /** Every subscription belongs to one approved business and one selected reviewer. */
 export async function pushContext(req){
  const pool=getPool();
+ if(new URL(req.url).pathname==='/api/team/push'){try{const a=await teamIdentity(pool,req);return {pool,businessId:a.business_id,businessSlug:a.slug,businessName:a.business_name,ownerId:a.owner_id,reviewer:'team-account:'+a.id,settings:JSON.parse(a.config),workspacePath:'/team/workspace'};}catch{throw Error('ACCESS_DENIED');}}
  const bearer=req.headers.get('authorization')?.replace(/^Bearer\s+/i,'')||'';
  if(bearer){
   if(!/^[0-9a-f]{64}$/.test(bearer))throw Error('ACCESS_DENIED');
