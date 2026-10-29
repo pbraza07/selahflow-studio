@@ -8,6 +8,6 @@ const config: NextConfig = {
     {key:'Referrer-Policy',value:'strict-origin-when-cross-origin'},
     {key:'X-Frame-Options',value:'DENY'},
     {key:'Permissions-Policy',value:'camera=(), microphone=(), geolocation=()'}
-  ]}];}
+  ]},{source:'/api/owner-guide',headers:[{key:'X-Frame-Options',value:'SAMEORIGIN'}]}];}
 };
 export default config;

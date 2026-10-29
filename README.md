@@ -1,4 +1,4 @@
-## Release source: v1.3.179
+## Release source: v1.3.180
 
 Saved social links show recognizable platform logos across business/team pages and owner link settings.
 

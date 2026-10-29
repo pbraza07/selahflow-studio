@@ -46,7 +46,7 @@ test('generic defaults and new-business instructions cover unrelated industries 
  const custom=registrationQuestions({bookingStandardFields:{memberNumber:{label:'Reference number',help:'Use your saved reference.'}}},'booking').find(x=>x.id==='memberNumber');assert.equal(custom.label,'Reference number');assert.equal(custom.help,'Use your saved reference.');
 });
 test('owner destinations keep their stable keys and search both new labels and familiar names',()=>{
- const keys=workspaceGroups.flatMap(g=>g.items);assert.equal(keys.length,12);assert.equal(new Set(keys).size,12);
+ const keys=workspaceGroups.flatMap(g=>g.items);assert.equal(keys.length,13);assert.equal(new Set(keys).size,13);
  for(const key of keys)assert.ok(workspaceLabels[key]);
  assert.ok(filteredWorkspaceGroups('calendar').flatMap(g=>g.items).includes('Calendar'));
  assert.ok(filteredWorkspaceGroups('client assistant').flatMap(g=>g.items).includes('Receptionist'));
