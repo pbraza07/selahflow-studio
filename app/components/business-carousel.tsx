@@ -12,7 +12,7 @@ export default function BusinessCarousel({children,count}:{children:ReactNode;co
    const origin=cards[0]?.offsetLeft||0;
    const distances=cards.map(card=>Math.abs(card.offsetLeft-origin-el.scrollLeft));
    const index=distances.length?distances.indexOf(Math.min(...distances)):0;
-   const next={index,start:el.scrollLeft<2,end:el.scrollLeft+el.clientWidth>=el.scrollWidth-2};
+   const next={index,start:el.scrollLeft<=2,end:el.scrollLeft+el.clientWidth>=el.scrollWidth-2};
    setPosition(old=>old.index===next.index&&old.start===next.start&&old.end===next.end?old:next);
   };
   el.scrollTo({left:0,behavior:'instant'});update();
