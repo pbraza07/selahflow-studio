@@ -1,8 +1,8 @@
-# v1.3.170 — Administrator-only commissions and $5 minimum
+# v1.3.170 release handoff — Administrator-only commissions and $5 minimum
 
 Only the primary platform administrator can toggle booking or membership commissions. Owners can review activity, accept revised terms, and expire unpaid checkouts; owner API rejects activation fields with 403. New first-purchase commissions use max(10%, $5), capped at eligible payment basis minus one cent. Free purchases remain exempt. Booking and membership eligibility remain independent, renewals remain exempt, and existing checkout quotes/refunds retain their stored fees. Revised v2 terms require owner acceptance before new fees can be collected; existing activation flags are retained. No business is activated automatically.
 
-Validation/deployment pending. No real payments or customer data changed for verification.
+All application tests, typecheck and production build passed. Deployment verification pending. No real payments or customer data changed for verification.
 
 # v1.3.169 release handoff — Administrator waiver activation
 
