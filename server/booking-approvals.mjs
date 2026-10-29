@@ -51,10 +51,13 @@ export async function confirmBooking(options){
    if(!pending.rows[0]||pending.rows[0].owner_id!==owner||pending.rows[0].status!=='pending'||(expectedReviewer&&expectedReviewer!=='owner'&&pending.rows[0].reviewer!==expectedReviewer))
     throw conflict('This request has already been reviewed or is unavailable.');
   }
+  if(options.teamAccountId){const team=await client.query("SELECT a.id FROM team_accounts a JOIN businesses b ON b.id=a.business_id WHERE a.id=$1 AND a.active=true AND a.must_change_password=false AND a.staff_id=$2 AND b.owner_id=$3 AND b.status='active'",[options.teamAccountId,staff,owner]);if(!team.rows.length)throw conflict('Team access changed. Sign in again.');}
   const prior=await client.query('SELECT id FROM appointments WHERE id=$1 AND owner=$2',[id,owner]);
   if(prior.rowCount){await client.query('COMMIT');return {id,duplicate:true};}
   const settingRow=await client.query('SELECT data FROM settings WHERE owner=$1',[owner]);
   const config=settingRow.rows[0] ? JSON.parse(settingRow.rows[0].data) : {};
+  if(options.teamAccountId){const member=config.staff?.find(s=>s.id===staff),current=services.map(s=>config.services?.find(v=>v.id===s.id));if(!member||current.some((s,i)=>!s||!member.services?.includes(s.id)||s.price!==services[i].price||s.duration!==services[i].duration)||Number(config.buffer||0)!==Number(buffer||0))throw conflict('Team or service details changed. Refresh your calendar.');}
+
   await assertBookingWaiver(client,{owner,config,serviceIds:services.map(s=>s.id),memberNumber:data.memberNumber});
   if(options.autoConfirmRequest)throw conflict('Owner approval is required before payment.');
   if(options.submissionOrigin){
