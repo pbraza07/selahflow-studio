@@ -1,8 +1,12 @@
+# v1.3.171 release handoff — Neutral Google cards
+
+Shared compact and full Places UI Kit cards force the supported light color scheme with a neutral off-white surface, readable dark text, muted green links/buttons and subtle borders. Applies across business pages and expanded reviews, including devices preferring dark mode. Google content, attribution, photos, review links and loading behavior are preserved. No provider configuration, data or payment changes. Validation/deployment pending.
+
 # v1.3.170 release handoff — Administrator-only commissions and $5 minimum
 
 Only the primary platform administrator can toggle booking or membership commissions. Owners can review activity, accept revised terms, and expire unpaid checkouts; owner API rejects activation fields with 403. New first-purchase commissions use max(10%, $5), capped at eligible payment basis minus one cent. Free purchases remain exempt. Booking and membership eligibility remain independent, renewals remain exempt, and existing checkout quotes/refunds retain their stored fees. Revised v2 terms require owner acceptance before new fees can be collected; existing activation flags are retained. No business is activated automatically.
 
-All application tests, typecheck and production build passed. Deployment verification pending. No real payments or customer data changed for verification.
+All 460 tests, typecheck, build and GitHub validation passed. PR #101 merged as 846fc9cfc58e82a6dd8f38dfc575d8e94f68c560. Production dep-dbha12ks728c73crtou0 and staging dep-dbh9ua9iimcc73e8ul10 verified LIVE; commission disclosure/authentication/origin smoke checks passed without real payments. No real payments or customer data changed for verification.
 
 # v1.3.169 release handoff — Administrator waiver activation
 
