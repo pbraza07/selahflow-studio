@@ -23,6 +23,7 @@ test('carousel supports next/previous, keyboard isolation, reduced motion and na
  reduced=true;buttons[1].props.onClick();assert.deepEqual(calls.at(-1),{left:640,behavior:'instant'});
  let prevented=false;track.props.onKeyDown({key:'ArrowLeft',target:el,currentTarget:el,preventDefault:()=>prevented=true});assert.equal(prevented,true);assert.equal(calls.at(-1).left,0);
  prevented=false;track.props.onKeyDown({key:'ArrowRight',target:{tagName:'A'},currentTarget:el,preventDefault:()=>prevented=true});assert.equal(prevented,false);
+ el.scrollLeft=2;events.scroll();assert.equal(globalThis.__carouselState.at(-1)({}).start,true);
  el.scrollLeft=640;events.scroll();assert.deepEqual(globalThis.__carouselState.at(-1)({}),{index:2,start:false,end:true});
  const single=Carousel({count:1,children:[]});assert.equal(single.props['aria-roledescription'],'carousel');
 });
