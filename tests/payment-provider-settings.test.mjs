@@ -27,6 +27,15 @@ test('provider choice persists per business, never activates Helcim or changes S
  await assert.rejects(savePaymentProviderPreference(pool,'unknown',{provider:'helcim'}),/FORBIDDEN/);
  for(const input of [{provider:'paypal'},{provider:'helcim',businessId:'b2'},{provider:'helcim',active:true},{provider:'helcim',bookingEnabled:false},{provider:'helcim',ready:true},null])await assert.rejects(savePaymentProviderPreference(pool,'u1',input),/Choose/);
  assert.equal((await paymentProviderSettings(pool,'u1')).preferredProvider,'stripe');
+ await savePaymentProviderPreference(pool,'u2',{provider:'helcim'});
+ await db.query("UPDATE businesses SET status='archived' WHERE id='b2'");
+ assert.equal((await db.query("SELECT preferred_provider FROM business_payment_preferences WHERE business_id='b2'")).rows[0].preferred_provider,'helcim');
+ await db.query("UPDATE businesses SET status='active' WHERE id='b2'");
+ assert.equal((await paymentProviderSettings(pool,'u2')).preferredProvider,'helcim');
+ await db.query("DELETE FROM businesses WHERE id='b2'");
+ assert.equal((await db.query("SELECT * FROM business_payment_preferences WHERE business_id='b2'")).rows.length,0);
+ await db.query("DELETE FROM users WHERE id='u2'");
+ assert.equal((await paymentProviderSettings(pool,'u1')).preferredProvider,'stripe');
 });
 
 test('provider API protects authentication, origin, size and supplied activation flags',async t=>{
