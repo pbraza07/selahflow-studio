@@ -64,3 +64,11 @@ export async function saveTimeOff(pool,{owner,staff,input,actor}){
  await db.query('UPDATE settings SET data=$2 WHERE owner=$1',[owner,JSON.stringify(c)]);await db.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5)',[randomUUID(),owner,new Date().toISOString(),'team_time_off',JSON.stringify({staff,actor,removed:!!input.remove})]);await db.query('COMMIT');return {ok:true};
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
 }
+/** Keep source templates needed to resolve transfers, while stripping private tracking metadata. */
+export function teamCalendarConfig(config,staff){
+ const overrides=config.sessionOverrides||[];
+ const bases=(config.bookableSessions||[]).filter(s=>s.staff===staff||overrides.some(o=>(o.seriesId||o.id)===s.id&&o.staff===staff));
+ const ids=new Set(bases.map(s=>s.id));
+ const project=s=>Object.fromEntries(['id','seriesId','originalDate','date','start','staff','service','capacity','repeat','cancelled','onlyScheduledTime','duration'].filter(k=>s[k]!==undefined).map(k=>[k,s[k]]));
+ return {bookableSessions:bases.map(project),sessionOverrides:overrides.filter(o=>ids.has(o.seriesId||o.id)).map(project)};
+}
