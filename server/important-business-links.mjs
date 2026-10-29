@@ -10,7 +10,7 @@ export function importantBusinessLinks({slug,accounts=[],staff=[],socialLinks={}
  {title:'Team members · sign-in required',links:[{label:'Team member sign in',path:'/team/login'},{label:'Team member workspace',path:'/team/workspace'}]}];
  const team=accounts.filter(a=>a.active&&staff.some(s=>s.id===a.staff_id&&s.bookingVisible!==false)).map(a=>({label:staff.find(s=>s.id===a.staff_id).name+' · Public profile & booking',path:'/team/'+encodeURIComponent(a.id)}));
  if(team.length)groups.push({title:'Your team’s public pages',links:team});
- const social=publicSocialLinks(socialLinks),links=SOCIAL_PLATFORMS.filter(([id])=>social[id]).map(([id,label])=>({label,path:social[id]}));
+ const social=publicSocialLinks(socialLinks),links=SOCIAL_PLATFORMS.filter(([id])=>social[id]).map(([id,label])=>({label,path:social[id],platform:id}));
  const google=external(googleListingUrl);if(google)links.push({label:'Google business listing',path:google});
  if(address&&!/^Add your /i.test(address)){const url=new URL('https://www.google.com/maps/dir/');url.searchParams.set('api','1');url.searchParams.set('destination',address);links.push({label:'Business directions',path:url.href});}
  if(links.length)groups.push({title:'Saved business links',links});return groups;

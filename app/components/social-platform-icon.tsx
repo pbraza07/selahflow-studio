@@ -1,0 +1,3 @@
+import {Globe} from 'lucide-react';
+import {SOCIAL_LOGOS,socialPlatformForUrl} from '../../server/social-platform-logos.mjs';
+export default function SocialPlatformIcon({platform,url,size=20}:{platform?:string;url?:string;size?:number}){const id=platform||socialPlatformForUrl(url||''),logo=SOCIAL_LOGOS[id as keyof typeof SOCIAL_LOGOS];return logo?<svg className="sf-social-platform-logo" width={size} height={size} viewBox={logo.viewBox} fill="currentColor" aria-hidden="true" focusable="false"><path d={logo.path}/></svg>:<Globe className="sf-social-platform-logo" width={size} height={size} aria-hidden="true"/>;}
