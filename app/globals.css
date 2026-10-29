@@ -2062,3 +2062,19 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 
 .sf-support-banner{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:16px;margin-bottom:20px;border:2px solid currentColor;border-radius:12px;background:var(--surface,#fff);color:var(--text,#173f3a)}
 .sf-support-banner span{flex:1 1 240px}.sf-support-banner button{min-height:44px}
+
+/* Keep Google content neutral even when the device prefers dark mode.
+   Supported Places UI Kit theme tokens style both compact and full cards. */
+.sf-google-ui-kit :is(gmp-place-details,gmp-place-details-compact){
+ color-scheme:light;
+ background-color:#f7f8f6;
+ --gmp-mat-color-surface:#f7f8f6;
+ --gmp-mat-color-on-surface:#24352e;
+ --gmp-mat-color-on-surface-variant:#52625a;
+ --gmp-mat-color-primary:#24574e;
+ --gmp-mat-color-secondary-container:#e6eeea;
+ --gmp-mat-color-on-secondary-container:#204b41;
+ --gmp-mat-color-neutral-container:#edf0eb;
+ --gmp-mat-color-on-neutral-container:#52625a;
+ --gmp-mat-color-outline-decorative:#dce3dc;
+}
