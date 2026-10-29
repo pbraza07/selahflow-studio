@@ -63,6 +63,8 @@ export default function Booking(){
  const automaticTeam=fixedSession||Boolean(serviceDefaultStaff&&!sessionChoice);
  const clientTeamLabel=config?.staff?.find((s:any)=>s.id===staff)?.name||'Session team';
  const pendingSession=useRef<{date:string;start:number;staff:string;service:string}|null>(null);
+ const teamLinkLoaded=useRef(false);
+ useEffect(()=>{if(!config||teamLinkLoaded.current)return;teamLinkLoaded.current=true;const q=new URLSearchParams(window.location.search),sid=q.get('service'),host=q.get('staff'),day=q.get('date'),start=Number(q.get('start'));const service=config.services.find((s:any)=>s.id===sid),member=config.staff.find((s:any)=>s.id===host&&s.services.includes(sid));if(!service||!member||!day||!/^\d{4}-\d{2}-\d{2}$/.test(day)||day<today()||!Number.isInteger(start)||start<0||start>=1440)return;setSelected([sid!]);setStaff(host!);setDate(day);setCalendarAnchor(day);pendingSession.current={date:day,start,staff:host!,service:sid!};setStep(2);},[config]);
  const services=config?.services.filter((s:any)=>selected.includes(s.id))||[];
  const regularPrice=services.reduce((n:number,s:any)=>n+s.price,0),duration=services.reduce((n:number,s:any)=>n+s.duration,0);
  const selectedSessionId=time===null?null:sessionAvailability[time]?.id||null;

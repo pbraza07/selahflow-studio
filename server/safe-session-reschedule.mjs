@@ -1,3 +1,4 @@
+import {isBlocked} from './booking-blockouts.mjs';
 import {assertWeeklyMembershipBooking} from './membership-weekly.mjs';
 import {randomUUID} from 'node:crypto';
 import {getPool} from './database.mjs';
@@ -111,6 +112,7 @@ export async function rescheduleSessionForOwner({owner,input,pool=getPool()}){
   if(move.start<config.open*60||move.start+service.duration+(config.buffer||0)>config.close*60)
    throw Error('Session must fit the selected business hours, including preparation time.');
 
+  if(isBlocked(config,move.date,move.staff,move.start,service.duration+(config.buffer||0)))throw conflict('This time is blocked. Edit the time off or choose another time.');
   const next=rescheduledConfig(config,current,move);
   const instances=sessionsForDate(next,move.date,move.staff);
   const target=instances.find(s=>s.id===move.sessionId);
