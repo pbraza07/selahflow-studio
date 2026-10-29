@@ -10,11 +10,13 @@ export function addressCity(address){
 export function discoveryBusiness(row){
  const {studio_data,logo_version,google_address,google_city,google_region,...business}=row;
  let config={};try{config=JSON.parse(studio_data||'{}');}catch{}
- const ownerAddress=typeof config.address==='string'&&!/^Add your /i.test(config.address)?config.address.trim():'';
- const city=google_city||row.city||addressCity(ownerAddress)||'';
+ const legacyAddress=/^\d+\s/.test(String(row.city||''))?String(row.city).trim():'';
+ const ownerAddress=(typeof config.address==='string'&&!/^Add your /i.test(config.address)?config.address.trim():'')||legacyAddress;
+ const ownerCity=legacyAddress?addressCity(legacyAddress):row.city||'';
+ const city=google_city||ownerCity||addressCity(ownerAddress)||'';
  return {...business,description:String(row.description||'').trim(),city,region:google_region||row.region||'',address:google_address||ownerAddress,hasLogo:Boolean(logo_version),logoVersion:logo_version?new Date(logo_version).toISOString():null,
   // Internal matching fields are stripped by the route before returning the result.
-  _cities:[google_city&&[google_city,google_region].filter(Boolean).join(' '),addressCity(ownerAddress)&&[addressCity(ownerAddress),row.region].filter(Boolean).join(' '),row.city&&[row.city,row.region].filter(Boolean).join(' ')].filter(Boolean)};
+  _cities:[google_city&&[google_city,google_region].filter(Boolean).join(' '),addressCity(ownerAddress)&&[addressCity(ownerAddress),row.region].filter(Boolean).join(' '),ownerCity&&[ownerCity,row.region].filter(Boolean).join(' ')].filter(Boolean)};
 }
 export function matchesDiscovery(business,{q='',city='',industry=''}){
  const contains=(haystack,needle)=>{const terms=searchText(needle);if(String(needle).trim()&&!terms)return String(haystack).includes(String(needle).trim());return terms.split(' ').filter(Boolean).every(word=>searchText(haystack).includes(word));};
