@@ -233,3 +233,21 @@
 @media(max-width:700px){.businessGoogleSection{margin:28px auto;padding:0 20px}}
 
 @media(min-width:701px) and (max-width:1100px){.publicHeader .desktopNav{display:none}.mobileNav{display:block}.mobileNav summary{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;font-weight:750;list-style:none}.mobileNav summary::-webkit-details-marker{display:none}.mobileNav nav{position:absolute;left:16px;right:16px;top:100%;display:flex;flex-direction:column;background:#fff;color:#184e49;border:1px solid #c6d6cb;border-radius:14px;padding:16px;box-shadow:0 20px 40px #184e4926}.mobileNav nav a{display:flex;min-height:48px;padding:12px;border-radius:8px}}
+
+/* Native touch scrolling preserves vertical page gestures and link interactions. */
+.businessCarousel{min-width:0;margin:10px 0 24px}
+.carouselHeading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px}
+.carouselHeading h2{font-size:clamp(22px,3vw,32px);line-height:1.25;margin:0 0 8px;color:#184e49;letter-spacing:-.025em}
+.carouselHeading p{margin:0;color:#526d60;font-size:14px}
+.carouselControls{display:flex;gap:10px;flex-shrink:0}
+.carouselControls button{display:grid;place-items:center;width:46px;height:46px;border:1px solid #c6d6cb;border-radius:50%;background:#fff;color:#184e49;cursor:pointer;transition:background .18s}
+.carouselControls button:hover:not(:disabled){background:#e5eee6}
+.carouselControls button:disabled{opacity:.35;cursor:default}
+.carouselControls button:focus-visible,.carouselTrack:focus-visible{outline:3px solid #184e49;outline-offset:4px}
+.carouselTrack{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 48px)/3);gap:24px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:0;padding:4px 2px 20px;scrollbar-width:thin;scrollbar-color:#9db5a6 #eef2ec;align-items:start;border-radius:18px}
+.carouselTrack>.businessCard{scroll-snap-align:start;min-width:0;box-shadow:0 8px 25px #184e490a;border-radius:20px;padding:24px;transition:border-color .18s}
+.carouselTrack>.businessCard:hover{border-color:#91b4a4}
+.carouselPosition{margin:8px 0 0;color:#526d60;font-size:12px;text-align:right}
+@media(max-width:1000px){.carouselTrack{grid-auto-columns:calc((100% - 24px)/2)}}
+@media(max-width:700px){.carouselTrack{grid-auto-columns:88%;gap:16px;margin-right:-20px;padding-right:20px;scroll-padding-right:20px;scroll-snap-type:x mandatory}.carouselHeading{align-items:flex-start;gap:12px}.carouselHeading h2{font-size:25px}.carouselControls{gap:6px}.carouselControls button{width:44px;height:44px}.carouselTrack>.businessCard{padding:20px}.carouselPosition{text-align:left}}
+@media(prefers-reduced-motion:reduce){.carouselControls button,.carouselTrack>.businessCard{transition:none}}
