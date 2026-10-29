@@ -28,7 +28,7 @@ test('owner background refresh pauses only in hidden tab and resumes when visibl
 test('owner API preserves payload and tenant context while loading business name in parallel',async()=>{
  const code=await source('lib/studio-handler.ts');
  assert.match(code,/const \[a,e,roster,membershipPayments,businessDetails\]=await Promise\.all\(/);
- assert.match(code,/SELECT name,business_model,industry FROM businesses WHERE owner_id=\$1 AND status='active'/);
+ assert.match(code,/SELECT name,description,city,region,business_model,industry FROM businesses WHERE owner_id=\$1 AND status='active'/);
  assert.match(code,/reportBusinessName:businessDetails\.rows\[0\]\?\.name/);
  assert.match(code,/decorateOwnerAppointments\(visits,roster\)/);
  assert.match(code,/visibleReportPayments/);
