@@ -1,3 +1,9 @@
+# v1.3.176 verified rollout
+
+PR #108 merged as 50273c5c1324827cb8fcde6e23c0b3b10a6db454. Production dep-dbhpeu7b9u1s73a922g0 LIVE and final staging 693efd7c9bd9263fd6ebac3f9d1d04e18d3367a6 / dep-dbhpamcs728c73d9fhtg LIVE. All 480 local tests, typecheck and build passed; final GitHub validation 40934499515 / job 123661342391 passed. Staging live access/origin/media protection checks passed. Production checked startup error log has no entries. Migration 071 applied in staging and production startup succeeded. Private authenticated owner/team browser walkthrough and physical-phone acceptance were not performed. No real team credentials, client booking, photo, payment or outgoing message was created for QA.
+
+Removed all six automatic client-side preview appointments and the Show samples toggle. Empty businesses, including Crawford Hair Company, display only saved records. No database deletion was needed for those virtual entries. Owner setup: Settings → Team members → save roster, then Settings → Team logins → email → Create login. Copy credentials privately; member replaces temporary password on first sign-in. Team profiles, private client photos/notes, shareable booking pages and calendar time off ship in the same release. See docs/TEAM_MEMBER_GUIDE.md. Earlier pending labels below describe implementation history; this verified rollout supersedes them.
+
 # v1.3.176 sample appointment removal
 
 Removed the client-side six-appointment preview and its Show samples toggle from the shared owner dashboard. Empty businesses, including Crawford Hair Company, now show their actual empty calendar. The preview was never saved to the database; no real appointment, client or payment is deleted. Applies to all existing and new businesses. Verification and deployment pending.
