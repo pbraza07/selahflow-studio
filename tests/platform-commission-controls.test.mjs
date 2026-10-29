@@ -25,11 +25,11 @@ test('owners can record terms acceptance with both commissions off for later ini
  let compiled=ts.transpileModule(await readFile(new URL('../app/components/business-commissions.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
  const settings={bookingEnabled:false,membershipEnabled:false,acceptedAt:null,ratePercent:10,recent:[],totals:[],stripeSetup:{ready:false}};
  compiled=compiled.replace(/import \{[^\n]+\} from "react\/jsx-runtime";/,"const _jsx=(type,props)=>({type,props}),_jsxs=_jsx,_Fragment='fragment';")
-  .replace(/import \{ useEffect, useState \} from 'react';/,`let index=0;const useEffect=()=>{},useState=initial=>{const i=index++;return [i===0?${JSON.stringify(settings)}:i===3?true:initial,()=>{}];};`);
+  .replace(/import \{ useEffect, useState \} from 'react';/,`let index=0;const useEffect=()=>{},useState=initial=>{const i=index++;return [i===0?${JSON.stringify(settings)}:i===1?true:initial,()=>{}];};`);
  const {default:OwnerControls}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
  const inputs=[],buttons=[];function visit(n){if(!n||typeof n!=='object')return;if(n.type==='input')inputs.push(n);if(n.type==='button')buttons.push(n);for(const c of [n.props?.children].flat(Infinity))visit(c);}visit(OwnerControls());
- assert.equal(inputs.length,3,'terms acceptance is available while both commission conditions are off');assert.equal(inputs[2].props.checked,true);
- const save=buttons.find(b=>b.props.children==='Save commission settings');assert.equal(save.props.disabled,false,'acceptance alone does not require charging readiness');
+ assert.equal(inputs.length,1,'terms acceptance is available while both commission conditions are off');assert.equal(inputs[0].props.checked,true);
+ const save=buttons.find(b=>b.props.children==='Accept commission terms');assert.equal(save.props.disabled,false,'acceptance alone does not require charging readiness');
  const requests=[];t.mock.method(globalThis,'fetch',async(url,options)=>{requests.push({url,options});return {ok:true,json:async()=>({...settings,acceptedAt:'2026-10-24T00:00:00Z'})};});
- await save.props.onClick();assert.deepEqual(JSON.parse(requests[0].options.body),{action:'save',bookingEnabled:false,membershipEnabled:false,acceptTerms:true});
+ await save.props.onClick();assert.deepEqual(JSON.parse(requests[0].options.body),{action:'save',acceptTerms:true});
 });

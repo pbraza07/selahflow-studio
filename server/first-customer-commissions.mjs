@@ -1,12 +1,12 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {stripeApi,paymentConfigured} from './membership-payments.mjs';
-export const COMMISSION_TERMS='first-booking-and-membership-10-v1';
-export function commissionCents(cents){if(!Number.isSafeInteger(cents)||cents<0)throw Error('Invalid commission basis.');return Math.min(Math.max(0,cents-1),Math.round(cents/10));}
+export const COMMISSION_TERMS='first-booking-and-membership-10-min5-v2';
+export function commissionCents(cents){if(!Number.isSafeInteger(cents)||cents<0)throw Error('Invalid commission basis.');return Math.min(Math.max(0,cents-1),Math.max(500,Math.round(cents/10)));}
 export async function commissionSettings(db,businessId){
  const policy=(await db.query('SELECT booking_enabled,membership_enabled,booking_enabled_at,membership_enabled_at,terms_version,accepted_at FROM business_commission_policies WHERE business_id=$1',[businessId])).rows[0];
  const totals=(await db.query("SELECT kind,count(*) FILTER(WHERE status IN ('paid','refunded'))::int AS paid_count,COALESCE(sum(fee_cents) FILTER(WHERE status IN ('paid','refunded')),0)::bigint AS collected_cents,COALESCE(sum(refunded_fee_cents),0)::bigint AS refunded_cents FROM first_customer_commissions WHERE business_id=$1 GROUP BY kind",[businessId])).rows;
  const recent=(await db.query('SELECT id,kind,source_id,status,gross_cents,eligible_cents,fee_cents,refunded_fee_cents,created_at,paid_at FROM first_customer_commissions WHERE business_id=$1 ORDER BY created_at DESC LIMIT 30',[businessId])).rows;
- return {bookingEnabled:policy?.booking_enabled===true,membershipEnabled:policy?.membership_enabled===true,termsVersion:COMMISSION_TERMS,acceptedAt:policy?.terms_version===COMMISSION_TERMS?policy.accepted_at:null,ratePercent:10,configured:paymentConfigured(),totals:totals.map(t=>({...t,collected_cents:Number(t.collected_cents),refunded_cents:Number(t.refunded_cents)})),recent};
+ return {bookingEnabled:policy?.booking_enabled===true,membershipEnabled:policy?.membership_enabled===true,termsVersion:COMMISSION_TERMS,acceptedAt:policy?.terms_version===COMMISSION_TERMS?policy.accepted_at:null,ratePercent:10,minimumFeeCents:500,configured:paymentConfigured(),totals:totals.map(t=>({...t,collected_cents:Number(t.collected_cents),refunded_cents:Number(t.refunded_cents)})),recent};
 }
 export async function saveCommissionSettings(db,{businessId,actor,bookingEnabled,membershipEnabled,acceptTerms}){
  if(typeof bookingEnabled!=='boolean'||typeof membershipEnabled!=='boolean')throw Error('Choose both commission settings.');
@@ -15,14 +15,14 @@ export async function saveCommissionSettings(db,{businessId,actor,bookingEnabled
  const old=(await db.query('SELECT * FROM business_commission_policies WHERE business_id=$1 FOR UPDATE',[businessId])).rows[0];
  const enabling=(bookingEnabled&&!old?.booking_enabled)||(membershipEnabled&&!old?.membership_enabled);
  if(enabling&&business.status!=='active')throw Error('Business must be active before enabling commissions.');
- if(enabling&&(old?.terms_version!==COMMISSION_TERMS||!old?.accepted_at)&&acceptTerms!==true)throw Error('Review and accept the 10% commission terms before activation.');
+ if(enabling&&(old?.terms_version!==COMMISSION_TERMS||!old?.accepted_at)&&acceptTerms!==true)throw Error('Review and accept the 10% or $5 minimum commission terms before activation.');
  // Turning a condition off must remain possible when Stripe is unavailable.
  if(enabling){
   if(!paymentConfigured())throw Error('Configure Stripe payments before activating commissions.');
   if(!(await db.query("SELECT 1 FROM merchant_accounts WHERE business_id=$1 AND provider='stripe' AND charges_enabled=true AND onboarding_complete=true",[businessId])).rows.length)throw Error('Connect and verify this business Stripe account first.');
  }
  await db.query(`INSERT INTO business_commission_policies(business_id,booking_enabled,membership_enabled,booking_enabled_at,membership_enabled_at,terms_version,accepted_by,accepted_at) VALUES($1,$2,$3,CASE WHEN $2 THEN now() END,CASE WHEN $3 THEN now() END,$4,$5,CASE WHEN $6 THEN now() END) ON CONFLICT(business_id) DO UPDATE SET booking_enabled=$2,membership_enabled=$3,booking_enabled_at=CASE WHEN $2 THEN COALESCE(business_commission_policies.booking_enabled_at,now()) ELSE business_commission_policies.booking_enabled_at END,membership_enabled_at=CASE WHEN $3 THEN COALESCE(business_commission_policies.membership_enabled_at,now()) ELSE business_commission_policies.membership_enabled_at END,terms_version=CASE WHEN $6 THEN $4 ELSE business_commission_policies.terms_version END,accepted_by=CASE WHEN $6 THEN $5 ELSE business_commission_policies.accepted_by END,accepted_at=CASE WHEN $6 THEN now() ELSE business_commission_policies.accepted_at END,updated_at=now()`,[businessId,bookingEnabled,membershipEnabled,COMMISSION_TERMS,actor,acceptTerms===true]);
- await db.query("INSERT INTO events(id,owner,created,kind,data) SELECT $1,owner_id,$2,'commission_settings',$3 FROM businesses WHERE id=$4",[randomUUID(),new Date().toISOString(),JSON.stringify({bookingEnabled,membershipEnabled,ratePercent:10,termsVersion:COMMISSION_TERMS,actor}),businessId]);
+ await db.query("INSERT INTO events(id,owner,created,kind,data) SELECT $1,owner_id,$2,'commission_settings',$3 FROM businesses WHERE id=$4",[randomUUID(),new Date().toISOString(),JSON.stringify({bookingEnabled,membershipEnabled,ratePercent:10,minimumFeeCents:500,termsVersion:COMMISSION_TERMS,actor}),businessId]);
  return commissionSettings(db,businessId);
 }
 /** Caller owns a transaction. Change one condition without overwriting the other or accepting business terms. */
@@ -95,4 +95,11 @@ export async function refundCommission(db,{businessId,account,charge},api=stripe
  const delta=Math.max(0,target-Number(fee.amount_refunded||0));
  if(delta)await api('application_fees/'+feeId+'/refunds',{idempotencyKey:'commission-refund-'+r.id+'-'+target,params:{amount:delta}});
  await db.query("UPDATE first_customer_commissions SET refunded_fee_cents=$1,status=CASE WHEN $1=fee_cents THEN 'refunded' ELSE 'paid' END,updated_at=now() WHERE id=$2 AND business_id=$3",[Math.min(r.fee_cents,Math.max(target,Number(fee.amount_refunded||0))),r.id,businessId]);
+}
+
+/** Owner consent never changes activation; serialize it against administrator toggles. */
+export async function acceptCommissionTerms(db,{businessId,actor}){
+ await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[businessId+':commission-settings']);
+ const old=(await db.query('SELECT booking_enabled,membership_enabled FROM business_commission_policies WHERE business_id=$1 FOR UPDATE',[businessId])).rows[0];
+ return saveCommissionSettings(db,{businessId,actor,bookingEnabled:old?.booking_enabled===true,membershipEnabled:old?.membership_enabled===true,acceptTerms:true});
 }

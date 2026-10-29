@@ -21,8 +21,8 @@ async function fixture(t){
  const identity=async(businessId='b1',number='AM010100',key='alex member|2000-01-01')=>query('INSERT INTO business_member_ids(business_id,member_number,identity_key) VALUES($1,$2,$3)',[businessId,number,key]);
  return {pg,db,pool,tx,activate,identity};
 }
-test('10% calculation is cents-safe with no legacy minimum or maximum',()=>{
- for(const [n,fee]of [[0,0],[100,10],[9999,1000],[7000,700],[40000,4000]])assert.equal(commissionCents(n),fee);
+test('commission uses 10% or $5 minimum with a payment ceiling',()=>{
+ for(const [n,fee]of [[0,0],[1,0],[100,99],[499,498],[500,499],[501,500],[3000,500],[4999,500],[5000,500],[5010,501],[9999,1000],[7000,700],[40000,4000]])assert.equal(commissionCents(n),fee);
  for(const n of [-1,NaN,Infinity,1.5])assert.throws(()=>commissionCents(n));
 });
 test('activation is prospective, requires disclosed terms and a ready business account; each condition can be independently paused',async t=>{
@@ -115,13 +115,14 @@ test('actual owner commission API enforces authentication, origin, request size,
  const {db,pool}=await fixture(t);globalThis.__commissionPool=pool;globalThis.__commissionActor=null;t.after(()=>{delete globalThis.__commissionPool;delete globalThis.__commissionActor;});
  let source=ts.transpileModule(await readFile(new URL('../app/api/studio/commissions/route.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
  source=source.replace(/import \{ getPool \}[^\n]+;/,'const getPool=()=>globalThis.__commissionPool;').replace(/import \{ requireOwner \}[^\n]+;/,"const requireOwner=async()=>{if(!globalThis.__commissionActor)throw Error('AUTH_REQUIRED');return globalThis.__commissionActor;};");
- source=source.replace(/import \{ assertCommissionStripeReady, commissionStripeStatus \}[^\n]+;/,'const assertCommissionStripeReady=async()=>({ready:true});const commissionStripeStatus=async()=>({ready:true});');
+ source=source.replace(/import \{ commissionStripeStatus \}[^\n]+;/,'const assertCommissionStripeReady=async()=>({ready:true});const commissionStripeStatus=async()=>({ready:true});');
  for(const name of ['security','first-customer-commissions'])source=source.replaceAll("'../../../../server/"+name+".mjs'",JSON.stringify(new URL('../server/'+name+'.mjs',import.meta.url).href));
  const route=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64')),origin=new URL(process.env.APP_URL||process.env.RENDER_EXTERNAL_URL||'https://example.test').origin;
  const req=(body,from=origin)=>new Request(origin+'/api/studio/commissions',{method:'POST',headers:{'Content-Type':'application/json',Origin:from},body:JSON.stringify(body)});
  assert.equal((await route.GET(new Request(origin))).status,401);globalThis.__commissionActor='u1';assert.equal((await route.POST(req({action:'save'},'https://evil.test'))).status,403);
- const consent=await route.POST(req({action:'save',bookingEnabled:false,membershipEnabled:false,acceptTerms:true}));assert.equal(consent.status,200);const consentData=await consent.json();assert.ok(consentData.acceptedAt);assert.equal(consentData.bookingEnabled,false);assert.equal(consentData.membershipEnabled,false);
- const r=await route.POST(req({action:'save',businessId:'b2',bookingEnabled:true,membershipEnabled:true,acceptTerms:true}));assert.equal(r.status,200);assert.match(r.headers.get('cache-control'),/no-store/);assert.equal((await commissionSettings(db,'b1')).bookingEnabled,true);assert.equal((await commissionSettings(db,'b2')).bookingEnabled,false);
+ const consent=await route.POST(req({action:'save',acceptTerms:true}));assert.equal(consent.status,200);const consentData=await consent.json();assert.ok(consentData.acceptedAt);assert.equal(consentData.bookingEnabled,false);assert.equal(consentData.membershipEnabled,false);
+ assert.equal((await route.POST(req({action:'save',bookingEnabled:false,membershipEnabled:false,acceptTerms:true}))).status,403);
+ const r=await route.POST(req({action:'save',businessId:'b2',bookingEnabled:true,membershipEnabled:true,acceptTerms:true}));assert.equal(r.status,403);assert.match(r.headers.get('cache-control'),/no-store/);assert.equal((await commissionSettings(db,'b1')).bookingEnabled,false);assert.equal((await commissionSettings(db,'b2')).bookingEnabled,false);
  assert.equal((await route.POST(req({action:'save',text:'x'.repeat(2000)}))).status,400);
 });
 test('a refund received before checkout reconciliation is applied when the fee settles, with no second first-purchase fee',async t=>{
@@ -186,4 +187,13 @@ test('platform changes are independently audited and disabling survives lost Str
  await assert.rejects(tx(()=>setPlatformCommissionEnabled(db,{businessId:'b2',actor:'primary',kind:'membership',enabled:true})),/accept/);
  await assert.rejects(tx(()=>setPlatformCommissionEnabled(db,{businessId:'b1',actor:'primary',kind:'all',enabled:true})),/Choose/);
  await assert.rejects(tx(()=>setPlatformCommissionEnabled(db,{businessId:'b1',actor:'primary',kind:'booking',enabled:'false'})),/Choose/);
+});
+
+test('minimum applies independently to both first purchases and outdated consent cannot collect it',async t=>{
+ const {db,tx,activate,identity}=await fixture(t);await activate('b1');await identity();
+ const args={businessId:'b1',memberNumber:'AM010100',account:'acct_one',grossCents:3000};
+ await db.query("UPDATE business_commission_policies SET terms_version='first-booking-and-membership-10-v1' WHERE business_id='b1'");
+ assert.equal(await tx(()=>reserveCommission(db,{...args,kind:'membership',sourceId:'old'})),null);
+ await activate('b1');
+ for(const kind of ['booking','membership']){const claim=await tx(()=>reserveCommission(db,{...args,kind,sourceId:kind}));assert.equal(claim.fee_cents,500);}
 });
