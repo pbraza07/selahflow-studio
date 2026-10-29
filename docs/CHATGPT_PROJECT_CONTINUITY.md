@@ -1,6 +1,6 @@
 # v1.3.171 release handoff — Neutral Google cards
 
-Shared compact and full Places UI Kit cards force the supported light color scheme with a neutral off-white surface, readable dark text, muted green links/buttons and subtle borders. Applies across business pages and expanded reviews, including devices preferring dark mode. Google content, attribution, photos, review links and loading behavior are preserved. No provider configuration, data or payment changes. Validation/deployment pending.
+Shared compact and full Places UI Kit cards force the supported light color scheme with a neutral off-white surface, readable dark text, muted green links/buttons and subtle borders. Applies across business pages and expanded reviews, including devices preferring dark mode. Google content, attribution, photos, review links and loading behavior are preserved. No provider configuration, data or payment changes. All 460 tests, typecheck, production build and GitHub validation 40862283277 passed. PR #102 merged as 33775ed70c3fe6ebf4e88f70326d0c1b7111dc2e. Production dep-dbhiignb9u1s739tibi0 and staging dep-dbhifkifngtc73boie20 verified LIVE. Live browser verified compact/full card backgrounds rgb(247,248,246), forced light scheme, photos, attribution and expanded reviews. Both environments passed health/version and commission protection smoke checks. Screenshot: docs/screenshots/google-neutral-v1.3.171.jpg. Physical iPhone dark-mode acceptance was not performed.
 
 # v1.3.170 release handoff — Administrator-only commissions and $5 minimum
 

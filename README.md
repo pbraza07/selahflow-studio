@@ -1,6 +1,6 @@
 # v1.3.171 release handoff — Neutral Google cards
 
-Shared compact and full Places UI Kit cards force the supported light color scheme with a neutral off-white surface, readable dark text, muted green links/buttons and subtle borders. Applies across business pages and expanded reviews, including devices preferring dark mode. Google content, attribution, photos, review links and loading behavior are preserved. No provider configuration, data or payment changes. Validation/deployment pending.
+Shared compact and full Places UI Kit cards force the supported light color scheme with a neutral off-white surface, readable dark text, muted green links/buttons and subtle borders. Applies across business pages and expanded reviews, including devices preferring dark mode. Google content, attribution, photos, review links and loading behavior are preserved. No provider configuration, data or payment changes. All 460 tests, typecheck, production build and GitHub validation 40862283277 passed. PR #102 merged as 33775ed70c3fe6ebf4e88f70326d0c1b7111dc2e. Production dep-dbhiignb9u1s739tibi0 and staging dep-dbhifkifngtc73boie20 verified LIVE. Live browser verified compact/full card backgrounds rgb(247,248,246), forced light scheme, photos, attribution and expanded reviews. Both environments passed health/version and commission protection smoke checks. Screenshot: docs/screenshots/google-neutral-v1.3.171.jpg. Physical iPhone dark-mode acceptance was not performed.
 
 # v1.3.170 release handoff — Administrator-only commissions and $5 minimum
 
@@ -198,7 +198,7 @@ Verified LIVE: staging dep-dbgdbgui0phs73c6n7rg (c66e66a93022cf16aea5a0eba171871
 
 Local, GitHub validation 40544366209/job 122330868733 and Render staging passed all 424 tests, typecheck and builds. Live workflow 40544366309 rerun/job 122338369953 passed after deployment, including first-customer-commission read-only checks; its initial pre-deployment attempt had correctly reported the expected staging version not ready. Staging and canonical production passed health/version, booking/payment-shell, protected-API, invalid invitation/no-store, exact PDF bytes, tenant-scoped assistant instructions/published knowledge and synthetic unknown-ID status checks. Startup preflights verify dedicated database/role, schema CREATE true and zero unowned tables; canonical Gmail readiness remains configured/setupComplete true, needsReconnect false, authorization stored_connection_not_live_verified. No error-level entries in the checked canonical startup window. APP_URL and live Stripe webhook were read back at the canonical origin. Google Cloud remains Site Unavailable in this browser; the new callback is user-confirmed, obsolete callbacks have not been inspected/removed. Saved historical messages/previously issued provider sessions were not rewritten. No real booking, charge or outbound test email was created for verification.
 
-**Release source: v1.3.171 — deployment verification pending; prior v1.3.170 verified live.**
+**Release source: v1.3.171 — verified live in staging and production.**
 
 # v1.3.154 release handoff — canonical URL deployment verified LIVE
 
