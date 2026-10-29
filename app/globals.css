@@ -2078,3 +2078,24 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
  --gmp-mat-color-on-neutral-container:#52625a;
  --gmp-mat-color-outline-decorative:#dce3dc;
 }
+
+/* Provider setup is shared by all business workspaces. */
+.sf-owner-payment-setup {min-width:0;}
+.sf-owner-payment-setup > section {margin-top:24px;}
+.sf-provider-choice {border:1px solid var(--line,#c7d5ca);border-radius:12px;padding:16px;margin:16px 0;min-width:0;}
+.sf-provider-choice label {display:flex!important;flex-direction:row;align-items:flex-start;gap:12px;padding:12px 4px;cursor:pointer;}
+.sf-provider-choice input[type=radio] {width:20px;height:20px;flex:0 0 20px;accent-color:var(--sf-button,#397355);margin-top:2px;}
+.sf-provider-choice small {display:block;margin-top:4px;line-height:1.5;}
+.sf-payment-table-scroll {max-width:100%;overflow-x:auto;border:1px solid var(--line,#c7d5ca);border-radius:10px;}
+.sf-payment-table-scroll:focus-visible {outline:2px solid var(--sf-button,#397355);outline-offset:3px;}
+.sf-payment-comparison table {border-collapse:collapse;width:100%;min-width:640px;white-space:normal;}
+.sf-payment-comparison caption {text-align:left;font-weight:600;padding:12px;}
+.sf-payment-comparison th,.sf-payment-comparison td {padding:12px;text-align:left;vertical-align:top;border-top:1px solid var(--line,#c7d5ca);white-space:normal;line-height:1.55;}
+.sf-payment-comparison thead th {background:var(--sf-button,#397355);color:var(--sf-on-button,#fff);}
+.sf-payment-comparison tbody th {width:23%;}
+.sf-payment-comparison td {width:38.5%;}
+.sf-payment-sources {line-height:1.9;overflow-wrap:anywhere;}
+.sf-helcim-setup {padding:16px;border:1px solid var(--line,#c7d5ca);border-radius:12px;}
+.sf-helcim-setup li {margin:10px 0;line-height:1.6;}
+.sf-existing-stripe-setup {border-top:1px solid var(--line,#c7d5ca);padding-top:24px;}
+@media(max-width:640px){.sf-payment-comparison th,.sf-payment-comparison td{padding:10px;}.sf-helcim-setup{padding:12px;}}

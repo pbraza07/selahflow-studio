@@ -2,7 +2,7 @@ import {stripeApi,createStripeMerchantAccount,paymentConfigured} from './members
 import {assertSandboxPayments,isStaging} from './staging-safety.mjs';
 
 export async function businessStripeDirectory(pool){
- const rows=(await pool.query("SELECT b.id,b.slug,b.name,b.status,a.external_account_id AS account_id,COALESCE(a.charges_enabled,false) AS charges_enabled,COALESCE(a.onboarding_complete,false) AS onboarding_complete,a.updated_at FROM businesses b LEFT JOIN merchant_accounts a ON a.business_id=b.id ORDER BY b.name,b.id")).rows;
+ const rows=(await pool.query("SELECT b.id,b.slug,b.name,b.status,a.external_account_id AS account_id,COALESCE(a.charges_enabled,false) AS charges_enabled,COALESCE(a.onboarding_complete,false) AS onboarding_complete,a.updated_at,COALESCE(p.preferred_provider,'stripe') AS preferred_provider,p.helcim_requested_at FROM businesses b LEFT JOIN merchant_accounts a ON a.business_id=b.id LEFT JOIN business_payment_preferences p ON p.business_id=b.id ORDER BY b.name,b.id")).rows;
  return {configured:paymentConfigured(),sandbox:isStaging(),businesses:rows.map(b=>({...b,ready:paymentConfigured()&&b.status==='active'&&b.charges_enabled===true&&b.onboarding_complete===true}))};
 }
 export async function synchronizeBusinessStripe(pool,businessId,{createMissing=false,origin='',api=stripeApi,createAccount=createStripeMerchantAccount}={}){

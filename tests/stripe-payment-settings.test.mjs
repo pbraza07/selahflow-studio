@@ -29,8 +29,8 @@ test('Stripe settings render loading, unavailable, onboarding and ready states w
 });
 test('one Stripe setup entry is wired under Settings and onboarding returns reopen that category',async()=>{
  const [dashboard,memberships,css]=await Promise.all(['app/studio/owner-dashboard.tsx','app/components/owner-memberships.tsx','app/globals.css'].map(p=>readFile(new URL('../'+p,import.meta.url),'utf8')));
- assert.match(dashboard,/id:'payments',title:'Stripe payments'/);
- assert.match(dashboard,/settingsTab==='payments'&&<OwnerStripePayments\/>/);
+ assert.match(dashboard,/id:'payments',title:'Payment setup'/);
+ assert.match(dashboard,/settingsTab==='payments'&&<OwnerPaymentSetup\/>/);
  assert.match(dashboard,/status==='connected'\|\|status==='retry'/);
  assert.match(dashboard,/setViewState\('Settings'\);setSettingsTab\('payments'\)/);
  assert.match(dashboard,/<OwnerMemberships onOpenPayments=/);
