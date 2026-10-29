@@ -1,3 +1,7 @@
+# v1.3.180 release handoff — Business owner PDF guide
+
+Dashboard header and searchable Owner guide menu open a 13-page guide viewer with Back, Open and Download controls. Important URLs also links to the PDF. Covers profile, services, bookable sessions, appointments/time off, memberships, team access/profiles/push, branding/sharing, payments, questions/approvals/waivers, clients/communications/reports and troubleshooting. Clickable contents, PDF bookmarks and Back to dashboard on every page. Environment-specific PDFs return through the existing protected /studio/owner route, which resolves the signed-in business; no account/client data is embedded. Helcim remains activation request only. No migrations, payments or outgoing messages. Verification/deployment pending.
+
 # v1.3.179 verified LIVE — Social platform logos
 
 PR #111 merged as e551683c9ae1918d1bdb2d01facd6fed2207f609. Final staging 860cea6c812a552c8deb3556f0d00bdce4e015a3 / dep-dbhqd9f1f1fs73e3pot0 and production dep-dbhqk4s9v7es73bp5vs0 verified LIVE. All 487 local and final staging tests, typecheck and builds passed; final GitHub validation 40945653419 passed. Existing navigation harnesses load the actual shared icon component. Production browser verified Crawford Hair Company’s Instagram SVG, preserved href/target/rel and readable dark-header appearance; Arcila’s public header also renders its saved platform logo. Source/licensing records are under public/brand/social. Screenshot: docs/screenshots/social-platform-logos-v1.3.179.jpg.
