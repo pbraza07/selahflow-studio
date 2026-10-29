@@ -1,3 +1,7 @@
+# v1.3.176 sample appointment removal
+
+Removed the client-side six-appointment preview and its Show samples toggle from the shared owner dashboard. Empty businesses, including Crawford Hair Company, now show their actual empty calendar. The preview was never saved to the database; no real appointment, client or payment is deleted. Applies to all existing and new businesses. Verification and deployment pending.
+
 # v1.3.176 release handoff — Team member workspaces (implementation; deployment verification pending)
 
 Owner Settings → Team logins creates/resets/disables one separate login for each saved staff record. Existing server-enforced package roster limits and platform administrator overrides remain authoritative; no extra seats or accounts are provisioned automatically. Generated one-time temporary credentials require rotation; resets revoke sessions. Team accounts/cookies/tables are separate from owner accounts and cannot authenticate to owner APIs. Removed/disabled staff and inactive businesses lose portal/public access.
