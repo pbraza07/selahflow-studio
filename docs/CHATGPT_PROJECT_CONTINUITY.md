@@ -1,6 +1,12 @@
+# v1.3.174 release handoff — Soft business-logo presentation
+
+Business logos use consistent light neutral gradient panels, rounded image edges, subtle borders/shadows and balanced spacing. Discovery categories appear below the logo panel so all businesses have the same brand area. Shared header, business home and owner brand preview use matching treatments. Original uploaded assets, colors, transparency and full logo proportions are preserved; no blend modes, recoloring or background removal. Validation/deployment pending.
+
 # v1.3.173 release handoff — Discover business carousel
 
-Discover search results use a horizontal native-scroll carousel with mobile next-card peeking, snap points, previous/next controls, keyboard arrows, position feedback and reduced-motion support. Search, URL history, business branding, Google photos/reviews, booking and directions links remain intact. No automatic rotation, data or payment changes. Validation/deployment pending.
+Discover search results use a horizontal native-scroll carousel with mobile next-card peeking, snap points, previous/next controls, keyboard arrows, position feedback and reduced-motion support. Search, URL history, business branding, Google photos/reviews, booking and directions links remain intact. No automatic rotation, data or payment changes. Verified v1.3.173 LIVE in production (PRs #104/#105, final 0d3f89d2af2a9c456a522a97f6f82cc0255a8137, dep-dbhl0eh5efls738vud4g) and staging (81ea3c524df1ec5c31cc3433baa572acd4e482a4, dep-dbhl0bon74is73eatvs0). All 465 tests, typecheck and build passed. GitHub 40884711640 passed; final 40886352623 passed on retry after the known intermittent push-key fixture failure, which also passed in isolation. Browser verified carousel start/end boundaries, horizontal movement, no page overflow, one-result/empty-result/clear searches and retained booking links; staging controls verified. Physical-phone swiping was not tested. No data/payment/provider changes.
+
+
 
 # v1.3.172 release handoff — Payment setup and Helcim activation requests
 

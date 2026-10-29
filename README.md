@@ -1,6 +1,12 @@
+# v1.3.174 release handoff — Soft business-logo presentation
+
+Business logos use consistent light neutral gradient panels, rounded image edges, subtle borders/shadows and balanced spacing. Discovery categories appear below the logo panel so all businesses have the same brand area. Shared header, business home and owner brand preview use matching treatments. Original uploaded assets, colors, transparency and full logo proportions are preserved; no blend modes, recoloring or background removal. Validation/deployment pending.
+
 # v1.3.173 release handoff — Discover business carousel
 
-Discover search results use a horizontal native-scroll carousel with mobile next-card peeking, snap points, previous/next controls, keyboard arrows, position feedback and reduced-motion support. Search, URL history, business branding, Google photos/reviews, booking and directions links remain intact. No automatic rotation, data or payment changes. Validation/deployment pending.
+Discover search results use a horizontal native-scroll carousel with mobile next-card peeking, snap points, previous/next controls, keyboard arrows, position feedback and reduced-motion support. Search, URL history, business branding, Google photos/reviews, booking and directions links remain intact. No automatic rotation, data or payment changes. Verified v1.3.173 LIVE in production (PRs #104/#105, final 0d3f89d2af2a9c456a522a97f6f82cc0255a8137, dep-dbhl0eh5efls738vud4g) and staging (81ea3c524df1ec5c31cc3433baa572acd4e482a4, dep-dbhl0bon74is73eatvs0). All 465 tests, typecheck and build passed. GitHub 40884711640 passed; final 40886352623 passed on retry after the known intermittent push-key fixture failure, which also passed in isolation. Browser verified carousel start/end boundaries, horizontal movement, no page overflow, one-result/empty-result/clear searches and retained booking links; staging controls verified. Physical-phone swiping was not tested. No data/payment/provider changes.
+
+
 
 # v1.3.172 release handoff — Payment setup and Helcim activation requests
 
@@ -214,7 +220,7 @@ Verified LIVE: staging dep-dbgdbgui0phs73c6n7rg (c66e66a93022cf16aea5a0eba171871
 
 Local, GitHub validation 40544366209/job 122330868733 and Render staging passed all 424 tests, typecheck and builds. Live workflow 40544366309 rerun/job 122338369953 passed after deployment, including first-customer-commission read-only checks; its initial pre-deployment attempt had correctly reported the expected staging version not ready. Staging and canonical production passed health/version, booking/payment-shell, protected-API, invalid invitation/no-store, exact PDF bytes, tenant-scoped assistant instructions/published knowledge and synthetic unknown-ID status checks. Startup preflights verify dedicated database/role, schema CREATE true and zero unowned tables; canonical Gmail readiness remains configured/setupComplete true, needsReconnect false, authorization stored_connection_not_live_verified. No error-level entries in the checked canonical startup window. APP_URL and live Stripe webhook were read back at the canonical origin. Google Cloud remains Site Unavailable in this browser; the new callback is user-confirmed, obsolete callbacks have not been inspected/removed. Saved historical messages/previously issued provider sessions were not rewritten. No real booking, charge or outbound test email was created for verification.
 
-**Release source: v1.3.173 — verified live in staging and production; Helcim collection remains pending.**
+**Release source: v1.3.174 — verified live in staging and production; Helcim collection remains pending.**
 
 # v1.3.154 release handoff — canonical URL deployment verified LIVE
 
