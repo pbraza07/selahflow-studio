@@ -1,3 +1,7 @@
+# v1.3.173 release handoff — Discover business carousel
+
+Discover search results use a horizontal native-scroll carousel with mobile next-card peeking, snap points, previous/next controls, keyboard arrows, position feedback and reduced-motion support. Search, URL history, business branding, Google photos/reviews, booking and directions links remain intact. No automatic rotation, data or payment changes. Validation/deployment pending.
+
 # v1.3.172 release handoff — Payment setup and Helcim activation requests
 
 Business settings → Payment setup replaces the Stripe-only category. Owners can save an isolated Stripe/Helcim setup preference, review dated U.S. fees/pros/cons with official-source links, open Helcim’s website, and record an activation request visible to the primary platform administrator. Existing Stripe connection/help and administrator-only commission controls remain available. Migration 068 adds preferences; migration 069 preserves archive/restore and explicit permanent-business-purge compatibility. Neither migration reroutes checkout, changes merchant connections, deletes a business or migrates subscriptions.
