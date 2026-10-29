@@ -1,3 +1,7 @@
+## Release source: v1.3.179
+
+Saved social links show recognizable platform logos across business/team pages and owner link settings.
+
 ## Release source: v1.3.178
 
 Business settings → Important URLs provides current business navigation links with Open and Copy controls.

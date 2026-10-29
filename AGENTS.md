@@ -1,3 +1,7 @@
+# v1.3.179 release handoff — Social platform logos
+
+Shared platform marks accompany saved social links on business navigation, public team profiles, Important URLs and owner branding fields. Recognizes current business-supported Instagram/Facebook/TikTok/YouTube/LinkedIn/X plus Threads, Pinterest, Snapchat, WhatsApp, Telegram, Reddit, Discord, Twitch and Bluesky for team links. Domain matching uses exact hosts/subdomains and rejects spoofed domains. Unknown websites use a globe. Original SVG geometry is bundled locally from Simple Icons and Bootstrap Icons with source/license records under public/brand/social; inline icons inherit readable theme colors. Existing visible labels, target URLs, HTTPS validation and link safety remain. No database/payment/auth changes. Verification/deployment pending.
+
 # v1.3.178 release handoff — Important URLs
 
 Business settings → Important URLs lists current customer homepage, booking, memberships/status/help, owner login and all workspace/settings destinations, team login/workspace, active visible team public pages, saved social/website/Google listing and directions. Open and Copy URL controls use the current environment origin. Owner deep links validate known section/settings names and preserve existing Stripe/Google return behavior. Client-specific payment, waiver and booking access tokens are never collected into this list. Uses existing authenticated business/team endpoints, no migration or account/data changes. Verification/deployment pending.

@@ -1,4 +1,5 @@
 'use client';
+import SocialPlatformIcon from './social-platform-icon';
 import {useEffect,useState} from 'react';
 import dynamic from 'next/dynamic';
 import {SOCIAL_PLATFORMS} from '../../server/business-social-links.mjs';
@@ -19,7 +20,7 @@ export default function OwnerBranding({slug,config,setConfig,onSave,onProfileSav
  <div hidden={section!=='google'}>{visited.includes('google')&&<OwnerGoogleBusiness/>}</div>
  <div hidden={section!=='appearance'}>{visited.includes('appearance')&&<OwnerThemeEditor/>}</div>
  <div hidden={section!=='pages'}>{visited.includes('pages')&&<><VisualPageEditor config={config} setConfig={setConfig} slug={slug} onSave={onSave} onExit={()=>setSection('identity')} busy={busy} dirty={dirty}/><details className="panel padded"><summary>All page wording &amp; booking display options</summary><PageEditorSettings config={config} setConfig={setConfig}/><button type="button" className="primary" disabled={busy||!dirty} onClick={onSave}>Save page changes</button></details></>}</div>
- <div hidden={section!=='social'}>{visited.includes('social')&&<section className="panel padded"><h2>Social media buttons</h2><p>Add full HTTPS profile links. Saved links appear at the top right of your public business page. Leave a field empty to hide its button.</p>{SOCIAL_PLATFORMS.map(([id,label])=><label key={id}>{label}<input type="url" maxLength={500} value={config.socialLinks?.[id]||''} placeholder={id==='website'?'https://your-business.com':'https://'+(id==='x'?'x.com':id+'.com')+'/your-profile'} onChange={e=>setConfig((c:any)=>({...c,socialLinks:{...(c.socialLinks||{}),[id]:e.target.value}}))}/></label>)}<button type="button" className="primary" disabled={busy||!dirty} onClick={onSave}>{busy?'Saving…':'Save social links'}</button></section>}</div>
+ <div hidden={section!=='social'}>{visited.includes('social')&&<section className="panel padded"><h2>Social media buttons</h2><p>Add full HTTPS profile links. Saved links appear at the top right of your public business page. Leave a field empty to hide its button.</p>{SOCIAL_PLATFORMS.map(([id,label])=><label key={id}><span className="sf-social-input-label">{config.socialLinks?.[id]&&<SocialPlatformIcon platform={id}/>} {label}</span><input type="url" maxLength={500} value={config.socialLinks?.[id]||''} placeholder={id==='website'?'https://your-business.com':'https://'+(id==='x'?'x.com':id+'.com')+'/your-profile'} onChange={e=>setConfig((c:any)=>({...c,socialLinks:{...(c.socialLinks||{}),[id]:e.target.value}}))}/></label>)}<button type="button" className="primary" disabled={busy||!dirty} onClick={onSave}>{busy?'Saving…':'Save social links'}</button></section>}</div>
  <div hidden={section!=='sharing'}>{visited.includes('sharing')&&<BookingPageSharing slug={slug} name={config.name}/>}</div>
  </section>;
 }

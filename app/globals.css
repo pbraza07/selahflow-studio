@@ -2120,3 +2120,5 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 .sf-settings-form[data-settings-tab="urls"] [data-sf-settings-group="urls"]{display:block!important}.sf-important-url-group{margin:24px 0}.sf-important-url-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--sf-settings-line,#d6e0da)}.sf-important-url-row>div:first-child{min-width:0;flex:1}.sf-important-url-value{display:block;overflow-wrap:anywhere;margin-top:6px;font-size:13px;line-height:1.5}.sf-important-url-row .button-row{flex-shrink:0;flex-wrap:wrap}@media(max-width:600px){.sf-important-url-row{align-items:stretch;flex-direction:column}.sf-important-url-row .button-row{justify-content:flex-start}}
 
 .sf-settings-form[data-settings-tab="urls"] .sf-settings-save{display:none}
+
+.sf-social-platform-logo{display:inline-block;flex-shrink:0;vertical-align:middle}.sf-social-input-label,.sf-important-url-label{display:flex;align-items:center;gap:8px}.sf-team-public-hero .button-row a{display:inline-flex;align-items:center;gap:8px;min-height:44px}
