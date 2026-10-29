@@ -234,9 +234,9 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
 .public-header .public-brand>div{min-width:0;flex:1}
 .public-header .public-brand b{display:block;line-height:1.22;overflow-wrap:anywhere}
 .public-header .public-brand small{display:block;line-height:1.35}
-.public-header .sf-business-logo-frame{position:relative;display:flex;align-items:center;justify-content:center;flex:0 0 clamp(96px,12vw,132px);width:clamp(96px,12vw,132px);height:clamp(82px,10vw,112px);min-width:0;padding:5px;border:0;border-radius:10px;background:transparent!important;transform:none!important;overflow:hidden;isolation:isolate}
+.sf-business-logo-frame{position:relative;display:flex;align-items:center;justify-content:center;flex:0 0 clamp(96px,12vw,132px);width:clamp(96px,12vw,132px);height:clamp(82px,10vw,112px);min-width:0;padding:10px;box-sizing:border-box;border:1px solid #e4ebe4;border-radius:16px;background:linear-gradient(145deg,#fff,#f3f6f1)!important;box-shadow:0 5px 16px #184e490a;transform:none!important;overflow:hidden;isolation:isolate}
 .public-header .sf-business-logo-frame::before,.public-header .sf-business-logo-frame::after{content:none!important}
-.public-header .sf-business-logo-image{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center;transform:none!important;filter:none;mix-blend-mode:normal}
+.sf-business-logo-image{display:block;width:auto;height:auto;max-width:100%;max-height:100%;border-radius:10px;object-fit:contain;object-position:center;transform:none!important;filter:none;mix-blend-mode:normal}
 .sf-business-profile-logo{display:block;width:min(100%,290px);height:140px;max-width:100%;object-fit:contain;object-position:center}
 @media(max-width:600px){.public-header .public-brand{gap:12px}.public-header .sf-business-logo-frame{flex-basis:96px;width:96px;height:84px}.public-header .public-brand b{font-size:clamp(17px,4.3vw,22px)}.public-header .public-brand small{font-size:10px}.sf-business-profile-logo{height:125px}}
 
@@ -2099,3 +2099,7 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 .sf-helcim-setup li {margin:10px 0;line-height:1.6;}
 .sf-existing-stripe-setup {border-top:1px solid var(--line,#c7d5ca);padding-top:24px;}
 @media(max-width:640px){.sf-payment-comparison th,.sf-payment-comparison td{padding:10px;}.sf-helcim-setup{padding:12px;}}
+
+.sf-business-logo-surface{display:flex;align-items:center;justify-content:center;width:min(100%,310px);height:164px;box-sizing:border-box;padding:20px;margin:12px 0 22px;border:1px solid #e4ebe4;border-radius:22px;background:linear-gradient(145deg,#fff,#f3f6f1);box-shadow:0 8px 24px #184e490a;overflow:hidden}
+.sf-business-logo-surface .sf-business-profile-logo{width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;border-radius:12px;box-shadow:0 3px 12px #173f3512}
+@media(max-width:600px){.sf-business-logo-surface{height:144px;padding:18px;border-radius:18px}}
