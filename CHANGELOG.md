@@ -1,3 +1,7 @@
+# v1.3.178 release handoff — Important URLs
+
+Business settings → Important URLs lists current customer homepage, booking, memberships/status/help, owner login and all workspace/settings destinations, team login/workspace, active visible team public pages, saved social/website/Google listing and directions. Open and Copy URL controls use the current environment origin. Owner deep links validate known section/settings names and preserve existing Stripe/Google return behavior. Client-specific payment, waiver and booking access tokens are never collected into this list. Uses existing authenticated business/team endpoints, no migration or account/data changes. Verification/deployment pending.
+
 # v1.3.177 release handoff — Email-only team login and business branding
 
 Team profile setup includes Enable booking notifications using an account-scoped device subscription. Additive migration 073 queues jobs only from actual appointment inserts, team transfers and appointment assignments; time-off/settings changes never enqueue. A background worker rechecks active business/account/current assignment before sending, uses the existing VAPID provider and staging restrictions, and opens /team/workspace. Delivery attempts are not replayed after ambiguous failures. No real subscription or device permission was enabled for QA; actual phone delivery remains owner/member acceptance.

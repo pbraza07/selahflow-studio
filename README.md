@@ -1,3 +1,7 @@
+## Release source: v1.3.178
+
+Business settings → Important URLs provides current business navigation links with Open and Copy controls.
+
 ## Release source: v1.3.177
 
 Email-only team sign-in, temporary password 123456 with mandatory replacement, and owner-branded team pages.
