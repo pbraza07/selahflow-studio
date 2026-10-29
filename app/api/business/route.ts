@@ -29,7 +29,7 @@ export async function POST(req:Request){
   const googleLink=b.googleListingUrl===undefined?null:googleListingUrl(b.googleListingUrl);
   const requestedTheme=b.theme===undefined?null:b.theme;
   if(requestedTheme!==null&&!themeIsValid(requestedTheme))return Response.json({error:'Choose valid theme colors and fonts.'},{status:400});
-  if(name.length<2||name.length>100||description.length>600||city.length>80||region.length>80||(businessModel!==null&&businessModel.length>2000)||(brandPrimary!==null&&!/^#[0-9a-fA-F]{6}$/.test(brandPrimary))||(brandBackground!==null&&!/^#[0-9a-fA-F]{6}$/.test(brandBackground))||(address!==null&&(address.length>350||/[<>\u0000-\u001f]/.test(address)))||typeof b.requestListing!=='boolean')
+  if(name.length<2||name.length>100||!description||description.length>600||city.length>80||region.length>80||(businessModel!==null&&businessModel.length>2000)||(brandPrimary!==null&&!/^#[0-9a-fA-F]{6}$/.test(brandPrimary))||(brandBackground!==null&&!/^#[0-9a-fA-F]{6}$/.test(brandBackground))||(address!==null&&(address.length>350||/[<>\u0000-\u001f]/.test(address)))||typeof b.requestListing!=='boolean')
    return Response.json({error:'Check business profile information.'},{status:400});
   const pool=getPool(),client=await pool.connect();
   try{
@@ -41,7 +41,7 @@ export async function POST(req:Request){
    if(b.requestListing&&(!settings?.services?.length||!settings?.staff?.length))
     {await client.query('ROLLBACK');return Response.json({error:'Add at least one service and team member before requesting a listing.'},{status:400});}
    await saveBusinessProfile(client,{owner,name,description,city,region,brandPrimary,brandBackground,businessModel,googleLink});
-   if(settings){settings.name=name;if(businessModel!==null)settings.business_model=businessModel;if(requestedTheme!==null)settings.theme=resolveTheme(requestedTheme);if(address!==null)settings.address=address;await client.query('UPDATE settings SET data=$1 WHERE owner=$2',[JSON.stringify(settings),owner]);}
+   if(settings){settings.servicesDescription=description;settings.city=city;settings.region=region;settings.name=name;if(businessModel!==null)settings.business_model=businessModel;if(requestedTheme!==null)settings.theme=resolveTheme(requestedTheme);if(address!==null)settings.address=address;await client.query('UPDATE settings SET data=$1 WHERE owner=$2',[JSON.stringify(settings),owner]);}
    await client.query('COMMIT');
    return Response.json({ok:true,listingPending:!!b.requestListing},{headers:noStore});
   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}

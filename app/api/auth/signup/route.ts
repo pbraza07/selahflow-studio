@@ -17,6 +17,9 @@ export async function POST(req:Request){
   if(b.website)return Response.json({error:'Unable to register.'},{status:400});
   const email=String(b.email||'').trim().toLowerCase();
   const name=String(b.businessName||'').trim();
+  const description=typeof b.description==='string'?b.description.trim():'';
+  const address=typeof b.address==='string'?b.address.trim():'';
+  if(!description||description.length>600||address.length>350||/[<>\u0000-\u001f]/.test(address))return Response.json({error:'Describe the services your business offers (1–600 characters) and enter a valid address.'},{status:400});
   const slug=String(b.slug||'').trim().toLowerCase();
   const industry=String(b.industry||'other');
   const city=String(b.city||'').trim(),region=canonicalState(String(b.region||''));
@@ -33,12 +36,12 @@ export async function POST(req:Request){
   if(limit.rows[0].count>10)return Response.json({error:'Registration limit reached. Please try later.'},{status:429});
   const userId=randomUUID(),businessId=randomUUID(),session=randomBytes(32).toString('hex');
   const preset=onboardingPreset(industry);
-  const config={...structuredClone(defaultSettings),name,tagline:industry,...preset,phone:'',address:'',greeting:'Welcome! How can we help?',timezone:'America/New_York'};
+  const config={...structuredClone(defaultSettings),name,tagline:industry,...preset,phone:'',address,city,region,servicesDescription:description,greeting:'Welcome! How can we help?',timezone:'America/New_York'};
   const client=await pool.connect();
   try{
    await client.query('BEGIN');
    await client.query('INSERT INTO users(id,email,password_hash) VALUES($1,$2,$3)',[userId,email,hashPassword(password)]);
-   await client.query("INSERT INTO businesses(id,owner_id,slug,name,industry,city,region,status,is_listed,listing_requested) VALUES($1,$2,$3,$4,$5,$6,$7,'pending',FALSE,FALSE)",[businessId,userId,slug,name,industry,city,region]);
+   await client.query("INSERT INTO businesses(id,owner_id,slug,name,industry,city,region,description,status,is_listed,listing_requested) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'pending',FALSE,FALSE)",[businessId,userId,slug,name,industry,city,region,description]);
    await client.query('UPDATE businesses SET brand_primary=$1,brand_background=$2 WHERE id=$3',[preset.brandPrimary,preset.brandBackground,businessId]);
    await client.query("INSERT INTO business_memberships(business_id,user_id,role) VALUES($1,$2,'owner')",[businessId,userId]);
    await client.query("INSERT INTO business_subscriptions(business_id,plan_code,status) VALUES($1,'free','active')",[businessId]);

@@ -10,8 +10,9 @@ test('marketplace exposes current logo metadata only for active businesses and p
  CREATE TABLE settings(owner text,data text);CREATE TABLE business_logos(business_id int,updated_at timestamptz,bytes text);
  INSERT INTO businesses VALUES(1,'one','first-business','First','fitness','','Tampa','FL','active',now()),(2,'two','second-business','Second','fitness','','Tampa','FL','active',now()),(3,'three','archived-business','Hidden','fitness','','Tampa','FL','archived',now());
  INSERT INTO business_logos VALUES(1,'2026-10-27T12:00:00Z','private-image-bytes'),(3,now(),'hidden');INSERT INTO settings VALUES('one','{"address":"123 Example Street","privateField":"secret"}');`);
+ await pg.exec('CREATE TABLE business_google_profiles(business_id int,place_id text); CREATE TABLE business_discovery_locations(business_id int,place_id text,address text,city text,region text,fetched_at timestamptz);');
  globalThis.__discoveryLogoPool=pg;t.after(()=>delete globalThis.__discoveryLogoPool);
- const source=compile(await read('app/api/marketplace/route.ts')).replace(/import \{ getPool \}[^\n]+;/,'const getPool=()=>globalThis.__discoveryLogoPool;');
+ const source=compile(await read('app/api/marketplace/route.ts')).replace(/import \{ getPool \}[^\n]+;/,'const getPool=()=>globalThis.__discoveryLogoPool;').replace("'../../../server/discovery-search.mjs'",JSON.stringify(new URL('../server/discovery-search.mjs',import.meta.url).href));
  const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
  const list=async(q='')=>(await (await GET(new Request('https://example.test/api/marketplace'+q))).json()).businesses;
  let rows=await list();assert.equal(rows.length,2);const first=rows.find(b=>b.slug==='first-business');assert.equal(first.hasLogo,true);assert.equal(first.logoVersion,'2026-10-27T12:00:00.000Z');assert.equal(first.address,'123 Example Street');assert.equal(rows.find(b=>b.slug==='second-business').hasLogo,false);assert.doesNotMatch(JSON.stringify(rows),/secret|private-image-bytes|studio_data|logo_version|owner_id/);

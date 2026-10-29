@@ -53,13 +53,13 @@ export async function ownerGet(req:Request){
    db().prepare("SELECT * FROM events WHERE owner=? AND kind<>'membership_payment' ORDER BY created DESC").bind(owner).all(),
    loadOwnerMemberRoster(getPool(),owner),
    loadMembershipReportPayments(getPool(),owner),
-   getPool().query("SELECT name,business_model,industry FROM businesses WHERE owner_id=$1 AND status='active'",[owner])
+   getPool().query("SELECT name,description,city,region,business_model,industry FROM businesses WHERE owner_id=$1 AND status='active'",[owner])
   ]);
   const visits=a.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   const activityEvents=e.results.map((r:any)=>({...r,...JSON.parse(r.data)}));
   const paidBookingFallback=await reconcileStripeBookingReceipts(getPool(),owner,activityEvents);
   return reply({
-   canReviewWaivers:await canReviewWaivers(getPool(),req),config:{...config,industry:businessDetails.rows[0]?.industry,business_model:businessDetails.rows[0]?.business_model??config.business_model},reportBusinessName:businessDetails.rows[0]?.name,appointments:decorateOwnerAppointments(visits,roster),
+   canReviewWaivers:await canReviewWaivers(getPool(),req),config:{...config,city:businessDetails.rows[0]?.city??config.city,region:businessDetails.rows[0]?.region??config.region,servicesDescription:businessDetails.rows[0]?.description||'',industry:businessDetails.rows[0]?.industry,business_model:businessDetails.rows[0]?.business_model??config.business_model},reportBusinessName:businessDetails.rows[0]?.name,appointments:decorateOwnerAppointments(visits,roster),
    events:await visibleReportPayments(getPool(),owner,[...reportSaleEvents([...activityEvents,...paidBookingFallback],config.services),...membershipPayments])
   });
  }catch(e){
@@ -127,6 +127,7 @@ if(!c?.name?.trim()||c.name.length>100||!Array.isArray(c.services)||!Array.isArr
  if(c.services.some((service:any)=>service.requiresApproval!==undefined&&typeof service.requiresApproval!=='boolean'))throw Error('Service approval preference must be a checkbox value.');
  if(c.services.some((service:any)=>service.requiresWaiver!==undefined&&typeof service.requiresWaiver!=='boolean'))throw Error('Service waiver preference must be a checkbox value.');
  validateTeamBookingPolicy(c);
+ if(c.servicesDescription!==undefined&&(typeof c.servicesDescription!=='string'||!c.servicesDescription.trim()||c.servicesDescription.trim().length>600))throw Error('Describe your services in 1–600 characters.');
  validateBookableSessions(c);
 for(const s of c.services)if(!validSlotCapacity(s.maxSlots??1))throw Error('Service slots must be between 1 and 20.');
  for(const s of c.services)if(!s.name||s.price<0||!Number.isFinite(s.price)||!validDuration(s))throw Error('Enter a valid service duration (minutes, hours, days, weeks, months or years); prices cannot be negative.');const pool=getPool(),client=await pool.connect();
@@ -181,8 +182,8 @@ try{
  if(JSON.stringify(oldConfig.categoryWaiver||null)!==JSON.stringify(c.categoryWaiver||null))await client.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5)',[crypto.randomUUID(),owner,new Date().toISOString(),'category_waiver_review',JSON.stringify({category:c.categoryWaiver?.category,enabled:c.categoryWaiver?.enabled,review:c.categoryWaiver?.review||null})]);
  if(JSON.stringify(oldConfig.waiverLegalReview||null)!==JSON.stringify(c.waiverLegalReview||null))await client.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5)',[crypto.randomUUID(),owner,new Date().toISOString(),'waiver_legal_review',JSON.stringify({review:c.waiverLegalReview||null})]);
  await client.query('INSERT INTO settings(owner,data) VALUES($1,$2) ON CONFLICT(owner) DO UPDATE SET data=excluded.data',[owner,JSON.stringify(c)]);
- await client.query('UPDATE businesses SET name=$1,city=COALESCE($2,city),region=COALESCE($3,region),business_model=COALESCE($5,business_model),brand_primary=COALESCE($6,brand_primary),brand_background=COALESCE($7,brand_background),updated_at=now() WHERE owner_id=$4',
-  [c.name,typeof c.city==='string'?c.city:null,typeof c.region==='string'?c.region:null,owner,typeof c.business_model==='string'?c.business_model:null,c.theme?.colors?.button||null,c.theme?.colors?.page||null]);
+ await client.query('UPDATE businesses SET name=$1,city=COALESCE($2,city),region=COALESCE($3,region),description=COALESCE($8,description),business_model=COALESCE($5,business_model),brand_primary=COALESCE($6,brand_primary),brand_background=COALESCE($7,brand_background),updated_at=now() WHERE owner_id=$4',
+  [c.name,typeof c.city==='string'?c.city:null,typeof c.region==='string'?c.region:null,owner,typeof c.business_model==='string'?c.business_model:null,c.theme?.colors?.button||null,c.theme?.colors?.page||null,typeof c.servicesDescription==='string'?c.servicesDescription.trim():null]);
  await client.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING',
   [crypto.randomUUID(),owner,new Date().toISOString(),'settings','{}']);
  await client.query('COMMIT');
