@@ -117,7 +117,7 @@ export default function OwnerMemberships({slug,prefill,onOpenPayments}:{slug:str
   {error&&!modal&&<p className="sf-membership-error" role="alert">{error}</p>}
   {message&&<p className="sf-membership-success" role="status">{message}</p>}
   {loading?<p>Loading membership management…</p>:<>
-   <p className="sf-membership-plan-allowance">Business Stripe setup is now in Settings. <button type="button" className="outline" onClick={onOpenPayments}>Open Stripe payments settings</button></p>
+   <p className="sf-membership-plan-allowance">Payment provider setup is in Business settings. <button type="button" className="outline" onClick={onOpenPayments}>Open payment setup</button></p>
    <p className="sf-membership-plan-allowance" role="status"><strong>Membership payment emails:</strong> {data?.emailDelivery?.ready?`${data.emailDelivery.provider} sender connected — confirmations are queued after verified payment. Provider acceptance does not guarantee inbox delivery.`:"Email provider is not connected. Paid confirmations are queued but cannot be sent until Gmail or another email provider is configured."}</p>
    <p className="sf-membership-plan-allowance" role="status">
    <strong>{data?.planBenefits.name||'Free'} subscription:</strong> {(data?.plans||[]).filter(x=>x.active).length}/{data?.planBenefits.limits.membershipPlans||2} active membership offers. Existing members and plans remain preserved if your subscription changes. <a href="/pricing">Compare SelahFlow plans ↗</a>
