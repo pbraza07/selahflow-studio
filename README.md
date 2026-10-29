@@ -1,3 +1,7 @@
+## Release source: v1.3.177
+
+Email-only team sign-in, temporary password 123456 with mandatory replacement, and owner-branded team pages.
+
 ## Release source: v1.3.176 — Team member workspaces
 
 Owners create separate team logins in Settings → Team logins. Team members manage their own profile, private client photos/notes, appointment calendar and time off; shared pages offer public profiles and booking availability. Package limits and administrator overrides still govern the saved staff roster. See AGENTS.md for deployment verification and testing limits.

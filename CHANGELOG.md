@@ -1,3 +1,7 @@
+# v1.3.177 release handoff — Email-only team login and business branding
+
+Team sign-in requires only email/password. Duplicate matching workspace credentials offer a workspace picker after verification, without a business-link field. Login rate limits use normalized email across businesses. Owner create/reset uses temporary password 123456, requiring replacement before private access. Migration 072 applies it only to accounts still awaiting first setup and revokes their pending sessions; chosen permanent passwords remain unchanged. Team private/public pages use the canonical owner theme, fonts, colors, logo and business header, with readable theme-derived surfaces and controls. Existing tenant isolation, profile privacy and package limits remain. Deployment verification pending.
+
 # v1.3.176 sample appointment removal
 
 Removed the client-side six-appointment preview and its Show samples toggle from the shared owner dashboard. Empty businesses, including Crawford Hair Company, now show their actual empty calendar. The preview was never saved to the database; no real appointment, client or payment is deleted. Applies to all existing and new businesses. Verification and deployment pending.

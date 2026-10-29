@@ -1,3 +1,7 @@
+# v1.3.177 release handoff — Email-only team login and business branding
+
+Team sign-in requires only email/password. Duplicate matching workspace credentials offer a workspace picker after verification, without a business-link field. Login rate limits use normalized email across businesses. Owner create/reset uses temporary password 123456, requiring replacement before private access. Migration 072 applies it only to accounts still awaiting first setup and revokes their pending sessions; chosen permanent passwords remain unchanged. Team private/public pages use the canonical owner theme, fonts, colors, logo and business header, with readable theme-derived surfaces and controls. Existing tenant isolation, profile privacy and package limits remain. Deployment verification pending.
+
 # v1.3.176 verified rollout
 
 PR #108 merged as 50273c5c1324827cb8fcde6e23c0b3b10a6db454. Production dep-dbhpeu7b9u1s73a922g0 LIVE and final staging 693efd7c9bd9263fd6ebac3f9d1d04e18d3367a6 / dep-dbhpamcs728c73d9fhtg LIVE. All 480 local tests, typecheck and build passed; final GitHub validation 40934499515 / job 123661342391 passed. Staging live access/origin/media protection checks passed. Production checked startup error log has no entries. Migration 071 applied in staging and production startup succeeded. Private authenticated owner/team browser walkthrough and physical-phone acceptance were not performed. No real team credentials, client booking, photo, payment or outgoing message was created for QA.

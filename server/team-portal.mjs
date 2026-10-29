@@ -1,3 +1,4 @@
+import {resolveTheme} from './themes.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {tokenHash,hashPassword,verifyPassword} from './security.mjs';
 import {sessionTeamDefaults} from './team-booking-policy.mjs';
@@ -7,20 +8,23 @@ export const teamToken=req=>(req.headers.get('cookie')||'').split(';').map(s=>s.
 export function portalError(message,status=400){return Object.assign(new Error(message),{status});}
 export async function teamIdentity(pool,req,allowPasswordChange=false){
  const token=teamToken(req);if(!/^[a-f0-9]{64}$/.test(token))throw portalError('Please sign in to your team workspace.',401);
- const a=(await pool.query(`SELECT a.*,b.owner_id,b.slug,b.name AS business_name,s.data AS config FROM team_sessions t JOIN team_accounts a ON a.id=t.account_id JOIN businesses b ON b.id=a.business_id JOIN settings s ON s.owner=b.owner_id WHERE t.token_hash=$1 AND t.expires_at>now() AND a.active=true AND b.status='active'`,[tokenHash(token)])).rows[0];
+ const a=(await pool.query(`SELECT a.*,b.owner_id,b.slug,b.name AS business_name,b.brand_primary,b.brand_background,s.data AS config FROM team_sessions t JOIN team_accounts a ON a.id=t.account_id JOIN businesses b ON b.id=a.business_id JOIN settings s ON s.owner=b.owner_id WHERE t.token_hash=$1 AND t.expires_at>now() AND a.active=true AND b.status='active'`,[tokenHash(token)])).rows[0];
  if(!a||!JSON.parse(a.config).staff?.some(s=>s.id===a.staff_id))throw portalError('Your team access is unavailable. Contact the business owner.',401);
  if(a.must_change_password&&!allowPasswordChange)throw portalError('Set your own password before continuing.',428);
  return a;
 }
 export async function teamLogin(pool,input){
- const {slug,email,password}=input;
- if(typeof slug!=='string'||slug.length>60||typeof email!=='string'||email.length>254||typeof password!=='string'||password.length<6||password.length>256)throw portalError('Enter your business link, email and password.');
- const key=tokenHash('team:'+slug+':'+email.trim().toLowerCase());
+ const {email,password,accountId}=input;
+ if(typeof email!=='string'||email.length>254||typeof password!=='string'||password.length<6||password.length>256)throw portalError('Enter your email and password.');
+ const key=tokenHash('team:'+email.trim().toLowerCase());
  const rate=(await pool.query("INSERT INTO login_attempts(key,count,window_start) VALUES($1,1,now()) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN login_attempts.window_start<now()-interval '15 minutes' THEN 1 ELSE login_attempts.count+1 END,window_start=CASE WHEN login_attempts.window_start<now()-interval '15 minutes' THEN now() ELSE login_attempts.window_start END RETURNING count",[key])).rows[0];
  if(rate.count>10)throw portalError('Too many attempts. Try again in 15 minutes.',429);
- const a=(await pool.query("SELECT a.*,s.data AS config FROM team_accounts a JOIN businesses b ON b.id=a.business_id JOIN settings s ON s.owner=b.owner_id WHERE b.slug=$1 AND b.status='active' AND a.email=$2 AND a.active=true",[slug,email.trim().toLowerCase()])).rows[0];
- // Equal password work for unknown accounts.
- if(!verifyPassword(password,a?.password_hash||hashPassword('unmatched-account'))||!a||!JSON.parse(a.config).staff?.some(s=>s.id===a.staff_id))throw portalError('Business, email or password is incorrect.',401);
+ const candidates=(await pool.query("SELECT a.*,b.name AS business_name,s.data AS config FROM team_accounts a JOIN businesses b ON b.id=a.business_id JOIN settings s ON s.owner=b.owner_id WHERE b.status='active' AND a.email=$1 AND a.active=true",[email.trim().toLowerCase()])).rows;
+ const matches=candidates.filter(a=>verifyPassword(password,a.password_hash)&&JSON.parse(a.config).staff?.some(s=>s.id===a.staff_id));
+ if(!candidates.length)verifyPassword(password,hashPassword('unmatched-account'));
+ if(!matches.length)throw portalError('Email or password is incorrect.',401);
+ if(matches.length>1&&!accountId)return {choices:matches.map(a=>({id:a.id,business:a.business_name}))};
+ const a=accountId?matches.find(a=>a.id===accountId):matches[0];if(!a)throw portalError('Email or password is incorrect.',401);
  const token=randomBytes(32).toString('hex');await pool.query("INSERT INTO team_sessions VALUES($1,$2,now()+interval '12 hours')",[tokenHash(token),a.id]);await pool.query('DELETE FROM login_attempts WHERE key=$1',[key]);
  return {token,mustChangePassword:a.must_change_password};
 }
@@ -38,10 +42,10 @@ export async function assertClientAppointment(pool,a,id){
 }
 export function privateAppointment(row){const d=JSON.parse(row.data);return {id:row.id,date:row.date,start:row.start,duration:row.duration,status:row.status,name:d.name||'Client',email:d.email||'',phone:d.phone||'',services:d.services||[]};}
 export async function publicTeam(pool,id){
- const a=(await pool.query("SELECT a.id,a.staff_id,a.profile,b.slug,b.name,s.data AS config FROM team_accounts a JOIN businesses b ON b.id=a.business_id JOIN settings s ON s.owner=b.owner_id WHERE a.id=$1 AND a.active=true AND b.status='active'",[id])).rows[0];
+ const a=(await pool.query("SELECT a.id,a.staff_id,a.profile,b.slug,b.name,b.brand_primary,b.brand_background,s.data AS config FROM team_accounts a JOIN businesses b ON b.id=a.business_id JOIN settings s ON s.owner=b.owner_id WHERE a.id=$1 AND a.active=true AND b.status='active'",[id])).rows[0];
  if(!a)throw portalError('Team page not found.',404);const c=JSON.parse(a.config),staff=c.staff?.find(x=>x.id===a.staff_id&&x.bookingVisible!==false);if(!staff)throw portalError('Team page not found.',404);
  const portrait=(await pool.query("SELECT id FROM team_media WHERE account_id=$1 AND kind='portrait'",[id])).rows[0];
- return {id:a.id,staffId:a.staff_id,business:a.name,slug:a.slug,profile:{name:a.profile.name||staff.name,phone:a.profile.phone||'',email:a.profile.email||'',description:a.profile.description||'',socials:a.profile.socials||[]},portrait:portrait?.id||null,services:(c.services||[]).filter(s=>staff.services.includes(s.id)&&(!s.defaultStaffId||s.defaultStaffId===staff.id)&&(!s.durationUnit||['minutes','hours'].includes(s.durationUnit))).map(s=>({id:s.id,name:s.name,price:s.price,duration:s.duration}))};
+ return {branding:teamBranding(a,c),id:a.id,staffId:a.staff_id,business:a.name,slug:a.slug,profile:{name:a.profile.name||staff.name,phone:a.profile.phone||'',email:a.profile.email||'',description:a.profile.description||'',socials:a.profile.socials||[]},portrait:portrait?.id||null,services:(c.services||[]).filter(s=>staff.services.includes(s.id)&&(!s.defaultStaffId||s.defaultStaffId===staff.id)&&(!s.durationUnit||['minutes','hours'].includes(s.durationUnit))).map(s=>({id:s.id,name:s.name,price:s.price,duration:s.duration}))};
 }
 export async function saveTimeOff(pool,{owner,staff,input,actor}){
  const db=await pool.connect();try{await db.query('BEGIN');await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
@@ -72,3 +76,5 @@ export function teamCalendarConfig(config,staff){
  const project=s=>Object.fromEntries(['id','seriesId','originalDate','date','start','staff','service','capacity','repeat','cancelled','onlyScheduledTime','duration'].filter(k=>s[k]!==undefined).map(k=>[k,s[k]]));
  return {bookableSessions:bases.map(project),sessionOverrides:overrides.filter(o=>ids.has(o.seriesId||o.id)).map(project)};
 }
+
+export function teamBranding(account,config){return {name:account.business_name||account.name,slug:account.slug,theme:resolveTheme(config.theme,account.brand_primary,account.brand_background)};}

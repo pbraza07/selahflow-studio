@@ -1,5 +1,5 @@
 import {bookableTeamLimit} from '../../../../server/team-seat-policy.mjs';
-import {randomUUID,randomBytes} from 'node:crypto';
+import {randomUUID} from 'node:crypto';
 import {requireOwner} from '../../../../lib/auth';
 import {getPool} from '../../../../server/database.mjs';
 import {validOrigin,hashPassword} from '../../../../server/security.mjs';
@@ -16,9 +16,9 @@ export async function POST(req:Request){if(!validOrigin(req))return Response.jso
  if(!existing?.active){const plan=(await db.query("SELECT s.plan_code,s.status,(SELECT COUNT(*)::int FROM business_team_seat_requests r WHERE r.business_id=$1 AND r.status='approved') AS extras FROM business_subscriptions s WHERE s.business_id=$1",[b.id])).rows[0];const overrides=(await db.query('SELECT limits FROM business_entitlement_overrides WHERE business_id=$1',[b.id])).rows[0]?.limits||{};const approved=plan?.extras??(await db.query("SELECT COUNT(*)::int AS n FROM business_team_seat_requests WHERE business_id=$1 AND status='approved'",[b.id])).rows[0].n;const limit=Number.isInteger(overrides.bookableStaff)?overrides.bookableStaff:bookableTeamLimit(plan?.plan_code,plan?.status,approved);const count=(await db.query('SELECT COUNT(*)::int AS n FROM team_accounts WHERE business_id=$1 AND active=true AND staff_id=ANY($2::text[])',[b.id,c.staff.map((s:any)=>s.id)])).rows[0].n;if(count>=limit)throw portalError('Your team login allowance is full. Request an additional seat from the platform administrator.',409);}
 
  if(body.action==='create'&&existing)throw portalError('This team member already has a login. Use Reset access.');
- if(typeof body.email!=='string'||body.email.length>254||!/^\S+@\S+\.\S+$/.test(body.email))throw portalError('Enter a valid login email.');password=randomBytes(15).toString('base64url');
+ if(typeof body.email!=='string'||body.email.length>254||!/^\S+@\S+\.\S+$/.test(body.email))throw portalError('Enter a valid login email.');password='123456';
  await db.query('INSERT INTO team_accounts(id,business_id,staff_id,email,password_hash) VALUES($1,$2,$3,$4,$5) ON CONFLICT(business_id,staff_id) DO UPDATE SET email=excluded.email,password_hash=excluded.password_hash,active=true,must_change_password=true',[existing?.id||randomUUID(),b.id,body.staffId,body.email.trim().toLowerCase(),hashPassword(password)]);
  }else if(body.action==='disable'){if(!existing)throw portalError('No account to disable.');await db.query('UPDATE team_accounts SET active=false WHERE id=$1',[existing.id]);}else throw portalError('Choose an access action.');
- if(existing)await db.query('DELETE FROM team_sessions WHERE account_id=$1',[existing.id]);await db.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5)',[randomUUID(),owner,new Date().toISOString(),'team_access',JSON.stringify({staff:body.staffId,action:body.action})]);await db.query('COMMIT');return Response.json({ok:true,temporaryPassword:password,loginPath:'/team/login?business='+encodeURIComponent(b.slug)},{headers});
+ if(existing)await db.query('DELETE FROM team_sessions WHERE account_id=$1',[existing.id]);await db.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5)',[randomUUID(),owner,new Date().toISOString(),'team_access',JSON.stringify({staff:body.staffId,action:body.action})]);await db.query('COMMIT');return Response.json({ok:true,temporaryPassword:password,loginPath:'/team/login'},{headers});
  }catch(e:any){await db.query('ROLLBACK');if(e.code==='23505')throw portalError('That login email is already used by another team member in this business.');throw e;}finally{db.release();}
  }catch(e){return fail(e);}}

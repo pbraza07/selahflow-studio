@@ -1,13 +1,13 @@
 # Team member workspaces
 
-Available from SelahFlow v1.3.176. Check AGENTS.md for the verified rollout state.
+Available from SelahFlow v1.3.177. Check AGENTS.md for the verified rollout state.
 
 ## Business owner setup
 
 1. In Business settings → Team members, add the member, choose the services they provide, and save business settings.
 2. Open Business settings → Team logins. Enter the member's login email and select Create login.
-3. Copy the generated sign-in details and share them privately with that team member. SelahFlow does not email these credentials automatically.
-4. The member opens the supplied team sign-in link and replaces the temporary password before accessing their workspace.
+3. Copy the sign-in details and share them privately with that team member. SelahFlow does not email these credentials automatically.
+4. The member opens the team sign-in page with email and password and replaces the temporary password 123456 before accessing their workspace.
 
 The normal team limits are Free: 1, Professional: 3, Business: 10. Platform administrator overrides and approved additional seats apply. Each saved team member has one login. New activations respect the account allowance; existing records are preserved after a plan downgrade. Reset access signs out existing sessions, can update the login email, and issues a new temporary password. Disable access closes the login and public page while preserving records. Removing the member from the saved team also prevents access.
 
