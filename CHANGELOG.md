@@ -1,3 +1,9 @@
+# v1.3.181
+
+- Add a compact Back / Pages menu across business, team, owner and platform pages.
+- Show eligible public team portraits and biographies in a business landing-page carousel with profile/booking links.
+- Preserve login boundaries, business visibility and private client media.
+
 # v1.3.180
 
 - Add a simple owner how-to PDF with task-based instructions, screenshot, clickable contents and dashboard return links.
