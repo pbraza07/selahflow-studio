@@ -1,3 +1,11 @@
+# v1.3.184 release handoff — Onsite appointment payments
+
+Client confirmations and future transactional emails include service-enabled Make Payment / Pay on Site actions. Private-link POST saves onsite preference for pending/approved bookings without recording received money. Paid/free/covered bookings omit active payment choices. Owner appointment tables, calendar details and session rosters expose onsite collection/check/cancel; Payment setup selects a business-scoped Stripe Terminal location.
+
+Native Expo/React Native companion source is under native/selahflow-pay. PKCE one-use codes and owner-session-bound one-booking grants protect Terminal endpoints; support impersonation cannot delegate native collection. Card-present intents use saved prices/waivers/commission policy, expire verified unpaid online Checkout first, and block competing online/cash flows. Signed webhooks or authenticated provider retrieval verify amount/account/metadata/paid card-present charge before atomically recording a single receipt, revenue event, appointment status, commission and confirmation. Pending collection blocks appointment/client deletion. Migration 075 is additive.
+
+Distribution remains pending: no signed app, Apple entitlement approval, store installation, physical NFC/device acceptance, live payment or business activation has been performed. Setup page and native README state these requirements. The existing connected-account webhook destination needs payment_intent.succeeded subscribed for automatic background reconciliation; authenticated Check payment provides provider verification if delivery is delayed. Testing/deployment verification pending.
+
 # v1.3.183 release handoff — Business sequences for clients without a birth date
 
 Missing birth date uses first/last initials plus a business-wide transactional sequence starting at 1001. Booking, membership and owner-added clients share the allocator. Supplied birth dates retain initials + MMDDYY; existing IDs and historical records are not rewritten. Business-required questions and waiver/payment verification rules remain. Migration 074 adds only a per-business counter and permits an ID-less profile to receive its initial immutable registration identity. Verified staging and production rollout is recorded in AGENTS.md.

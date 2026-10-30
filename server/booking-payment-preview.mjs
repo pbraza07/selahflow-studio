@@ -15,11 +15,15 @@ export async function bookingPaymentPreview(pool,{slug,bookingId,token}){
    return {business:row.business_name,date:row.date,start:Number(row.start_minute),amountCents:Math.round(Number(pending.details.quotedPrice)*100),status:full?'full':requiresBookingApproval(services)?'awaiting_approval':'ready',message:full?SESSION_FULL_MESSAGE:undefined,pendingReservation:true};
   }
  }
+ if(!r){
+  const waiting=(await pool.query("SELECT b.name,s.data AS settings,r.date,r.start_minute,r.details FROM businesses b JOIN customer_booking_access c ON c.owner_id=b.owner_id AND c.booking_id=$2 AND c.token_hash=$3 AND c.expires_at>now() JOIN booking_requests r ON r.id=c.booking_id AND r.business_id=b.id AND r.status='pending' LEFT JOIN settings s ON s.owner=b.owner_id WHERE b.slug=$1 AND b.status='active'",[slug,bookingId,tokenHash(token)])).rows[0];
+  if(waiting){const d=typeof waiting.details==='string'?JSON.parse(waiting.details):waiting.details;const config=typeof waiting.settings==='string'?JSON.parse(waiting.settings):waiting.settings||{};return {business:waiting.name,date:waiting.date,start:waiting.start_minute,amountCents:Math.round(Number(d.quotedPrice??d.price??0)*100),status:'awaiting_approval',paymentOptions:bookingServicePaymentOptions(config,d),paymentChoice:d.paymentChoice};}
+ }
  if(!r||r.status==='Cancelled')throw Error('This payment link is unavailable or expired. Contact the business.');
  const d=typeof r.data==='string'?JSON.parse(r.data):r.data;
  const config=typeof r.settings==='string'?JSON.parse(r.settings):r.settings||{};
  const options=bookingServicePaymentOptions(config,d);
  if(r.payment_status!=='paid'&&d.paymentStatus!=='paid'&&(d.membershipCovered||Number(d.price)===0))return {business:r.name,amountCents:0,status:'covered'};
- if(r.payment_status!=='paid'&&d.paymentStatus!=='paid'&&!options.online)return {business:r.name,date:r.date,start:r.start,amountCents:Math.round(Number(d.price)*100),status:'onsite'};
- return {business:r.name,date:r.date,start:r.start,amountCents:Math.round(Number(d.price)*100),status:r.payment_status==='paid'||d.paymentStatus==='paid'?'paid':'ready'};
+ if(r.payment_status!=='paid'&&d.paymentStatus!=='paid'&&!options.online)return {business:r.name,date:r.date,start:r.start,amountCents:Math.round(Number(d.price)*100),status:'onsite',paymentOptions:options,paymentChoice:d.paymentChoice};
+ return {business:r.name,date:r.date,start:r.start,amountCents:Math.round(Number(d.price)*100),status:r.payment_status==='paid'||d.paymentStatus==='paid'?'paid':'ready',paymentOptions:options,paymentChoice:d.paymentChoice};
 }

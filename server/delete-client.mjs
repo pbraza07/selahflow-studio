@@ -69,6 +69,7 @@ export async function deleteClientPermanently(db,{owner,businessId,client,closeO
   for(const s of specs)s.rows??=await read(s.table,s.where,s.args);
   const rowsFor=table=>specs.find(s=>s.table===table).rows;
   if(['business_communication_recipients','booking_client_messages','booking_receipt_emails','membership_payment_emails','membership_payment_invitations','owner_form_notifications'].some(table=>rowsFor(table).some(m=>m.status==='processing')))throw Error('A related email is currently being sent. Retry reset after delivery finishes.');
+  if(rowsFor('booking_payments').some(p=>p.status==='pending'&&p.terminal_payment_intent_id))throw Error('Check or cancel this appointment onsite card collection before deleting the client.');
   if(closeOpenCheckouts)await expireClientCheckouts(db,{businessId:business.id,bookingKeys,members,bookingPayments:rowsFor('booking_payments')},api);
   if(!closeOpenCheckouts&&rowsFor('booking_payments').some(p=>p.status==='pending'&&p.stripe_checkout_session_id))throw Error('Expire this registration open Stripe Checkout before reset.');
   if((await db.query("SELECT 1 FROM first_customer_commissions WHERE business_id=$1 AND source_id=ANY($2::text[]) AND kind='membership' AND status='reserved' AND stripe_checkout_session_id IS NOT NULL",[business.id,memberIds])).rows.length)throw Error('Expire this membership open Stripe Checkout before reset.');

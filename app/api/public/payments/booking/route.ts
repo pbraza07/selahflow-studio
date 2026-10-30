@@ -1,3 +1,4 @@
+import {chooseBookingOnsite} from '../../../../../server/booking-payment-choice.mjs';
 import {getPool} from '../../../../../server/database.mjs';
 import {validOrigin,trustedOrigin,tokenHash} from '../../../../../server/security.mjs';
 import {stripeApi} from '../../../../../server/membership-payments.mjs';
@@ -14,6 +15,7 @@ export async function POST(req:Request){
   const pool=getPool(),ip=(req.headers.get('x-forwarded-for')||'unknown').split(',').at(-1)!.trim();
   const limit=(await pool.query("INSERT INTO public_limits(key,count,window_start) VALUES($1,1,now()) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN 1 ELSE public_limits.count+1 END,window_start=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN now() ELSE public_limits.window_start END RETURNING count",['booking-checkout:'+tokenHash(ip)])).rows[0];
   if(limit.count>30)return Response.json({error:'Too many payment requests. Try again later.'},{status:429,headers});
+  if(body.action==='onsite')return Response.json(await chooseBookingOnsite(pool,body),{headers});
   if(body.action==='preview')return Response.json(await bookingPaymentPreview(pool,body),{headers});
   if(body.action==='registration'){
    const key='registration-checkout:'+tokenHash(ip+':'+String(body.slug)+':'+String(body.memberNumber));

@@ -472,6 +472,7 @@ if(b.action==='deleteAppointments'){
   const available=new Set(existing.rows.map((row:any)=>row.id));
   if(all&&(ids.length!==available.size||ids.some((id:string)=>!available.has(id))))throw Error('Appointment list changed. Refresh and confirm again.');
   if(ids.some((id:string)=>!available.has(id)))throw Error('One or more appointments no longer exist. Refresh the list.');
+  if((await client.query("SELECT 1 FROM booking_payments p JOIN businesses b ON b.id=p.business_id WHERE b.owner_id=$1 AND p.booking_id=ANY($2::text[]) AND p.status='pending' AND p.terminal_payment_intent_id IS NOT NULL",[owner,ids])).rows.length)throw Error('Check or cancel onsite card collection before deleting this appointment.');
   await client.query('DELETE FROM slots WHERE owner=$1 AND appointment=ANY($2::text[])',[owner,ids]);
   await client.query('DELETE FROM booking_requests WHERE owner_id=$1 AND appointment_id=ANY($2::text[])',[owner,ids]);
   const removed=await client.query('DELETE FROM appointments WHERE owner=$1 AND id=ANY($2::text[]) RETURNING id',[owner,ids]);

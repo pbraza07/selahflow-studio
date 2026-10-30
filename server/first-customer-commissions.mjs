@@ -48,6 +48,10 @@ export async function reserveCommission(db,{businessId,kind,memberNumber,sourceI
   const session=await api('checkout/sessions/'+prior.stripe_checkout_session_id,{method:'GET',account:prior.stripe_account_id});
   if(session.status!=='expired')throw Error('Another first-time '+kind+' payment is open or processing for this client. Complete it or ask the business to expire the unpaid checkout first.');
  }
+ if(prior?.stripe_payment_intent_id&&prior.status==='reserved'){
+  const intent=await api('payment_intents/'+prior.stripe_payment_intent_id,{method:'GET',account:prior.stripe_account_id});
+  if(intent.status!=='canceled')throw Error('Another onsite first-time payment is open or processing for this client. Cancel or complete it first.');
+ }
  // Preserve returning/legacy/imported booking clients at activation. Membership is independently eligible.
  if(kind==='booking'){
   const old=(await db.query('SELECT 1 FROM business_client_profiles p JOIN businesses b ON b.owner_id=p.owner WHERE b.id=$1 AND p.member_number=$2 AND (p.created_at<$3::timestamptz OR p.commission_existing_client=true) LIMIT 1',[businessId,memberNumber,policy.booking_enabled_at])).rows.length;
@@ -59,7 +63,7 @@ export async function reserveCommission(db,{businessId,kind,memberNumber,sourceI
   if(paid)return null;
  }
  if(prior){
-  await db.query("UPDATE first_customer_commissions SET source_id=$1,stripe_account_id=$2,stripe_checkout_session_id=NULL,gross_cents=$3,eligible_cents=$4,fee_cents=$5,status='reserved',updated_at=now() WHERE id=$6 AND business_id=$7",[sourceId,account,grossCents,eligibleCents,fee,prior.id,businessId]);
+  await db.query("UPDATE first_customer_commissions SET source_id=$1,stripe_account_id=$2,stripe_checkout_session_id=NULL,stripe_payment_intent_id=NULL,gross_cents=$3,eligible_cents=$4,fee_cents=$5,status='reserved',updated_at=now() WHERE id=$6 AND business_id=$7",[sourceId,account,grossCents,eligibleCents,fee,prior.id,businessId]);
   return {...prior,source_id:sourceId,stripe_checkout_session_id:null,fee_cents:fee};
  }
  return (await db.query('INSERT INTO first_customer_commissions(business_id,identity_digest,kind,source_id,stripe_account_id,gross_cents,eligible_cents,fee_cents) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',[businessId,digest,kind,sourceId,account,grossCents,eligibleCents,fee])).rows[0];
@@ -102,4 +106,14 @@ export async function acceptCommissionTerms(db,{businessId,actor}){
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[businessId+':commission-settings']);
  const old=(await db.query('SELECT booking_enabled,membership_enabled FROM business_commission_policies WHERE business_id=$1 FOR UPDATE',[businessId])).rows[0];
  return saveCommissionSettings(db,{businessId,actor,bookingEnabled:old?.booking_enabled===true,membershipEnabled:old?.membership_enabled===true,acceptTerms:true});
+}
+
+export async function attachCommissionIntent(db,claim,intent){if(claim)await db.query('UPDATE first_customer_commissions SET stripe_checkout_session_id=NULL,stripe_payment_intent_id=$1,updated_at=now() WHERE id=$2 AND business_id=$3',[intent.id,claim.id,claim.business_id]);}
+export async function settleTerminalCommission(db,{businessId,account,intent},api=stripeApi){
+ const claim=(await db.query('SELECT * FROM first_customer_commissions WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_payment_intent_id=$3 FOR UPDATE',[businessId,account,intent.id])).rows[0];
+ if(!claim||['paid','refunded'].includes(claim.status))return;
+ if(intent.status!=='succeeded'||intent.currency!=='usd'||intent.amount_received!==claim.gross_cents||intent.application_fee_amount!==claim.fee_cents||intent.metadata?.commission_claim_id!==claim.id)throw Error('Stripe onsite commission needs reconciliation.');
+ const fee=typeof intent.latest_charge?.application_fee==='string'?intent.latest_charge.application_fee:intent.latest_charge?.application_fee?.id;
+ await db.query("UPDATE first_customer_commissions SET status='paid',stripe_application_fee_id=$1,paid_at=now(),updated_at=now() WHERE id=$2 AND business_id=$3",[fee||null,claim.id,businessId]);
+ if(Number(intent.latest_charge?.amount_refunded)>0)await refundCommission(db,{businessId,account,charge:intent.latest_charge},api);
 }
