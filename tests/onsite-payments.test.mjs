@@ -10,6 +10,7 @@ import {bookingPaymentPreview} from '../server/booking-payment-preview.mjs';
 import {startTerminalPayment,checkTerminalPayment,applyTerminalPayment,saveTerminalLocation,nativeConnectionToken} from '../server/terminal-payments.mjs';
 import {startBookingCheckout} from '../server/stripe-checkout.mjs';
 import {bookingReceiptMessage} from '../server/booking-receipts.mjs';
+import {recordCashSale} from '../server/record-cash-sale.mjs';
 import {saveCommissionSettings} from '../server/first-customer-commissions.mjs';
 async function fixture(t){
  const old={...process.env};Object.assign(process.env,{APP_ENV:'staging',STRIPE_SECRET_KEY:'sk_test_fixture',STRIPE_CONNECT_WEBHOOK_SECRET:'whsec_fixture'});
@@ -147,4 +148,29 @@ test('phone setup and native return links use the guarded universal owner route'
  const [setup,native,owner]=await Promise.all(['app/onsite/setup/page.tsx','native/selahflow-pay/App.tsx','app/studio/[slug]/page.tsx'].map(f=>readFile(new URL('../'+f,import.meta.url),'utf8')));
  assert.match(setup,/href="\/studio\/owner"/);assert.match(native,/https:\/\/selahflow\.onrender\.com\/studio\/owner/);assert.match(native,/grant\.origin\+'\/studio\/owner'/);
  assert.doesNotMatch(setup,/href="\/owner"/);assert.doesNotMatch(native,/['"]\/owner['"]/);assert.match(owner,/actualSlug!==slug/);assert.match(owner,/redirect\('\/login'\)/);
+});
+
+test('online → onsite → cancel → online uses a fresh Checkout idempotency key and reuses its open link',async t=>{
+ const f=await fixture(t);await saveTerminalLocation(f.db,'u1','tml_one',f.api);
+ let session={id:'cs_test_onlinefirst',livemode:false,status:'open',mode:'payment',payment_status:'unpaid',url:'https://checkout.stripe.com/c/pay/test_first'},keys=[];
+ const api=async(path,o)=>{
+  if(path==='checkout/sessions'){keys.push(o.idempotencyKey);session={...session,id:keys.length===1?'cs_test_onlinefirst':'cs_test_onlinesecond',status:'open',url:'https://checkout.stripe.com/c/pay/test_'+keys.length};return session;}
+  if(path.startsWith('checkout/sessions/')){if(path.endsWith('/expire'))session={...session,status:'expired'};return session;}
+  return f.api(path,o);
+ };
+ const args={slug:'one',bookingId:f.bookingId,token:f.token,origin:'https://staging.example'};
+ await startBookingCheckout(f.pool,args,api);assert.equal(keys.length,1);
+ await startTerminalPayment(f.pool,f.scope,args.origin,api);assert.equal(session.status,'expired');
+ await checkTerminalPayment(f.pool,f.scope,{cancel:true},api);
+ assert.ok((await startBookingCheckout(f.pool,args,api)).checkoutUrl);assert.equal(keys.length,2);assert.notEqual(keys[0],keys[1]);assert.ok(keys[1].includes('pi_onsite1'));
+ assert.ok((await startBookingCheckout(f.pool,args,api)).checkoutUrl);assert.equal(keys.length,2,'refresh reuses the new open session instead of creating another');
+ assert.equal((await f.query('SELECT terminal_payment_intent_id FROM booking_payments')).rows[0].terminal_payment_intent_id,null,'online checkout clears the inactive Terminal pointer, retaining its immutable attempt history');
+ await startTerminalPayment(f.pool,f.scope,args.origin,api);assert.equal(f.creates,2,'switching onsite again creates a fresh intent instead of reusing the cancelled first attempt');
+ const intentCreates=f.calls.filter(([path])=>path==='payment_intents');assert.notEqual(intentCreates[0][1].idempotencyKey,intentCreates[1][1].idempotencyKey);assert.ok(intentCreates[1][1].idempotencyKey.includes('cs_test_onlinesecond'));
+ await assert.rejects(recordCashSale(f.pool,{owner:'u1',eventId:randomUUID(),bookingId:f.bookingId,lines:[{id:'s',name:'Coaching',type:'service',price:100,qty:1}],taxRate:0}),/card checkout/,'active Terminal collection blocks cash');
+ await checkTerminalPayment(f.pool,f.scope,{cancel:true},api);
+ await recordCashSale(f.pool,{owner:'u1',eventId:randomUUID(),bookingId:f.bookingId,lines:[{id:'s',name:'Coaching',type:'service',price:100,qty:1}],taxRate:0});
+ assert.equal(JSON.parse((await f.query('SELECT data FROM appointments WHERE id=$1',[f.bookingId])).rows[0].data).paymentStatus,'paid','verified cancellation permits a later owner-confirmed cash payment');
+ assert.equal((await startTerminalPayment(f.pool,f.scope,args.origin,api)).paid,true);assert.equal(f.creates,2);
+ assert.equal((await f.query('SELECT count(*)::int AS n FROM stripe_payment_receipts')).rows[0].n,0,'channel changes and recorded cash never fabricate a Stripe receipt');
 });

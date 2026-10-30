@@ -13,7 +13,7 @@ export async function recordCashSale(pool,{owner,eventId,bookingId,lines,taxRate
    const data=read(booking.data);
    const provider=(await db.query('SELECT status,stripe_checkout_session_id,terminal_payment_intent_id FROM booking_payments WHERE booking_id=$1 AND business_id=$2 FOR UPDATE',[bookingId,booking.business_id])).rows[0];
    if(data.paymentStatus==='paid'||provider?.status==='paid')throw Error('This booking is already paid.');
-   if(provider?.stripe_checkout_session_id||provider?.terminal_payment_intent_id)throw Error('This booking has a card checkout. Resolve that checkout before linking a cash payment.');
+   if(provider?.stripe_checkout_session_id||provider?.terminal_payment_intent_id&&provider.status!=='expired')throw Error('This booking has a card checkout. Resolve that checkout before linking a cash payment.');
    const prior=(await db.query("SELECT data FROM events WHERE owner=$1 AND kind='cash_sale'",[owner])).rows.some(r=>read(r.data).bookingId===bookingId);
    if(prior)throw Error('Cash has already been recorded for this booking.');
    const expected=Math.round(Number(data.price)*100),services=lines.filter(l=>l.type==='service');

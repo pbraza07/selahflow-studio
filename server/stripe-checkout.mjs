@@ -84,7 +84,7 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
   }else if(record.amount_cents!==cents)throw Error('The booking price changed. Contact the business before paying.');
   const eligible=Math.min(record.amount_cents,record.lines.filter(line=>line.type==='service').reduce((n,line)=>n+Math.round(Number(line.price)*100)*line.qty,0));
   const commission=await reserveCommission(db,{businessId:business.id,kind:'booking',memberNumber:data.memberNumber,sourceId:actualId,account,grossCents:cents,eligibleCents:eligible},api);
-  const session=await api('checkout/sessions',{account,idempotencyKey:'booking-'+actualId+'-'+(record.stripe_checkout_session_id||'initial'),params:{
+  const session=await api('checkout/sessions',{account,idempotencyKey:'booking-'+actualId+'-'+(record.stripe_checkout_session_id||record.terminal_payment_intent_id||'initial'),params:{
    mode:'payment',...(commission?{'payment_intent_data[application_fee_amount]':commission.fee_cents,'metadata[commission_claim_id]':commission.id}:{}),'allowed_payment_method_types[0]':'card',client_reference_id:actualId,customer_email:data.email||undefined,
    'line_items[0][quantity]':'1','line_items[0][price_data][currency]':'usd',
    'line_items[0][price_data][unit_amount]':String(record.amount_cents),
@@ -97,7 +97,7 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
   }});
   assertTestPayment(session);const url=checkoutUrl(session);
   await attachCommissionSession(db,commission,session);
-  await db.query("UPDATE booking_payments SET stripe_checkout_session_id=$1,status='pending',updated_at=now() WHERE booking_id=$2 AND business_id=$3",[session.id,actualId,business.id]);
+  await db.query("UPDATE booking_payments SET stripe_checkout_session_id=$1,terminal_payment_intent_id=NULL,status='pending',updated_at=now() WHERE booking_id=$2 AND business_id=$3",[session.id,actualId,business.id]);
   await db.query('COMMIT');return {checkoutUrl:url};
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
 }
