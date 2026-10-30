@@ -1,3 +1,10 @@
+# v1.3.187 release handoff — Owner-controlled full sessions
+
+Owners can click any dated bookable session in the owner calendar, open its private roster and check **Mark session as full**. The exact occurrence remains published on the customer session calendar with 0 spaces available and the existing full-session label, but public booking, team booking, direct owner add and approval/confirmation paths cannot add another customer. Unchecking immediately reopens the occurrence using its real capacity minus active bookings. Recurring series are occurrence-scoped: closing one date does not close later dates. Removing a session cleans its saved manual-full state. Existing customers, payments, approvals, roster history and session schedule remain unchanged.
+
+Server validation limits and sanitizes the saved occurrence identifiers. The booking transaction rechecks the latest persisted setting under the existing schedule lock, so stale browser availability cannot bypass an owner-marked full session. All 530 local tests, TypeScript and the production build pass. Staging and production verification are pending. No real business setting, booking, payment or message is created for automated QA.
+
+
 # v1.3.186 release handoff — Agreement-first paid business activation
 
 New paid business signup now enforces the complete order: read and electronically sign the current services/revenue agreement, create the private pending account, then open SelahFlow's Stripe-hosted subscription Checkout from the clearly labeled “Sign up now and pay with Stripe” action. The saved current agreement is verified server-side before Checkout can be created; returning from Checkout does not grant access. Only a signed Stripe webhook and provider-verified paid invoice can mark the requested Professional or Business package paid.

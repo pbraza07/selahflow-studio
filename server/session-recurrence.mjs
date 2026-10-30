@@ -68,11 +68,13 @@ export function originalSessionOccurrence(config,id){
 export function sessionInstances(config,date,staffId){
  const overrides=Array.isArray(config.sessionOverrides)?config.sessionOverrides:[];
  const overriddenIds=new Set(overrides.map(o=>o.id));
+ const fullIds=new Set(Array.isArray(config.fullSessionIds)?config.fullSessionIds:[]);
  const generated=(Array.isArray(config.bookableSessions)?config.bookableSessions:[])
   .map(s=>recurringSessionForDate(s,date))
   .filter(s=>s&&!overriddenIds.has(s.id));
  const moved=overrides.filter(s=>s.date===date).map(s=>({...s,recurring:true,overridden:true}));
- return [...generated,...moved].filter(s=>!staffId||s.staff===staffId);
+ return [...generated,...moved].map(s=>({...s,manuallyFull:fullIds.has(s.id)}))
+  .filter(s=>!staffId||s.staff===staffId);
 }
 export function recurrenceCount(session){
  const rule=validateRecurrence(session);if(!rule)return dateOK(session?.date)?1:0;

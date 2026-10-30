@@ -156,6 +156,13 @@ const updateSession=(id:string,update:Any)=>setConfig((c:Any)=>({...c,bookableSe
 const removeSession=(id:string)=>{if(window.confirm('Remove this bookable session and all its recurring/rescheduled dates? Existing customer bookings, pending requests, payments and history will be retained. Save business settings to finish removal.'))setConfig((c:Any)=>removeBookableSession(c,id));};
 const hasPublishedSession=(a:Any)=>!!a.sessionId&&sessionsOn(a.date).some((session:Any)=>session.id===a.sessionId);
 const sessionBookings=(id:string)=>appointments.filter((a:Any)=>a.sessionId===id&&!['Cancelled','No-show'].includes(a.status)).length;
+async function setSessionFull(session:Any,checked:boolean){
+ const ids=new Set<string>(Array.isArray(config.fullSessionIds)?config.fullSessionIds:[]);
+ if(checked)ids.add(session.id);else ids.delete(session.id);
+ const next={...config,fullSessionIds:[...ids]};
+ const result=await action({action:'settings',config:next});
+ if(result?.ok){await refresh(true);setToast(checked?'Session marked as full. It remains visible but cannot be booked.':'Session reopened for booking.');}
+}
 async function addRosterCustomer(){
  if(!selectedRosterSession||!selectedSessionRoster||selectedSessionRoster.remaining<=0){setToast('No seats are available.');return;}
  const service=config.services.find((v:Any)=>v.id===selectedRosterSession.service);
@@ -222,7 +229,7 @@ async function saveSessionReschedule(){
  finally{setRescheduleBusy(false);}
 }
 const sessionsOn=(d:string,staffId?:string)=>sessionInstances(config,d,staffId).filter((session:Any)=>config.services.some((v:Any)=>v.id===session.service));
-const sessionLeft=(session:Any)=>Math.max(0,session.capacity-sessionBookings(session.id));
+const sessionLeft=(session:Any)=>session.manuallyFull===true?0:Math.max(0,session.capacity-sessionBookings(session.id));
 const sessionLabel=(session:Any)=>{const service=config.services.find((v:Any)=>v.id===session.service);return (service?.name||'Session')+' · '+sessionLeft(session)+'/'+session.capacity+' slots left';};
 const studioDate=(d:string)=>d.includes('T')?new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d)):d;
 const inRange=(raw:string)=>{const d=studioDate(raw);return range==='All time'||(range==='Today'?d.slice(0,10)===date:d.slice(0,7)===date.slice(0,7));};
@@ -541,6 +548,7 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
    <button type="button" className="sf-roster-close" aria-label="Close session roster" onClick={()=>setRosterSelection(null)}><X size={20}/></button>
   </header>
   {selectedRosterSession&&selectedSessionRoster?<div className="sf-roster-content">
+   <label className="sf-toggle-row" style={{marginBottom:16,padding:14,border:'1px solid #d9ded9',borderRadius:12}}><input type="checkbox" checked={selectedSessionRoster.manuallyFull===true} disabled={busy} onChange={e=>void setSessionFull(selectedRosterSession,e.target.checked)}/><span><b>Mark session as full</b><small>Keep this session visible to customers with 0 spaces available, but prevent any new bookings. Uncheck it to reopen the remaining seats.</small></span></label>
    <div style={{display:'flex',gap:10,flexWrap:'wrap',marginBottom:16}}>
  <button type="button" className="primary" disabled={busy||selectedSessionRoster.remaining<=0} onClick={()=>setRosterAddOpen(v=>!v)}><Plus size={16}/> Add customer</button>
  <small style={{alignSelf:'center'}}>{selectedSessionRoster.remaining<=0?'Session is full':'Add a customer directly to this session'}</small>

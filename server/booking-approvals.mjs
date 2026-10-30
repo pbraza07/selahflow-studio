@@ -11,7 +11,7 @@ import {requiresBookingApproval} from './booking-review.mjs';
 import {SESSION_FULL_MESSAGE} from './session-capacity.mjs';
 
 import {getPool} from './database.mjs';
-import {appointmentData,bookedSessionCount,selectedSession,sessionTimeRestricted,sessionsForDate,easternClock} from './session-scheduling.mjs';
+import {appointmentData,selectedSession,sessionTimeRestricted,sessionsForDate,sessionRemaining,easternClock} from './session-scheduling.mjs';
 export function slotCapacity(service){const n=service?.maxSlots??1;return Number.isInteger(n)&&n>=1&&n<=20?n:1;}
 export function validSlotCapacity(n){return Number.isInteger(n)&&n>=1&&n<=20;}
 export function overlaps(start,duration,otherStart,otherDuration){return start<otherStart+otherDuration&&otherStart<start+duration;}
@@ -107,7 +107,7 @@ export async function confirmBooking(options){
   if(session){
    if(start+duration+bufferMinutes > config.close*60 || start < config.open*60)
     throw conflict('This session no longer fits the business opening hours.');
-   if(bookedSessionCount(existing,session.id)>=session.capacity)
+   if(sessionRemaining(session,existing)<=0)
     throw conflict(SESSION_FULL_MESSAGE);
   }else{
    if(sessionTimeRestricted(config,staff,services))throw conflict('Choose a scheduled session start time.');
