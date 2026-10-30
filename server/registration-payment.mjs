@@ -1,3 +1,4 @@
+import {bookingServicePaymentOptions} from './service-payment-options.mjs';
 import {randomBytes} from 'node:crypto';
 import {tokenHash} from './security.mjs';
 import {paymentConfigured} from './membership-payments.mjs';
@@ -6,8 +7,9 @@ import {startBookingCheckout} from './stripe-checkout.mjs';
 const dataOf=value=>{try{return typeof value==='string'?JSON.parse(value):value||{};}catch{return {};}};
 export async function registrationPaymentSummary(pool,owner,appointmentId){
  if(!appointmentId)return {state:'awaiting_approval'};
- const row=(await pool.query(`SELECT a.status,a.data,b.slug,r.id AS request_id,r.status AS request_status,p.status AS payment_status,
+ const row=(await pool.query(`SELECT a.status,a.data,s.data AS settings,b.slug,r.id AS request_id,r.status AS request_status,p.status AS payment_status,
  ma.charges_enabled,ma.onboarding_complete FROM appointments a JOIN businesses b ON b.owner_id=a.owner AND b.status='active'
+ LEFT JOIN settings s ON s.owner=a.owner
  LEFT JOIN booking_requests r ON r.appointment_id=a.id AND r.business_id=b.id
  LEFT JOIN booking_payments p ON p.booking_id=a.id AND p.business_id=b.id
  LEFT JOIN merchant_accounts ma ON ma.business_id=b.id AND ma.provider='stripe'
@@ -19,6 +21,7 @@ export async function registrationPaymentSummary(pool,owner,appointmentId){
  if(data.paymentStatus==='paid')return {state:'paid'};
  if(data.membershipCovered===true||amountCents===0)return {state:'covered'};
  if(!Number.isSafeInteger(amountCents)||amountCents<50||amountCents>100000000)return {state:'unavailable'};
+ if(!bookingServicePaymentOptions(dataOf(row.settings),data).online)return {state:'onsite',amountCents};
  if(!paymentConfigured()||!row.charges_enabled||!row.onboarding_complete)return {state:'contact_business',amountCents};
  return {state:'due',amountCents,slug:row.slug,bookingId:row.request_id||appointmentId};
 }

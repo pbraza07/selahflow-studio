@@ -40,6 +40,12 @@ test('all pending bookings require explicit owner approval before Stripe checkou
  assert.equal((await query('SELECT status FROM booking_requests WHERE id=$1',[id])).rows[0].status,'accepted');
  assert.equal((await bookingPaymentPreview(pool,args)).status,'ready');
  await assert.rejects(startBookingCheckout(pool,{...args,token:'b'.repeat(64)},api),/expired/);
+ service.paymentOptions='onsite';await save();
+ assert.equal((await bookingPaymentPreview(pool,args)).status,'onsite');
+ await assert.rejects(startBookingCheckout(pool,args,api),/Pay onsite/);assert.equal(creates,0);
+ const {registrationPaymentSummary}=await import('../server/registration-payment.mjs');assert.equal((await registrationPaymentSummary(pool,'u1',id)).state,'onsite');
+ assert.equal((await query('SELECT count(*)::int n FROM booking_payments')).rows[0].n,0);
+ service.paymentOptions='both';await save();
  await startBookingCheckout(pool,args,api);await startBookingCheckout(pool,args,api);assert.equal(creates,1);
  const paid={...session,payment_status:'paid',currency:'usd',amount_total:1500,payment_intent:'pi_fixture',client_reference_id:id,metadata:{booking_id:id,selahflow_business_id:'b1'}};
  await query('BEGIN');assert.equal(await applyBookingPayment(db,'b1','acct_fixture',paid),true);await query('COMMIT');

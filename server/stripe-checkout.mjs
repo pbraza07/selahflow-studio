@@ -1,3 +1,4 @@
+import {bookingServicePaymentOptions} from './service-payment-options.mjs';
 import {weeklyMonthCredits} from './membership-weekly.mjs';
 import {reserveCommission,attachCommissionSession,settleCommission} from './first-customer-commissions.mjs';
 import {monthlyPeriod,refreshMemberPeriod,membershipAnchor,nextBillingAnchor} from './membership-periods.mjs';
@@ -60,6 +61,7 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
   let record=(await db.query('SELECT * FROM booking_payments WHERE booking_id=$1 AND business_id=$2 FOR UPDATE',[actualId,business.id])).rows[0];
   if(record?.status==='paid'){await queueBookingPaid(db,business.id,actualId);await db.query('COMMIT');return {paid:true};}
   if(record&&record.amount_cents!==cents)throw Error('The booking price changed. Contact the business before paying.');
+  if(!bookingServicePaymentOptions(config,data).online)throw Error('Pay onsite at the business for this service. Online payment is not enabled.');
   const account=await readyMerchant(db,business.id,api);
   if(record&&record.stripe_account_id!==account)throw Error('The payment account changed. Contact the business before paying.');
   if(record?.stripe_checkout_session_id){
