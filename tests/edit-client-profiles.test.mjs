@@ -62,3 +62,19 @@ test('a corrected client can be deleted once and both former/current IDs are rel
 test('editor catalog includes membership/session/service, removed saved questions and current values without editing definitions',()=>{
  const config={bookingCustomFields:[{id:'member',label:'Membership',forms:['membership'],sessionIds:['private'],type:'select',options:['New'],required:true}]},client={registrationAnswers:{member:'Old',removed:false},registrationFieldLabels:{removed:'Former consent'}};const fields=editableClientProfileFields(config,client);assert.equal(fields.length,2);assert.deepEqual(fields[0].options,['New','Old']);assert.equal(fields[0].required,false);assert.equal(fields[1].label,'Former consent');assert.equal(fields[1].type,'checkbox');assert.deepEqual(config.bookingCustomFields[0].forms,['membership']);
 });
+
+test('owner creates a no-DOB client with the business sequence and keeps that ID after identity edits',async()=>{
+ const f=await fixture();try{
+ const config=JSON.parse((await f.pg.query("SELECT data FROM settings WHERE owner='owner'")).rows[0].data);config.bookingStandardFields={dateOfBirth:{required:false}};await f.pg.query("UPDATE settings SET data=$1 WHERE owner='owner'",[JSON.stringify(config)]);
+ const created=await f.post({action:'create',firstName:'Alex',lastName:'Brown',dateOfBirth:'',memberNumber:'',email:'alex@example.test',phone:'8135550123',customAnswers:{level:'New'},notes:''});assert.equal(created.status,200,await created.clone().text());
+ const {clientId}=await created.json();const client=(await(await f.get()).json()).clients.find(c=>c.id===clientId);assert.equal(client.memberNumber,'AB1001');assert.equal(client.idUsesSequence,true);
+ const replace=await f.post({action:'replaceLegacyId',clientId,oldMemberNumber:'AB1001'});assert.equal(replace.status,409);assert.match((await replace.json()).error,/sequence-based/);
+ const changed=await f.post({...f.edit(client),clientId,firstName:'Alexandra',lastName:'Brown',dateOfBirth:'2000-02-29',memberNumber:'AB1001'});assert.equal(changed.status,200,await changed.clone().text());
+ const after=(await(await f.get()).json()).clients.find(c=>c.id===clientId);assert.equal(after.memberNumber,'AB1001');assert.equal(after.dateOfBirth,'2000-02-29');assert.equal(after.name,'Alexandra Brown');
+ assert.equal((await f.pg.query("SELECT member_id_sequence FROM businesses WHERE id='biz'")).rows[0].member_id_sequence,1001);
+ const missingId=randomUUID();await f.pg.query("INSERT INTO business_client_profiles(id,owner,name,first_name,last_name,email) VALUES($1,'owner','Chris Davis','Chris','Davis','chris@example.test')",[missingId]);
+ const withoutId=(await(await f.get()).json()).clients.find(c=>c.id===missingId);const assigned=await f.post({...f.edit(withoutId),clientId:missingId,firstName:'Chris',lastName:'Davis',dateOfBirth:'',memberNumber:'',phone:'8135550199'});assert.equal(assigned.status,200,await assigned.clone().text());
+ const assignedClient=(await(await f.get()).json()).clients.find(c=>c.id===missingId);assert.equal(assignedClient.memberNumber,'CD1002');assert.equal(assignedClient.idUsesSequence,true);
+
+ }finally{await f.close();}
+});

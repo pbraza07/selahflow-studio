@@ -1,6 +1,6 @@
-## Release source: v1.3.182
+## Release source: v1.3.183
 
-Service catalog payment buttons can be Make payment, Pay onsite or both. Team-page bookings default to the visible qualified team member, ahead of the service catalog default. Approval, waiver and verified-payment rules still apply.
+Clients without a birth date receive initials plus a business-specific sequence starting at 1001. Birth-date-based and existing IDs remain supported; booking, membership and owner client creation share the allocator.
 
 ## Release source: v1.3.178
 

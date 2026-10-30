@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-import {birthdateMemberId} from './member-id-policy.mjs';
+import {issueMemberId,birthdateMemberId,memberRegistrationIdentity} from './member-id-policy.mjs';
 import {validateClientInput,sameClientContact} from './client-profile-logic.mjs';
 import {editableClientProfileFields,clientProfileAnswers} from './client-profile-fields.mjs';
 import {sanitizeBookingAnswers} from './booking-custom-fields.mjs';
@@ -25,15 +25,19 @@ export async function updateClientProfile(db,{owner,businessId,selected,profile,
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
  await db.query('LOCK TABLE appointments,booking_requests,business_client_profiles,business_member_ids,customer_booking_ids,customer_memberships,booking_client_messages,booking_receipt_emails,membership_payment_emails,membership_payment_invitations,owner_form_notifications,business_communication_recipients IN SHARE ROW EXCLUSIVE MODE');
  const old=selected.memberNumber||'',oldReservation=old?(await db.query('SELECT * FROM business_member_ids WHERE business_id=$1 AND member_number=$2',[businessId,old])).rows[0]:null;
- const oldKey=oldReservation?.identity_key,newKey=oldKey?.startsWith('registration:')?oldKey:(await db.query('SELECT member_identity_key($1,$2::date) AS key',[values.name,dob||null])).rows[0].key;
+ const oldKey=oldReservation?.identity_key;let newKey=oldKey?.startsWith('registration:')?oldKey:(await db.query('SELECT member_identity_key($1,$2::date) AS key',[values.name,dob||null])).rows[0].key;
  const identityChanged=normalize(values.name)!==normalize(selected.name)||dob!==(selected.dateOfBirth||'');
  const requested=String(input.memberNumber||'').trim().toUpperCase();let number=old;
- if(identityChanged||!old||requested&&requested!==old){
-  if(!dob&&old)throw Error('A date of birth is required when changing a client with a Unique ID.');
-  number=dob?birthdateMemberId(values.name,dob,firstName,lastName):'';
+ if(old&&(oldKey?.startsWith('registration:')||!dob)){
+  if(requested&&requested!==old)throw Error('Keep this client’s existing Unique ID.');
+ }else if(!old&&!dob){
+  number=await issueMemberId(db,{businessId,name:values.name,firstName,lastName,dateOfBirth:null,registrationIdentity:randomUUID(),requested});
+  newKey='registration:'+await memberRegistrationIdentity(db,businessId,number);
+ }else if(identityChanged||!old||requested&&requested!==old){
+  number=birthdateMemberId(values.name,dob,firstName,lastName);
   if(requested&&requested!==old&&requested!==number)throw Error('The Unique ID must match first/last initials and MMDDYY.');
- }else if(requested&&requested!==old)throw Error('Enter the configured Unique ID.');
- const ownNumbers=oldKey?(await db.query('SELECT member_number FROM business_member_ids WHERE business_id=$1 AND identity_key=$2',[businessId,oldKey])).rows.map(r=>r.member_number):old?[old]:[];
+ }
+ const ownNumbers=oldKey?(await db.query('SELECT member_number FROM business_member_ids WHERE business_id=$1 AND identity_key=$2',[businessId,oldKey])).rows.map(r=>r.member_number):old?[old]:number&&newKey.startsWith('registration:')?[number]:[];
  const collision=number?(await db.query('SELECT * FROM business_member_ids WHERE business_id=$1 AND member_number=$2',[businessId,number])).rows[0]:null;
  if(collision&&!ownNumbers.includes(number))throw Error('This Unique ID belongs to another client in this business.');
  if(identityChanged&&(await db.query('SELECT member_number FROM business_member_ids WHERE business_id=$1 AND identity_key=$2 AND NOT(member_number=ANY($3::text[])) AND retired_at IS NULL',[businessId,newKey,ownNumbers])).rows.length)throw Error('Another client already has that name and birth date.');
@@ -56,12 +60,12 @@ export async function updateClientProfile(db,{owner,businessId,selected,profile,
  }
  const id=profile?.id||randomUUID(),anchor=selected.history?.at(-1)?.id||null;
  const args=[values.name,values.email,values.phone,values.notes,number||null,dob||null,JSON.stringify(answers),JSON.stringify(labels),JSON.stringify(imports),firstName,lastName,JSON.stringify(previous),owner,id];
- if(profile)await db.query('UPDATE business_client_profiles SET name=$1,email=$2,phone=$3,notes=$4,member_number=$5,date_of_birth=$6::date,registration_answers=$7::jsonb,registration_field_labels=$8::jsonb,import_columns=$9::jsonb,first_name=$10,last_name=$11,previous_member_numbers=$12::jsonb,updated_at=now() WHERE owner=$13 AND id=$14 AND deleted_at IS NULL',args);
+ if(profile)await db.query('UPDATE business_client_profiles SET name=$1,email=$2,phone=$3,notes=$4,member_number=$5,date_of_birth=$6::date,registration_answers=$7::jsonb,registration_field_labels=$8::jsonb,import_columns=$9::jsonb,first_name=$10,last_name=$11,previous_member_numbers=$12::jsonb,registration_identity=COALESCE(registration_identity,$15::uuid),updated_at=now() WHERE owner=$13 AND id=$14 AND deleted_at IS NULL',[...args,newKey.startsWith('registration:')?newKey.slice(13):null]);
  else await db.query('INSERT INTO business_client_profiles(name,email,phone,notes,member_number,date_of_birth,registration_answers,registration_field_labels,import_columns,first_name,last_name,previous_member_numbers,owner,id,source_key,anchor_appointment_id,registration_identity) VALUES($1,$2,$3,$4,$5,$6::date,$7::jsonb,$8::jsonb,$9::jsonb,$10,$11,$12::jsonb,$13,$14,$15,$16,$17::uuid)',[...args,selected.id,anchor,newKey.startsWith('registration:')?newKey.slice(13):null]);
  await db.query('UPDATE customer_memberships SET customer_name=$1,customer_email=$2,customer_phone=$3,date_of_birth=$4::date,member_number=$5,updated_at=now() WHERE business_id=$6 AND id=ANY($7::text[])',[values.name,values.email,values.phone,dob||null,number||null,businessId,memberIds]);
  const bookingIdentities=(await db.query('SELECT id FROM customer_booking_ids WHERE business_id=$1 AND member_number=ANY($2::text[])',[businessId,ownNumbers])).rows;
  await db.query('UPDATE customer_booking_ids SET first_name=$1,last_name=$2,email=$3,phone=$4,date_of_birth=$5::date,member_number=$6 WHERE business_id=$7 AND member_number=ANY($8::text[])',[firstName,lastName,values.email,values.phone,dob||null,number||null,businessId,ownNumbers]);
- if(number&&dob&&!bookingIdentities.length)await db.query('INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,phone,date_of_birth,member_number,registration_identity) VALUES($1,$2,$3,$4,$5,$6::date,$7,$8::uuid)',[businessId,firstName,lastName,values.email,values.phone,dob,number,newKey.startsWith('registration:')?newKey.slice(13):null]);
+ if(number&&!bookingIdentities.length)await db.query('INSERT INTO customer_booking_ids(business_id,first_name,last_name,email,phone,date_of_birth,member_number,registration_identity) VALUES($1,$2,$3,$4,$5,$6::date,$7,$8::uuid)',[businessId,firstName,lastName,values.email,values.phone,dob||null,number,newKey.startsWith('registration:')?newKey.slice(13):null]);
  if(identityChanged||old&&old!==number)await db.query("UPDATE participation_waivers SET deleted_at=now(),deleted_by=$1,retention_status='identity_corrected' WHERE business_id=$2 AND customer_id=ANY($3::uuid[]) AND deleted_at IS NULL",[owner,businessId,bookingIdentities.map(x=>x.id)]);
  const pending=(await db.query("SELECT id,details FROM booking_requests WHERE business_id=$1 AND status='pending'",[businessId])).rows.filter(r=>historyIds.includes(r.id)||old&&ownNumbers.includes(object(r.details).memberNumber));
  for(const r of pending){const d=object(r.details),next={...d,originalSubmission:d.originalSubmission||{customerName:d.customerName,customerEmail:d.customerEmail,customerPhone:d.customerPhone,customAnswers:d.customAnswers,memberNumber:d.memberNumber,dateOfBirth:d.dateOfBirth},customerName:values.name,customerEmail:values.email,customerPhone:values.phone,firstName,lastName,dateOfBirth:dob,memberNumber:number,profileCorrectedAt:new Date().toISOString()};await db.query('UPDATE booking_requests SET details=$1 WHERE id=$2 AND business_id=$3',[JSON.stringify(next),r.id,businessId]);}

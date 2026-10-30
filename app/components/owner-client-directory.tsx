@@ -22,7 +22,7 @@ export type Visit={
  answers?:Answer[];originalAnswers?:Answer[];customerName?:string;customerEmail?:string;customerPhone?:string;customerMemberNumber?:string;dateOfBirth?:string;firstName?:string;lastName?:string;
  originalSubmission?:{customerName:string;customerEmail:string;customerPhone:string;customAnswers?:Record<string,string|boolean>}|null;submittedAt?:string|null;policyAccepted?:boolean;policyAcceptedAt?:string|null;
 };
-type Client={
+type Client={idUsesSequence?:boolean;
  membershipBadge?:MembershipBadgeDesign|null;memberNumber?:string;membershipName?:string;membershipStatus?:string;membershipAnswers?:Answer[];membershipDetails?:MembershipDetails;membershipRegistration?:{name:string;firstName:string;lastName:string;email:string;phone:string;dateOfBirth:string;memberNumber:string};dateOfBirth?:string;
  id:string;firstName?:string;lastName?:string;editToken?:string;previousMemberNumbers?:string[];profileUpdatedAt?:string;name:string;email:string;phone:string;bookedSessions:number;attendedSessions:number;
  attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;importColumns?:Record<string,string|boolean>;registrationAnswers?:Record<string,string|boolean>;registrationFieldLabels?:Record<string,string>;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:Answer[];
@@ -161,7 +161,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
      <button type="button" className="outline" onClick={()=>beginEdit(selected)}><Pencil size={16}/> Edit client</button><button type="button" className="outline" onClick={()=>onAddMembership({name:selected.name,email:selected.email,phone:selected.phone})}>Add membership</button>
      <a className="primary sf-clients-export" href={exported(selected.id)}><Download size={16}/> Export this client to Excel</a>
      <button type="button" className="outline sf-client-remove" disabled={!!actionBusy} onClick={()=>void removeClient(selected)}><Trash2 size={16}/> Delete permanently</button>
-     {selected.memberNumber&&!/^[A-Z]{2}[0-9]{6}$/.test(selected.memberNumber)&&<button type="button" className="outline" disabled={!!actionBusy} onClick={()=>void replaceLegacyId(selected)}>Replace legacy ID with eight characters</button>}
+     {selected.memberNumber&&!selected.idUsesSequence&&!/^[A-Z]{2}[0-9]{6}$/.test(selected.memberNumber)&&<button type="button" className="outline" disabled={!!actionBusy} onClick={()=>void replaceLegacyId(selected)}>Replace legacy ID with eight characters</button>}
     </div>
    </div>
    <div className="sf-client-profile-tabs" role="group" aria-label="Client profile sections">{['History','Details','Membership','Sessions'].map(tab=><button type="button" key={tab} className={profileTab===tab?'primary':'outline'} aria-pressed={profileTab===tab} onClick={()=>setProfileTab(tab)}>{tab}</button>)}</div>

@@ -2,7 +2,7 @@ import {updateClientProfile,clientProfileEditToken} from '../../../../server/upd
 import {allBookingStatusRows} from '../../../../server/booking-status.mjs';
 import {decorateBookingTimeline} from '../../../../server/booking-timeline.mjs';
 import {deleteOwnerClient} from '../../../../server/owner-client-deletion.mjs';
-import {issueMemberId,birthdateMemberId} from '../../../../server/member-id-policy.mjs';
+import {issueMemberId,birthdateMemberId,memberRegistrationIdentity} from '../../../../server/member-id-policy.mjs';
 import {replaceLegacyMemberId} from '../../../../server/replace-legacy-member-id.mjs';
 import {randomUUID} from 'node:crypto';
 import {getPool} from '../../../../server/database.mjs';
@@ -33,7 +33,7 @@ async function businessFor(owner: string,db:{query:(sql:string,values:unknown[])
 async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>Promise<{rows:any[]}>},settings:Record<string,unknown>){
  const [appointments,profiles,requests,payments,clientEvents]=await Promise.all([
   db.query('SELECT id,date,start,duration,staff,status,data FROM appointments WHERE owner=$1 ORDER BY date DESC,start DESC',[owner]),
-  db.query('SELECT id,source_key,anchor_appointment_id,name,email,phone,notes,archived,import_columns,registration_answers,registration_field_labels,member_number,date_of_birth,deleted_at,first_name,last_name,previous_member_numbers,updated_at FROM business_client_profiles WHERE owner=$1 ORDER BY created_at,id',[owner]),
+  db.query('SELECT id,source_key,anchor_appointment_id,name,email,phone,notes,archived,import_columns,registration_answers,registration_field_labels,member_number,date_of_birth,deleted_at,first_name,last_name,previous_member_numbers,updated_at,registration_identity FROM business_client_profiles WHERE owner=$1 ORDER BY created_at,id',[owner]),
   db.query("SELECT id,date,staff_id,start_minute,duration,details,status,created_at,reviewed_at,appointment_id FROM booking_requests WHERE owner_id=$1 ORDER BY created_at DESC",[owner]),
   db.query('SELECT p.booking_id,p.status,p.paid_at FROM booking_payments p JOIN businesses b ON b.id=p.business_id WHERE b.owner_id=$1',[owner]),
   db.query("SELECT kind,created,data FROM events WHERE owner=$1 AND kind IN ('status','cash_sale')",[owner])
@@ -137,9 +137,10 @@ export async function POST(req:Request){
     validateStandardRegistration(settings,'booking',body);
     const input=validateClientInput({...body,name:(String(body.firstName||'').trim()+' '+String(body.lastName||'').trim()).trim()});
     const dateOfBirth=String(body.dateOfBirth||'');
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)||!Number.isFinite(Date.parse(dateOfBirth))||dateOfBirth>new Date().toISOString().slice(0,10))throw Error('Enter a valid date of birth.');
+    if(dateOfBirth&&(!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)||!Number.isFinite(Date.parse(dateOfBirth))||new Date(dateOfBirth).toISOString().slice(0,10)!==dateOfBirth||dateOfBirth>new Date().toISOString().slice(0,10)))throw Error('Enter a valid date of birth.');
     const requested=String(body.memberNumber||'').trim().toUpperCase();
-    const memberNumber=await issueMemberId(db,{businessId:business.id,name:input.name,firstName:body.firstName,lastName:body.lastName,dateOfBirth,requested:requested===birthdateMemberId(input.name,dateOfBirth,body.firstName,body.lastName)?'':requested});
+    const registrationIdentity=dateOfBirth?null:randomUUID();
+    const memberNumber=await issueMemberId(db,{businessId:business.id,name:input.name,firstName:body.firstName,lastName:body.lastName,dateOfBirth,registrationIdentity,requested:dateOfBirth&&requested===birthdateMemberId(input.name,dateOfBirth,body.firstName,body.lastName)?'':requested});
     const fields=customRegistrationFields(settings,'booking',null,[]);
     const registrationAnswers=sanitizeBookingAnswers(fields,body.customAnswers||{});
     const registrationFieldLabels=Object.fromEntries(fields.map((field:any)=>[field.id,field.label]));
@@ -148,8 +149,8 @@ export async function POST(req:Request){
     const removed=result.archived.find(c=>sameClientContact(c,input));
     if(removed)throw Error('This client was previously removed. Restore this client from the Removed clients section.');
     responseId=randomUUID();
-    await db.query('INSERT INTO business_client_profiles(id,owner,name,email,phone,notes,member_number,date_of_birth,registration_answers,registration_field_labels,first_name,last_name) VALUES($1,$2,$3,$4,$5,$6,$7,$8::date,$9::jsonb,$10::jsonb,$11,$12)',
-     [responseId,owner,input.name,input.email,input.phone,input.notes,memberNumber||null,dateOfBirth,JSON.stringify(registrationAnswers),JSON.stringify(registrationFieldLabels),String(body.firstName).trim(),String(body.lastName).trim()]);
+    await db.query('INSERT INTO business_client_profiles(id,owner,name,email,phone,notes,member_number,date_of_birth,registration_answers,registration_field_labels,first_name,last_name,registration_identity) VALUES($1,$2,$3,$4,$5,$6,$7,$8::date,$9::jsonb,$10::jsonb,$11,$12,$13::uuid)',
+     [responseId,owner,input.name,input.email,input.phone,input.notes,memberNumber||null,dateOfBirth||null,JSON.stringify(registrationAnswers),JSON.stringify(registrationFieldLabels),String(body.firstName).trim(),String(body.lastName).trim(),await memberRegistrationIdentity(db,business.id,memberNumber)]);
    }else if(body.action==='archive'||body.action==='delete'){
     await deleteOwnerClient(db,{owner,businessId:business.id,client,clientId:id,confirmPhrase:body.confirmPhrase});
    }else if(body.action==='deleteArchived'){

@@ -1,3 +1,7 @@
+# v1.3.183 release handoff — Business sequences for clients without a birth date
+
+Missing birth date uses first/last initials plus a business-wide transactional sequence starting at 1001. Booking, membership and owner-added clients share the allocator. Supplied birth dates retain initials + MMDDYY; existing IDs and historical records are not rewritten. Business-required questions and waiver/payment verification rules remain. Migration 074 adds only a per-business counter and permits an ID-less profile to receive its initial immutable registration identity. Verification/deployment pending.
+
 # v1.3.182 verified LIVE — Service payment choices and team booking defaults
 
 PR #114 merged as 8dd667378c85a2758174240baa215074af8cc12c. Final staging 73ba00b20ed365c54f754a527a755ad15a877073 / dep-dbi9ioei0phs73e8mfs0 and production dep-dbi9o1i9lscs73fn4j2g verified LIVE. Local and staging passed all 499 tests, TypeScript and production builds; final GitHub validation job 124084713607 passed. The application tree matches the tested source exactly. Both environments passed public catalog payment-option projection, preferred qualified staff availability/calendar, foreign-staff rejection, private-route 401 and origin 403 checks. Checked startup error windows were empty.
