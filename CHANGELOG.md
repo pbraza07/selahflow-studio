@@ -1,3 +1,7 @@
+# v1.3.183 release handoff — Business sequences for clients without a birth date
+
+Missing birth date uses first/last initials plus a business-wide transactional sequence starting at 1001. Booking, membership and owner-added clients share the allocator. Supplied birth dates retain initials + MMDDYY; existing IDs and historical records are not rewritten. Business-required questions and waiver/payment verification rules remain. Migration 074 adds only a per-business counter and permits an ID-less profile to receive its initial immutable registration identity. Verification/deployment pending.
+
 # v1.3.182 release handoff — Service payment buttons and team booking defaults
 
 Service catalog supports Make payment, Pay onsite or both (legacy/new default). Public booking shows the saved choices; online checkout enforces the business-scoped catalog choice. Onsite does not mark payment received. Team profile links keep the visible qualified member selected through availability, date/service changes and booking; scheduled sessions retain their assigned host. Approval, waiver, capacity, merchant readiness and verified-payment rules remain. Verified staging and production rollout is recorded in AGENTS.md.

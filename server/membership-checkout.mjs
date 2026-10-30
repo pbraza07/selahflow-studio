@@ -2,7 +2,7 @@ import {reserveCommission,attachCommissionSession} from './first-customer-commis
 import {checkoutCoupon} from './business-coupons.mjs';
 import {anniversary} from './membership-periods.mjs';
 import {createHash} from 'node:crypto';
-import {issueMemberId} from './member-id-policy.mjs';
+import {issueMemberId,memberRegistrationIdentity} from './member-id-policy.mjs';
 import {ensureMemberBookingIdentity} from './shared-member-identity.mjs';
 import {membershipRequestDetails} from './membership-requests.mjs';
 import {stripeApi} from './membership-payments.mjs';
@@ -22,9 +22,10 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
   const details=membershipRequestDetails(config,body);
   const name=details.name,email=details.email.toLowerCase(),dob=details.dateOfBirth;
   const couponCode=String(body.couponCode||'').trim().toUpperCase();
-  const fingerprint=createHash('sha256').update(JSON.stringify({plan:plan.id,couponCode,name:name.toLowerCase().replace(/\s+/g,' '),email,dob,...(details.registrationIdentity?{registrationIdentity:details.registrationIdentity}:{})})).digest('hex');
   // Serialize enrollment for the same identity, including retries with a fresh browser request ID.
   const number=await issueMemberId(db,{businessId:business.id,name,firstName:details.firstName,lastName:details.lastName,dateOfBirth:dob,requested:body.memberNumber,registrationIdentity:details.registrationIdentity||null});
+  details.registrationIdentity=await memberRegistrationIdentity(db,business.id,number);
+  const fingerprint=createHash('sha256').update(JSON.stringify({plan:plan.id,couponCode,name:name.toLowerCase().replace(/\s+/g,' '),email,dob,...(details.registrationIdentity?{registrationIdentity:details.registrationIdentity}:{})})).digest('hex');
   let member=(await db.query('SELECT * FROM customer_memberships WHERE business_id=$1 AND member_number=$2 FOR UPDATE',[business.id,number])).rows[0];
   // A pending offline registration may transition into Stripe without approval.
   // Only the matching member identity, selected plan and unchanged price qualify.

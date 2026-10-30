@@ -1,5 +1,5 @@
 import {queueOwnerFormNotification} from './owner-form-notifications.mjs';
-import {issueMemberId} from './member-id-policy.mjs';
+import {issueMemberId,memberRegistrationIdentity} from './member-id-policy.mjs';
 import {ensureMemberBookingIdentity} from './shared-member-identity.mjs';
 import {randomUUID} from 'node:crypto';
 import {customRegistrationFields,validateStandardRegistration} from './registration-questions.mjs';
@@ -28,6 +28,7 @@ export async function reviewMembershipRequest(client,{owner,id,approve}){
  const identity=request.business_id+'|'+normalizedName+'|'+d.dateOfBirth;
  await client.query('SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))',[request.business_id,identity]);
  const number=await issueMemberId(client,{businessId:request.business_id,name:d.name,firstName:d.firstName,lastName:d.lastName,dateOfBirth:d.dateOfBirth,requested:d.memberNumber,registrationIdentity:d.registrationIdentity||null});
+ d.registrationIdentity=await memberRegistrationIdentity(client,request.business_id,number);
  const existing=(await client.query('SELECT id,member_number,customer_name,date_of_birth::text AS date_of_birth FROM customer_memberships WHERE business_id=$1 AND member_number=$2 FOR UPDATE',[request.business_id,number])).rows[0];
  if(d.memberNumber&&d.memberNumber!==number)throw Error('The submitted member ID does not match this client. Review their registration details.');
  const collision=(await client.query('SELECT 1 FROM customer_memberships WHERE business_id=$1 AND member_number=$2 AND id<>$3',[request.business_id,number,existing?.id||''])).rowCount;

@@ -11,7 +11,8 @@ import {membershipAllows} from '../server/membership-eligibility.mjs';
 import {ensureParticipationWaiver,assertBookingWaiver,publicWaiverDocument,validateCategoryWaiverSettings} from '../server/participation-waivers.mjs';
 import {recordCashSale} from '../server/record-cash-sale.mjs';
 import {queueBookingReceipt} from '../server/booking-receipts.mjs';
-import {issueMemberId} from '../server/member-id-policy.mjs';
+import {ensureMemberBookingIdentity} from '../server/shared-member-identity.mjs';
+import {issueMemberId,memberRegistrationIdentity} from '../server/member-id-policy.mjs';
 import {loadMembershipReportPayments,reportSaleEvents,reconcileStripeBookingReceipts} from '../server/report-payments.mjs';
 import {visibleReportPayments} from '../server/report-reset.mjs';
 import {validatePageContent} from '../server/page-content.mjs';
@@ -407,6 +408,20 @@ if(isPublic&&b.firstName&&b.lastName&&b.dateOfBirth){
   await client.query('COMMIT');
  }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
 }
+if(isPublic&&b.firstName&&b.lastName&&!b.dateOfBirth){
+ const firstName=String(b.firstName||'').trim(),lastName=String(b.lastName||'').trim();
+ const client=await getPool().connect();
+ try{
+  await client.query('BEGIN');
+  const business=(await client.query("SELECT id,brand_primary,brand_background FROM businesses WHERE owner_id=$1 AND status='active'",[owner])).rows[0];
+  if(!business)throw Error('Business not found.');
+  issuedMemberNumber=await issueMemberId(client,{businessId:business.id,name:firstName+' '+lastName,firstName,lastName,dateOfBirth:null,requested:issuedMemberNumber,registrationIdentity:typeof b.key==='string'?b.key:crypto.randomUUID()});
+  await ensureMemberBookingIdentity(client,{businessId:business.id,ownerId:owner,firstName,lastName,email:b.email,phone:b.phone,dateOfBirth:null,memberNumber:issuedMemberNumber,registrationIdentity:await memberRegistrationIdentity(client,business.id,issuedMemberNumber),customAnswers,source:'First online booking'});
+  await ensureParticipationWaiver(client,{businessId:business.id,memberNumber:issuedMemberNumber,config,services,input:b.waiver,primary:business.brand_primary,background:business.brand_background});
+  await client.query('COMMIT');
+ }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
+}
+
 const bookedSession=selectedSession(config,b.date,b.staff,services,b.start);const membershipCreditAllowed=(bookedSession?bookedSession.membershipCreditAllowed!==false:services.every((service:any)=>service.membershipCreditAllowed!==false))&&(!verifiedMembership||membershipAllows(verifiedMembership.credit_eligibility,{serviceIds:services.map((s:any)=>s.id),sessionId:bookedSession?.id,seriesId:bookedSession?.seriesId}));const membershipCovered=!!verifiedMembership&&membershipBookingActive(verifiedMembership,b.date)&&membershipCreditAllowed&&membershipAllows(verifiedMembership.credit_eligibility,{serviceIds:services.map((s:any)=>s.id),sessionId:bookedSession?.id,seriesId:bookedSession?.seriesId});
 const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.randomUUID();const data:any={name:b.name.trim()||'Guest',firstName:isPublic?String(b.firstName||'').trim():undefined,lastName:isPublic?String(b.lastName||'').trim():undefined,dateOfBirth:isPublic?String(b.dateOfBirth||''):undefined,email:b.email,phone:String(b.phone||'').slice(0,40),services:services.map((s:any)=>s.name),price:membershipCovered?0:services.reduce((a:number,s:any)=>a+s.price,0),membershipCovered,membershipCreditAllowed,channel:isPublic?'Online booking':b.channel==='Booking portal'?'Booking portal':'Front desk',created:new Date().toISOString()};data.paymentChoice=isPublic?b.paymentChoice:undefined;data.paymentLines=services.map((s:any)=>({id:s.id,name:s.name,type:'service',price:s.price,qty:1}));data.serviceIds=services.map((s:any)=>s.id);data.customAnswers=customAnswers;data.memberNumber=isPublic?issuedMemberNumber:null;data.policyAccepted=isPublic?b.policyAccepted===true:null;data.policyAcceptedAt=isPublic?new Date().toISOString():null;data.customFieldLabels=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.label]));data.customFieldTypes=Object.fromEntries((config.bookingCustomFields||[]).map((field:any)=>[field.id,field.type]));if(bookedSession)data.sessionId=bookedSession.id;data.hostTeamIds=bookedSession?sessionTeamDefaults(config,bookedSession):[b.staff];
  if(isPublic&&requiresBookingApproval(services)){
