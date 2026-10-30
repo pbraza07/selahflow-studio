@@ -142,3 +142,9 @@ test('Terminal rejects non-active v2 merchant capabilities even when legacy acco
  }
  assert.equal(f.creates,0);assert.equal((await f.query('SELECT count(*)::int AS n FROM booking_payments')).rows[0].n,0);
 });
+
+test('phone setup and native return links use the guarded universal owner route',async()=>{
+ const [setup,native,owner]=await Promise.all(['app/onsite/setup/page.tsx','native/selahflow-pay/App.tsx','app/studio/[slug]/page.tsx'].map(f=>readFile(new URL('../'+f,import.meta.url),'utf8')));
+ assert.match(setup,/href="\/studio\/owner"/);assert.match(native,/https:\/\/selahflow\.onrender\.com\/studio\/owner/);assert.match(native,/grant\.origin\+'\/studio\/owner'/);
+ assert.doesNotMatch(setup,/href="\/owner"/);assert.doesNotMatch(native,/['"]\/owner['"]/);assert.match(owner,/actualSlug!==slug/);assert.match(owner,/redirect\('\/login'\)/);
+});
