@@ -6,6 +6,7 @@ import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import ts from 'typescript';
 import {businessIntroLines} from '../server/business-profile-copy.mjs';
+import {businessTeamShowcase} from '../server/team-showcase.mjs';
 const require=createRequire(import.meta.url);
 test('business introduction shows matching fields once without overwriting distinct copy',()=>{
  assert.deepEqual(businessIntroLines({tagline:'landscaping',business_model:'landscaping'}),['landscaping']);
@@ -23,6 +24,7 @@ test('actual shared tenant landing page renders repeated introduction once for a
  let row;
  const Empty=()=>null;
  const load=id=>{
+  if(id.endsWith('team-showcase.mjs'))return {businessTeamShowcase};
   if(id.endsWith('business-profile-copy.mjs'))return {businessIntroLines};
   if(id.endsWith('database.mjs'))return {getPool:()=>({query:async()=>({rows:[row]})})};
   if(id.endsWith('business-social-links.mjs'))return {publicSocialLinks:()=>[]};
