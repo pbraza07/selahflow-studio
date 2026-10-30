@@ -4,7 +4,7 @@
 
 .header a[aria-current="page"]{box-shadow:inset 0 -2px 0 currentColor;background:color-mix(in srgb,currentColor 8%,transparent)}
 
-.tools{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:0}.navigation{display:flex;align-items:center;justify-content:flex-end}.social{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}.social a{font-size:12px;font-weight:700;padding:8px 10px;gap:4px;display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;border:1px solid currentColor;border-radius:9px}.social a:hover{background:color-mix(in srgb,currentColor 12%,transparent)}
+.tools{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:0;margin-left:auto}.navigation{display:flex;align-items:center;justify-content:flex-end}.social{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}.social a{font-size:12px;font-weight:700;padding:8px 10px;gap:4px;display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;border:1px solid currentColor;border-radius:9px}.social a:hover{background:color-mix(in srgb,currentColor 12%,transparent)}
 @media(max-width:600px){.header{align-items:flex-start;flex-wrap:wrap}.tools{flex:1 1 180px}.social{max-width:100%}.identity{flex:1 1 140px}}
 
 .ownerAccess{border:1px solid currentColor;opacity:.9}.header{flex-wrap:wrap}
