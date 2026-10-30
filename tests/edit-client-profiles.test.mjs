@@ -68,6 +68,7 @@ test('owner creates a no-DOB client with the business sequence and keeps that ID
  const config=JSON.parse((await f.pg.query("SELECT data FROM settings WHERE owner='owner'")).rows[0].data);config.bookingStandardFields={dateOfBirth:{required:false}};await f.pg.query("UPDATE settings SET data=$1 WHERE owner='owner'",[JSON.stringify(config)]);
  const created=await f.post({action:'create',firstName:'Alex',lastName:'Brown',dateOfBirth:'',memberNumber:'',email:'alex@example.test',phone:'8135550123',customAnswers:{level:'New'},notes:''});assert.equal(created.status,200,await created.clone().text());
  const {clientId}=await created.json();const client=(await(await f.get()).json()).clients.find(c=>c.id===clientId);assert.equal(client.memberNumber,'AB1001');assert.equal(client.idUsesSequence,true);
+ const replace=await f.post({action:'replaceLegacyId',clientId,oldMemberNumber:'AB1001'});assert.equal(replace.status,409);assert.match((await replace.json()).error,/sequence-based/);
  const changed=await f.post({...f.edit(client),clientId,firstName:'Alexandra',lastName:'Brown',dateOfBirth:'2000-02-29',memberNumber:'AB1001'});assert.equal(changed.status,200,await changed.clone().text());
  const after=(await(await f.get()).json()).clients.find(c=>c.id===clientId);assert.equal(after.memberNumber,'AB1001');assert.equal(after.dateOfBirth,'2000-02-29');assert.equal(after.name,'Alexandra Brown');
  assert.equal((await f.pg.query("SELECT member_id_sequence FROM businesses WHERE id='biz'")).rows[0].member_id_sequence,1001);

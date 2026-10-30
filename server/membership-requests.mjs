@@ -32,11 +32,11 @@ export async function reviewMembershipRequest(client,{owner,id,approve}){
  const existing=(await client.query('SELECT id,member_number,customer_name,date_of_birth::text AS date_of_birth FROM customer_memberships WHERE business_id=$1 AND member_number=$2 FOR UPDATE',[request.business_id,number])).rows[0];
  if(d.memberNumber&&d.memberNumber!==number)throw Error('The submitted member ID does not match this client. Review their registration details.');
  const collision=(await client.query('SELECT 1 FROM customer_memberships WHERE business_id=$1 AND member_number=$2 AND id<>$3',[request.business_id,number,existing?.id||''])).rowCount;
- if(collision)throw Error('This eight-character ID belongs to another client. Resolve the ID before approving.');
+ if(collision)throw Error('This client ID belongs to another client. Resolve the ID before approving.');
  let membershipId=existing?.id;
  if(!membershipId){
   const otherBooking=(await client.query('SELECT 1 FROM customer_booking_ids WHERE business_id=$1 AND member_number=$2 AND NOT(lower(first_name)=lower($3) AND lower(last_name)=lower($4) AND date_of_birth=$5::date)',[request.business_id,number,d.firstName,d.lastName,d.dateOfBirth])).rowCount;
-  if(otherBooking)throw Error('This eight-character ID belongs to another client.');
+  if(otherBooking)throw Error('This client ID belongs to another client.');
   membershipId=randomUUID();
   await client.query("INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,customer_phone,date_of_birth,member_number,status,stripe_account_id,price_cents,sessions_included,sessions_used,registration_answers,registration_field_labels,registration_identity) VALUES($1,$2,$3,$4,$5,$6,$7::date,$8,'pending_payment','',$9,0,0,$10::jsonb,$11::jsonb,$12::uuid)",[membershipId,request.business_id,request.plan_id,d.name,d.email,d.phone,d.dateOfBirth,number,request.price_cents,JSON.stringify(d.customAnswers),JSON.stringify(d.fieldLabels),d.registrationIdentity||null]);
  }

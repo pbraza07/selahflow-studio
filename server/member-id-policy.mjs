@@ -43,7 +43,7 @@ export async function issueMemberId(db,{businessId,name,dateOfBirth,requested=''
  else{
   const initials=memberInitials(name,firstName,lastName);
   const next=(await db.query(`SELECT n FROM businesses b CROSS JOIN LATERAL generate_series(b.member_id_sequence+1,9999) n WHERE b.id=$1 AND NOT EXISTS(SELECT 1 FROM business_member_ids r WHERE r.business_id=b.id AND r.member_number=$2||n::text) ORDER BY n LIMIT 1`,[businessId,initials])).rows[0];
-  if(!next)throw Error('This business has used all four-digit client sequence numbers. Contact support before adding another client without a birth date.');
+  if(!next)throw Error('Cannot assign a Unique ID: this business has used all four-digit client sequence numbers. Contact support before adding another client without a birth date.');
   await db.query('UPDATE businesses SET member_id_sequence=$2 WHERE id=$1',[businessId,Number(next.n)]);
   number=initials+next.n;
  }
