@@ -1,3 +1,9 @@
+## Release source: v1.3.186 — verification pending
+
+Paid business onboarding now enforces signed agreement → Stripe-hosted package payment → primary approval → functional business page and owner dashboard. Free onboarding requires the signed agreement and approval without a card. Provider-verified paid invoices, not redirect URLs, control paid readiness.
+
+Assigned team members also receive a private workspace bell confirmation for each appointment on their own calendar, with client/service/date/time details and per-member read state.
+
 ## Release source: v1.3.185 — verified LIVE
 
 Team profile name URLs and circular crop controls, team onsite-only confirmations, ten-year recurrence, header sharing, signed registration agreements and Stripe package subscriptions. All 527 final local, GitHub and staging tests passed. Production deployment dep-dbiesjnavr4c73blpq3g is LIVE; see AGENTS.md for verified deployment details and remaining native distribution/legal/tax setup limits.
