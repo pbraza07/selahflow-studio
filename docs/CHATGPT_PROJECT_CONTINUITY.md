@@ -1,4 +1,4 @@
-# v1.3.184 implementation — Onsite appointment payments
+# v1.3.184 release handoff — Onsite appointment payments
 
 Client confirmations and future transactional emails include service-enabled Make Payment / Pay on Site actions. Private-link POST saves onsite preference for pending/approved bookings without recording received money. Paid/free/covered bookings omit active payment choices. Owner appointment tables, calendar details and session rosters expose onsite collection/check/cancel; Payment setup selects a business-scoped Stripe Terminal location.
 
