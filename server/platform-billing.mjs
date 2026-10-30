@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import {stripeApi,createStripeMerchantAccount,invoiceSubscriptionId,invoicePaidThrough} from './membership-payments.mjs';
 import {PLAN_CATALOG} from './plan-entitlements.mjs';
 import {recordServiceAcceptance} from './business-service-agreement.mjs';
+import {SERVICE_AGREEMENT_VERSION} from './business-service-terms.mjs';
 import {assertTestPayment,checkoutUrl} from './stripe-checkout.mjs';
 export const platformPriceId=code=>process.env['STRIPE_PLATFORM_PRICE_'+code.toUpperCase()]||'';
 export const platformBillingReady=()=>!!process.env.STRIPE_SECRET_KEY&&!!process.env.STRIPE_PLATFORM_WEBHOOK_SECRET&&['professional','business'].every(p=>/^price_[A-Za-z0-9]+$/.test(platformPriceId(p)));
@@ -10,7 +11,8 @@ const reference=x=>typeof x==='string'?x:x?.id;
 async function ownerBusiness(db,owner){const b=(await db.query('SELECT b.*,u.email FROM businesses b JOIN users u ON u.id=b.owner_id WHERE b.owner_id=$1',[owner])).rows[0];if(!b)throw Error('Business unavailable.');return b;}
 export async function platformBillingInfo(db,owner){
  const b=await ownerBusiness(db,owner),s=(await db.query('SELECT * FROM business_subscriptions WHERE business_id=$1',[b.id])).rows[0];
- return {business:b.name,businessStatus:b.status,planCode:s?.plan_code||'free',requestedPlan:s?.requested_plan_code||'free',billingStatus:s?.billing_status||'none',periodEnd:s?.billing_period_end,riskHold:s?.billing_risk_hold===true,hasSubscription:!!s?.stripe_subscription_id,configured:platformBillingReady()};
+ const agreement=(await db.query('SELECT plan_code FROM business_service_agreements WHERE business_id=$1 AND owner_id=$2 AND version=$3 ORDER BY accepted_at DESC LIMIT 1',[b.id,owner,SERVICE_AGREEMENT_VERSION])).rows[0];
+ return {business:b.name,slug:b.slug,businessStatus:b.status,planCode:s?.plan_code||'free',requestedPlan:s?.requested_plan_code||'free',billingStatus:s?.billing_status||'none',periodEnd:s?.billing_period_end,riskHold:s?.billing_risk_hold===true,hasSubscription:!!s?.stripe_subscription_id,agreementPlan:agreement?.plan_code||null,configured:platformBillingReady()};
 }
 async function billingCustomer(db,b,api){
  let id=(await db.query("SELECT external_account_id FROM merchant_accounts WHERE business_id=$1 AND provider='stripe'",[b.id])).rows[0]?.external_account_id;
@@ -22,11 +24,13 @@ export async function startPlatformSubscription(pool,{owner,planCode,agreement,o
  if(!['professional','business'].includes(planCode))throw Error('Choose a paid SelahFlow package.');
  if(!platformBillingReady())throw Error('SelahFlow package billing is not configured yet.');
  const db=await pool.connect();try{
-  await db.query('BEGIN');const b=await ownerBusiness(db,owner);if(b.status!=='active')throw Error('Business approval is required before package payment.');
+  await db.query('BEGIN');const b=await ownerBusiness(db,owner);if(!['pending','active'].includes(b.status))throw Error('This business cannot start package payment.');
   await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[b.id+':platform-billing']);
   const row=(await db.query('SELECT * FROM business_subscriptions WHERE business_id=$1 FOR UPDATE',[b.id])).rows[0];if(!row)throw Error('Business package record unavailable.');
   if(row.billing_risk_hold)throw Error('Contact SelahFlow support about the billing review. You can still manage or cancel the subscription.');
-  await recordServiceAcceptance(db,{businessId:b.id,owner,input:agreement,planCode,ipHash});
+  if(agreement)await recordServiceAcceptance(db,{businessId:b.id,owner,input:agreement,planCode,ipHash});
+  else if(!(await db.query('SELECT 1 FROM business_service_agreements WHERE business_id=$1 AND owner_id=$2 AND version=$3 AND plan_code=$4 LIMIT 1',[b.id,owner,SERVICE_AGREEMENT_VERSION,planCode])).rows.length)
+   throw Error('Read and sign the current SelahFlow services agreement before payment.');
   let previousEnded=false;if(row.stripe_subscription_id){const sub=await api('subscriptions/'+row.stripe_subscription_id,{method:'GET'});assertTestPayment(sub);if(!['canceled','incomplete_expired'].includes(sub.status))throw Error('Manage or cancel the existing subscription before starting another.');previousEnded=true;}
   if(row.billing_checkout_session_id){const path='checkout/sessions/'+row.billing_checkout_session_id,s=await api(path,{method:'GET'});assertTestPayment(s);if(s.status==='open'&&row.billing_checkout_plan===planCode){await db.query('COMMIT');return {checkoutUrl:checkoutUrl(s)};}if(!['open','expired'].includes(s.status)&&!previousEnded)throw Error('Previous payment is processing. Check billing status before paying again.');if(s.status==='open'){const expired=await api(path+'/expire',{idempotencyKey:'platform-expire-'+s.id});assertTestPayment(expired);if(expired.status!=='expired')throw Error('The previous checkout could not be closed.');}}
   const priceId=platformPriceId(planCode),price=await api('prices/'+priceId,{method:'GET'});assertTestPayment(price);

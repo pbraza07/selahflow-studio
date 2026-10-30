@@ -91,7 +91,7 @@ test('audience pages separate customer booking from the shared business plan cat
  assert.match(cards,/aria-expanded=\{opened\}/);
  assert.match(cards,/See all /);
  assert.match(cards,/plan\.included\.map/);
- assert.match(cards,/Stripe checkout after approval/i);
+ assert.match(cards,/sign agreement, then pay securely with Stripe/i);
  assert.match(css,/\.planGrid\{/);
  assert.match(css,/@media\(max-width:650px\)/);
 });

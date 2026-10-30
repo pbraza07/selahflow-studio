@@ -2,6 +2,8 @@ import {getPool} from '../../../../server/database.mjs';
 import {requireOwner} from '../../../../lib/auth';
 import {validOrigin} from '../../../../server/security.mjs';
 import {getPlatformRole} from '../../../../server/platform-roles.mjs';
+import {SERVICE_AGREEMENT_VERSION} from '../../../../server/business-service-terms.mjs';
+import {activatePendingBusiness} from '../../../../server/business-activation.mjs';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 async function platformOwner(req:Request){
@@ -21,7 +23,7 @@ export async function GET(req:Request){
    pool.query('SELECT COUNT(*)::int AS count FROM appointments'),
    pool.query("SELECT id,slug,name,industry,city,region FROM businesses WHERE listing_requested=TRUE AND is_listed=FALSE AND status='active' ORDER BY created_at LIMIT 50"),
    pool.query('SELECT COALESCE(SUM(estimated_cost_cents),0)::bigint::text AS estimated_cost_cents FROM ai_usage'),
-   pool.query("SELECT b.id,b.slug,b.name,b.industry,b.city,b.region,b.created_at,u.email FROM businesses b JOIN users u ON u.id=b.owner_id WHERE b.status='pending' ORDER BY b.created_at ASC LIMIT 200"),
+   pool.query("SELECT b.id,b.slug,b.name,b.industry,b.city,b.region,b.created_at,u.email,COALESCE(s.requested_plan_code,'free') AS requested_plan_code,COALESCE(s.billing_status,'none') AS billing_status,CASE WHEN COALESCE(s.requested_plan_code,'free')='free' THEN EXISTS(SELECT 1 FROM business_service_agreements a WHERE a.business_id=b.id AND a.owner_id=b.owner_id AND a.version=$1 AND a.plan_code='free') ELSE s.billing_status='active' AND s.plan_code=s.requested_plan_code AND EXISTS(SELECT 1 FROM business_service_agreements a WHERE a.business_id=b.id AND a.owner_id=b.owner_id AND a.version=$1 AND a.plan_code=s.requested_plan_code) END AS activation_ready FROM businesses b JOIN users u ON u.id=b.owner_id LEFT JOIN business_subscriptions s ON s.business_id=b.id WHERE b.status='pending' ORDER BY b.created_at ASC LIMIT 200",[SERVICE_AGREEMENT_VERSION]),
    pool.query("SELECT b.name AS business_name,b.slug,e.duration_unit,COUNT(*)::int AS count,COUNT(*) FILTER (WHERE e.status='active' AND e.ends_on>=CURRENT_DATE)::int AS active_count FROM service_enrollments e JOIN businesses b ON b.id=e.business_id GROUP BY b.name,b.slug,e.duration_unit ORDER BY b.name,e.duration_unit"),
    pool.query("SELECT b.id,b.slug,b.name,b.industry,b.description,b.city,b.region,b.status,b.is_listed,b.archived_at::text AS archived_at,b.restored_at::text AS restored_at,b.created_at::text AS created_at,u.email AS owner_email,COALESCE(sub.plan_code,'free') AS plan_code,COALESCE(ap.booking_count,0)::int AS appointment_count FROM businesses b JOIN users u ON u.id=b.owner_id LEFT JOIN business_subscriptions sub ON sub.business_id=b.id LEFT JOIN (SELECT owner,COUNT(*)::int AS booking_count FROM appointments GROUP BY owner) ap ON ap.owner=b.owner_id ORDER BY CASE b.status WHEN 'active' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END,b.created_at DESC,b.name"),
    pool.query("SELECT COUNT(*)::int AS count FROM business_team_seat_requests WHERE status='pending'")
@@ -40,9 +42,10 @@ export async function POST(req:Request){
   const pool=getPool();
   if(b.action==='registration'){
    if(await getPlatformRole(pool,actor)!=='primary')return Response.json({error:'Only the primary platform administrator may approve business applications.'},{status:403});
-   const result=await pool.query("UPDATE businesses SET status=CASE WHEN $1 THEN 'active' ELSE 'rejected' END,is_listed=$1,listing_requested=FALSE,updated_at=now() WHERE id=$2 AND status='pending' RETURNING slug",[b.approve,b.businessId]);
-   if(!result.rowCount)return Response.json({error:'Pending business application not found.'},{status:404});
-   return Response.json({ok:true,slug:result.rows[0].slug,status:b.approve?'active':'rejected',listed:b.approve},{headers:{'Cache-Control':'no-store'}});
+   let row;
+   if(b.approve){try{row=await activatePendingBusiness(pool,b.businessId);}catch(e){return Response.json({error:(e as Error).message},{status:409});}}
+   else{const result=await pool.query("UPDATE businesses SET status='rejected',is_listed=FALSE,listing_requested=FALSE,updated_at=now() WHERE id=$1 AND status='pending' RETURNING slug",[b.businessId]);if(!result.rowCount)return Response.json({error:'Pending business application not found.'},{status:404});row=result.rows[0];}
+   return Response.json({ok:true,slug:row.slug,status:b.approve?'active':'rejected',listed:b.approve},{headers:{'Cache-Control':'no-store'}});
   }
   return Response.json({error:'Approved businesses are published automatically. Listing cannot be disabled for active businesses.'},{status:400,headers:{'Cache-Control':'no-store'}});
  }catch(e){return err(e);}

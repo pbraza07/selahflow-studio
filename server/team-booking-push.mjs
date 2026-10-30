@@ -1,6 +1,22 @@
 import {getPool} from './database.mjs';
 import {configured,sendWebPush} from './push-crypto.mjs';
 import {businessDeviceName} from './business-device-name.mjs';
+
+export async function teamBookingNotifications(pool,account){
+ const rows=(await pool.query(`SELECT j.appointment_id AS id,j.created_at::text AS created_at,(j.read_at IS NULL) AS unread,a.date,a.start,a.data
+  FROM team_booking_push_jobs j JOIN appointments a ON a.id=j.appointment_id AND a.owner=$2
+  LEFT JOIN appointment_team_assignments direct ON direct.appointment_id=a.id AND direct.business_id=$3
+  LEFT JOIN session_team_occurrences occurrence ON occurrence.business_id=$3 AND occurrence.session_id=a.data::jsonb->>'sessionId' AND occurrence.session_date=a.date AND occurrence.start_minute=a.start
+  LEFT JOIN session_team_assignments series ON series.business_id=$3 AND series.session_id=regexp_replace(a.data::jsonb->>'sessionId','__[0-9]{8}$','')
+  WHERE j.account_id=$1 AND a.status NOT IN ('Cancelled','No-show') AND (a.staff=$4 OR COALESCE(direct.staff_ids,'[]'::jsonb) ? $4 OR COALESCE(occurrence.staff_ids,series.staff_ids,'[]'::jsonb) ? $4 OR COALESCE(a.data::jsonb->'hostTeamIds','[]'::jsonb) ? $4)
+  ORDER BY j.created_at DESC LIMIT 100`,[account.id,account.owner_id,account.business_id,account.staff_id])).rows;
+ const config=JSON.parse(account.config||'{}'),profile=account.profile||{},member=profile.name||config.staff?.find(s=>s.id===account.staff_id)?.name||'Team member';
+ return rows.map(row=>{let data={};try{data=JSON.parse(row.data||'{}');}catch{}return {id:row.id,createdAt:row.created_at,unread:row.unread,date:row.date,start:row.start,teamMember:member,customerName:String(data.name||data.customerName||'Client').slice(0,100),services:Array.isArray(data.services)?data.services.slice(0,8).map(x=>String(x).slice(0,100)):[]};});
+}
+export async function markTeamBookingNotificationsRead(pool,account,ids){
+ if(!ids.length)return;
+ await pool.query("UPDATE team_booking_push_jobs j SET read_at=COALESCE(j.read_at,now()) FROM appointments a WHERE j.account_id=$1 AND j.appointment_id=a.id AND a.owner=$2 AND j.appointment_id=ANY($3::text[])",[account.id,account.owner_id,ids]);
+}
 /** Only appointment-triggered jobs exist here; settings/time-off changes never enqueue. */
 export async function deliverTeamBookingPush(pool,{enabled=configured(),send=sendWebPush}={}){
  if(!enabled)return {processed:0};let processed=0;

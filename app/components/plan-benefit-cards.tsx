@@ -24,7 +24,7 @@ export default function PlanBenefitCards({placement='home'}:{placement?:'home'|'
       <h3>{plan.name}</h3>
       <p className={styles.planSubtitle}>{plan.summary}</p>
       <p className={styles.planPrice}>${(plan.monthlyCents/100).toFixed(2)}<span>/month</span></p>
-      <p className={styles.planPriceNote}>{isPaid?'Monthly subscription · Stripe checkout after approval':'No monthly package fee'}</p>
+      <p className={styles.planPriceNote}>{isPaid?'Monthly subscription · sign agreement, then pay securely with Stripe':'No monthly package fee'}</p>
      </div>
      <div className={styles.planHighlights}>
       <p><b>{plan.bookableStaff}</b> bookable team member{plan.bookableStaff===1?'':'s'}</p>

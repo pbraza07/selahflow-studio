@@ -60,9 +60,11 @@ test('business approval is primary-only; new registrants cannot bypass via direc
  const signup=await load('app/api/auth/signup/route.ts');
  assert.match(signup,/status,is_listed,listing_requested/);assert.match(signup,/'pending',FALSE,FALSE/);
  const overview=await load('app/api/platform/overview/route.ts');
+ const activation=await load('server/business-activation.mjs');
  assert.match(overview,/getPlatformRole\(pool,actor\)/);assert.match(overview,/!=='primary'/);
- assert.match(overview,/is_listed=\$1,listing_requested=FALSE/);
- assert.match(overview,/WHERE id=\$2 AND status='pending'/);
+ assert.match(activation,/is_listed=TRUE,listing_requested=FALSE/);
+ assert.match(overview,/activatePendingBusiness/);assert.match(activation,/business_service_agreements/);assert.match(activation,/billing_status='active'/);
+ assert.match(activation,/requested_plan_code IN \('professional','business'\)/);
  const server=await load('lib/studio-handler.ts');
  assert.match(server,/business.status!=='active'/);
  assert.match(server,/isCalendarUnit/);
