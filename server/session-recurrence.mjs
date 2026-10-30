@@ -74,6 +74,11 @@ export function sessionInstances(config,date,staffId){
  const moved=overrides.filter(s=>s.date===date).map(s=>({...s,recurring:true,overridden:true}));
  return [...generated,...moved].filter(s=>!staffId||s.staff===staffId);
 }
+export function recurrenceCount(session){
+ const rule=validateRecurrence(session);if(!rule)return dateOK(session?.date)?1:0;
+ if(rule.frequency==='monthly')return recurrenceDates(session).length;
+ return Math.floor((dateUTC(rule.until)-dateUTC(session.date))/86400000/(rule.every*(rule.frequency==='weekly'?7:1)))+1;
+}
 export function recurrenceDates(session){
  if(!dateOK(session?.date))return [];
  const rule=validateRecurrence(session);if(!rule)return [session.date];

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
-import {recurringSessionForDate,sessionInstances,recurrenceDates,recurrenceOccursOn,expandAllSessions,validateRecurrence,firstSeriesOccurrence,seriesOccurrences} from '../server/session-recurrence.mjs';
+import {recurringSessionForDate,sessionInstances,recurrenceDates,recurrenceOccursOn,expandAllSessions,validateRecurrence,firstSeriesOccurrence,seriesOccurrences,recurrenceCount} from '../server/session-recurrence.mjs';
 import {validateBookableSessions,validateExistingSessionReservations,computeDayAvailability,selectedSession,sessionRemaining} from '../server/session-scheduling.mjs';
 import {confirmBooking,serviceCapacityOpen} from '../server/booking-approvals.mjs';
 
@@ -30,6 +30,7 @@ test('daily repetition and monthly recurrence skip nonexistent dates without UTC
  const daily={...base,repeat:{frequency:'daily',every:2,until:'2026-11-08'}};
  assert.deepEqual(recurrenceDates(daily),['2026-11-02','2026-11-04','2026-11-06','2026-11-08']);
  const monthly={...base,date:'2027-01-31',repeat:{frequency:'monthly',every:1,until:'2027-06-30'}};
+ assert.equal(recurrenceCount(monthly),3);
  assert.deepEqual(recurrenceDates(monthly),['2027-01-31','2027-03-31','2027-05-31']);
  const leap={...base,date:'2028-01-29',repeat:{frequency:'monthly',every:1,until:'2028-04-30'}};
  assert.deepEqual(recurrenceDates(leap),['2028-01-29','2028-02-29','2028-03-29','2028-04-29']);
@@ -142,7 +143,7 @@ test('owner displays repeat frequency, every N days/weeks/months and inclusive e
 
 test('ten year daily series render by date, detect late conflicts, and invalid drafts do not crash calendars',()=>{
  const daily={...base,repeat:{frequency:'daily',every:1,until:'2036-11-02'}};
- assert.equal(recurrenceDates(daily).length,3654);
+ assert.equal(recurrenceDates(daily).length,3654);assert.equal(recurrenceCount(daily),3654);
  assert.equal(firstSeriesOccurrence({...config,bookableSessions:[daily]},daily.id).id,daily.id);
  assert.deepEqual(seriesOccurrences({...config,bookableSessions:[{...daily,repeat:{...daily.repeat,until:''}}]},daily.id),[]);
  assert.equal(sessionInstances({...config,bookableSessions:[daily]},'2036-11-02')[0].id,'repeat-group__20361102');
