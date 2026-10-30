@@ -1,6 +1,6 @@
-## Release source: v1.3.185
+## Release source: v1.3.185 — verified LIVE
 
-Team profile name URLs and circular crop controls, team onsite-only confirmations, ten-year recurrence, header sharing, signed registration agreements and Stripe package subscriptions. See AGENTS.md for provider and deployment verification status.
+Team profile name URLs and circular crop controls, team onsite-only confirmations, ten-year recurrence, header sharing, signed registration agreements and Stripe package subscriptions. All 527 final local, GitHub and staging tests passed. Production deployment dep-dbiesjnavr4c73blpq3g is LIVE; see AGENTS.md for verified deployment details and remaining native distribution/legal/tax setup limits.
 
 ## Release source: v1.3.184
 
