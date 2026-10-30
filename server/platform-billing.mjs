@@ -87,7 +87,10 @@ export async function processPlatformBillingEvent(pool,event,api=platformApi){
  const db=await pool.connect();try{await db.query('BEGIN');const r=await db.query('INSERT INTO platform_billing_events(event_id,event_type) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING event_id',[event.id,event.type]);if(!r.rows.length){await db.query('COMMIT');return;}
  const o=event.data.object;
  if(['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type))await bindCheckout(db,o,api);
- else if(event.type==='invoice.paid')await applyPlatformInvoice(db,o.id,api);
+ else if(event.type==='checkout.session.expired'){
+  const session=await api('checkout/sessions/'+o.id,{method:'GET'});assertTestPayment(session);
+  if(session.mode==='subscription'&&session.status==='expired'&&session.payment_status!=='paid'&&!reference(session.subscription))await db.query("UPDATE business_subscriptions SET billing_status='checkout_expired',updated_at=now() WHERE billing_checkout_session_id=$1 AND stripe_customer_id=$2 AND business_id=$3 AND stripe_subscription_id IS NULL",[session.id,session.customer_account,session.client_reference_id]);
+ }else if(event.type==='invoice.paid')await applyPlatformInvoice(db,o.id,api);
  else if(['customer.subscription.updated','customer.subscription.deleted'].includes(event.type)){
   const sub=await api('subscriptions/'+o.id,{method:'GET'});assertTestPayment(sub);const row=(await db.query('SELECT * FROM business_subscriptions WHERE stripe_subscription_id=$1 FOR UPDATE',[sub.id])).rows[0];
   if(row&&sub.customer_account===row.stripe_customer_id){if(['canceled','unpaid','incomplete_expired','paused'].includes(sub.status))await db.query("UPDATE business_subscriptions SET billing_status=$1,plan_code=CASE WHEN billing_managed THEN 'free' ELSE plan_code END,updated_at=now() WHERE business_id=$2",[sub.status,row.business_id]);else if(sub.latest_invoice)await applyPlatformInvoice(db,reference(sub.latest_invoice),api);}

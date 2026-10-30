@@ -23,7 +23,8 @@ export function canChangeManagedStatus(role,prior,next){
  if(next==='pending'||next==='rejected')return role==='primary';
  return true;
 }
-export function canArchiveBusiness({members=0,subscribed=false}){
+export function canArchiveBusiness({members=0,subscribed=false,billing=null}){
+ if(billing?.billing_checkout_plan&&(billing.stripe_subscription_id||billing.billing_checkout_session_id))subscribed=billing.billing_risk_hold===true||!['canceled','incomplete_expired','checkout_expired'].includes(billing.billing_status);
  return Number(members)<=0&&subscribed!==true;
 }
 
