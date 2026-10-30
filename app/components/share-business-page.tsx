@@ -4,7 +4,7 @@ import {Share2,Check,Copy} from 'lucide-react';
 export default function ShareBusinessPage({name,slug}:{name:string;slug?:string}){
  const [copied,setCopied]=useState(false);
  async function share(){
-  const url=slug?new URL('/'+encodeURIComponent(slug),window.location.origin).href:window.location.href;
+  const url=slug?new URL('/'+encodeURIComponent(slug),window.location.origin).href:new URL(window.location.pathname,window.location.origin).href;
   try{
    if(navigator.share){await navigator.share({title:name,text:'Visit '+name+' on SelahFlow',url});return;}
    await navigator.clipboard.writeText(url);setCopied(true);window.setTimeout(()=>setCopied(false),3000);

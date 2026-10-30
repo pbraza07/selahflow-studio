@@ -20,7 +20,7 @@ export function validateSnapshot(snapshot){
 }
 export function isolatedSnapshotRow(table,record){
  const row={...record};
- if(table==='business_subscriptions'){row.stripe_customer_id=null;row.stripe_subscription_id=null;}
+ if(table==='business_subscriptions'){row.stripe_customer_id=null;row.stripe_subscription_id=null;for(const key of ['billing_price_id','billing_checkout_session_id','billing_checkout_plan'])if(key in row)row[key]=null;if('billing_status' in row)row.billing_status='none';if('billing_managed' in row)row.billing_managed=false;if('billing_risk_hold' in row)row.billing_risk_hold=false;if('billing_period_end' in row)row.billing_period_end=null;}
  if(table==='customer_memberships')for(const key of Object.keys(row))if(key.startsWith('stripe_'))row[key]=key==='stripe_account_id'?'staging_replica_unconnected':null;
  return row;
 }

@@ -1,3 +1,4 @@
+import {SharePage} from './helpers/share-page-module.mjs';
 import {socialIconModule} from './helpers/social-icon-module.mjs';
 const {Icon:SocialPlatformIcon}=await socialIconModule();
 import test from 'node:test';
@@ -15,7 +16,7 @@ const require=createRequire(import.meta.url),read=f=>readFile(new URL('../'+f,im
 async function component(file,path='/'){
  const source=ts.transpileModule(await read(file),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
  const module={exports:{}};
- const load=id=>id==='./social-platform-icon'?{__esModule:true,default:SocialPlatformIcon}:id.endsWith('.css')?new Proxy({},{get:(_,key)=>String(key)}):id==='next/navigation'?{usePathname:()=>path}:id==='next/link'?{__esModule:true,default:({children,...props})=>React.createElement('a',props,children)}:id.endsWith('business-social-links.mjs')?social:require(id);
+ const load=id=>id==='./share-business-page'?{__esModule:true,default:SharePage}:id==='./social-platform-icon'?{__esModule:true,default:SocialPlatformIcon}:id.endsWith('.css')?new Proxy({},{get:(_,key)=>String(key)}):id==='next/navigation'?{usePathname:()=>path}:id==='next/link'?{__esModule:true,default:({children,...props})=>React.createElement('a',props,children)}:id.endsWith('business-social-links.mjs')?social:require(id);
  new Function('require','module','exports',source)(load,module,module.exports);return module.exports;
 }
 const hrefs=html=>[...html.matchAll(/href="([^"]+)"/g)].map(m=>m[1]);

@@ -9,7 +9,7 @@ export function businessSlugFromPath(pathname=''){
 export function pageShortcuts(slug,profileId){
  const business=safeBusinessSlug(slug),links=[];
  if(business)links.push({label:'Business home',href:'/'+business},{label:'Book a service',href:'/book/'+business},{label:'Memberships',href:'/membership/'+business});
- if(typeof profileId==='string'&&/^[a-zA-Z0-9-]{1,100}$/.test(profileId))links.push({label:'Team member page',href:'/team/'+encodeURIComponent(profileId)});
+ if(typeof profileId==='string'&&/^[a-zA-Z0-9-]{1,190}$/.test(profileId))links.push({label:'Team member page',href:'/team/'+encodeURIComponent(profileId)});
  links.push({label:'Team workspace',href:'/team/workspace'},{label:'Team sign in',href:'/team/login'+(business?'?business='+business:'')},{label:'Owner dashboard',href:'/studio/owner'},{label:'Business owner sign in',href:'/login'},{label:'Find a business',href:'/discover'},{label:'SelahFlow home',href:'/'});
  return links;
 }

@@ -49,7 +49,7 @@ export async function POST(req:Request){
      [object.charges_enabled===true,object.details_submitted===true,merchant.business_id,account]);
    }else if(event.type==='payment_intent.succeeded'&&object.metadata?.selahflow_channel==='terminal'){
     if(!await applyTerminalPayment(db,merchant.business_id,account,object))throw Error('Onsite payment is awaiting reconciliation.');
-   }else if(event.type==='checkout.session.completed'&&object.mode==='payment'){
+   }else if(['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type)&&object.mode==='payment'){
     if(object.metadata?.membership_initial==='true'&&object.metadata?.selahflow_business_id===merchant.business_id){if(!await completeInitialMembershipCheckout(db,{businessId:merchant.business_id,account,session:object}))throw Error('Initial membership payment is awaiting local checkout reconciliation.');}
     else await applyBookingPayment(db,merchant.business_id,account,object);
    }else if(event.type==='checkout.session.completed'&&object.mode==='subscription'&&object.client_reference_id&&object.subscription){

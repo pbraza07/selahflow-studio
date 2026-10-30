@@ -4,3 +4,5 @@
 .portraitLink{display:block;background:var(--sf-page,#f5f4ee);aspect-ratio:1;overflow:hidden}.portraitLink img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
 .copy{padding:22px}.copy h3{margin:0 0 8px;color:var(--sf-heading-on-surface,#123f3a);font-size:22px;line-height:1.3;overflow-wrap:anywhere}.copy a{color:inherit;text-decoration:none}.copy .role{margin:0 0 12px;font-size:12px;font-weight:700;opacity:.8}.copy .bio{margin:0 0 18px;line-height:1.7;white-space:pre-line;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:5;overflow:hidden}.copy .link{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:13px;font-weight:700;color:var(--sf-link-on-surface,#123f3a)}.card a:focus-visible{outline:3px solid var(--sf-link-on-surface,#315e50);outline-offset:-3px}
 @media(max-width:700px){.showcase{padding:24px 20px}.copy{padding:18px}}
+
+.portraitLink{width:160px;height:160px;aspect-ratio:1;margin:24px auto 0;border-radius:50%;border:4px solid var(--sf-surface,#fff);box-shadow:0 6px 20px #0001}.portraitLink img{border-radius:50%}

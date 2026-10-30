@@ -2122,3 +2122,9 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 .sf-settings-form[data-settings-tab="urls"] .sf-settings-save{display:none}
 
 .sf-social-platform-logo{display:inline-block;flex-shrink:0;vertical-align:middle}.sf-social-input-label,.sf-important-url-label{display:flex;align-items:center;gap:8px}.sf-team-public-hero .button-row a{display:inline-flex;align-items:center;gap:8px;min-height:44px}
+
+/* Session schedule controls stay light and unobtrusive. */
+.app-shell[data-selah-theme] .sf-recurring-session-editor .sf-session-change{background:transparent!important;border:0!important;color:var(--sf-link-on-surface)!important;padding:5px 0;text-decoration:underline;box-shadow:none!important}
+.app-shell[data-selah-theme] .sf-session-reschedule-panel{background:#fff!important;color:#182c28!important;border:1px solid #d5ddd9!important;box-shadow:none!important}
+
+.sf-session-reschedule-panel{--sf-surface:#fff;--sf-on-surface:#182c28;--sf-heading-on-surface:#182c28;--sf-input:#fff;--sf-on-input:#182c28;}

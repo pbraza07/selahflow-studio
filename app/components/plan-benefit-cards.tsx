@@ -24,7 +24,7 @@ export default function PlanBenefitCards({placement='home'}:{placement?:'home'|'
       <h3>{plan.name}</h3>
       <p className={styles.planSubtitle}>{plan.summary}</p>
       <p className={styles.planPrice}>${(plan.monthlyCents/100).toFixed(2)}<span>/month</span></p>
-      <p className={styles.planPriceNote}>{isPaid?'Proposed launch price · paid billing not active':'Free registration available now'}</p>
+      <p className={styles.planPriceNote}>{isPaid?'Monthly subscription · Stripe checkout after approval':'No monthly package fee'}</p>
      </div>
      <div className={styles.planHighlights}>
       <p><b>{plan.bookableStaff}</b> bookable team member{plan.bookableStaff===1?'':'s'}</p>
@@ -42,12 +42,12 @@ export default function PlanBenefitCards({placement='home'}:{placement?:'home'|'
       <ul>{plan.included.map(item=><li key={item}><CheckCircle2 size={17} aria-hidden="true"/><span>{item}</span></li>)}</ul>
       <p>Your business keeps its records and history as your plan changes.</p>
      </div>}
-     <Link className={styles.planCta} href={code==='free'?'/signup':placement==='home'?'/pricing#'+code:'/signup'}>
-      {code==='free'?'Create a free business account':placement==='home'?'View '+plan.name+' plan information':'Start free while paid plans are in preparation'} <ArrowRight size={16}/>
+     <Link className={styles.planCta} href={'/signup?plan='+code}>
+      {'Sign up for '+plan.name} <ArrowRight size={16}/>
      </Link>
     </article>;
    })}
   </div>
-  <p className={styles.plansDisclosure}>Free accounts are available now. Professional and Business are proposed plans; paid subscription billing is not active. Online payments require the business’s Stripe connection. Email and SMS depend on separate setup and may carry provider costs. AI receptionist and premium add-ons are not included.</p>
+  <p className={styles.plansDisclosure}>All registrations require the business services and revenue agreement. Paid packages renew monthly through Stripe after administrator approval. Eligible first-customer commissions may apply, including on Free, when enabled by the administrator. Online payments require the business’s Stripe connection. Email and SMS depend on separate setup and may carry provider costs. AI receptionist and premium add-ons are not included.</p>
  </section>;
 }
