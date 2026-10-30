@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./usability.css";
+import "./page-shortcuts.css";
+import PageShortcuts from "./components/page-shortcuts";
 import {isStaging} from '../server/staging-safety.mjs';
 
 export const metadata: Metadata = {
@@ -23,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{isStaging()&&<div role="status" style={{background:'#8a4b00',color:'#fff',padding:'10px 16px',textAlign:'center',fontWeight:700}}>SelahFlow STAGING · Test data only · Sandbox payments</div>}{children}</body>
+      <body className="antialiased"><PageShortcuts/>{isStaging()&&<div role="status" style={{background:'#8a4b00',color:'#fff',padding:'10px 16px',textAlign:'center',fontWeight:700}}>SelahFlow STAGING · Test data only · Sandbox payments</div>}{children}</body>
     </html>
   );
 }

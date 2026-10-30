@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {ArrowLeft,ArrowRight} from 'lucide-react';
 import styles from '../site.module.css';
-export default function BusinessCarousel({children,count}:{children:ReactNode;count:number}){
+export default function BusinessCarousel({children,count,title='Find your next favorite business',description='Swipe or use the arrows to explore.',label='Browse businesses',itemLabel='businesses',singularLabel='Business',trackId='discover-business-track'}:{children:ReactNode;count:number;title?:string;description?:string;label?:string;itemLabel?:string;singularLabel?:string;trackId?:string}){
  const track=useRef<HTMLDivElement>(null);
  const [position,setPosition]=useState({index:0,start:true,end:count<2});
  useEffect(()=>{
@@ -29,15 +29,15 @@ export default function BusinessCarousel({children,count}:{children:ReactNode;co
   const target=direction>0?offsets.find(offset=>offset>el.scrollLeft+2):offsets.filter(offset=>offset<el.scrollLeft-2).at(-1);
   el.scrollTo({left:target??(direction>0?el.scrollWidth:0),behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
  }
- return <section className={styles.businessCarousel} aria-label="Browse businesses" aria-roledescription="carousel">
-  <div className={styles.carouselHeading}><div><h2>Find your next favorite business</h2><p>Swipe or use the arrows to explore.</p></div><div className={styles.carouselControls}>
-   <button type="button" aria-label="Previous businesses" aria-controls="discover-business-track" disabled={position.start} onClick={()=>move(-1)}><ArrowLeft size={20}/></button>
-   <button type="button" aria-label="Next businesses" aria-controls="discover-business-track" disabled={position.end} onClick={()=>move(1)}><ArrowRight size={20}/></button>
+ return <section className={styles.businessCarousel} aria-label={label} aria-roledescription="carousel">
+  <div className={styles.carouselHeading}><div><h2>{title}</h2><p>{description}</p></div><div className={styles.carouselControls}>
+   <button type="button" aria-label={'Previous '+itemLabel} aria-controls={trackId} disabled={position.start} onClick={()=>move(-1)}><ArrowLeft size={20}/></button>
+   <button type="button" aria-label={'Next '+itemLabel} aria-controls={trackId} disabled={position.end} onClick={()=>move(1)}><ArrowRight size={20}/></button>
   </div></div>
-  <div id="discover-business-track" ref={track} className={styles.carouselTrack} tabIndex={0} aria-label="Business cards; use left and right arrow keys to browse" onKeyDown={e=>{
+  <div id={trackId} ref={track} className={styles.carouselTrack} tabIndex={0} aria-label={singularLabel+' cards; use left and right arrow keys to browse'} onKeyDown={e=>{
    if(e.target!==e.currentTarget||!['ArrowLeft','ArrowRight'].includes(e.key))return;
    e.preventDefault();move(e.key==='ArrowRight'?1:-1);
   }}>{children}</div>
-  <p className={styles.carouselPosition} aria-live="polite">Business {position.index+1} of {count}</p>
+  <p className={styles.carouselPosition} aria-live="polite">{singularLabel} {position.index+1} of {count}</p>
  </section>;
 }
