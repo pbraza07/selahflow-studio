@@ -1,3 +1,6 @@
+import {randomBytes} from 'node:crypto';
+import {tokenHash} from './security.mjs';
+import {bookingServicePaymentOptions} from './service-payment-options.mjs';
 import {clientTeamName} from './team-booking-policy.mjs';
 import {memberIdMembershipSummary} from './member-id-summary.mjs';
 import {bookingConfirmationInstructions} from './booking-confirmation-copy.mjs';
@@ -15,22 +18,35 @@ export async function bookingReceiptSnapshot(db,{owner,bookingId,date,start,dura
   services:(d.services||[]).map(clean),staff:clean(clientTeamName(config,staff)),
   address:clean(config.address),phone:clean(config.phone),price:Number(d.price??d.quotedPrice??0),membershipCovered:d.membershipCovered===true,
   answers:Object.entries(d.customAnswers||{}).map(([id,value])=>({label:clean(d.customFieldLabels?.[id]||id),value:clean(value)})),
-  coupon:d.coupon||null,pending,membership:membership?.status==='active'?membership:null,links:receiptLinks(origin,business.slug),instructions:bookingConfirmationInstructions(pending)};
+  paymentOptions:bookingServicePaymentOptions(config,d),coupon:d.coupon||null,pending,membership:membership?.status==='active'?membership:null,links:receiptLinks(origin,business.slug),instructions:bookingConfirmationInstructions(pending)};
 }
 export function bookingReceiptMessage(receipt,{event='submission',paymentLink=''}={}){
  const r=receipt,paid=event==='payment_confirmation',approved=event!=='submission'||!r.pending;
  const heading=paid?'Payment received':event==='payment_link'?'Booking confirmed — payment requested':approved?'Booking approved':'Booking request received';
  const time=`${Math.floor(r.start/60)%12||12}:${String(r.start%60).padStart(2,'0')} ${r.start<720?'AM':'PM'} Eastern`;
  const amount=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(r.price);
- const actions=[...(paymentLink?[{label:'Make Payment',url:paymentLink}]:[]),{label:'Check membership & booking status',url:r.links.status},{label:'Explore membership options',url:r.links.membership},{label:'Book another appointment',url:r.links.booking}];
+ const options=r.paymentOptions||{online:true,onsite:true},due=!paid&&!r.membershipCovered&&r.price>0;
+ const onsiteLink=paymentLink?paymentLink+'&choice=onsite':'';
+ const actions=[...(due&&paymentLink&&options.online?[{label:'Make Payment',url:paymentLink}]:[]),...(due&&onsiteLink&&options.onsite?[{label:'Pay on Site',url:onsiteLink}]:[]),{label:'Check membership & booking status',url:r.links.status},{label:'Explore membership options',url:r.links.membership},{label:'Book another appointment',url:r.links.booking}];
  const membership=r.membership?`\nActive membership: ${r.membership.name}\nSessions left: ${r.membership.sessionsLeft}\nSessions taken / used: ${r.membership.sessionsUsed}\nBalance at the time of this email.\n`:'';
  const answers=(r.answers||[]).length?'\nRegistration answers:\n'+r.answers.map(a=>a.label+': '+a.value).join('\n')+'\n':'';
  const discount=r.coupon?`\nCoupon: ${clean(r.coupon.code)} — ${clean(r.coupon.description)}\nOriginal subtotal: $${(r.coupon.originalCents/100).toFixed(2)}\nDiscount: -$${(r.coupon.discountCents/100).toFixed(2)}\n`:'';
- const payment=paid?`${amount} paid. Thank you! Your Stripe payment has been verified.`:r.price<=0?(r.membershipCovered?'No payment due — covered by your membership.':'No payment due.'):!approved?`${amount} quoted. If payment is due after approval, we will email your payment instructions.`:paymentLink?`${amount} due.\nPay securely with Stripe: ${paymentLink}\nThis private link expires in 30 days. Do not forward it.`:`${amount} due. Check payment options with your registration status: ${r.links.status}`;
- return {actions,subject:`${heading} — ${r.business}`,text:`Hello ${r.name},\n\n${heading} at ${r.business}. ${approved?'We look forward to seeing you!':'Thanks for sending your request!'}\n\nMembership ID: ${r.memberNumber||'Contact the business'}\nBooking reference: ${r.reference}\nServices: ${r.services.join(', ')}\nDate: ${r.date}\nTime: ${time}\nDuration: ${r.duration} minutes\nTeam member: ${r.staff}${r.address?'\nLocation: '+r.address:''}${answers}${discount}\n\n${payment}\n${membership}\n${bookingConfirmationInstructions(!approved)}\n\nCheck registration & membership details: ${r.links.status}\nBook another visit: ${r.links.booking}\nInterested in a membership? Explore plans and sign up: ${r.links.membership}\n\nQuestions or changes? Contact ${r.business}${r.phone?' at '+r.phone:''}.`,sms:`${r.business}: ${heading}. ${r.date} ${time}. ID ${r.memberNumber||'see email'}. ${paymentLink?'Pay: '+paymentLink:paid?amount+' paid.':'Details: '+r.links.status}`};
+ const onsite=due&&onsiteLink&&options.onsite?`\nPay on Site: ${onsiteLink}\nSelect Pay on Site on the private page to save your preference. Payment remains due until collected.\n`:'';
+ const payment=paid?`${amount} paid. Thank you! Your Stripe payment has been verified.`:r.price<=0?(r.membershipCovered?'No payment due — covered by your membership.':'No payment due.'):!approved?`${amount} quoted. If payment is due after approval, we will email your payment instructions.`:paymentLink&&options.online?`${amount} due.\nPay securely with Stripe: ${paymentLink}\nThis private link expires in 30 days. Do not forward it.`:paymentLink&&options.onsite?`${amount} due at the business. No payment has been recorded.`:`${amount} due. Check payment options with your registration status: ${r.links.status}`;
+ return {actions,subject:`${heading} — ${r.business}`,text:`Hello ${r.name},\n\n${heading} at ${r.business}. ${approved?'We look forward to seeing you!':'Thanks for sending your request!'}\n\nMembership ID: ${r.memberNumber||'Contact the business'}\nBooking reference: ${r.reference}\nServices: ${r.services.join(', ')}\nDate: ${r.date}\nTime: ${time}\nDuration: ${r.duration} minutes\nTeam member: ${r.staff}${r.address?'\nLocation: '+r.address:''}${answers}${discount}\n\n${payment}${onsite}\n${membership}\n${bookingConfirmationInstructions(!approved)}\n\nCheck registration & membership details: ${r.links.status}\nBook another visit: ${r.links.booking}\nInterested in a membership? Explore plans and sign up: ${r.links.membership}\n\nQuestions or changes? Contact ${r.business}${r.phone?' at '+r.phone:''}.`,sms:`${r.business}: ${heading}. ${r.date} ${time}. ID ${r.memberNumber||'see email'}. ${paymentLink?'Pay: '+paymentLink:paid?amount+' paid.':'Details: '+r.links.status}`};
 }
 export async function queueBookingReceipt(db,input,{event='submission'}={}){
- const receipt=await bookingReceiptSnapshot(db,input),message=bookingReceiptMessage(receipt,{event});
+ const receipt=await bookingReceiptSnapshot(db,input);
+ let paymentLink='';
+ if(receipt.price>0&&!receipt.membershipCovered&&event!=='payment_confirmation'){
+  const business=(await db.query("SELECT slug FROM businesses WHERE id=$1 AND owner_id=$2 AND status='active'",[receipt.businessId,input.owner])).rows[0];
+  if(business){
+   const token=randomBytes(32).toString('hex');
+   paymentLink=new URL(input.origin).origin+'/payment/'+encodeURIComponent(business.slug)+'#booking_id='+encodeURIComponent(input.bookingId)+'&token='+token;
+   await db.query("INSERT INTO customer_booking_access(token_hash,owner_id,booking_id,expires_at) VALUES($1,$2,$3,now()+interval '30 days') ON CONFLICT DO NOTHING",[tokenHash(token),input.owner,input.bookingId]);
+  }
+ }
+ const message=bookingReceiptMessage(receipt,{event,paymentLink});
  await db.query('INSERT INTO booking_receipt_emails(booking_key,event_type,business_id,destination,destination_masked,message) VALUES($1,$2,$3,$4,$5,$6::jsonb) ON CONFLICT DO NOTHING',[input.bookingId,event,receipt.businessId,receipt.email,maskDestination(receipt.email,'email'),JSON.stringify(message)]);
  const {email,...publicReceipt}=receipt;
  return publicReceipt;

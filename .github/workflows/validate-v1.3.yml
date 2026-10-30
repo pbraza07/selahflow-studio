@@ -22,3 +22,21 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
       - name: Measure static build asset sizes
         run: node scripts/measure-build.mjs
+
+  native-pay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: native/selahflow-pay
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.22.0"
+          cache: npm
+          cache-dependency-path: native/selahflow-pay/package-lock.json
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npx expo prebuild --no-install
+      - run: npx expo export --platform ios --platform android --output-dir dist

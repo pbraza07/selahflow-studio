@@ -31,7 +31,7 @@ test('all pending bookings require explicit owner approval before Stripe checkou
  const args={slug:'club-one',bookingId:id,token,origin:'https://staging.example'};
  let creates=0;const session={id:'cs_test_fixture12345',livemode:false,mode:'payment',status:'open',payment_status:'unpaid',url:'https://checkout.stripe.com/c/pay/test_fixture'};
  const api=async(path,o)=>{if(path.startsWith('accounts/'))return {charges_enabled:true,details_submitted:true};if(path==='checkout/sessions')creates++;return session;};
- await assert.rejects(bookingPaymentPreview(pool,args),/unavailable/);
+ assert.equal((await bookingPaymentPreview(pool,args)).status,'awaiting_approval','private preview shows both choices without authorizing a pending charge');
  await assert.rejects(startBookingCheckout(pool,args,api),/must approve/);assert.equal(creates,0);
  await confirmDirectBookingForPayment(pool,args);assert.equal((await query('SELECT count(*)::int n FROM appointments')).rows[0].n,0);
  assert.equal((await reconcileUncheckedBookings(pool,{origin:args.origin})).confirmed,0);

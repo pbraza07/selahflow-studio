@@ -1,4 +1,4 @@
-## Release source: v1.3.183
+## Release source: v1.3.184
 
 Clients without a birth date receive initials plus a business-specific sequence starting at 1001. Birth-date-based and existing IDs remain supported; booking, membership and owner client creation share the allocator.
 

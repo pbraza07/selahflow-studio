@@ -1,4 +1,5 @@
 'use client';
+import OwnerTerminalSetup from './owner-terminal-setup';
 import {useCallback,useEffect,useState} from 'react';
 import OwnerStripePayments from './owner-stripe-payments';
 import PaymentProviderComparison from './payment-provider-comparison';
@@ -27,6 +28,7 @@ export default function OwnerPaymentSetup(){
     <a className="outline" href="https://www.helcim.com/" target="_blank" rel="noopener noreferrer">Open Helcim website</a><p className="muted">Opening Helcim does not link your account. Do not send API keys, passwords or bank details in support messages.</p>
    </section>}
   </>}
+  <OwnerTerminalSetup/>
   <PaymentProviderComparison/>
   <section className="sf-existing-stripe-setup" aria-label="Stripe connection and commission settings"><OwnerStripePayments/></section>
  </div>;

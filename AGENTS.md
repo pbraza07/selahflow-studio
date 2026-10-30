@@ -1,3 +1,11 @@
+# v1.3.184 implementation — Onsite appointment payments
+
+Client confirmations and future transactional emails include service-enabled Make Payment / Pay on Site actions. Private-link POST saves onsite preference for pending/approved bookings without recording received money. Paid/free/covered bookings omit active payment choices. Owner appointment tables, calendar details and session rosters expose onsite collection/check/cancel; Payment setup selects a business-scoped Stripe Terminal location.
+
+Native Expo/React Native companion source is under native/selahflow-pay. PKCE one-use codes and owner-session-bound one-booking grants protect Terminal endpoints; support impersonation cannot delegate native collection. Card-present intents use saved prices/waivers/commission policy, expire verified unpaid online Checkout first, and block competing online/cash flows. Signed webhooks or authenticated provider retrieval verify amount/account/metadata/paid card-present charge before atomically recording a single receipt, revenue event, appointment status, commission and confirmation. Pending collection blocks appointment/client deletion. Migration 075 is additive.
+
+Distribution remains pending: no signed app, Apple entitlement approval, store installation, physical NFC/device acceptance, live payment or business activation has been performed. Setup page and native README state these requirements. The existing connected-account webhook destination needs payment_intent.succeeded subscribed for automatic background reconciliation; authenticated Check payment provides provider verification if delivery is delayed. Testing/deployment verification pending.
+
 # v1.3.183 verified LIVE — Client IDs without a birth date
 
 PR #115 merged as 07a09a035b29b42582df14b0ee2b48b1a2ae9f96. Final staging a7a70a93677081ca0004d8d39a0bd49a85de6821 / dep-dbiavim9j67c73fvplpg and production dep-dbib5th5efls739kakpg verified LIVE. Both applied migration 074. All 504 final local and staging tests, TypeScript and production builds passed; final GitHub job 124131889124 passed. Production application tree matches the tested source. Checked startup error windows were empty.

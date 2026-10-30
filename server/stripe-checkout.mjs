@@ -43,10 +43,10 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
   if(!business)throw Error('Business unavailable.');
   const access=(await db.query('SELECT 1 FROM customer_booking_access WHERE owner_id=$1 AND booking_id=$2 AND token_hash=$3 AND expires_at>now()',[business.owner_id,bookingId,tokenHash(token)])).rowCount;
   if(!access)throw Error('Invalid or expired booking payment link.');
-  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[business.id+':payment:'+bookingId]);
   const request=(await db.query('SELECT status,appointment_id FROM booking_requests WHERE id=$1 AND business_id=$2',[bookingId,business.id])).rows[0];
   if(request&&request.status!=='accepted')throw Error('The business must approve this booking before you can pay.');
   const actualId=request?.appointment_id||bookingId;
+  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[business.id+':payment:'+actualId]);
   const appointment=(await db.query('SELECT id,data,status FROM appointments WHERE owner=$1 AND id=$2 FOR UPDATE',[business.owner_id,actualId])).rows[0];
   if(!appointment||!['Confirmed','Checked in','Checked-in','Completed','No-show'].includes(appointment.status))throw Error('This booking is not available for payment.');
   const data=typeof appointment.data==='string'?JSON.parse(appointment.data):appointment.data;
@@ -64,6 +64,10 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
   if(!bookingServicePaymentOptions(config,data).online)throw Error('Pay onsite at the business for this service. Online payment is not enabled.');
   const account=await readyMerchant(db,business.id,api);
   if(record&&record.stripe_account_id!==account)throw Error('The payment account changed. Contact the business before paying.');
+  if(record?.terminal_payment_intent_id){
+   const intent=await api('payment_intents/'+record.terminal_payment_intent_id,{method:'GET',account});assertTestPayment(intent);
+   if(intent.status!=='canceled')throw Error('Onsite card collection has started. Ask the business to check or cancel that payment before paying online.');
+  }
   if(record?.stripe_checkout_session_id){
    const existing=await api('checkout/sessions/'+record.stripe_checkout_session_id,{method:'GET',account});
    assertTestPayment(existing);
@@ -106,12 +110,19 @@ export async function applyBookingPayment(db,businessId,account,session,api=stri
  if(!row||session.client_reference_id!==row.booking_id||session.metadata?.booking_id!==row.booking_id||session.metadata?.selahflow_business_id!==businessId||session.amount_total!==row.amount_cents)return false;
  if(row.status==='paid')return true;
  await settleCommission(db,{businessId,account,session},api);
- const receipt=await db.query('INSERT INTO stripe_payment_receipts(stripe_account_id,provider_reference,business_id,booking_id,amount_cents) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING provider_reference',[account,session.payment_intent,businessId,row.booking_id,row.amount_cents]);
- if(!receipt.rowCount)return true;
- await db.query("UPDATE booking_payments SET status='paid',stripe_payment_intent_id=$1,paid_at=now(),updated_at=now() WHERE booking_id=$2 AND business_id=$3",[session.payment_intent,row.booking_id,businessId]);
- const payment={bookingId:row.booking_id,lines:row.lines,total:row.amount_cents/100,tax:0,payment:isStaging()?'Stripe sandbox':'Stripe',providerReference:session.payment_intent};
- await db.query("INSERT INTO events(id,owner,created,kind,data) SELECT $1,owner_id,$2,'cash_sale',$3 FROM businesses WHERE id=$4",['stripe-booking-'+account+'-'+session.payment_intent,new Date().toISOString(),JSON.stringify(payment),businessId]);
- await db.query("UPDATE appointments SET data=(data::jsonb||$1::jsonb)::text WHERE id=$2 AND owner=(SELECT owner_id FROM businesses WHERE id=$3)",[JSON.stringify({paymentStatus:'paid',paymentProvider:'stripe',paymentReference:session.payment_intent}),row.booking_id,businessId]);
+ return recordVerifiedBookingPayment(db,{businessId,account,row,intentId:session.payment_intent});
+}
+/** Provider proof is checked by the caller. Receipt, sale, appointment and email are atomic. */
+export async function recordVerifiedBookingPayment(db,{businessId,account,row,intentId,onsite=false}){
+ const receipt=await db.query('INSERT INTO stripe_payment_receipts(stripe_account_id,provider_reference,business_id,booking_id,amount_cents) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING provider_reference',[account,intentId,businessId,row.booking_id,row.amount_cents]);
+ if(!receipt.rowCount){
+  const prior=(await db.query('SELECT business_id,booking_id,amount_cents FROM stripe_payment_receipts WHERE stripe_account_id=$1 AND provider_reference=$2',[account,intentId])).rows[0];
+  if(prior?.business_id!==businessId||prior?.booking_id!==row.booking_id||prior?.amount_cents!==row.amount_cents)throw Error('Payment receipt needs reconciliation. Do not charge again.');
+ }
+ await db.query("UPDATE booking_payments SET status='paid',stripe_payment_intent_id=$1,paid_at=COALESCE(paid_at,now()),updated_at=now() WHERE booking_id=$2 AND business_id=$3",[intentId,row.booking_id,businessId]);
+ const payment={bookingId:row.booking_id,lines:row.lines,total:row.amount_cents/100,tax:0,payment:isStaging()?'Stripe sandbox':onsite?'Stripe Tap to Pay':'Stripe',providerReference:intentId};
+ await db.query("INSERT INTO events(id,owner,created,kind,data) SELECT $1,owner_id,$2,'cash_sale',$3 FROM businesses WHERE id=$4 ON CONFLICT DO NOTHING",['stripe-booking-'+account+'-'+intentId,new Date().toISOString(),JSON.stringify(payment),businessId]);
+ await db.query("UPDATE appointments SET data=(data::jsonb||$1::jsonb)::text WHERE id=$2 AND owner=(SELECT owner_id FROM businesses WHERE id=$3)",[JSON.stringify({paymentStatus:'paid',paymentProvider:'stripe',paymentReference:intentId,...(onsite?{paymentChoice:'onsite',paymentMethod:'tap_to_pay'}:{})}),row.booking_id,businessId]);
  await queueBookingPaid(db,businessId,row.booking_id);
  return true;
 }
