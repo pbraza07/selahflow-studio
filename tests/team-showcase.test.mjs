@@ -53,3 +53,12 @@ test('compact page menu follows loaded team branding, supports back fallback, Es
  menu.open=true;tree.find(n=>n.type==='details').props.onKeyDown({key:'Escape'});assert.equal(menu.open,false);assert.equal(focused,true);
  menu.open=true;events.pointerdown({target:{}});assert.equal(menu.open,false);observeUpdate();cleanup();assert.equal(removed,true);
 });
+test('team workspace expiry and sign-out replace the protected history entry so Back cannot bounce through sign-in',async t=>{
+ const saved={fetch:globalThis.fetch,location:globalThis.location};t.after(()=>{for(const [key,value]of Object.entries(saved)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}});
+ const replacements=[],effects=[];globalThis.location={replace:url=>replacements.push(url),assign:()=>assert.fail('Protected team navigation must replace history')};globalThis.fetch=async()=>({status:401,json:async()=>({error:'Sign in'})});
+ const hooks={useState:initial=>[initial,()=>{}],useEffect:fn=>effects.push(fn)};
+ const source=ts.transpileModule(await read('app/team/workspace/page.tsx'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText,exp={};
+ new Function('require','exports',source)(id=>id==='react'?hooks:id.includes('components/')?{__esModule:true,default:()=>null,teamRequest:async()=>({})}:require(id),exp);
+ const tree=exp.default(),nodes=(n,out=[])=>{if(Array.isArray(n))n.forEach(x=>nodes(x,out));else if(n?.props){out.push(n);nodes(n.props.children,out);}return out;},tick=()=>new Promise(r=>setImmediate(r));
+ effects[0]();await tick();assert.deepEqual(replacements,['/team/login']);nodes(tree).find(n=>n.type==='button'&&n.props.children==='Sign out').props.onClick();await tick();assert.deepEqual(replacements,['/team/login','/team/login']);
+});
