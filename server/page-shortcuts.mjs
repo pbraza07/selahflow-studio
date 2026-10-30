@@ -13,3 +13,5 @@ export function pageShortcuts(slug,profileId){
  links.push({label:'Team workspace',href:'/team/workspace'},{label:'Team sign in',href:'/team/login'+(business?'?business='+business:'')},{label:'Owner dashboard',href:'/studio/owner'},{label:'Business owner sign in',href:'/login'},{label:'Find a business',href:'/discover'},{label:'SelahFlow home',href:'/'});
  return links;
 }
+
+export function shortcutBackFallback(pathname,slug){const business=safeBusinessSlug(slug),home=business?'/'+business:null;return home&&pathname!==home?home:'/discover';}

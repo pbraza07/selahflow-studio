@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {usePathname} from 'next/navigation';
-import {businessSlugFromPath,pageShortcuts,safeBusinessSlug} from '../../server/page-shortcuts.mjs';
+import {businessSlugFromPath,pageShortcuts,safeBusinessSlug,shortcutBackFallback} from '../../server/page-shortcuts.mjs';
 export default function PageShortcuts(){
  const pathname=usePathname(),menu=useRef<HTMLDetailsElement>(null);
  const [context,setContext]=useState<{slug:string|null;profileId:string|null}>({slug:null,profileId:null});
@@ -19,5 +19,5 @@ export default function PageShortcuts(){
   document.addEventListener('pointerdown',outside);
   return()=>{observer.disconnect();document.removeEventListener('pointerdown',outside);};
  },[pathname]);
- return <nav className="sf-page-shortcuts" aria-label="Page shortcuts"><button type="button" className="sf-shortcut-back" onClick={()=>{if(window.history.length>1)window.history.back();else window.location.assign(context.slug?'/'+context.slug:'/discover');}}><span aria-hidden="true">←</span> Back</button><details ref={menu} onKeyDown={event=>{if(event.key==='Escape'&&menu.current){menu.current.open=false;menu.current.querySelector('summary')?.focus();}}}><summary>Pages <span aria-hidden="true">⌄</span></summary><div className="sf-shortcut-menu" onClick={event=>{if((event.target as Element).closest('a')&&menu.current)menu.current.open=false;}}>{context.slug&&<span className="sf-shortcut-context">{context.slug.replaceAll('-',' ')}</span>}{pageShortcuts(context.slug,context.profileId).map((link:{label:string;href:string})=><a key={link.label} href={link.href} aria-current={pathname===link.href.split('?')[0]?'page':undefined}>{link.label}</a>)}<small>Owner and team workspaces require their own sign-in.</small></div></details></nav>;
+ return <nav className="sf-page-shortcuts" aria-label="Page shortcuts"><button type="button" className="sf-shortcut-back" onClick={()=>{if(window.history.length>1)window.history.back();else window.location.assign(shortcutBackFallback(pathname,context.slug));}}><span aria-hidden="true">←</span> Back</button><details ref={menu} onKeyDown={event=>{if(event.key==='Escape'&&menu.current){menu.current.open=false;menu.current.querySelector('summary')?.focus();}}}><summary>Pages <span aria-hidden="true">⌄</span></summary><div className="sf-shortcut-menu" onClick={event=>{if((event.target as Element).closest('a')&&menu.current)menu.current.open=false;}}>{context.slug&&<span className="sf-shortcut-context">{context.slug.replaceAll('-',' ')}</span>}{pageShortcuts(context.slug,context.profileId).map((link:{label:string;href:string})=><a key={link.label} href={link.href} aria-current={pathname===link.href.split('?')[0]?'page':undefined}>{link.label}</a>)}<small>Owner and team workspaces require their own sign-in.</small></div></details></nav>;
 }

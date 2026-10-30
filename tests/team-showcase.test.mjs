@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PGlite} from '@electric-sql/pglite';
 import {businessTeamShowcase} from '../server/team-showcase.mjs';
-import {businessSlugFromPath,pageShortcuts,safeBusinessSlug} from '../server/page-shortcuts.mjs';
+import {businessSlugFromPath,pageShortcuts,safeBusinessSlug,shortcutBackFallback} from '../server/page-shortcuts.mjs';
 import {readFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
 import ts from 'typescript';
@@ -23,6 +23,7 @@ test('page shortcuts keep business context across core routes and keep private d
  for(const path of ['/tenant-one','/book/tenant-one','/membership/tenant-one','/studio/tenant-one'])assert.equal(businessSlugFromPath(path),'tenant-one');
  for(const path of ['/','/login','/discover','/team/login','/team/workspace','/team/review/token','/studio/owner','/api/business','/membership-pay/private-token'])assert.equal(businessSlugFromPath(path),null);
  for(const value of ['../admin','https://evil.test','tenant?bad','',null])assert.equal(safeBusinessSlug(value),null);
+ assert.equal(shortcutBackFallback('/tenant-one','tenant-one'),'/discover');assert.equal(shortcutBackFallback('/team/login','tenant-one'),'/tenant-one');assert.equal(shortcutBackFallback('/login',null),'/discover');
  const links=pageShortcuts('tenant-one','profile-id');assert.ok(links.some(x=>x.href==='/tenant-one'));assert.ok(links.some(x=>x.href==='/team/profile-id'));assert.ok(links.some(x=>x.href==='/team/workspace'));assert.ok(links.some(x=>x.href==='/studio/owner'));assert.ok(links.some(x=>x.href==='/team/login?business=tenant-one'));
  assert.ok(pageShortcuts(null,null).some(x=>x.href==='/discover'));assert.ok(pageShortcuts('../admin','../private').every(x=>!x.href.includes('..')));
 });
