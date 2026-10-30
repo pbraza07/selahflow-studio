@@ -1,14 +1,23 @@
-import {stripeApi} from './membership-payments.mjs';
+import {stripeApi,paymentConfigured} from './membership-payments.mjs';
 import {isStaging} from './staging-safety.mjs';
-import {readyMerchant,assertTestPayment,applyBookingPayment,recordVerifiedBookingPayment} from './stripe-checkout.mjs';
+import {assertTestPayment,applyBookingPayment,recordVerifiedBookingPayment} from './stripe-checkout.mjs';
 import {reserveCommission,attachCommissionIntent,settleTerminalCommission} from './first-customer-commissions.mjs';
 import {bookingServicePaymentOptions} from './service-payment-options.mjs';
 import {assertBookingWaiver} from './participation-waivers.mjs';
 import {queueApprovedBooking} from './booking-client-notifications.mjs';
 const obj=x=>typeof x==='string'?JSON.parse(x):x||{};
+/** New Terminal collection uses Accounts v2's current capability, not a cached/v1 readiness flag. */
+export async function readyTerminalMerchant(db,businessId,api=stripeApi){
+ if(!paymentConfigured())throw Error('Stripe payments are not configured for SelahFlow.');
+ const merchant=(await db.query("SELECT external_account_id FROM merchant_accounts WHERE business_id=$1 AND provider='stripe'",[businessId])).rows[0];
+ if(!merchant?.external_account_id)throw Error('Connect this business Stripe account before using Tap to Pay.');
+ const account=await api('core/accounts/'+merchant.external_account_id+'?include%5B0%5D=configuration.merchant',{method:'GET',namespace:'v2'});
+ if(account.id!==merchant.external_account_id||account.configuration?.merchant?.capabilities?.card_payments?.status!=='active')throw Error('Complete Stripe verification: card payments must be active before onsite collection.');
+ return merchant.external_account_id;
+}
 export async function terminalSettings(db,owner,api=stripeApi){
  const b=(await db.query("SELECT id FROM businesses WHERE owner_id=$1 AND status='active'",[owner])).rows[0];if(!b)throw Error('Business unavailable.');
- const account=await readyMerchant(db,b.id,api);
+ const account=await readyTerminalMerchant(db,b.id,api);
  const locations=await api('terminal/locations?limit=100',{method:'GET',account});
  const saved=(await db.query('SELECT location_id FROM business_terminal_settings WHERE business_id=$1 AND stripe_account_id=$2',[b.id,account])).rows[0];
  return {locationId:saved?.location_id||'',locations:(locations.data||[]).map(l=>({id:l.id,name:l.display_name||l.id})),sandbox:isStaging()};
@@ -16,7 +25,7 @@ export async function terminalSettings(db,owner,api=stripeApi){
 export async function saveTerminalLocation(db,owner,locationId,api=stripeApi){
  if(!/^tml_[A-Za-z0-9]+$/.test(locationId||''))throw Error('Choose a Stripe Terminal location.');
  const b=(await db.query("SELECT id FROM businesses WHERE owner_id=$1 AND status='active'",[owner])).rows[0];if(!b)throw Error('Business unavailable.');
- const account=await readyMerchant(db,b.id,api),location=await api('terminal/locations/'+locationId,{method:'GET',account});
+ const account=await readyTerminalMerchant(db,b.id,api),location=await api('terminal/locations/'+locationId,{method:'GET',account});
  if(location.id!==locationId||location.deleted)throw Error('Stripe Terminal location unavailable.');
  await db.query('INSERT INTO business_terminal_settings(business_id,stripe_account_id,location_id) VALUES($1,$2,$3) ON CONFLICT(business_id) DO UPDATE SET stripe_account_id=$2,location_id=$3,updated_at=now()',[b.id,account,locationId]);return {saved:true};
 }
@@ -32,7 +41,7 @@ export async function nativePaymentInfo(db,scope){
 }
 export async function nativeConnectionToken(db,scope,api=stripeApi){
  const info=await nativePaymentInfo(db,scope);if(info.paid)throw Error('This appointment is already paid.');
- const account=await readyMerchant(db,scope.business_id,api);
+ const account=await readyTerminalMerchant(db,scope.business_id,api);
  const token=await api('terminal/connection_tokens',{account,params:{location:info.locationId}});
  if(typeof token.secret!=='string')throw Error('Stripe connection unavailable.');return {secret:token.secret};
 }
@@ -47,7 +56,7 @@ export async function startTerminalPayment(pool,scope,origin,api=stripeApi){
   if(!Number.isSafeInteger(cents)||cents<50||cents>100000000)throw Error('Invalid saved appointment price.');
   if(!bookingServicePaymentOptions(a.config,d).onsite)throw Error('Pay on Site is not enabled for this service.');
   await assertBookingWaiver(db,{owner:a.owner,config:a.config,serviceIds:d.serviceIds||[],memberNumber:d.memberNumber});
-  const account=await readyMerchant(db,scope.business_id,api);
+  const account=await readyTerminalMerchant(db,scope.business_id,api);
   const setting=(await db.query('SELECT location_id FROM business_terminal_settings WHERE business_id=$1 AND stripe_account_id=$2',[scope.business_id,account])).rows[0];
   if(!setting)throw Error('Choose a Stripe Terminal location in Payment setup.');
   if(p&&(p.stripe_account_id!==account||p.amount_cents!==cents))throw Error('Saved payment amount or account changed. Reconcile before collecting.');

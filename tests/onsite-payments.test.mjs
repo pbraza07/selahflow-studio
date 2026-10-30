@@ -24,7 +24,7 @@ async function fixture(t){
  await query("INSERT INTO customer_booking_access(token_hash,owner_id,booking_id) VALUES($1,'u1',$2)",[tokenHash(token),bookingId]);
  let creates=0;let pi=null;const calls=[];
  const api=async(path,o={})=>{
-  calls.push([path,o]);if(path.startsWith('accounts/'))return {id:'acct_one',charges_enabled:true,details_submitted:true};assert.equal(o.account,'acct_one');
+  calls.push([path,o]);if(path.startsWith('core/accounts/')){assert.equal(o.namespace,'v2');return {id:'acct_one',configuration:{merchant:{capabilities:{card_payments:{status:'active'}}}}};}if(path.startsWith('accounts/'))return {id:'acct_one',charges_enabled:true,details_submitted:true};assert.equal(o.account,'acct_one');
   if(path.startsWith('terminal/locations/'))return {id:'tml_one'};
   if(path==='terminal/connection_tokens'){assert.equal(o.params.location,'tml_one');return {secret:'pst_fixture'};}
   if(path==='payment_intents'){creates++;pi={id:'pi_onsite'+creates,client_secret:'pi_onsite_secret',livemode:false,status:'requires_payment_method',amount:10000,amount_received:0,currency:'usd',payment_method_types:['card_present'],application_fee_amount:o.params.application_fee_amount||null,metadata:{booking_id:bookingId,selahflow_business_id:'b1',selahflow_channel:'terminal',commission_claim_id:o.params['metadata[commission_claim_id]']}};return pi;}
@@ -131,4 +131,14 @@ test('onsite collection rejects covered/free bookings and live objects on stagin
  await set({price:0});await assert.rejects(start(),/No payment/);assert.equal(f.creates,0);
  await set({});await assert.rejects(start(async(path,o)=>{const r=await f.api(path,o);return path==='payment_intents'?{...r,livemode:true}:r;}),/sandbox/);
  assert.equal((await f.query('SELECT count(*)::int AS n FROM booking_payments')).rows[0].n,0);assert.equal((await f.query('SELECT count(*)::int AS n FROM booking_terminal_attempts')).rows[0].n,0);
+});
+
+test('Terminal rejects non-active v2 merchant capabilities even when legacy account flags are ready',async t=>{
+ const f=await fixture(t);await saveTerminalLocation(f.db,'u1','tml_one',f.api);
+ for(const status of ['pending','restricted','rejected','unsupported']){
+  const api=async(path,o)=>path.startsWith('core/accounts/')?{id:'acct_one',configuration:{merchant:{capabilities:{card_payments:{status}}}}}:f.api(path,o);
+  await assert.rejects(startTerminalPayment(f.pool,f.scope,'https://staging.example',api),/card payments must be active/);
+  await assert.rejects(nativeConnectionToken(f.db,f.scope,api),/card payments must be active/);
+ }
+ assert.equal(f.creates,0);assert.equal((await f.query('SELECT count(*)::int AS n FROM booking_payments')).rows[0].n,0);
 });
