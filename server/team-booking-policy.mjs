@@ -42,6 +42,10 @@ export function publicBookingStaff(config,input){
   if(input.staff&&input.staff!==session.staff)throw Error('This session uses its assigned team member. Choose another session to change the team.');
   return session.staff;
  }
+ if(input.preferredStaff){
+  if(input.preferredStaff!==input.staff||!member||member.bookingVisible===false||!Array.isArray(input.services)||!input.services.length||!input.services.every(id=>member.services?.includes(id)))throw Error('Choose a visible qualified team member from this business.');
+  return member.id;
+ }
  const serviceHost=defaultServiceStaff(config,input.services);
  if(serviceHost){if(input.staff&&input.staff!==serviceHost)throw Error('These services use their default team member. Choose a scheduled session to use another host.');return serviceHost;}
  if(member?.bookingVisible===false)throw Error('This team member is not available for client selection. Choose a scheduled session.');

@@ -1,6 +1,6 @@
-## Release source: v1.3.181
+## Release source: v1.3.182
 
-Saved social links show recognizable platform logos across business/team pages and owner link settings.
+Service catalog payment buttons can be Make payment, Pay onsite or both. Team-page bookings default to the visible qualified team member, ahead of the service catalog default. Approval, waiver and verified-payment rules still apply.
 
 ## Release source: v1.3.178
 

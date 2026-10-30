@@ -1,0 +1,51 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import React from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import ts from 'typescript';
+import {servicePaymentOptions,bookingServicePaymentOptions,validateServicePaymentOptions} from '../server/service-payment-options.mjs';
+import {teamBookingLink} from '../server/team-booking-link.mjs';
+import {publicBookingStaff} from '../server/team-booking-policy.mjs';
+const require=createRequire(import.meta.url),read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
+const config={staff:[{id:'alex',services:['lesson','visit']},{id:'blair',services:['lesson']},{id:'hidden',services:['lesson'],bookingVisible:false}],services:[{id:'lesson',duration:30,defaultStaffId:'blair',durationUnit:'minutes'},{id:'visit',durationUnit:'hours'},{id:'term',durationUnit:'weeks'}],bookableSessions:[{id:'group',date:'2030-01-01',staff:'blair',service:'lesson',start:600,capacity:2}]};
+test('service payment choices preserve legacy behavior and combine only compatible methods',()=>{
+ assert.deepEqual(servicePaymentOptions([{}]),{online:true,onsite:true});
+ assert.deepEqual(servicePaymentOptions([{paymentOptions:'onsite'},{}]),{online:false,onsite:true});
+ assert.deepEqual(servicePaymentOptions([{paymentOptions:'online'},{}]),{online:true,onsite:false});
+ assert.deepEqual(servicePaymentOptions([{paymentOptions:'online'},{paymentOptions:'onsite'}]),{online:false,onsite:false});
+ for(const choice of ['online','onsite','both',undefined])assert.doesNotThrow(()=>validateServicePaymentOptions({services:[{paymentOptions:choice}]}));
+ for(const choice of ['other',null,{},true])assert.throws(()=>validateServicePaymentOptions({services:[{paymentOptions:choice}]}),/Choose Make payment/);
+ const c={services:[{id:'one',name:'One',paymentOptions:'onsite'},{id:'two',name:'Two',paymentOptions:'online'}]};
+ assert.deepEqual(bookingServicePaymentOptions(c,{serviceIds:['one']}),{online:false,onsite:true});
+ assert.deepEqual(bookingServicePaymentOptions(c,{services:['One']}),{online:false,onsite:true});
+ assert.deepEqual(bookingServicePaymentOptions(c,{serviceIds:['two'],services:['One']}),{online:true,onsite:false});
+});
+test('team links accept a member alone, preserve valid service/date/time and reject hidden or foreign members',()=>{
+ const link=q=>teamBookingLink(config,new URLSearchParams(q),'2029-12-01');
+ assert.deepEqual(link('staff=alex&service=lesson&date=2030-01-01&start=600'),{staff:'alex',service:'lesson',date:'2030-01-01',start:600});
+ assert.deepEqual(link('staff=alex'),{staff:'alex',service:null,date:null,start:null});
+ assert.equal(link('staff=hidden'),null);assert.equal(link('staff=foreign'),null);
+ assert.equal(link('staff=blair&service=visit').service,null);assert.equal(link('staff=alex&service=term').service,null);
+ for(const date of ['2029-01-01','2030-02-30','no-date'])assert.equal(link('staff=alex&date='+date+'&start=600').date,null);
+ for(const start of ['', '-1','1440','bad','12.5'])assert.equal(link('staff=alex&date=2030-01-01&start='+start).start,null);
+ assert.equal(link('staff=alex&date=2030-01-01').start,null,'missing time never becomes midnight');
+});
+test('qualified visible profile member overrides catalog default while canonical session assignment and tenant scope remain enforced',()=>{
+ assert.equal(publicBookingStaff(config,{staff:'alex',preferredStaff:'alex',services:['lesson']}),'alex');
+ assert.equal(publicBookingStaff(config,{staff:'alex',preferredStaff:'alex',services:['lesson','visit']}),'alex');
+ for(const input of [{staff:'hidden',preferredStaff:'hidden',services:['lesson']},{staff:'foreign',preferredStaff:'foreign',services:['lesson']},{staff:'blair',preferredStaff:'blair',services:['visit']},{staff:'alex',preferredStaff:'blair',services:['lesson']}])assert.throws(()=>publicBookingStaff(config,input),/visible qualified/);
+ assert.equal(publicBookingStaff(config,{services:['lesson']}),'blair');
+ assert.throws(()=>publicBookingStaff(config,{staff:'alex',preferredStaff:'alex',services:['lesson'],sessionId:'group',date:'2030-01-01',start:600}),/assigned team/);
+});
+test('payment actions use the booking form, respect per-service choices and never offer payment for a zero quote',async()=>{
+ const source=ts.transpileModule(await read('app/components/service-booking-actions.tsx'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,exp={};new Function('require','exports',source)(require,exp);
+ const html=(services,price=30,disabled=false)=>renderToStaticMarkup(React.createElement(exp.default,{price,options:servicePaymentOptions(services),disabled,busy:false,confirmLabel:'Request booking'}));
+ assert.match(html([{}]),/>Make payment</);assert.match(html([{}]),/>Pay onsite</);
+ assert.match(html([{paymentOptions:'onsite'}]),/value="business"/);assert.doesNotMatch(html([{paymentOptions:'onsite'}]),/Make payment/);
+ assert.match(html([{paymentOptions:'online'}]),/value="online"/);assert.doesNotMatch(html([{paymentOptions:'online'}]),/Pay onsite/);
+ assert.match(html([{}]),/form="public-confirm" type="submit"/);assert.match(html([{}],30,true),/disabled=""/);
+ assert.match(html([{}],0),/>Request booking</);assert.doesNotMatch(html([{}],0),/Make payment|Pay onsite/);
+ assert.equal(html([{paymentOptions:'onsite'},{paymentOptions:'online'}]),'');
+});

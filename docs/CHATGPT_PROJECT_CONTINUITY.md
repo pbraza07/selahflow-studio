@@ -1,3 +1,7 @@
+# v1.3.182 release handoff — Service payment buttons and team booking defaults
+
+Service catalog supports Make payment, Pay onsite or both (legacy/new default). Public booking shows the saved choices; online checkout enforces the business-scoped catalog choice. Onsite does not mark payment received. Team profile links keep the visible qualified member selected through availability, date/service changes and booking; scheduled sessions retain their assigned host. Approval, waiver, capacity, merchant readiness and verified-payment rules remain. Verification/deployment pending.
+
 # v1.3.181 verified LIVE — Compact page navigation and team carousel
 
 PR #113 merged as 6dcac4cf3bf643239fbd1b1b96d888e1bf9a63d3. Final staging d752e3e61056320415a0ccb853e5978b5b0c7fd5 / dep-dbi89nua5vhs73a1pcrg and production dep-dbi8h829lscs73fla83g verified LIVE. All 494 final local and staging tests, TypeScript and production builds passed; final GitHub jobs124047223155/124047199504 passed. Root Back/Pages navigation was verified on sign-in/workspace shells, Discover and every listed business page. Staging browser verified business-context menu links, business-to-team-sign-in and Back, Escape/focus behavior, and anonymous Team workspace → sign-in → Back returning to the business without a loop. Protected APIs stayed401 and the universal owner route redirected anonymous users to sign-in. Checked startup error windows were empty.
