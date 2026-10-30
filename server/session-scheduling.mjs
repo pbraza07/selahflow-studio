@@ -1,5 +1,5 @@
 import {isBlocked} from './booking-blockouts.mjs';
-import {sessionInstances,expandAllSessions,validateRecurrence,originalSessionOccurrence} from './session-recurrence.mjs';
+import {sessionInstances,recurrenceDates,recurringSessionForDate,validateRecurrence,originalSessionOccurrence} from './session-recurrence.mjs';
 /** Pure, business-scoped session and appointment availability helpers.
  * Pending booking requests do not consume capacity until accepted.
  */
@@ -105,25 +105,18 @@ export function validateBookableSessions(config) {
       throw Error('Check the rescheduled session date, time, service, team member, capacity and business hours.');
     overrideIds.add(override.id);
   }
-  // Validation expands a bounded two-year date horizon. Each occurrence is
-  // checked against one-offs and other recurring series for staff collisions.
-  const occurrenceIds=new Set(),byStaffDay=new Map();
-  for(const instance of expandAllSessions(config)){
-    if(occurrenceIds.has(instance.id))throw Error('Recurring session occurrence IDs must be unique.');
-    occurrenceIds.add(instance.id);
-    const key=instance.staff+'|'+instance.date;
-    if(!byStaffDay.has(key))byStaffDay.set(key,[]);
-    byStaffDay.get(key).push(instance);
-  }
-  for(const occurrences of byStaffDay.values()){
-    occurrences.sort((a,b)=>a.start-b.start);
-    for(let i=1;i<occurrences.length;i++){
-      const previous=occurrences[i-1],current=occurrences[i];
-      const duration=config.services.find(s=>s.id===previous.service).duration+config.buffer;
-      if(overlaps(previous.start,duration,current.start,
-        config.services.find(s=>s.id===current.service).duration+config.buffer))
-        throw Error('Sessions for the same team member cannot overlap, including preparation time.');
-    }
+  for(let i=0;i<sessions.length;i++)for(let j=i+1;j<sessions.length;j++)if(originalSessionOccurrence({bookableSessions:[sessions[i]]},sessions[j].id)||originalSessionOccurrence({bookableSessions:[sessions[j]]},sessions[i].id))throw Error('Recurring session occurrence IDs must be unique.');
+  // Compare only overlapping staff/time templates, without flattening ten years
+  // of every series into hundreds of thousands of calendar objects.
+  const templates=[...sessions,...overrides],dates=new Map();
+  const generatedDates=t=>{if(!dates.has(t))dates.set(t,recurrenceDates(t));return dates.get(t);};
+  const isPresent=(t,date)=>{const occurrence=recurringSessionForDate(t,date);return occurrence&&(!sessions.includes(t)||!overrideIds.has(occurrence.id));};
+  for(let i=0;i<templates.length;i++)for(let j=i+1;j<templates.length;j++){
+   const a=templates[i],b=templates[j];if(a.cancelled||b.cancelled||a.staff!==b.staff)continue;
+   const da=config.services.find(s=>s.id===a.service).duration+config.buffer,db=config.services.find(s=>s.id===b.service).duration+config.buffer;
+   if(!overlaps(a.start,da,b.start,db)||a.date>(b.repeat?.until||b.date)||b.date>(a.repeat?.until||a.date))continue;
+   const ad=generatedDates(a),bd=generatedDates(b),scan=ad.length<=bd.length?ad:bd;
+   if(scan.some(date=>isPresent(a,date)&&isPresent(b,date)))throw Error('Sessions for the same team member cannot overlap, including preparation time.');
   }
   return sessions;
 }

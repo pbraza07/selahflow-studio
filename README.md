@@ -1,3 +1,7 @@
+## Release source: v1.3.185
+
+Team profile name URLs and circular crop controls, team onsite-only confirmations, ten-year recurrence, header sharing, signed registration agreements and Stripe package subscriptions. See AGENTS.md for provider and deployment verification status.
+
 ## Release source: v1.3.184
 
 Clients without a birth date receive initials plus a business-specific sequence starting at 1001. Birth-date-based and existing IDs remain supported; booking, membership and owner client creation share the allocator.

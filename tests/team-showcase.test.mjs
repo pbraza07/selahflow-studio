@@ -10,12 +10,12 @@ import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 const require=createRequire(import.meta.url),read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('team showcase requires active same-business accounts, a public portrait and visible saved staff; projection contains no private fields',async t=>{
- const db=new PGlite();t.after(()=>db.close());await db.exec(`CREATE TABLE businesses(id text PRIMARY KEY,status text);CREATE TABLE team_accounts(id text,business_id text,staff_id text,profile jsonb,active boolean);CREATE TABLE team_media(id text,account_id text,kind text,appointment_id text);INSERT INTO businesses VALUES('one','active'),('two','active'),('closed','archived');`);
+ const db=new PGlite();t.after(()=>db.close());await db.exec(`CREATE TABLE businesses(id text PRIMARY KEY,status text);CREATE TABLE team_accounts(id text,business_id text,staff_id text,profile jsonb,active boolean,public_slug text);CREATE TABLE team_media(id text,account_id text,kind text,appointment_id text);INSERT INTO businesses VALUES('one','active'),('two','active'),('closed','archived');`);
  const profile={name:'Alex Public',description:'My experience and approach.',email:'private-login@example.test',password_hash:'secret',client_notes:'private'};
  for(const [id,business,staff,active,kind]of [['a','one','first',true,'portrait'],['b','one','hidden',true,'portrait'],['c','one','removed',true,'portrait'],['d','one','off',false,'portrait'],['e','one','no-picture',true,'client'],['f','two','first',true,'portrait'],['g','closed','first',true,'portrait']]){
- await db.query('INSERT INTO team_accounts VALUES($1,$2,$3,$4,$5)',[id,business,staff,profile,active]);await db.query('INSERT INTO team_media VALUES($1,$2,$3,$4)',['photo-'+id,id,kind,kind==='portrait'?null:'private-visit']);}
+ await db.query('INSERT INTO team_accounts(id,business_id,staff_id,profile,active) VALUES($1,$2,$3,$4,$5)',[id,business,staff,profile,active]);await db.query('INSERT INTO team_media VALUES($1,$2,$3,$4)',['photo-'+id,id,kind,kind==='portrait'?null:'private-visit']);}
  const config={staff:[{id:'first',name:'Alex',role:'Specialist'},{id:'hidden',name:'Hidden',bookingVisible:false},{id:'off',name:'Off'},{id:'no-picture',name:'No picture'}]};
- const result=await businessTeamShowcase(db,'one',config);assert.deepEqual(result,[{id:'a',name:'Alex Public',description:profile.description,portraitId:'photo-a'}]);assert.doesNotMatch(JSON.stringify(result),/private|password|secret|client_notes/);
+ const result=await businessTeamShowcase(db,'one',config);assert.deepEqual(result,[{id:'a',publicSlug:null,name:'Alex Public',description:profile.description,portraitId:'photo-a'}]);assert.doesNotMatch(JSON.stringify(result),/private|password|secret|client_notes/);
  assert.deepEqual(await businessTeamShowcase(db,'closed',config),[]);assert.deepEqual(await businessTeamShowcase(db,'one',{staff:[]}),[]);
  await db.exec("DELETE FROM team_media WHERE account_id='a'");assert.deepEqual(await businessTeamShowcase(db,'one',config),[]);
 });

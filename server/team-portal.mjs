@@ -42,10 +42,10 @@ export async function assertClientAppointment(pool,a,id){
 }
 export function privateAppointment(row){const d=JSON.parse(row.data);return {id:row.id,date:row.date,start:row.start,duration:row.duration,status:row.status,name:d.name||'Client',email:d.email||'',phone:d.phone||'',services:d.services||[]};}
 export async function publicTeam(pool,id){
- const a=(await pool.query("SELECT a.id,a.staff_id,a.profile,b.slug,b.name,b.brand_primary,b.brand_background,s.data AS config FROM team_accounts a JOIN businesses b ON b.id=a.business_id JOIN settings s ON s.owner=b.owner_id WHERE a.id=$1 AND a.active=true AND b.status='active'",[id])).rows[0];
+ const a=(await pool.query("SELECT a.id,a.public_slug,a.staff_id,a.profile,b.slug,b.name,b.brand_primary,b.brand_background,s.data AS config FROM team_accounts a JOIN businesses b ON b.id=a.business_id JOIN settings s ON s.owner=b.owner_id WHERE (a.id=$1 OR a.public_slug=$1 OR EXISTS(SELECT 1 FROM team_profile_aliases alias WHERE alias.account_id=a.id AND alias.slug=$1)) AND a.active=true AND b.status='active'",[id])).rows[0];
  if(!a)throw portalError('Team page not found.',404);const c=JSON.parse(a.config),staff=c.staff?.find(x=>x.id===a.staff_id&&x.bookingVisible!==false);if(!staff)throw portalError('Team page not found.',404);
- const portrait=(await pool.query("SELECT id FROM team_media WHERE account_id=$1 AND kind='portrait'",[id])).rows[0];
- return {branding:teamBranding(a,c),id:a.id,staffId:a.staff_id,business:a.name,slug:a.slug,profile:{name:a.profile.name||staff.name,phone:a.profile.phone||'',email:a.profile.email||'',description:a.profile.description||'',socials:a.profile.socials||[]},portrait:portrait?.id||null,services:(c.services||[]).filter(s=>staff.services.includes(s.id)&&(!s.durationUnit||['minutes','hours'].includes(s.durationUnit))).map(s=>({id:s.id,name:s.name,price:s.price,duration:s.duration}))};
+ const portrait=(await pool.query("SELECT id FROM team_media WHERE account_id=$1 AND kind='portrait'",[a.id])).rows[0];
+ return {branding:teamBranding(a,c),publicSlug:a.public_slug,id:a.id,staffId:a.staff_id,business:a.name,slug:a.slug,profile:{name:a.profile.name||staff.name,phone:a.profile.phone||'',email:a.profile.email||'',description:a.profile.description||'',socials:a.profile.socials||[]},portrait:portrait?.id||null,services:(c.services||[]).filter(s=>staff.services.includes(s.id)&&(!s.durationUnit||['minutes','hours'].includes(s.durationUnit))).map(s=>({id:s.id,name:s.name,price:s.price,duration:s.duration}))};
 }
 export async function saveTimeOff(pool,{owner,staff,input,actor}){
  const db=await pool.connect();try{await db.query('BEGIN');await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);

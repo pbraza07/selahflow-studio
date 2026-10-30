@@ -131,7 +131,8 @@ export async function confirmBooking(options){
    [id,data.reviewedBy||'owner',pendingId]);
   if(pendingId&&options.notificationOrigin)await queueApprovedBooking(client,{bookingId:id,requestId:pendingId,origin:options.notificationOrigin});
   if(options.submissionOrigin&&!pendingId){const business=(await client.query('SELECT id FROM businesses WHERE owner_id=$1',[owner])).rows[0];if(business)await queueOwnerFormNotification(client,{businessId:business.id,sourceId:id,form:'booking',values:data,answers:data.customAnswers});}
-  const bookingReceipt=options.submissionOrigin?await queueBookingReceipt(client,{owner,bookingId:id,date,start,duration,staff,data,origin:options.submissionOrigin,pending:false}):null;
+  const receiptOrigin=options.teamNotificationOrigin||options.submissionOrigin;
+  const bookingReceipt=receiptOrigin?await queueBookingReceipt(client,{owner,bookingId:id,date,start,duration,staff,data,origin:receiptOrigin,pending:false}):null;
   if(options.submissionOrigin&&Number(data.price)>0&&!data.membershipCovered)await queueApprovedBooking(client,{bookingId:id,requestId:null,origin:options.submissionOrigin});
   await client.query('COMMIT');
   return {id,duplicate:false,sessionId:session?.id||null,bookingReceipt};

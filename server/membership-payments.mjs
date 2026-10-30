@@ -33,7 +33,7 @@ export async function stripeApi(endpoint,options={}){
  const headers={Authorization:'Bearer '+secret};
  if(account)headers['Stripe-Account']=account;
  if(idempotencyKey)headers['Idempotency-Key']=idempotencyKey;
- if(namespace==='v2')headers['Stripe-Version']='2026-09-30.endive';
+ if(namespace==='v2')headers['Stripe-Version']='2026-09-30.endive';if(options.apiVersion)headers['Stripe-Version']=options.apiVersion;
  let payload;
  if(params){
   if(namespace==='v2'){
@@ -58,8 +58,8 @@ export async function stripeApi(endpoint,options={}){
 // Managed Risk platforms cannot create legacy Express accounts with platform
 // loss liability. Full dashboard access supports Stripe-owned risk without a
 // preview API. v2 IDs remain compatible with v1 account links and direct charges.
-export async function createStripeMerchantAccount(business,email){
- const created=await stripeApi('core/accounts',{namespace:'v2',params:{
+export async function createStripeMerchantAccount(business,email,api=stripeApi){
+ const created=await api('core/accounts',{namespace:'v2',params:{
   display_name:business.name,...(email?{contact_email:email}:{}),
   identity:{country:'US'},dashboard:'full',
   defaults:{responsibilities:{fees_collector:'stripe',losses_collector:'stripe'}},
@@ -84,7 +84,7 @@ export async function createStripeOnboardingLink(account,returnUrl,refreshUrl,ap
   throw Error('Unexpected Stripe onboarding destination.');
  return {...link,url:url.toString()};
 }
-export function verifyStripeWebhook(raw,signature,secret,now=Math.floor(Date.now()/1000),env=process.env){
+export function verifyStripeWebhook(raw,signature,secret,now=Math.floor(Date.now()/1000),env=process.env,accountRequired=true){
  if(!signature||!secret)throw Error('Missing payment webhook signature.');
  const attrs=Object.fromEntries(signature.split(',').map(v=>v.trim().split('=').slice(0,2)));
  const timestamp=Number(attrs.t);
@@ -95,7 +95,7 @@ export function verifyStripeWebhook(raw,signature,secret,now=Math.floor(Date.now
   throw Error('Payment webhook signature invalid.');
  const event=JSON.parse(raw);
  if(isStaging(env)&&event.livemode!==false)throw Error('Staging accepts only sandbox payment events.');
- if(!event.id||!event.type||!event.data?.object||!event.account)throw Error('Invalid connected-account payment event.');
+ if(!event.id||!event.type||!event.data?.object||(accountRequired?!event.account:!!event.account))throw Error('Invalid payment event scope.');
  return event;
 }
 export function invoiceSubscriptionId(invoice){

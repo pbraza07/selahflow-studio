@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
-import {recurringSessionForDate,sessionInstances,recurrenceDates,recurrenceOccursOn,expandAllSessions,validateRecurrence} from '../server/session-recurrence.mjs';
+import {recurringSessionForDate,sessionInstances,recurrenceDates,recurrenceOccursOn,expandAllSessions,validateRecurrence,firstSeriesOccurrence,seriesOccurrences,recurrenceCount} from '../server/session-recurrence.mjs';
 import {validateBookableSessions,validateExistingSessionReservations,computeDayAvailability,selectedSession,sessionRemaining} from '../server/session-scheduling.mjs';
 import {confirmBooking,serviceCapacityOpen} from '../server/booking-approvals.mjs';
 
@@ -30,6 +30,7 @@ test('daily repetition and monthly recurrence skip nonexistent dates without UTC
  const daily={...base,repeat:{frequency:'daily',every:2,until:'2026-11-08'}};
  assert.deepEqual(recurrenceDates(daily),['2026-11-02','2026-11-04','2026-11-06','2026-11-08']);
  const monthly={...base,date:'2027-01-31',repeat:{frequency:'monthly',every:1,until:'2027-06-30'}};
+ assert.equal(recurrenceCount(monthly),3);
  assert.deepEqual(recurrenceDates(monthly),['2027-01-31','2027-03-31','2027-05-31']);
  const leap={...base,date:'2028-01-29',repeat:{frequency:'monthly',every:1,until:'2028-04-30'}};
  assert.deepEqual(recurrenceDates(leap),['2028-01-29','2028-02-29','2028-03-29','2028-04-29']);
@@ -43,7 +44,7 @@ test('validates recurrence end date, frequency, interval and bounded horizon',()
  assert.throws(()=>validateRecurrence({...base,repeat:{frequency:'yearly',every:1,until:'2027-01-02'}}),/recurrence/i);
  assert.throws(()=>validateRecurrence({...base,repeat:{frequency:'weekly',every:0,until:'2027-01-02'}}),/recurrence/i);
  assert.throws(()=>validateRecurrence({...base,repeat:{frequency:'weekly',every:1,until:'2026-10-30'}}),/end date/i);
- assert.throws(()=>validateRecurrence({...base,repeat:{frequency:'daily',every:1,until:'2030-11-02'}}),/two years/i);
+ assert.throws(()=>validateRecurrence({...base,repeat:{frequency:'daily',every:1,until:'2037-11-02'}}),/ten years/i);
  assert.throws(()=>validateRecurrence({...base,repeat:{frequency:'daily',every:1,until:'2026-02-30'}}),/end date/i);
  const large={...base,repeat:{frequency:'daily',every:1,until:'2028-10-31'}};
  assert.throws(()=>expandAllSessions({...config,bookableSessions:[large]},10),/Too many/i);
@@ -137,4 +138,19 @@ test('owner displays repeat frequency, every N days/weeks/months and inclusive e
  assert.match(api,/sessionsForDate\(c,a.date,a.staff\)/);
  assert.match(api,/computeDayAvailability\(\{config/);
  assert.match(api,/selectedSession\(config/);
+});
+
+
+test('ten year daily series render by date, detect late conflicts, and invalid drafts do not crash calendars',()=>{
+ const daily={...base,repeat:{frequency:'daily',every:1,until:'2036-11-02'}};
+ assert.equal(recurrenceDates(daily).length,3654);assert.equal(recurrenceCount(daily),3654);
+ assert.equal(firstSeriesOccurrence({...config,bookableSessions:[daily]},daily.id).id,daily.id);
+ assert.deepEqual(seriesOccurrences({...config,bookableSessions:[{...daily,repeat:{...daily.repeat,until:''}}]},daily.id),[]);
+ assert.equal(sessionInstances({...config,bookableSessions:[daily]},'2036-11-02')[0].id,'repeat-group__20361102');
+ assert.throws(()=>validateBookableSessions({...config,bookableSessions:[daily,{...base,id:'late',date:'2036-11-02'}]}),/overlap/);
+ const many=Array.from({length:200},(_,i)=>({...daily,id:'series-'+i,staff:'coach-'+i}));
+ assert.doesNotThrow(()=>validateBookableSessions({...config,staff:many.map(s=>({...team,id:s.staff})),bookableSessions:many}));
+ assert.deepEqual(sessionInstances({...config,bookableSessions:[{...daily,repeat:{...daily.repeat,until:'2040-01-01'}}]},'2030-01-01'),[]);
+ const moved={...daily,id:daily.id,seriesId:daily.id,originalDate:daily.date,date:'2036-11-03',repeat:undefined};
+ assert.throws(()=>validateBookableSessions({...config,bookableSessions:[daily,{...base,id:'collision',date:moved.date}],sessionOverrides:[moved]}),/overlap/);
 });

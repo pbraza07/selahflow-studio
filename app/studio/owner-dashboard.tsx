@@ -47,7 +47,7 @@ import {US_STATES,canonicalState} from '../../lib/business-options';
 import type {CSSProperties} from 'react';
 import {themeStyles} from '../../server/themes.mjs';
 import {businessServiceTypes} from '../../server/booking-approval-display.mjs';
-import {sessionInstances,recurrenceDates,seriesOccurrences} from '../../server/session-recurrence.mjs';
+import {sessionInstances,recurrenceCount,seriesOccurrences,firstSeriesOccurrence} from '../../server/session-recurrence.mjs';
 import {businessPath} from '../../server/route-slugs.mjs';
 import {sessionRosterForOwner} from '../../server/session-roster.mjs';
 import OwnerCommunications from '../components/owner-communications';
@@ -150,8 +150,8 @@ const day=display.filter(a=>(a.date===date||(view==='Overview'&&overviewAll))&&(
 const businessTypes=businessServiceTypes(config.services||[]);
 const serviceAccent=(name:string)=>{const service=(config.services||[]).find((v:Any)=>v.name===name);return businessTypes.find((v:{name:string;color:string})=>v.name===service?.category?.trim())?.color;};
 const recurrenceEndDefault=(starting:string)=>{const d=new Date(starting+'T12:00:00Z');if(Number.isNaN(d.getTime()))return starting;d.setUTCDate(d.getUTCDate()+84);return d.toISOString().slice(0,10);};
-const recurrenceMaxDate=(start:string)=>{const d=new Date(start+'T12:00:00Z');if(Number.isNaN(d.getTime()))return start;d.setUTCDate(d.getUTCDate()+730);return d.toISOString().slice(0,10);};
-const safeOccurrenceCount=(session:Any)=>{try{return recurrenceDates(session).length;}catch{return 0;}};
+const recurrenceMaxDate=(start:string)=>{const d=new Date(start+'T12:00:00Z');if(Number.isNaN(d.getTime()))return start;d.setUTCDate(d.getUTCDate()+3653);return d.toISOString().slice(0,10);};
+const safeOccurrenceCount=(session:Any)=>{try{return recurrenceCount(session);}catch{return 0;}};
 const updateSession=(id:string,update:Any)=>setConfig((c:Any)=>({...c,bookableSessions:(c.bookableSessions||[]).map((item:Any)=>item.id===id?{...item,...update}:item)}));
 const removeSession=(id:string)=>{if(window.confirm('Remove this bookable session and all its recurring/rescheduled dates? Existing customer bookings, pending requests, payments and history will be retained. Save business settings to finish removal.'))setConfig((c:Any)=>removeBookableSession(c,id));};
 const hasPublishedSession=(a:Any)=>!!a.sessionId&&sessionsOn(a.date).some((session:Any)=>session.id===a.sessionId);
@@ -387,7 +387,7 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
     <small>{x.repeat?'Recurring schedule':'One-time session'} · {timeLabel(x.start)} Eastern</small></div>
    <div className="sf-session-editor-buttons">
     <button type="button" className="outline sf-session-change" disabled={rescheduleBusy}
-     onClick={()=>{const occurrence=seriesOccurrences(config,x.id)[0];if(occurrence)openSessionReschedule(occurrence);}}>
+     onClick={()=>{const occurrence=firstSeriesOccurrence(config,x.id);if(occurrence)openSessionReschedule(occurrence);}}>
      <CalendarDays size={15}/> Reschedule · keep customers
     </button>
 
@@ -443,7 +443,7 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
    </div>
   </div>}
 
-  <p className="sf-session-capacity"><b>{sessionLeft(seriesOccurrences(config,x.id)[0]||x)}/{(seriesOccurrences(config,x.id)[0]||x).capacity} slots left</b> on the first occurrence · {sessionBookings((seriesOccurrences(config,x.id)[0]||x).id)} confirmed customer{sessionBookings((seriesOccurrences(config,x.id)[0]||x).id)===1?'':'s'}{x.repeat&&<> · Later dates have independent availability</>}</p>
+  <p className="sf-session-capacity"><b>{sessionLeft(firstSeriesOccurrence(config,x.id)||x)}/{(firstSeriesOccurrence(config,x.id)||x).capacity} slots left</b> on the first occurrence · {sessionBookings((firstSeriesOccurrence(config,x.id)||x).id)} confirmed customer{sessionBookings((firstSeriesOccurrence(config,x.id)||x).id)===1?'':'s'}{x.repeat&&<> · Later dates have independent availability</>}</p>
   {rescheduling?.seriesId===x.id&&<section className="sf-session-reschedule-panel" aria-label="Reschedule without losing booked customers">
    <div className="sf-session-reschedule-heading">
     <div><span>KEEP ALL REGISTERED CUSTOMERS</span><h3>Edit session and move the bookings together</h3>

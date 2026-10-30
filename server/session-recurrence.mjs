@@ -19,13 +19,13 @@ export function validateRecurrence(session){
     !dateOK(session.date)||!dateOK(rule.until)||rule.until<session.date)
   throw Error('Choose a recurrence frequency, repeat interval and valid end date no earlier than the first session.');
  const days=Math.round((dateUTC(rule.until)-dateUTC(session.date))/86400000);
- if(days>730)throw Error('Recurring session end date must be within two years of its start date.');
+ if(days>3653)throw Error('Recurring session end date must be within ten years of its start date.');
  return rule;
 }
 export function recurrenceOccursOn(session,date){
  if(!dateOK(date)||!dateOK(session?.date)||date<session.date)return false;
  if(date===session.date)return true;
- const rule=validateRecurrence(session);
+ let rule;try{rule=validateRecurrence(session);}catch{return false;}
  if(!rule||date>rule.until)return false;
  if(rule.frequency==='daily'){
   const days=Math.round((dateUTC(date)-dateUTC(session.date))/86400000);
@@ -55,11 +55,10 @@ export function recurringSessionForDate(session,date){
 export function originalSessionOccurrence(config,id){
  for(const base of config.bookableSessions||[]){
   if(base.id===id)return recurringSessionForDate(base,base.date);
-  if(!base.repeat)continue;
-  for(const date of recurrenceDates(base)){
-   const occurrence=recurringSessionForDate(base,date);
-   if(occurrence?.id===id)return occurrence;
-  }
+  if(!base.repeat||!id.startsWith(base.id+'__'))continue;
+  const tail=id.slice(base.id.length+2);if(!/^\d{8}$/.test(tail))continue;
+  const date=tail.slice(0,4)+'-'+tail.slice(4,6)+'-'+tail.slice(6);
+  const occurrence=recurringSessionForDate(base,date);if(occurrence?.id===id)return occurrence;
  }
  return null;
 }
@@ -75,21 +74,38 @@ export function sessionInstances(config,date,staffId){
  const moved=overrides.filter(s=>s.date===date).map(s=>({...s,recurring:true,overridden:true}));
  return [...generated,...moved].filter(s=>!staffId||s.staff===staffId);
 }
+export function recurrenceCount(session){
+ const rule=validateRecurrence(session);if(!rule)return dateOK(session?.date)?1:0;
+ if(rule.frequency==='monthly')return recurrenceDates(session).length;
+ return Math.floor((dateUTC(rule.until)-dateUTC(session.date))/86400000/(rule.every*(rule.frequency==='weekly'?7:1)))+1;
+}
 export function recurrenceDates(session){
  if(!dateOK(session?.date))return [];
- const rule=validateRecurrence(session);
- if(!rule)return [session.date];
+ const rule=validateRecurrence(session);if(!rule)return [session.date];
  const out=[];
- for(let date=session.date;date<=rule.until;date=plusDate(date,1)){
-  if(recurrenceOccursOn(session,date))out.push(date);
+ if(rule.frequency!=='monthly'){
+  const step=rule.every*(rule.frequency==='weekly'?7:1);
+  for(let date=session.date;date<=rule.until;date=plusDate(date,step))out.push(date);
+ }else{
+  const first=new Date(dateUTC(session.date)),day=first.getUTCDate();
+  for(let n=0;n<=120;n+=rule.every){const d=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+n,day,12));const expected=(first.getUTCMonth()+n)%12;if(d.getUTCMonth()!==expected)continue;const date=d.toISOString().slice(0,10);if(date>rule.until)break;out.push(date);}
  }
  return out;
+}
+export function firstSeriesOccurrence(config,seriesId){
+ const base=(config.bookableSessions||[]).find(x=>x.id===seriesId);if(!base)return null;
+ const overrides=config.sessionOverrides||[],ids=new Set(overrides.map(o=>o.id));
+ let first=ids.has(base.id)?null:recurringSessionForDate(base,base.date);
+ if(!first){let dates;try{dates=recurrenceDates(base);}catch{dates=[];}for(const date of dates){const item=recurringSessionForDate(base,date);if(item&&!ids.has(item.id)){first=item;break;}}}
+ for(const moved of overrides.filter(o=>o.seriesId===seriesId))if(!first||moved.date<first.date||moved.date===first.date&&moved.start<first.start)first={...moved,recurring:true,overridden:true};
+ return first;
 }
 export function seriesOccurrences(config,seriesId){
  const base=(config.bookableSessions||[]).find(x=>x.id===seriesId);
  if(!base)return [];
+ let dates;try{dates=recurrenceDates(base);}catch{dates=[];}
  const candidates=new Set([
-  ...recurrenceDates(base),
+  ...dates,
   ...(config.sessionOverrides||[]).filter(x=>x.seriesId===seriesId).map(x=>x.date)
  ]);
  return [...candidates].flatMap(date=>sessionInstances(config,date).filter(x=>x.seriesId===seriesId))

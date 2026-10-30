@@ -1,3 +1,5 @@
+import {validateServiceAcceptance} from '../../../../server/business-service-terms.mjs';
+import {recordServiceAcceptance} from '../../../../server/business-service-agreement.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {getPool} from '../../../../server/database.mjs';
 import {hashPassword,tokenHash,validOrigin,cookie} from '../../../../server/security.mjs';
@@ -14,6 +16,7 @@ export async function POST(req:Request){
   const body=await req.text();
   if(body.length>6000)return Response.json({error:'Request too large.'},{status:413});
   const b=JSON.parse(body);
+  const planCode=b.planCode||'free';try{validateServiceAcceptance(b.agreement,planCode);}catch(e){return Response.json({error:(e as Error).message},{status:400});}
   if(b.website)return Response.json({error:'Unable to register.'},{status:400});
   const email=String(b.email||'').trim().toLowerCase();
   const name=String(b.businessName||'').trim();
@@ -44,7 +47,8 @@ export async function POST(req:Request){
    await client.query("INSERT INTO businesses(id,owner_id,slug,name,industry,city,region,description,status,is_listed,listing_requested) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'pending',FALSE,FALSE)",[businessId,userId,slug,name,industry,city,region,description]);
    await client.query('UPDATE businesses SET brand_primary=$1,brand_background=$2 WHERE id=$3',[preset.brandPrimary,preset.brandBackground,businessId]);
    await client.query("INSERT INTO business_memberships(business_id,user_id,role) VALUES($1,$2,'owner')",[businessId,userId]);
-   await client.query("INSERT INTO business_subscriptions(business_id,plan_code,status) VALUES($1,'free','active')",[businessId]);
+   await client.query("INSERT INTO business_subscriptions(business_id,plan_code,status,requested_plan_code) VALUES($1,'free','active',$2)",[businessId,planCode]);
+   await recordServiceAcceptance(client,{businessId,owner:userId,input:b.agreement,planCode,ipHash:tokenHash(ip)});
    await client.query('INSERT INTO settings(owner,data) VALUES($1,$2)',[userId,JSON.stringify(config)]);
    await client.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '12 hours')",[tokenHash(session),userId]);
    await client.query('COMMIT');

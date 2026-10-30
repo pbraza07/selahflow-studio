@@ -72,3 +72,13 @@ test('platform business CRUD endpoints are authenticated, origin checked, audite
  assert.match(ui,/Archive business/);
  assert.match(ui,/Restore/);
 });
+
+test('platform package checkout and risk review block archival until provider-verified cancellation or expiry',()=>{
+ const pending={billing_checkout_plan:'professional',billing_checkout_session_id:'cs_fixture',billing_status:'checkout_pending'};
+ assert.equal(canArchiveBusiness({billing:pending}),false);
+ assert.equal(canArchiveBusiness({subscribed:true,billing:{...pending,billing_status:'canceled'}}),true);
+ assert.equal(canArchiveBusiness({billing:{...pending,billing_status:'checkout_expired'}}),true);
+ assert.equal(canArchiveBusiness({billing:{...pending,billing_status:'canceled',billing_risk_hold:true}}),false);
+ assert.equal(canArchiveBusiness({members:1,billing:{...pending,billing_status:'checkout_expired'}}),false);
+ assert.equal(canArchiveBusiness({subscribed:true,billing:{stripe_subscription_id:'sub_legacy',status:'active'}}),false);
+});
