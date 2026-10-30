@@ -1,7 +1,8 @@
 /**
  * SelahFlow subscription catalog and server-side entitlements.
- * The public prices are proposed launch rates; plan assignment never processes
- * payment. Actual access derives only from the database subscription record.
+ * The catalog defines published monthly rates. Manual plan assignment never
+ * processes payment; Stripe package billing verifies paid invoices separately.
+ * Actual access derives only from the database subscription record.
  * Add-on AI/phone/SMS services remain unavailable until separately configured.
  */
 export const PLAN_CATALOG=Object.freeze({
