@@ -5,7 +5,8 @@ import {readFile} from 'node:fs/promises';
 import ts from 'typescript';
 import {pushConfiguration,configured} from '../server/push-crypto.mjs';
 import {ensurePushSubscription,decodePushKey} from '../lib/browser-push.mjs';
-const pair=()=>{const ec=createECDH('prime256v1');ec.generateKeys();return {VAPID_PUBLIC_KEY:ec.getPublicKey().toString('base64url'),VAPID_PRIVATE_KEY:ec.getPrivateKey().toString('base64url'),VAPID_SUBJECT:'https://example.com'};};
+// OpenSSL can omit leading zero bytes; a VAPID private scalar is exactly 32 bytes.
+const pair=()=>{const ec=createECDH('prime256v1');ec.generateKeys();const scalar=Buffer.alloc(32),raw=ec.getPrivateKey();raw.copy(scalar,32-raw.length);return {VAPID_PUBLIC_KEY:ec.getPublicKey().toString('base64url'),VAPID_PRIVATE_KEY:scalar.toString('base64url'),VAPID_SUBJECT:'https://example.com'};};
 test('push readiness validates paired keys and subject without leaking secrets; staging remains explicit',()=>{
  const env=pair();assert.deepEqual(pushConfiguration(env),{configured:true,reason:'ready'});
  assert.equal(configured({...env,APP_ENV:'staging'}),false);
