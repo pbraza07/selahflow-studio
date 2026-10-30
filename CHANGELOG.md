@@ -1,6 +1,6 @@
 # v1.3.183 release handoff — Business sequences for clients without a birth date
 
-Missing birth date uses first/last initials plus a business-wide transactional sequence starting at 1001. Booking, membership and owner-added clients share the allocator. Supplied birth dates retain initials + MMDDYY; existing IDs and historical records are not rewritten. Business-required questions and waiver/payment verification rules remain. Migration 074 adds only a per-business counter and permits an ID-less profile to receive its initial immutable registration identity. Verification/deployment pending.
+Missing birth date uses first/last initials plus a business-wide transactional sequence starting at 1001. Booking, membership and owner-added clients share the allocator. Supplied birth dates retain initials + MMDDYY; existing IDs and historical records are not rewritten. Business-required questions and waiver/payment verification rules remain. Migration 074 adds only a per-business counter and permits an ID-less profile to receive its initial immutable registration identity. Verified staging and production rollout is recorded in AGENTS.md.
 
 # v1.3.182 release handoff — Service payment buttons and team booking defaults
 
