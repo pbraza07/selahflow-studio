@@ -1,3 +1,7 @@
+## 1.3.197
+
+- Wrap expanded benefit descriptions within the benefit column, overriding inherited table nowrap styling. Also recover card activation and paid statements after an interrupted database write; fees are unchanged.
+
 ## 1.3.196
 
 - Add explicitly authorized monthly cash commission billing, itemized statements and outstanding-balance payment links.

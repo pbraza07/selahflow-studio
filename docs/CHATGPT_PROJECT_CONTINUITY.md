@@ -1,3 +1,7 @@
+# v1.3.197 release handoff — Benefits explanation wrapping
+
+Corrects the global table nowrap rule so expanded benefit explanations wrap within the benefit column instead of clipping across plan columns. Includes the monthly cash billing and comparison-table features from v1.3.196. Also makes Stripe verification recover safely from an interrupted local card-activation or paid-statement write. Fee calculations, schema, prices and limits are unchanged. Local build, final GitHub checks and live visual acceptance are pending; v1.3.196 is deployed in production and migration 081 applied successfully. The previous live check caught this clipping before final handoff. Staging remains suspended by Render billing. No real owner authorization, invoice or payment is created for QA.
+
 # v1.3.196 release handoff — Monthly cash commission billing and concise benefit tables
 
 Adds opt-in monthly automatic billing for eligible cash booking and manually confirmed offline initial membership commissions. Preserves the existing 10% or $5 minimum fee, first-booking / first-membership separation, legacy-client exclusions, and administrator activation. The owner must sign a separate versioned authorization and verify a billing card in Stripe Checkout; merchant connection or package subscription is never treated as cash-billing consent. Support administrators cannot sign for owners. No business is automatically enrolled or retrospectively charged.

@@ -46,7 +46,7 @@ export async function startCashBillingSetup(pool,{businessId,owner,input,origin}
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
 }
 export async function reconcileCashSetup(db,sessionId,api=apiDefault){
- const c=(await db.query('SELECT c.*,p.stripe_customer_id,p.pending_consent_id FROM commission_billing_consents c JOIN commission_billing_profiles p ON p.business_id=c.business_id WHERE c.stripe_setup_session_id=$1',[sessionId])).rows[0];if(!c||c.activated_at||c.pending_consent_id!==c.id)return false;
+ const c=(await db.query('SELECT c.*,p.stripe_customer_id,p.pending_consent_id FROM commission_billing_consents c JOIN commission_billing_profiles p ON p.business_id=c.business_id WHERE c.stripe_setup_session_id=$1',[sessionId])).rows[0];if(!c||c.pending_consent_id!==c.id)return false;
  const s=await api('checkout/sessions/'+sessionId,{method:'GET'});assertTestPayment(s);
  if(s.mode!=='setup'||ref(s.customer)!==c.stripe_customer_id||s.client_reference_id!==c.business_id||s.metadata?.selahflow_cash_consent!==c.id)throw Error('Billing setup ownership mismatch.');
  if(s.status==='expired'){await db.query('UPDATE commission_billing_profiles SET pending_consent_id=NULL WHERE business_id=$1 AND pending_consent_id=$2',[c.business_id,c.id]);return false;}
@@ -65,8 +65,10 @@ export async function reconcileCashInvoice(db,invoiceId,api=apiDefault){
  let status=inv.status;if(status==='open'&&inv.attempted&&inv.amount_remaining>0)status='failed';
  if(status==='paid'&&(inv.paid_out_of_band===true||Number(inv.amount_paid_off_stripe||0)>0||inv.amount_paid!==s.amount_cents||inv.amount_remaining!==0))throw Error('Commission invoice payment requires reconciliation.');
  if(!['draft','open','failed','paid','void','uncollectible'].includes(status))throw Error('Commission invoice state unavailable.');
- await db.query("UPDATE commission_monthly_statements SET status=$1,hosted_invoice_url=$2,invoice_pdf=$3,paid_at=CASE WHEN $1='paid' THEN COALESCE(paid_at,now()) ELSE paid_at END,checked_at=now(),updated_at=now() WHERE id=$4",[status,safeStripeUrl(inv.hosted_invoice_url,['invoice.stripe.com']),safeStripeUrl(inv.invoice_pdf,['pay.stripe.com']),s.id]);
- if(status==='paid')await db.query("UPDATE first_customer_commissions SET status='paid',paid_at=COALESCE(paid_at,now()),updated_at=now() WHERE business_id=$1 AND billing_statement_id=$2 AND collection_method='cash' AND status='invoiced'",[s.business_id,s.id]);return true;
+ const hosted=safeStripeUrl(inv.hosted_invoice_url,['invoice.stripe.com']),pdf=safeStripeUrl(inv.invoice_pdf,['pay.stripe.com']);
+ // Mark verified claim receipts first. If the statement write is interrupted, its old state remains eligible for worker reconciliation.
+ if(status==='paid')await db.query("UPDATE first_customer_commissions SET status='paid',paid_at=COALESCE(paid_at,now()),updated_at=now() WHERE business_id=$1 AND billing_statement_id=$2 AND collection_method='cash' AND status='invoiced'",[s.business_id,s.id]);
+ await db.query("UPDATE commission_monthly_statements SET status=$1,hosted_invoice_url=$2,invoice_pdf=$3,paid_at=CASE WHEN $1='paid' THEN COALESCE(paid_at,now()) ELSE paid_at END,checked_at=now(),updated_at=now() WHERE id=$4",[status,hosted,pdf,s.id]);return true;
 }
 export async function cashInvoicePaymentLink(db,businessId,id,api=apiDefault){
  const s=(await db.query('SELECT stripe_invoice_id FROM commission_monthly_statements WHERE id=$1 AND business_id=$2',[id,businessId])).rows[0];if(!s?.stripe_invoice_id)throw Error('This statement is still being prepared.');
