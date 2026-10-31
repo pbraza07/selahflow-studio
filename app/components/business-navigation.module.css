@@ -9,3 +9,23 @@
 
 .ownerAccess{border:1px solid currentColor;opacity:.9}.header{flex-wrap:wrap}
 @media(min-width:901px) and (max-width:1100px){.desktop{display:none}.mobile{display:block}.mobile summary{display:flex;align-items:center;gap:7px;min-height:44px;cursor:pointer}.mobile nav{position:absolute;left:12px;right:12px;top:100%;display:flex;flex-direction:column;background:var(--sf-header,#123f3a);padding:14px;border:1px solid currentColor;border-radius:12px}.mobile nav a{padding:14px;min-height:44px}}
+
+/* Give the business identity its own space; wrap names between whole words. */
+.header{display:grid;grid-template-columns:minmax(240px,1fr) minmax(0,2fr);align-items:center}
+.identity{width:100%;max-width:100%}.identity>span:last-child{min-width:0;flex:1}
+.identity strong{word-break:normal;overflow-wrap:break-word;hyphens:none;text-wrap:pretty}
+.identity small{letter-spacing:.03em;line-height:1.5}
+.tools{width:100%;max-width:100%;justify-self:end}.tools>button{max-width:100%}
+@media(max-width:1100px){
+ .header{grid-template-columns:minmax(0,1fr);gap:14px}
+ .tools{flex-direction:row;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin-left:0;gap:10px}
+ .navigation{margin-left:auto}.identity strong{font-size:clamp(18px,3.5vw,22px)}
+ .identity small{font-size:11px;max-width:none}
+}
+@media(max-width:600px){
+ .header{padding:16px;gap:14px}.identity{flex:none;gap:14px}
+ .identity :global(.sf-business-logo-frame){flex:0 0 72px;width:72px;height:68px;padding:7px;border-radius:12px}
+ .tools{flex:none;gap:8px;justify-content:flex-start}.tools>button{padding:10px 12px!important;font-size:13px!important;min-height:44px}
+ .social{justify-content:flex-start;gap:6px}.social a{font-size:12px;padding:8px}
+ .mobile summary{padding:8px 2px}.identity strong{line-height:1.3}
+}
