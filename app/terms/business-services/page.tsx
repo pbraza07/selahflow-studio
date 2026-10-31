@@ -1,3 +1,6 @@
-import {serviceAgreement} from '../../../server/business-service-terms.mjs';
+import {AgreementDocument,PrintAgreementButton} from '../../components/business-service-agreement';
 import {PLAN_CATALOG} from '../../../server/plan-entitlements.mjs';
-export default function BusinessServicesTerms(){const a=serviceAgreement('free');return <main className="panel padded" style={{maxWidth:820,margin:'32px auto'}}><h1>{a.title}</h1><p>Version {a.version}. Review the selected package and sign this agreement during signup. Package payments require separate Stripe authorization after business approval.</p><table><thead><tr><th>Package</th><th>Monthly USD</th></tr></thead><tbody>{Object.entries(PLAN_CATALOG).map(([id,p])=><tr key={id}><td>{p.name}</td><td>${(p.monthlyCents/100).toFixed(2)}</td></tr>)}</tbody></table>{a.sections.slice(1).map(s=><section key={s.title}><h2>{s.title}</h2><p style={{lineHeight:1.8}}>{s.text}</p></section>)}<a href="/signup">Review and sign at registration</a> · <a href="/privacy">Privacy Policy</a></main>;}
+export default async function BusinessServicesTerms({searchParams}:{searchParams:Promise<{plan?:string}>}){
+ const query=await searchParams,plan=query.plan&&Object.hasOwn(PLAN_CATALOG,query.plan)?query.plan:'free';
+ return <main className="sf-contract-page"><header className="sf-contract-tools"><a href="/" aria-label="SelahFlow home"><img src="/brand/logo.svg?v=1.3.99" alt="SelahFlow" width={190} height={40}/></a><PrintAgreementButton/></header><AgreementDocument planCode={plan}/><footer className="sf-contract-tools"><a href={'/signup?plan='+plan}>Continue with the {PLAN_CATALOG[plan as keyof typeof PLAN_CATALOG].name} package</a><a href="/privacy">Privacy Policy</a></footer></main>;
+}

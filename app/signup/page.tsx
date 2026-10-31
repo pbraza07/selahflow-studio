@@ -1,54 +1,60 @@
 'use client';
 import {APP_VERSION} from '../../lib/app-version';
 import {useEffect,useState} from 'react';
+import {ArrowLeft,ArrowRight,Check,CheckCircle2,LockKeyhole,Mail,ShieldCheck,CreditCard,FileText} from 'lucide-react';
 import BusinessServiceAgreement,{blankAcceptance,acceptanceComplete} from '../components/business-service-agreement';
+import GoogleAccountButton from '../components/google-account-button';
 import {PLAN_CATALOG} from '../../server/plan-entitlements.mjs';
-import styles from '../platform-pages.module.css';
 import {BUSINESS_INDUSTRIES,US_STATES} from '../../lib/business-options';
-
+import styles from './signup.module.css';
 export default function Signup(){
- const [planCode,setPlanCode]=useState('free'),[agreement,setAgreement]=useState(blankAcceptance('free')),[agreed,setAgreed]=useState(false);
- useEffect(()=>{const plan=new URLSearchParams(window.location.search).get('plan');if(plan&&Object.hasOwn(PLAN_CATALOG,plan)){setPlanCode(plan);setAgreement(blankAcceptance(plan));}},[]);
+ const [planCode,setPlanCode]=useState('free'),[agreement,setAgreement]=useState(blankAcceptance('free')),[step,setStep]=useState(1),[method,setMethod]=useState(''),[identity,setIdentity]=useState<any>(null),[registered,setRegistered]=useState(false);
+ const [name,setName]=useState(''),[description,setDescription]=useState(''),[address,setAddress]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[slug,setSlug]=useState(''),[slugEdited,setSlugEdited]=useState(false),[industry,setIndustry]=useState('other'),[city,setCity]=useState(''),[region,setRegion]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ useEffect(()=>{
+  const q=new URLSearchParams(location.search),requested=q.get('plan'),code=requested&&Object.hasOwn(PLAN_CATALOG,requested)?requested:'free';setPlanCode(code);setAgreement(blankAcceptance(code));
+  if(q.get('identity')==='failed')setError('Google sign-in was cancelled or could not be verified. Try again or continue with email.');
+  fetch('/api/auth/federation',{cache:'no-store'}).then(r=>r.json()).then(d=>{if(d.identity){setIdentity(d.identity);setEmail(d.identity.email);setMethod('google');setStep(2);}}).catch(()=>{});
+  if(q.get('signed')==='1')fetch('/api/studio/platform-billing',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{if(d&&d.agreementPlan===code){setName(d.business);setRegistered(true);setStep(4);}}).catch(()=>{});
+ },[]);
+ const plan=PLAN_CATALOG[planCode as keyof typeof PLAN_CATALOG],paid=plan.monthlyCents>0;
  const industriesAlphabetized=[...BUSINESS_INDUSTRIES].sort((a,b)=>a[1].localeCompare(b[1],'en',{sensitivity:'base'}));
- const [name,setName]=useState(''),[description,setDescription]=useState(''),[address,setAddress]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[slug,setSlug]=useState(''),[industry,setIndustry]=useState('other'),[city,setCity]=useState(''),[region,setRegion]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
- async function submit(e:React.FormEvent){
-  e.preventDefault();setBusy(true);setError('');
+ function selectPlan(code:string){setPlanCode(code);setAgreement(blankAcceptance(code));const url=new URL(location.href);url.searchParams.set('plan',code);history.replaceState(null,'',url.pathname+url.search);}
+ async function saveSignedApplication(e:React.FormEvent){
+  e.preventDefault();if(!acceptanceComplete(agreement))return;setBusy(true);setError('');
   try{
-   const response=await fetch('/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({planCode,agreement,businessName:name,description,address,email,password,slug,industry,city,region,website:''})});
+   const response=await fetch('/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({planCode,agreement,businessName:name,description,address,email,password:identity?undefined:password,slug,industry,city,region,website:''})});
    const data=await response.json();if(!response.ok)throw Error(data.error||'Registration failed.');
-   if(planCode==='free'){window.location.assign('/registration-status');return;}
-   const payment=await fetch('/api/studio/platform-billing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'checkout',planCode})});
-   const checkout=await payment.json();
-   if(!payment.ok){window.location.assign('/settings/package?onboarding=1&payment=retry');return;}
-   if(!/^https:\/\/checkout\.stripe\.com\//.test(checkout.checkoutUrl||''))throw Error('Stripe did not return a safe payment page.');
-   window.location.assign(checkout.checkoutUrl);
+   setPassword('');setRegistered(true);setStep(4);history.replaceState(null,'','/signup?plan='+planCode+'&signed=1');window.scrollTo({top:0,behavior:'smooth'});
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
- const paid=planCode!=='free';
- return <main className={styles.shell}>
-  <header className={styles.top}><a className={styles.brand} href="/" style={{width:220,maxWidth:'100%',flexShrink:0}}><img className="selah-logo" src="/brand/logo.svg?v=1.3.99" alt="SelahFlow" width="380" height="68"/></a><nav className={styles.nav}><a href="/discover">Find services</a><a href="/pricing">Pricing</a><a href="/login">Owner login</a></nav></header>
-  <section className={styles.hero}><h1>Sign up for SelahFlow.</h1><p>First read and sign the services agreement. Paid packages then continue to secure Stripe payment. Your business remains private until every required step is complete and the primary administrator approves it.</p></section>
-  <div className={styles.card} style={{maxWidth:620}}>{!agreed?<>
-   <label>Selected package<select value={planCode} onChange={e=>{setPlanCode(e.target.value);setAgreement(blankAcceptance(e.target.value));}}>{Object.entries(PLAN_CATALOG).map(([code,p])=><option value={code} key={code}>{p.name} · ${(p.monthlyCents/100).toFixed(2)}/month</option>)}</select></label>
-   <BusinessServiceAgreement planCode={planCode} value={agreement} onChange={setAgreement}/>
-   <button type="button" className={styles.button} disabled={!acceptanceComplete(agreement)} onClick={()=>setAgreed(true)}>Sign agreement and continue</button>
-  </>:<>
-   <h2>Create business account</h2><p>Selected package: {PLAN_CATALOG[planCode as keyof typeof PLAN_CATALOG].name}. <button className="outline" type="button" onClick={()=>setAgreed(false)}>Review agreement</button></p>
-   {error&&<p role="alert" className={styles.alert}>{error}</p>}
-   <form onSubmit={submit}>
-    <label>Business name<input required maxLength={100} value={name} onChange={e=>{const v=e.target.value;setName(v);if(!slug)setSlug(v.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''));}}/></label>
-    <label>Description of services (required)<textarea required maxLength={600} rows={4} value={description} onChange={e=>setDescription(e.target.value)} placeholder="Describe the services and specialties customers can book."/></label><small>Customers find your business by searching these services. You can update this description in Business details.</small>
-    <label>Business street address<input maxLength={350} autoComplete="street-address" value={address} onChange={e=>setAddress(e.target.value)}/></label>
-    <label>Industry<select value={industry} onChange={e=>setIndustry(e.target.value)}>{industriesAlphabetized.map(([v,n])=><option value={v} key={v}>{n}</option>)}</select></label>
-    <label>City<input value={city} maxLength={80} autoComplete="address-level2" onChange={e=>setCity(e.target.value)}/></label>
-    <label>State<select value={region} onChange={e=>setRegion(e.target.value)}><option value="">Select U.S. state (optional)</option>{US_STATES.map(([code,label])=><option key={code} value={label}>{label}</option>)}</select></label>
-    <label>Booking URL name<input required minLength={3} maxLength={60} value={slug} pattern="[a-z0-9][a-z0-9-]{1,58}[a-z0-9]" onChange={e=>setSlug(e.target.value.toLowerCase())}/></label><small>Customers will use /book/{slug||'your-business'}</small>
-    <label>Owner email<input type="email" autoComplete="email" required maxLength={254} value={email} onChange={e=>setEmail(e.target.value)}/></label>
-    <label>Password (at least 6 characters)<input type="password" autoComplete="new-password" minLength={6} maxLength={128} required value={password} onChange={e=>setPassword(e.target.value)}/></label>
-    <p><small>{paid?'This creates your private pending account and immediately opens Stripe Checkout. The public page and dashboard stay locked until Stripe verifies payment and the primary administrator approves the business.':'Free requires no payment. The public page and dashboard stay locked until the primary administrator approves the signed application.'}</small></p>
-    <button disabled={busy} className={styles.button}>{busy?(paid?'Opening secure payment…':'Creating account…'):(paid?'Sign up now and pay with Stripe':'Submit signed Free application')}</button>
-   </form>
-  </>}</div>
-  <footer className={styles.footer}>SelahFlow v{APP_VERSION} · Agreement → payment when required → approval → active business</footer>
- </main>;
+ async function makePayment(){
+  setBusy(true);setError('');try{const response=await fetch('/api/studio/platform-billing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'checkout',planCode})}),data=await response.json();if(!response.ok)throw Error(data.error||'Payment could not be opened.');if(!/^https:\/\/checkout\.stripe\.com\//.test(data.checkoutUrl||''))throw Error('Stripe did not return a safe payment page.');location.assign(data.checkoutUrl);}catch(e){setError((e as Error).message);setBusy(false);}
+ }
+ async function changeAccount(){if(identity){await fetch('/api/auth/federation',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'clear'})});}setIdentity(null);setEmail('');setPassword('');setMethod('');setStep(1);setAgreement(blankAcceptance(planCode));}
+ function next(){setError('');setStep(s=>s+1);window.scrollTo({top:0,behavior:'smooth'});}
+ return <div className={styles.page}>
+  <header className={styles.header}><a href="/" aria-label="SelahFlow home"><img src="/brand/logo.svg?v=1.3.99" alt="SelahFlow" width={200} height={42}/></a><nav><a href="/pricing">Compare packages</a><a href="/login">Already a member? Sign in <ArrowRight size={14}/></a></nav></header>
+  <main className={styles.layout}>
+   <section className={styles.content}>
+    <div className={styles.intro}><span className={styles.eyebrow}>YOUR NEXT CHAPTER, ORGANIZED</span><h1>Make room for a calmer business day.</h1><p>Choose how to join, review your agreement, and activate the package that fits your business.</p><p className={styles.packageBadge}>{plan.name} package · ${(plan.monthlyCents/100).toFixed(2)} USD / month</p></div>
+    <ol className={styles.steps} aria-label="Business signup progress">{['Your account','Your business','Agreement','Payment & access'].map((label,i)=><li key={label} aria-current={step===i+1?'step':undefined} className={step>i+1?styles.complete:step===i+1?styles.active:''}><span>{step>i+1?<Check size={14}/>:i+1}</span><b>{label}</b></li>)}</ol>
+    {error&&<p role="alert" className={styles.error}>{error}</p>}
+    <section className={styles.card}>
+     {step===1&&<><span className={styles.cardKicker}>01 / YOUR ACCOUNT</span><h2>Start your way.</h2><p>Use your Google account, including a Google Workspace account, or create an account with your email.</p><GoogleAccountButton planCode={planCode} onError={setError}/><div className={styles.divider}><span>or use your email</span></div>{method!=='email'?<button type="button" className={styles.emailChoice} onClick={()=>void changeAccount().then(()=>setMethod('email'))}><Mail size={19}/> Continue with email</button>:<form onSubmit={e=>{e.preventDefault();next();}}><label>Owner email<input required type="email" autoComplete="email" maxLength={254} value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Create a password<input required type="password" autoComplete="new-password" minLength={6} maxLength={128} value={password} onChange={e=>setPassword(e.target.value)}/><small>At least 6 characters. Use a unique password for your business account.</small></label><button className={styles.primary}>Continue <ArrowRight size={17}/></button></form>}<p className={styles.finePrint}><LockKeyhole size={14}/> Signing in does not accept the contract or start a payment.</p></>}
+     {step===2&&<><span className={styles.cardKicker}>02 / YOUR BUSINESS</span><h2>Tell us about your business.</h2><p>Your details help clients find the services you offer.</p><div className={styles.accountSummary}><span><CheckCircle2 size={17}/>{email}{identity&&<small>Google account verified</small>}</span><button type="button" onClick={()=>void changeAccount()}>Change account</button></div><form onSubmit={e=>{e.preventDefault();next();}}>
+      <label>Business name<input required minLength={2} maxLength={100} autoComplete="organization" value={name} onChange={e=>{const v=e.target.value;setName(v);if(!slugEdited)setSlug(v.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''));}}/></label>
+      <label>Description of services<textarea required maxLength={600} rows={4} value={description} onChange={e=>setDescription(e.target.value)} placeholder="What can clients book with your business?"/><small>Include your services and specialties. You can update this later.</small></label>
+      <label>Business street address<input maxLength={350} autoComplete="street-address" value={address} onChange={e=>setAddress(e.target.value)}/></label>
+      <div className={styles.fieldRow}><label>City<input value={city} maxLength={80} autoComplete="address-level2" onChange={e=>setCity(e.target.value)}/></label><label>State<select value={region} onChange={e=>setRegion(e.target.value)}><option value="">Select state (optional)</option>{US_STATES.map(([code,label])=><option value={label} key={code}>{label}</option>)}</select></label></div>
+      <label>Industry<select value={industry} onChange={e=>setIndustry(e.target.value)}>{industriesAlphabetized.map(([v,n])=><option value={v} key={v}>{n}</option>)}</select></label>
+      <label>Booking URL name<input required minLength={3} maxLength={60} value={slug} pattern="[a-z0-9][a-z0-9-]{1,58}[a-z0-9]" onChange={e=>{setSlugEdited(true);setSlug(e.target.value.toLowerCase());}}/><small>Your client booking link: /book/{slug||'your-business'}</small></label>
+      <div className={styles.actions}><button type="button" className={styles.back} onClick={()=>setStep(1)}><ArrowLeft size={16}/> Back</button><button className={styles.primary}>Review agreement <FileText size={17}/></button></div>
+     </form></>}
+     {step===3&&<><form onSubmit={saveSignedApplication}><BusinessServiceAgreement planCode={planCode} value={agreement} onChange={setAgreement}/><div className={styles.actions}><button type="button" className={styles.back} disabled={busy} onClick={()=>setStep(2)}><ArrowLeft size={16}/> Business details</button><button className={styles.primary} disabled={busy||!acceptanceComplete(agreement)}>{busy?'Saving your signed agreement…':'Sign & save agreement'}<Check size={17}/></button></div><p className={styles.finePrint}>This saves your private application and signed contract. {paid?'You choose Make payment on the next step. No charge is made here.':'The Free package does not require payment.'}</p></form></>}
+     {step===4&&registered&&<><span className={styles.successIcon}><CheckCircle2 size={29}/></span><span className={styles.cardKicker}>04 / PAYMENT & ACCESS</span><h2>Your agreement is saved.</h2><p><strong>{name||'Your business'}</strong> is registered privately for the {plan.name} package.</p>{paid?<><div className={styles.paymentSummary}><span>{plan.name} package</span><strong>${(plan.monthlyCents/100).toFixed(2)}<small>USD / month · recurring until cancelled</small></strong></div><p>Make your secure payment to complete the paid-package step. Your selected benefits become available after Stripe verifies payment and the primary administrator approves your business.</p><button type="button" className={styles.primary} disabled={busy} onClick={()=>void makePayment()}><CreditCard size={18}/>{busy?'Opening secure Stripe payment…':'Make payment · $'+(plan.monthlyCents/100).toFixed(2)+'/month'}</button><p className={styles.finePrint}><LockKeyhole size={14}/> Payment details stay in Stripe. Returning from Checkout alone does not activate your package.</p><a className={styles.statusLink} href="/settings/package?onboarding=1">Manage payment or retry later <ArrowRight size={14}/></a></>:<><p>Your signed Free application is ready for administrator review. No card or payment is required.</p><a className={styles.primary} href="/registration-status">View application status <ArrowRight size={17}/></a></>}<p className={styles.finePrint}>Your public page and owner workspace remain private until the required steps and approval are complete.</p></>}
+    </section>
+   </section>
+   <aside className={styles.summary}><div className={styles.summaryTop}><span className={styles.eyebrow}>YOUR SELAHFLOW PACKAGE</span><label>Selected package<select disabled={registered} value={planCode} onChange={e=>selectPlan(e.target.value)}>{Object.entries(PLAN_CATALOG).map(([code,p])=><option value={code} key={code}>{p.name}</option>)}</select></label><h2>{plan.name}</h2><div className={styles.price}>${(plan.monthlyCents/100).toFixed(2)}<span>USD / month</span></div><p>{plan.summary}</p></div><ul>{plan.included.map(item=><li key={item}><Check size={15}/><span>{item}</span></li>)}</ul><div className={styles.summaryNote}><ShieldCheck size={19}/><p>Transparent from the start.<small>Package fees, eligible first-customer commissions and separate provider fees are explained in your agreement.</small></p></div></aside>
+  </main><footer className={styles.footer}><span>SelahFlow · Pause & Flow · v{APP_VERSION}</span><a href="/privacy">Privacy Policy</a><a href={'/terms/business-services?plan='+planCode}>Business agreement</a></footer>
+ </div>;
 }

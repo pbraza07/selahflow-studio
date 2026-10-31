@@ -8,7 +8,7 @@ export default function Billing(){
  async function load(){
   const r=await fetch('/api/studio/platform-billing',{cache:'no-store'}),d=await r.json();
   if(r.status===401){location.assign('/login');return;}if(!r.ok)throw Error(d.error);
-  setInfo(d);if(['professional','business'].includes(d.requestedPlan))setPlan(d.requestedPlan);
+  setInfo(d);if(['professional','business'].includes(d.requestedPlan)){setPlan(d.requestedPlan);setAgreement(a=>a.planCode===d.requestedPlan?a:blankAcceptance(d.requestedPlan));}
  }
  useEffect(()=>{void load().catch(e=>setError(e.message));if(!new URLSearchParams(location.search).has('session_id'))return;let count=0;const timer=setInterval(()=>{void load().catch(e=>setError(e.message));if(++count>=10)clearInterval(timer);},3000);return()=>clearInterval(timer);},[]);
  const agreementAlreadySigned=info?.agreementPlan===plan;
@@ -37,7 +37,7 @@ export default function Billing(){
     <label>Package<select value={plan} onChange={e=>{setPlan(e.target.value);setAgreement(blankAcceptance(e.target.value));}}>{['professional','business'].map(code=><option value={code} key={code}>{PLAN_CATALOG[code as 'professional'|'business'].name} · ${(PLAN_CATALOG[code as 'professional'|'business'].monthlyCents/100).toFixed(2)}/month</option>)}</select></label>
     {agreementAlreadySigned?<p role="status">Signed services agreement received for this package.</p>:<BusinessServiceAgreement planCode={plan} value={agreement} onChange={setAgreement}/>}
     {!info.configured&&<p>Stripe package billing is awaiting platform configuration. No charge can start yet.</p>}
-    <button className="primary" disabled={busy||!info.configured||info.riskHold||(!agreementAlreadySigned&&!acceptanceComplete(agreement))} onClick={()=>void action()}>{busy?'Opening Stripe…':'Sign up now and pay with Stripe'}</button>
+    <button className="primary" disabled={busy||!info.configured||info.riskHold||(!agreementAlreadySigned&&!acceptanceComplete(agreement))} onClick={()=>void action()}>{busy?'Opening Stripe…':'Make payment · $'+(PLAN_CATALOG[plan as 'professional'|'business'].monthlyCents/100).toFixed(2)+'/month'}</button>
     <p>Monthly renewal begins when you authorize payment in Stripe. Paid package access requires a verified paid invoice.</p>
    </section>}
    <p><small>Stripe Tax collection is not automatically enabled. Tax registration and configuration are separate.</small></p>
