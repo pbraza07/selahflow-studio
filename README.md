@@ -1,6 +1,6 @@
 ## Release source: v1.3.190 — Package payment fix, team sharing and workspace approvals
 
-Deployment verification pending. Package checkout explicitly uses standard Stripe Billing to avoid the account-default Managed Payments tax-code error. Public profiles gain a top Share page button; private workspaces gain an in-page booking review panel under the welcome area. Reviewer permissions remain controlled by the business owner.
+Verified LIVE on staging and production. All 553 final local/staging tests, TypeScript, builds, GitHub and endpoint checks passed; see AGENTS.md for exact evidence and live-testing limits. Package checkout explicitly uses standard Stripe Billing to avoid the account-default Managed Payments tax-code error. Public profiles gain a top Share page button; private workspaces gain an in-page booking review panel under the welcome area. Reviewer permissions remain controlled by the business owner.
 
 ## Release source: v1.3.189 — Account choices and modern business agreements
 
