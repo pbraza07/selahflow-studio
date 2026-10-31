@@ -1,3 +1,9 @@
+# v1.3.195 release handoff — Concise booking client ID instructions
+
+The customer booking form removes the explanation of ID generation from the returning-client box. Two short paragraphs now explain: returning clients enter their client ID to fill in saved details; first-time clients leave it blank and complete the form below. Client lookup, assigned IDs, required fields and booking behavior are unchanged. No migration or business setting update is required.
+
+Full validation and staging/production rollout pending. This is a copy-only change to the booking form shown in the user screenshot; no business/customer records are changed for QA.
+
 # v1.3.194 verified LIVE — Marketplace logos open business landing pages
 
 PR #126 merged as 49cafc264893b68302a8cbe5abfe672f455adfe7. Staging source daa2ae57993651fcd18bf80bee2d88da48211aaf / dep-dbitdktg1s2s73e6sqpg LIVE at 2026-10-31T12:03:46.267032Z; production dep-dbitijeq1p3s73a4k700 LIVE at 12:06:10.691327Z. Both deployed application trees equal 71b5f3e26770901ba6bd8a4b998284f651112204. All 560 local/staging tests, TypeScript, production builds and final-head GitHub checks passed (web 124530108465 / 124530066341; native 124530108582 / 124530066476). Both environments passed versioned health, public booking/payment shells, protected API and invalid-invitation/no-store checks. Checked startup error windows were empty. No migration is required.
