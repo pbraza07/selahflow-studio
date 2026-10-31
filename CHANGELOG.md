@@ -1,6 +1,6 @@
 ## 1.3.197
 
-- Wrap expanded benefit descriptions within the benefit column, overriding inherited table nowrap styling. Billing behavior is unchanged.
+- Wrap expanded benefit descriptions within the benefit column, overriding inherited table nowrap styling. Also recover card activation and paid statements after an interrupted database write; fees are unchanged.
 
 ## 1.3.196
 

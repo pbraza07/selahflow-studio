@@ -1,6 +1,6 @@
 # v1.3.197 release handoff — Benefits explanation wrapping
 
-Corrects the global table nowrap rule so expanded benefit explanations wrap within the benefit column instead of clipping across plan columns. Includes the monthly cash billing and comparison-table features from v1.3.196. No billing logic, schema, prices or limits change in this correction. Local build, final GitHub checks and live visual acceptance are pending; v1.3.196 is deployed in production and migration 081 applied successfully. The previous live check caught this clipping before final handoff. Staging remains suspended by Render billing. No real owner authorization, invoice or payment is created for QA.
+Corrects the global table nowrap rule so expanded benefit explanations wrap within the benefit column instead of clipping across plan columns. Includes the monthly cash billing and comparison-table features from v1.3.196. Also makes Stripe verification recover safely from an interrupted local card-activation or paid-statement write. Fee calculations, schema, prices and limits are unchanged. Local build, final GitHub checks and live visual acceptance are pending; v1.3.196 is deployed in production and migration 081 applied successfully. The previous live check caught this clipping before final handoff. Staging remains suspended by Render billing. No real owner authorization, invoice or payment is created for QA.
 
 # v1.3.196 release handoff — Monthly cash commission billing and concise benefit tables
 
