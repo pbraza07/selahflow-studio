@@ -49,8 +49,9 @@ test('booking defaults place member ID first while the shared form supports conf
  assert.ok(fields.findIndex(f=>f.id==='memberNumber')<fields.findIndex(f=>f.id==='firstName'));
  assert.equal(fields.filter(f=>f.id==='dateOfBirth'&&f.required).length,1);
  assert.match(form,/<RegistrationFields config=\{config\} form="booking"/);
- assert.match(form,/automatically fill your name, birth date, email, phone and previous registration answers/);
- assert.match(form,/Leave the ID blank; provide your first and last name to receive an ID/);assert.match(form,/without one, it uses initials.*next number starting at 1001/);
+ assert.match(form,/Returning client\?<\/strong> Enter your client ID to fill in your saved details\./);
+ assert.match(form,/First booking\?<\/strong> Leave the ID blank and complete the form below\./);
+ assert.doesNotMatch(form,/MMDDYY|next number starting at 1001/);
  assert.doesNotMatch(form,/Not you\? Clear name.*?Load my saved details/s);
 });
 test('ID-only lookup retains business scope and throttling and optionally accepts a supplied birth date',async()=>{
