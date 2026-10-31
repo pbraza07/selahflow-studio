@@ -257,3 +257,5 @@
 .businessCardTop>span:last-child:not(.discoveryBusinessLogo){display:inline-flex;align-items:center;min-height:28px;padding:5px 10px;background:#f1f5ef;border:1px solid #e5ece3;border-radius:9px;color:#526d60;font-size:11px;line-height:1.45;letter-spacing:.02em}
 .discoveryBusinessLogo img[data-placeholder="true"]{box-shadow:none;padding:8px}
 @media(max-width:700px){.discoveryBusinessLogo{height:132px;padding:16px;border-radius:18px}}
+
+.discoveryBusinessLogo:focus-visible{outline:3px solid var(--brand-primary,#184e49);outline-offset:3px}

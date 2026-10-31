@@ -1,3 +1,7 @@
+## Release source: v1.3.194 — Clickable marketplace business logos
+
+Deployment verification pending. Marketplace logos open their business landing pages, including image fallbacks.
+
 ## Release source: v1.3.193 — Marketplace-backed customer category buttons
 
 Verified LIVE on staging and production. All 560 local/staging tests, TypeScript, builds, GitHub checks, category API checks and public browser verification passed. See AGENTS.md for exact deployment evidence and testing limits. Customer category buttons show only categories represented by current marketplace businesses.

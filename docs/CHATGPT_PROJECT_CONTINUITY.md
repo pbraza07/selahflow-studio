@@ -1,3 +1,9 @@
+# v1.3.194 release handoff — Marketplace logos open business landing pages
+
+Every marketplace business logo is now a native link to that business's public landing page, using its encoded slug and an accessible name identifying the business. Clicking the logo, pressing Enter when focused, or using normal browser link controls opens the same destination as the business name/View business link. Keyboard focus is visible. Placeholder and failed-image fallbacks retain the business destination; existing logo sizing, carousel behavior and all data/payment paths are preserved. No migration or business setting update is required.
+
+Full validation and staging/production rollout pending. Existing logo rendering/fallback tests also cover link semantics, tenant destination and URL encoding. No business or customer records are changed for QA.
+
 # v1.3.193 verified LIVE — Customer categories follow the marketplace
 
 PR #125 merged as 22636274605c82c147d16aa843ad1ce6226c0687. Staging source 6819a8c6ae799e96352ce8d9b9ff45da73a296c3 / dep-dbit4l5g1s2s73e677pg LIVE at 2026-10-31T11:44:10.788309Z; production dep-dbit9k3bc2fs73cqs8a0 LIVE at 11:47:10.421144Z. Both deployed application trees equal 690f4abe4a57762ed84d2847bbdd8d8538036720. All 560 local/staging tests, TypeScript, builds and final-head GitHub checks passed (web 124526239100 / 124526184614; native 124526238967 / 124526184449). Both environments passed versioned health, public booking/payment shells, protected API and invalid-invitation checks. Checked final startup error windows were empty; no migration is required.
