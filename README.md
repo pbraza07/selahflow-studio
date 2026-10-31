@@ -1,3 +1,7 @@
+## Release source: v1.3.195 — Concise booking client ID instructions
+
+Deployment verification pending. The booking client ID box uses two short instructions and omits ID-generation details.
+
 ## Release source: v1.3.194 — Clickable marketplace business logos
 
 Verified LIVE on staging and production. Marketplace logos open their business landing pages, including image fallbacks. All 560 tests, TypeScript, builds, GitHub checks, live endpoint checks and actual staging/production logo clicks passed. See AGENTS.md for deployment evidence and testing limits.
