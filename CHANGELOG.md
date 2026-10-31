@@ -1,3 +1,9 @@
+## 1.3.196
+
+- Add explicitly authorized monthly cash commission billing, itemized statements and outstanding-balance payment links.
+- Preserve first-purchase eligibility, administrator switches and card commission collection; add tenant-scoped reconciliation and retry safeguards.
+- Replace benefit cards with concise comparison tables and expandable descriptions, including booking, service and membership payment integration.
+
 # v1.3.195 release handoff — Concise booking client ID instructions
 
 The customer booking form removes the explanation of ID generation from the returning-client box. Two short paragraphs now explain: returning clients enter their client ID to fill in saved details; first-time clients leave it blank and complete the form below. Client lookup, assigned IDs, required fields and booking behavior are unchanged. No migration or business setting update is required.

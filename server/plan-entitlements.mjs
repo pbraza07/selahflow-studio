@@ -18,7 +18,8 @@ export const PLAN_CATALOG=Object.freeze({
    'Up to 2 active customer membership offers',
    'Online appointments and daily, weekly, monthly calendars',
    'Client directory, attendance history and Excel exports',
-   'Business branding, booking approvals and in-app / device push alerts'
+   'Business branding, booking approvals and in-app / device push alerts',
+   'Payment integration for bookings, services and memberships'
   ])
  }),
  professional:Object.freeze({
@@ -33,7 +34,8 @@ export const PLAN_CATALOG=Object.freeze({
    'Up to 10 active customer membership offers',
    'Online booking, calendars, staff schedules and group capacity tracking',
    'Client history, attendance reports and Excel exports',
-   'Business branding, booking approvals and device push alerts'
+   'Business branding, booking approvals and device push alerts',
+   'Payment integration for bookings, services and memberships'
   ])
  }),
  business:Object.freeze({
@@ -48,7 +50,8 @@ export const PLAN_CATALOG=Object.freeze({
    'Up to 25 active customer membership offers',
    'Staff calendars, recurring group sessions and remaining-seat tracking',
    'Client directory, full attendance history, reporting and Excel exports',
-   'Custom branding, booking approval controls and device push alerts'
+   'Custom branding, booking approval controls and device push alerts',
+   'Payment integration for bookings, services and memberships'
   ])
  })
 });

@@ -1,3 +1,4 @@
+import {accrueCashCommission} from '../../../../server/cash-commission-billing.mjs';
 import {deleteOwnerMembership} from '../../../../server/owner-membership-deletion.mjs';
 import {validateWeeklySessions,membershipUsageSummary,assertWeeklyMembershipBooking} from '../../../../server/membership-weekly.mjs';
 import {applyManualPeriod} from '../../../../server/manual-membership-period.mjs';
@@ -172,6 +173,7 @@ export async function POST(req:Request){
     if(!Number.isInteger(credits)||credits<1)throw Error('Membership package must include at least one session.');
     const existing=(await client.query("SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='payment_confirmed'",[business.id,id,requestId])).rowCount;
     if(existing){await client.query('COMMIT');return Response.json({ok:true,credited:0,alreadyProcessed:true},{headers});}
+    if(input.action==='confirmManualPayment')await accrueCashCommission(client,{businessId:business.id,kind:'membership',memberNumber:member.member_number,sourceId:member.id,grossCents:Number(member.price_cents)});
     const allocation=await applyManualPeriod(client,{member:{...member,business_id:business.id},credits,plan:selectedPlan||member});
     const paymentId=randomUUID();
     await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[paymentId,business.id,id,requestId,allocation.allocated,selectedPlan?selectedPlan.price_cents:member.price_cents]);

@@ -6,5 +6,7 @@ export async function register(){
   startDiscoveryLocationWorker();
   const {startTeamBookingPushWorker}=await import('./server/team-booking-push.mjs');
   startTeamBookingPushWorker();
+  const {startCashCommissionWorker}=await import('./server/cash-commission-billing.mjs');
+  startCashCommissionWorker();
  }
 }

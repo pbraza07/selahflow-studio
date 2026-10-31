@@ -103,6 +103,7 @@ export async function POST(req:Request){
    const merchant=await client.query('SELECT external_account_id FROM merchant_accounts WHERE business_id=$1',[before.id]);
    if(subscription.rows[0]?.stripe_subscription_id||Number(customerSubs.rows[0]?.n)>0||merchant.rows[0]?.external_account_id)
     throw Error('Connected payment accounts or subscription history require external billing reconciliation before permanent deletion. Remove external payment obligations first.');
+   if((await client.query('SELECT 1 FROM commission_billing_profiles WHERE business_id=$1 AND stripe_customer_id IS NOT NULL',[before.id])).rowCount)throw Error('Cash commission billing history requires external reconciliation before permanent deletion. Keep this business archived.');
    // Clear child records before parents; retain other tenants and shared accounts.
    await client.query('DELETE FROM platform_business_audit WHERE business_id=$1',[before.id]);
    await client.query('DELETE FROM business_plan_entitlement_audit WHERE business_id=$1',[before.id]);

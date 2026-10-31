@@ -3,6 +3,8 @@ import {useState} from 'react';
 import Link from 'next/link';
 import {ArrowRight,CheckCircle2,ChevronDown,ChevronUp} from 'lucide-react';
 import {PLANS} from '../../lib/plans';
+import {BENEFITS} from '../../server/benefit-catalog.mjs';
+import BenefitsTable from './benefits-table';
 import styles from '../site.module.css';
 
 type PlanCode='free'|'professional'|'business';
@@ -12,7 +14,7 @@ export default function PlanBenefitCards({placement='home'}:{placement?:'home'|'
   <div className={styles.plansHeading}>
    <span className={styles.plansEyebrow}>SIMPLE PLANS · BUILT FOR EVERY BUSINESS</span>
    <h2>A little business. A growing team. Room for both.</h2>
-   <p>Pick the room you need today. Every plan helps organize bookings, clients and attendance. Open a card to see all included benefits and limits.</p>
+   <p>Pick the room you need today. Every plan helps organize bookings, clients and attendance. Compare the plan limits below and expand any benefit for details.</p>
   </div>
   <div className={styles.planGrid}>
    {(Object.entries(PLANS) as [PlanCode,(typeof PLANS)[PlanCode]][]).map(([code,plan])=>{
@@ -39,7 +41,7 @@ export default function PlanBenefitCards({placement='home'}:{placement?:'home'|'
      </button>
      {opened&&<div id={'selah-'+placement+'-'+code+'-benefits'} className={styles.planExpanded}>
       <h4>What&apos;s included</h4>
-      <ul>{plan.included.map(item=><li key={item}><CheckCircle2 size={17} aria-hidden="true"/><span>{item}</span></li>)}</ul>
+      <p>{plan.limits.bookingFields} custom booking questions · {plan.limits.sessionSeries} session templates or recurring series.</p><p>All {BENEFITS.length} benefits in the comparison table are included within this plan’s limits.</p>
       <p>Your business keeps its records and history as your plan changes.</p>
      </div>}
      <Link className={styles.planCta} href={'/signup?plan='+code}>
@@ -48,6 +50,7 @@ export default function PlanBenefitCards({placement='home'}:{placement?:'home'|'
     </article>;
    })}
   </div>
+  {placement==='pricing'&&<BenefitsTable id="sf-pricing-benefits"/>}
   <p className={styles.plansDisclosure}>All registrations require the business services and revenue agreement. Paid packages renew monthly through Stripe after administrator approval. Eligible first-customer commissions may apply, including on Free, when enabled by the administrator. Online payments require the business’s Stripe connection. Email and SMS depend on separate setup and may carry provider costs. AI receptionist and premium add-ons are not included.</p>
  </section>;
 }

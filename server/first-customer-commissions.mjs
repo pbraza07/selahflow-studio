@@ -1,3 +1,4 @@
+import {CASH_BILLING_TERMS_VERSION} from './cash-commission-terms.mjs';
 import {createHash,randomUUID} from 'node:crypto';
 import {stripeApi,paymentConfigured} from './membership-payments.mjs';
 export const COMMISSION_TERMS='first-booking-and-membership-10-min5-v2';
@@ -33,7 +34,7 @@ export async function setPlatformCommissionEnabled(db,{businessId,actor,kind,ena
  return saveCommissionSettings(db,{businessId,actor,bookingEnabled:kind==='booking'?enabled:old?.booking_enabled===true,membershipEnabled:kind==='membership'?enabled:old?.membership_enabled===true,acceptTerms:false});
 }
 /** Caller owns a transaction. Separate once-per-identity claims for booking and membership. */
-export async function reserveCommission(db,{businessId,kind,memberNumber,sourceId,account,grossCents,eligibleCents=grossCents},api=stripeApi){
+export async function reserveCommission(db,{businessId,kind,memberNumber,sourceId,account,grossCents,eligibleCents=grossCents,collectionMethod='stripe'},api=stripeApi){
  if(!['booking','membership'].includes(kind))throw Error('Invalid commission category.');
  const policy=(await db.query('SELECT * FROM business_commission_policies WHERE business_id=$1',[businessId])).rows[0];
  if(!policy?.[kind+'_enabled']||policy.terms_version!==COMMISSION_TERMS||!policy.accepted_at)return null;
@@ -43,8 +44,8 @@ export async function reserveCommission(db,{businessId,kind,memberNumber,sourceI
  const digest=createHash('sha256').update(policy.identity_salt+'|'+businessId+'|'+identity.identity_key).digest('hex');
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[businessId+':commission:'+kind+':'+digest]);
  let prior=(await db.query('SELECT * FROM first_customer_commissions WHERE business_id=$1 AND identity_digest=$2 AND kind=$3 FOR UPDATE',[businessId,digest,kind])).rows[0];
- if(prior&&['paid','refunded'].includes(prior.status))return null;
- if(prior?.stripe_checkout_session_id&&prior.source_id!==sourceId&&prior.status==='reserved'){
+ if(prior&&['paid','refunded','accrued','invoiced'].includes(prior.status))return null;
+ if(prior?.stripe_checkout_session_id&&(prior.source_id!==sourceId||collectionMethod==='cash')&&prior.status==='reserved'){
   const session=await api('checkout/sessions/'+prior.stripe_checkout_session_id,{method:'GET',account:prior.stripe_account_id});
   if(session.status!=='expired')throw Error('Another first-time '+kind+' payment is open or processing for this client. Complete it or ask the business to expire the unpaid checkout first.');
  }
@@ -61,6 +62,10 @@ export async function reserveCommission(db,{businessId,kind,memberNumber,sourceI
  }else{
   const paid=(await db.query("SELECT 1 FROM customer_memberships m WHERE m.business_id=$1 AND m.member_number=$2 AND (m.initial_paid_at IS NOT NULL OR m.last_paid_at IS NOT NULL OR m.paid_through IS NOT NULL OR m.status='active' OR EXISTS(SELECT 1 FROM membership_session_ledger l WHERE l.membership_id=m.id AND l.business_id=m.business_id AND l.event_type='payment_confirmed' AND l.amount_cents>0)) LIMIT 1",[businessId,memberNumber])).rows.length;
   if(paid)return null;
+ }
+ if(collectionMethod==='cash'){
+  const billing=(await db.query('SELECT p.authorized_at FROM commission_billing_profiles p JOIN commission_billing_consents c ON c.id=p.active_consent_id WHERE p.business_id=$1 AND p.stripe_payment_method_id IS NOT NULL AND c.activated_at IS NOT NULL AND c.terms_version=$2',[businessId,CASH_BILLING_TERMS_VERSION])).rows[0];
+  if(!billing?.authorized_at)throw Error('Authorize monthly cash commission billing in Business settings → Payment setup before recording this eligible cash payment.');
  }
  if(prior){
   await db.query("UPDATE first_customer_commissions SET source_id=$1,stripe_account_id=$2,stripe_checkout_session_id=NULL,stripe_payment_intent_id=NULL,gross_cents=$3,eligible_cents=$4,fee_cents=$5,status='reserved',updated_at=now() WHERE id=$6 AND business_id=$7",[sourceId,account,grossCents,eligibleCents,fee,prior.id,businessId]);

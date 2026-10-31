@@ -1,3 +1,4 @@
+import {processCashBillingEvent} from './cash-commission-billing.mjs';
 import {createHash} from 'node:crypto';
 import {stripeApi,createStripeMerchantAccount,invoiceSubscriptionId,invoicePaidThrough} from './membership-payments.mjs';
 import {PLAN_CATALOG} from './plan-entitlements.mjs';
@@ -89,6 +90,7 @@ async function holdForRisk(db,object,type,api){
 export async function processPlatformBillingEvent(pool,event,api=platformApi){
  assertTestPayment(event);if(event.account)throw Error('Connected-account event cannot update platform billing.');
  const db=await pool.connect();try{await db.query('BEGIN');const r=await db.query('INSERT INTO platform_billing_events(event_id,event_type) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING event_id',[event.id,event.type]);if(!r.rows.length){await db.query('COMMIT');return;}
+ await processCashBillingEvent(db,event,api);
  const o=event.data.object;
  if(['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type))await bindCheckout(db,o,api);
  else if(event.type==='checkout.session.expired'){
