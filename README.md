@@ -1,6 +1,6 @@
 ## Release source: v1.3.188 — Owner usability and responsive layout
 
-Deployment verification pending.
+Verified LIVE on staging and production. All 538 final local and staging tests, TypeScript, builds, GitHub checks and live endpoint checks passed. See AGENTS.md for exact deployment evidence and browser-testing limitations.
 
 ## Release source: v1.3.187 — Owner session-full checkbox
 
