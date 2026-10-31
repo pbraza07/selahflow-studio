@@ -1,6 +1,6 @@
 ## Release source: v1.3.189 — Account choices and modern business agreements
 
-Deployment verification pending.
+Verified LIVE on staging and production. Google/Google Workspace or email/password → business details → read and sign agreement → separate Make payment. Selected package price/benefits are displayed; paid access still requires verified payment and primary approval. All 549 tests, TypeScript, builds, GitHub checks and live endpoint checks passed. See AGENTS.md for deployment evidence and real-account/payment testing limitations.
 
 ## Release source: v1.3.188 — Owner usability and responsive layout
 
