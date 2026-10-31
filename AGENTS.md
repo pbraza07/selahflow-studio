@@ -1,9 +1,8 @@
-# v1.3.187 release handoff — Owner-controlled full sessions
+# v1.3.187 release handoff — Owner session-full control
 
-Owners can click any dated bookable session in the owner calendar, open its private roster and check **Mark session as full**. The exact occurrence remains published on the customer session calendar with 0 spaces available and the existing full-session label, but public booking, team booking, direct owner add and approval/confirmation paths cannot add another customer. Unchecking immediately reopens the occurrence using its real capacity minus active bookings. Recurring series are occurrence-scoped: closing one date does not close later dates. Removing a session cleans its saved manual-full state. Existing customers, payments, approvals, roster history and session schedule remain unchanged.
+Owners can click a bookable calendar session and check “Session full” in its private roster. The change saves immediately for that occurrence, keeps the session visible, and blocks new public, owner and team bookings plus pending-request acceptance. Unchecking restores actual remaining capacity. Existing attendees, payments, capacity and other recurring dates are preserved. The server scopes writes to the authenticated active owner and serializes them with booking confirmations using the schedule lock. Stale general settings drafts cannot overwrite closure state. No migration is required.
 
-Server validation limits and sanitizes the saved occurrence identifiers. The booking transaction rechecks the latest persisted setting under the existing schedule lock, so stale browser availability cannot bypass an owner-marked full session. All 530 local tests, TypeScript and the production build pass. Staging and production verification are pending. No real business setting, booking, payment or message is created for automated QA.
-
+Staging and production rollout pending. Automated regression tests exercise persisted closure/reopen, tenant isolation, stale bookings, pending approvals, recurrence, visibility and roster preservation without changing real business records.
 
 # v1.3.186 release handoff — Agreement-first paid business activation
 

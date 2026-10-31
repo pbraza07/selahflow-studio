@@ -39,7 +39,7 @@ export function sessionReviewSummary(settings,request,confirmedAppointments=[],p
     (!d.sessionId && r.start_minute===selected.start &&
      Array.isArray(d.serviceIds)&&d.serviceIds.length===1&&d.serviceIds[0]===selected.service));
  }).length;
- return {id:selected.id,booked,capacity:selected.capacity,remaining:Math.max(0,selected.capacity-booked),waiting};
+ return {id:selected.id,booked,capacity:selected.capacity,remaining:selected.manuallyFull===true?0:Math.max(0,selected.capacity-booked),waiting};
 }
 /** Palette only for service types configured by this business; never a
  * hard-coded industry legend such as Hair, Barber, Color.

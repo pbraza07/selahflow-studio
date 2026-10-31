@@ -1,8 +1,8 @@
-## Release source: v1.3.187 — verification pending
+## Release source: v1.3.187 — Owner session-full checkbox
 
-Owners can click a dated bookable session in the calendar and use **Mark session as full**. The selected occurrence remains visible to customers with 0 spaces available, while public, team and owner booking paths reject new customers. Reopening restores the actual remaining capacity; other dates in a recurring series are unchanged.
+Deployment verification pending.
 
-## Release source: v1.3.186 — verified LIVE
+## Release source: v1.3.186 — verification pending
 
 Paid business onboarding now enforces signed agreement → Stripe-hosted package payment → primary approval → functional business page and owner dashboard. Free onboarding requires the signed agreement and approval without a card. Provider-verified paid invoices, not redirect URLs, control paid readiness.
 
