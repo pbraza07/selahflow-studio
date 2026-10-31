@@ -53,10 +53,10 @@ test('public booking honors catalog approval; staff access is limited',async()=>
  assert.match(handler,/INSERT INTO booking_requests/);
  assert.match(handler,/confirmBooking\(/);
  assert.match(handler,/capacityOpen:serviceCapacityOpen/);
- const staffRoute=await read('app/api/team/review/route.ts');
+ const staffRoute=await read('server/team-review-context.mjs');
  assert.match(staffRoute,/l.expires_at>now\(\)/);
  assert.match(staffRoute,/l.token_hash=\$1/);
- assert.match(staffRoute,/cfg.bookingApprovalReviewer!==link.staff_id/);
+ assert.match(staffRoute,/cfg.bookingApprovalReviewer===link.staff_id/);
  const ownerRoute=await read('app/api/studio/approvals/route.ts');
  assert.match(ownerRoute,/requireOwner\(req\)/);
  assert.match(ownerRoute,/tokenHash\(token\)/);
