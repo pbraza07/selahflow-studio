@@ -7,7 +7,17 @@ export async function recordCashSale(pool,{owner,eventId,bookingId,memberNumber,
   await db.query('BEGIN');
   const total=lines.reduce((n,l)=>n+Math.round(Number(l.price)*100)*l.qty,0);
   if(!Number.isSafeInteger(total)||total<0)throw Error('Invalid sale total.');
-  if(!bookingId&&lines.some(l=>l.type==='service')&&(await db.query("SELECT 1 FROM business_commission_policies p JOIN businesses b ON b.id=p.business_id WHERE b.owner_id=$1 AND p.booking_enabled=true AND p.accepted_at IS NOT NULL",[owner])).rows.length)throw Error('Select the client booking before recording a cash service payment so first-purchase eligibility can be checked.');
+  let cashClient=null;
+  if(!bookingId&&lines.some(l=>l.type==='service')){
+   const business=(await db.query("SELECT b.id,p.booking_enabled,p.accepted_at FROM businesses b LEFT JOIN business_commission_policies p ON p.business_id=b.id WHERE b.owner_id=$1 AND b.status='active'",[owner])).rows[0];
+   if(memberNumber){
+    const profile=(await db.query('SELECT member_number,name FROM business_client_profiles WHERE owner=$1 AND member_number=$2 AND archived=false AND deleted_at IS NULL',[owner,memberNumber])).rows[0];
+    if(!profile||!business)throw Error('Choose a client ID from this business client directory.');
+    cashClient={...profile,business_id:business.id};
+   }
+   if(business?.booking_enabled&&business.accepted_at&&!cashClient)throw Error('Enter the client ID for this cash service sale so first-purchase eligibility can be checked. Link a booking when this payment settles an existing appointment.');
+   if(cashClient)await accrueCashCommission(db,{businessId:cashClient.business_id,kind:'booking',memberNumber:cashClient.member_number,sourceId:eventId,grossCents:lines.filter(l=>l.type==='service').reduce((n,l)=>n+Math.round(Number(l.price)*100)*l.qty,0)});
+  }
   let booking;
   if(bookingId){
    booking=(await db.query("SELECT a.id,a.data,a.status,b.id AS business_id FROM appointments a JOIN businesses b ON b.owner_id=a.owner AND b.status='active' WHERE a.owner=$1 AND a.id=$2 FOR UPDATE OF a",[owner,bookingId])).rows[0];
@@ -34,7 +44,7 @@ export async function recordCashSale(pool,{owner,eventId,bookingId,memberNumber,
    booking.data=data;
    await accrueCashCommission(db,{businessId:booking.business_id,kind:'booking',memberNumber:data.memberNumber,sourceId:booking.id,grossCents:expected});
   }
-  const data={lines,total:total/100,tax:total/100*taxRate/100,payment:'Cash recorded manually',...(booking?{bookingId:booking.id,client:booking.data.name||''}:{})};
+  const data={lines,total:total/100,tax:total/100*taxRate/100,payment:'Cash recorded manually',...(booking?{bookingId:booking.id,client:booking.data.name||''}:cashClient?{memberNumber:cashClient.member_number,client:cashClient.name}:{})};
   const saved=await db.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'cash_sale',$4) ON CONFLICT DO NOTHING RETURNING id",[eventId,owner,new Date().toISOString(),JSON.stringify(data)]);
   if(!saved.rows.length)throw Error('This sale reference was already recorded. Refresh before recording another sale.');
   if(booking){
