@@ -1,3 +1,9 @@
+# v1.3.193 release handoff — Customer categories follow the live marketplace
+
+The customer landing page's category chips are derived from the same active businesses returned by the public marketplace, replacing the hardcoded Sports coaching / Fitness / Hair & beauty / Wellness / Auto detailing list. The marketplace API adds unique industry-code metadata from all eligible rows before search filtering and the 500-result cap. Chips use the existing catalog's exact category names and filter codes, update on page load and return to the tab, and remain absent while loading or unavailable rather than advertising nonexistent categories. Pending, rejected and archived businesses cannot introduce public categories. Empty and duplicate categories are excluded.
+
+The broader industry catalog for registering businesses is unchanged. Marketplace search, visibility rules, business records, payments and ownership are preserved. No migration or business setting change is required. Focused SQL/API and rendered-component tests pass; full release validation and staging/production rollout are pending. No actual business is created, activated, archived or edited for QA.
+
 # v1.3.192 verified LIVE — Customer membership offers before Google reviews
 
 PR #124 merged as da1e6dcdc2caf0ee5d222de3f96a21b0fce2b2c9. Staging source 8db204bca711007c3fb074f61d0bc14a573bca0e / dep-dbims54s728c73fom050 LIVE at 2026-10-31T04:36:26.214774Z; production dep-dbin0vtg1s2s73f6i7ug LIVE at 04:38:50.923219Z. Both deployed trees equal a5af592827ef03775008d31ef86181cfc6801848. All 558 local/staging tests, TypeScript, builds and final-head GitHub checks passed (web 124441471411 / 124441370564; native 124441471259 / 124441370718). Both environments passed versioned health, public booking/payment shells, protected API and invalid-invitation/no-store checks. Checked startup error windows were empty. No migration is required.

@@ -22,3 +22,6 @@ export function matchesDiscovery(business,{q='',city='',industry=''}){
  const contains=(haystack,needle)=>{const terms=searchText(needle);if(String(needle).trim()&&!terms)return String(haystack).includes(String(needle).trim());return terms.split(' ').filter(Boolean).every(word=>searchText(haystack).includes(word));};
  return (!industry||business.industry===industry)&&contains(business.name+' '+business.description,q)&&(!city||(business._cities||[business.city]).some(value=>contains(value,city)));
 }
+
+// Use the unfiltered public marketplace rows, before search and result limits.
+export const marketplaceIndustries=rows=>[...new Set(rows.map(row=>typeof row.industry==='string'?row.industry.trim():'').filter(Boolean))].sort();
