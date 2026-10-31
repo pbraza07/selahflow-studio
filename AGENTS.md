@@ -1,8 +1,16 @@
+# v1.3.192 verified LIVE — Customer membership offers before Google reviews
+
+PR #124 merged as da1e6dcdc2caf0ee5d222de3f96a21b0fce2b2c9. Staging source 8db204bca711007c3fb074f61d0bc14a573bca0e / dep-dbims54s728c73fom050 LIVE at 2026-10-31T04:36:26.214774Z; production dep-dbin0vtg1s2s73f6i7ug LIVE at 04:38:50.923219Z. Both deployed trees equal a5af592827ef03775008d31ef86181cfc6801848. All 558 local/staging tests, TypeScript, builds and final-head GitHub checks passed (web 124441471411 / 124441370564; native 124441471259 / 124441370718). Both environments passed versioned health, public booking/payment shells, protected API and invalid-invitation/no-store checks. Checked startup error windows were empty. No migration is required.
+
+Staging browser verified Arcila's eight offers, a single-column layout and membership panel before the Google container; switching to Small Group Training retained order with three offers. Google content is not configured for that staging business. Production browser verified eight offers, the configured Google UI Kit/reviews region and View all Google reviews link below the complete membership panel. Actual DOM order is introduction → membership panel → Google container. At a 1363px viewport the document was 1348px wide with one 1004.59px content column; panel bottom 2418.06px preceded Google top 2458.94px. The Google review link was visually inspected below the offers. Full third-party rating/photo rendering and physical-phone acceptance were not claimed; the one-column source order applies at every breakpoint. No membership selection was submitted, registration signed, payment made, or business/provider/customer record changed for QA.
+
+The v1.3.191 administrator workspace and v1.3.190 Stripe/team fixes remain included. All currently requested work is implemented and verified LIVE. Earlier pending notes below are superseded by this record; documentation-only verification commits may follow these application SHAs without rebuilding.
+
 # v1.3.192 release handoff — Customer membership offers before Google reviews
 
 The customer membership page uses one column at every screen width: business introduction, membership offers/registration panel, then Google photos and reviews. Google content sits after the complete membership panel in document order and waits until membership data has loaded, so faster Google responses cannot place reviews ahead of the offers. The shared Google gallery, attribution, review links, business branding and all membership grouping, details, IDs, coupons, consent, registration and payment logic are preserved. Business home and booking page layouts are unchanged. No migration or business setting change is required.
 
-Full verification and staging/production rollout pending. This is a display-order change; no real membership, payment, customer record or provider setting is changed for QA.
+Verified LIVE on staging and production; all 558 tests and release checks passed. This is a display-order change; no real membership, payment, customer record or provider setting is changed for QA.
 
 # v1.3.191 verified LIVE — Organized platform administrator workspace
 
