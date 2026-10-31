@@ -1,3 +1,4 @@
+import {signupIdentity,readIdentityCookie,identityCookie} from '../../../../server/owner-federation.mjs';
 import {validateServiceAcceptance} from '../../../../server/business-service-terms.mjs';
 import {recordServiceAcceptance} from '../../../../server/business-service-agreement.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
@@ -18,18 +19,21 @@ export async function POST(req:Request){
   const b=JSON.parse(body);
   const planCode=b.planCode||'free';try{validateServiceAcceptance(b.agreement,planCode);}catch(e){return Response.json({error:(e as Error).message},{status:400});}
   if(b.website)return Response.json({error:'Unable to register.'},{status:400});
-  const email=String(b.email||'').trim().toLowerCase();
   const name=String(b.businessName||'').trim();
   const description=typeof b.description==='string'?b.description.trim():'';
   const address=typeof b.address==='string'?b.address.trim():'';
   if(!description||description.length>600||address.length>350||/[<>\u0000-\u001f]/.test(address))return Response.json({error:'Describe the services your business offers (1–600 characters) and enter a valid address.'},{status:400});
+  const identityProof=readIdentityCookie(req,'selahflow_signup_identity');
+  const identity=identityProof?await signupIdentity(getPool(),req):null;
+  if(identityProof&&!identity)return Response.json({error:'Google signup expired. Choose your account again.'},{status:400});
+  const email=identity?identity.email:String(b.email||'').trim().toLowerCase();
   const slug=String(b.slug||'').trim().toLowerCase();
   const industry=String(b.industry||'other');
   const city=String(b.city||'').trim(),region=canonicalState(String(b.region||''));
   const password=b.password;
   if(isReservedBusinessSlug(slug))return Response.json({error:'This booking URL is reserved for the original business.'},{status:409});
   if(!/^\S+@\S+\.\S+$/.test(email)||email.length>254||
-    !validNewPassword(password)||
+    (!identity&&!validNewPassword(password))||
     name.length<2||name.length>100||city.length>80||(b.region&&!region)||!industries.has(industry)||
     !/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(slug))
     return Response.json({error:'Enter a valid business name, URL slug, email and password (6+ characters).'},{status:400});
@@ -43,7 +47,13 @@ export async function POST(req:Request){
   const client=await pool.connect();
   try{
    await client.query('BEGIN');
-   await client.query('INSERT INTO users(id,email,password_hash) VALUES($1,$2,$3)',[userId,email,hashPassword(password)]);
+   if(identity){
+    const proof=readIdentityCookie(req,'selahflow_signup_identity');
+    const consumed=(await client.query('DELETE FROM owner_signup_identities WHERE token_hash=$1 AND expires_at>now() RETURNING provider,subject,email',[tokenHash(proof)])).rows[0];
+    if(!consumed||consumed.subject!==identity.subject||consumed.provider!==identity.provider||consumed.email!==email)throw Error('Google signup expired. Choose your account again.');
+   }
+   await client.query('INSERT INTO users(id,email,password_hash) VALUES($1,$2,$3)',[userId,email,hashPassword(identity?randomBytes(48).toString('hex'):password)]);
+   if(identity)await client.query('INSERT INTO owner_federated_identities(user_id,provider,subject) VALUES($1,$2,$3)',[userId,identity.provider,identity.subject]);
    await client.query("INSERT INTO businesses(id,owner_id,slug,name,industry,city,region,description,status,is_listed,listing_requested) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'pending',FALSE,FALSE)",[businessId,userId,slug,name,industry,city,region,description]);
    await client.query('UPDATE businesses SET brand_primary=$1,brand_background=$2 WHERE id=$3',[preset.brandPrimary,preset.brandBackground,businessId]);
    await client.query("INSERT INTO business_memberships(business_id,user_id,role) VALUES($1,$2,'owner')",[businessId,userId]);
@@ -57,6 +67,7 @@ export async function POST(req:Request){
    if((error as {code?:string}).code==='23505')return Response.json({error:'This email or booking URL is already registered.'},{status:409});
    throw error;
   }finally{client.release();}
-  return Response.json({ok:true,slug,status:'pending',bookingUrl:bookingPath(slug),dashboardUrl:'/registration-status',businessUrl:businessPath(slug)},{status:201,headers:{'Set-Cookie':cookie(session),'Cache-Control':'no-store'}});
+  const headers=new Headers({'Cache-Control':'no-store'});headers.append('Set-Cookie',cookie(session));headers.append('Set-Cookie',identityCookie('selahflow_signup_identity','',0));
+  return Response.json({ok:true,slug,status:'pending',bookingUrl:bookingPath(slug),dashboardUrl:'/registration-status',businessUrl:businessPath(slug)},{status:201,headers});
  }catch(error){console.error('Business registration failed',error);return Response.json({error:'Registration is temporarily unavailable.'},{status:503});}
 }

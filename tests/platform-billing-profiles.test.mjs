@@ -12,7 +12,7 @@ import {verifyStripeWebhook} from '../server/membership-payments.mjs';
 import {confirmBooking} from '../server/booking-approvals.mjs';
 import {bookingServicePaymentOptions} from '../server/service-payment-options.mjs';
 import {activatePendingBusiness} from '../server/business-activation.mjs';
-const accept=planCode=>({planCode,version:SERVICE_AGREEMENT_VERSION,signatureName:'Test Owner',accepted:true,electronicConsent:true,revenueAccepted:true});
+const accept=planCode=>({planCode,version:SERVICE_AGREEMENT_VERSION,signatureName:'Test Owner',documentReviewed:true,accepted:true,electronicConsent:true,revenueAccepted:true});
 async function setup(t){const pg=new PGlite();t.after(()=>pg.close());for(const file of(await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort())await pg.exec(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8'));
 const db={async query(s,v){if(s.includes('pg_advisory_xact_lock'))return {rows:[],rowCount:1};const r=await pg.query(s,v);return {...r,rowCount:r.rows.length||r.affectedRows||0};},release(){}};const pool={...db,connect:async()=>db};
 await pg.exec("INSERT INTO users(id,email,password_hash) VALUES('owner','owner@example.test','x'),('other','other@example.test','x');INSERT INTO businesses(id,owner_id,slug,name,status) VALUES('biz','owner','example','Example','active'),('otherbiz','other','another','Another','active');INSERT INTO business_subscriptions(business_id,plan_code,status) VALUES('biz','free','active'),('otherbiz','business','active');INSERT INTO merchant_accounts(business_id,provider,external_account_id) VALUES('biz','stripe','acct_example');");return {pg,db,pool};}
@@ -47,7 +47,7 @@ s.sub.status='canceled';await processPlatformBillingEvent(pool,event('cancel','c
 
 test('all tiers require an explicit signed current revenue agreement and webhooks enforce the platform signature scope',()=>{
 for(const invalid of ['__proto__','toString','unknown'])assert.throws(()=>validateServiceAcceptance(accept(invalid),invalid));
-for(const code of ['free','professional','business']){assert.equal(validateServiceAcceptance(accept(code),code).planCode,code);for(const patch of [{accepted:false},{electronicConsent:false},{revenueAccepted:false},{signatureName:''},{version:'old'},{planCode:'wrong'}])assert.throws(()=>validateServiceAcceptance({...accept(code),...patch},code));}
+for(const code of ['free','professional','business']){assert.equal(validateServiceAcceptance(accept(code),code).planCode,code);for(const patch of [{documentReviewed:false},{accepted:false},{electronicConsent:false},{revenueAccepted:false},{signatureName:''},{version:'old'},{planCode:'wrong'}])assert.throws(()=>validateServiceAcceptance({...accept(code),...patch},code));}
 const e=event('evt_signed','invoice.paid',{id:'in_signed'}),raw=JSON.stringify(e),now=Math.floor(Date.now()/1000),secret='whsec_fixture',sig='t='+now+',v1='+createHmac('sha256',secret).update(now+'.'+raw).digest('hex');assert.equal(verifyStripeWebhook(raw,sig,secret,now,{APP_ENV:'staging'},false).id,e.id);assert.throws(()=>verifyStripeWebhook(raw,sig,secret,now,{APP_ENV:'staging'}),/scope|account/);assert.throws(()=>verifyStripeWebhook(raw,sig+'broken',secret,now,{APP_ENV:'staging'},false));
 });
 

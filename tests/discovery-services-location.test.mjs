@@ -1,5 +1,5 @@
 import {SERVICE_AGREEMENT_VERSION} from '../server/business-service-terms.mjs';
-const agreement={version:SERVICE_AGREEMENT_VERSION,planCode:'free',signatureName:'Test Owner',accepted:true,electronicConsent:true,revenueAccepted:true};
+const agreement={version:SERVICE_AGREEMENT_VERSION,planCode:'free',signatureName:'Test Owner',documentReviewed:true,accepted:true,electronicConsent:true,revenueAccepted:true};
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile,readdir} from 'node:fs/promises';import ts from 'typescript';import {PGlite} from '@electric-sql/pglite';
 import {discoveryBusiness,matchesDiscovery,addressCity} from '../server/discovery-search.mjs';
 import {googleLocation,refreshDiscoveryLocations} from '../server/discovery-locations.mjs';
@@ -22,7 +22,7 @@ test('Google location refresh verifies selected Place ID, updates city, avoids r
 test('signup server rejects missing, whitespace and oversized service descriptions before database access',async()=>{
  let source=ts.transpileModule(await read('app/api/auth/signup/route.ts'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
  source=source.replace(/import \{ getPool \}[^\n]+;/,'const getPool=()=>{throw Error("Unexpected database call");};').replace(/import \{ defaultSettings \}[^\n]+;/,'const defaultSettings={};').replace(/import \{ BUSINESS_INDUSTRIES, canonicalState \}[^\n]+;/,"const BUSINESS_INDUSTRIES=[['other','Other']],canonicalState=v=>v;");
- for(const file of ['security','onboarding-presets','platform-roles','route-slugs','business-service-terms','business-service-agreement'])source=source.replace("'../../../../server/"+file+".mjs'",JSON.stringify(new URL('../server/'+file+'.mjs',import.meta.url).href));
+ for(const file of ['security','onboarding-presets','platform-roles','route-slugs','business-service-terms','business-service-agreement','owner-federation'])source=source.replace("'../../../../server/"+file+".mjs'",JSON.stringify(new URL('../server/'+file+'.mjs',import.meta.url).href));
  const route=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));const origin=new URL(process.env.APP_URL||process.env.RENDER_EXTERNAL_URL||'https://example.test').origin;
  const unsigned=await route.POST(new Request(origin,{method:'POST',headers:{Origin:origin},body:JSON.stringify({description:'Test services'})}));assert.equal(unsigned.status,400);assert.match((await unsigned.json()).error,/agreement|accept|sign/i);
  for(const description of [undefined,'   ','a'.repeat(601)]){const r=await route.POST(new Request(origin,{method:'POST',headers:{Origin:origin},body:JSON.stringify({description,agreement})}));assert.equal(r.status,400);assert.match((await r.json()).error,/Describe the services/);}
@@ -39,7 +39,7 @@ test('actual signup persists the service description and address atomically and 
  globalThis.__discoverySignupPool={query:(...args)=>db.query(...args),connect:async()=>({query:(...args)=>db.query(...args),release(){}})};t.after(()=>delete globalThis.__discoverySignupPool);
  let source=ts.transpileModule(await read('app/api/auth/signup/route.ts'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
  source=source.replace(/import \{ getPool \}[^\n]+;/,'const getPool=()=>globalThis.__discoverySignupPool;').replace(/import \{ defaultSettings \}[^\n]+;/,'const defaultSettings={};').replace(/import \{ BUSINESS_INDUSTRIES, canonicalState \}[^\n]+;/,"const BUSINESS_INDUSTRIES=[['other','Other']],canonicalState=v=>v;");
- for(const file of ['security','onboarding-presets','platform-roles','route-slugs','business-service-terms','business-service-agreement'])source=source.replace("'../../../../server/"+file+".mjs'",JSON.stringify(new URL('../server/'+file+'.mjs',import.meta.url).href));
+ for(const file of ['security','onboarding-presets','platform-roles','route-slugs','business-service-terms','business-service-agreement','owner-federation'])source=source.replace("'../../../../server/"+file+".mjs'",JSON.stringify(new URL('../server/'+file+'.mjs',import.meta.url).href));
  const route=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));const origin=new URL(process.env.APP_URL||process.env.RENDER_EXTERNAL_URL||'https://example.test').origin;
  const body={agreement,businessName:'Example Learning',description:'  Piano lessons and music tutoring  ',address:'10 Test St, Tampa, FL 33602',city:'Tampa',region:'Florida',slug:'example-learning',industry:'other',email:'learning@example.test',password:'test-password123'};
  const response=await route.POST(new Request(origin,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)}));assert.equal(response.status,201,JSON.stringify(await response.json()));
