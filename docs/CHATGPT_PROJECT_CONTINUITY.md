@@ -1,3 +1,9 @@
+# v1.3.192 release handoff — Customer membership offers before Google reviews
+
+The customer membership page uses one column at every screen width: business introduction, membership offers/registration panel, then Google photos and reviews. Google content sits after the complete membership panel in document order and waits until membership data has loaded, so faster Google responses cannot place reviews ahead of the offers. The shared Google gallery, attribution, review links, business branding and all membership grouping, details, IDs, coupons, consent, registration and payment logic are preserved. Business home and booking page layouts are unchanged. No migration or business setting change is required.
+
+Full verification and staging/production rollout pending. This is a display-order change; no real membership, payment, customer record or provider setting is changed for QA.
+
 # v1.3.191 verified LIVE — Organized platform administrator workspace
 
 PR #123 merged as 1ea43abc66076ab9343fe115204c492fa7caa881. Staging source 6b9deaada87fcda0cd00fe1348d21195ac5b83d8 / dep-dbimllvb9u1s73buno4g LIVE at 2026-10-31T04:22:38.179971Z; production dep-dbimq8jncjis73cq2npg LIVE at 04:24:32.454012Z. Both deployed trees equal c00388608fedbf61631d96189009dd815360dd4c. All 558 local/staging tests, final TypeScript/builds and GitHub checks passed (web 124438397365 / 124438352309; native 124438397180 / 124438352160). Both environments passed versioned health, public booking/payment shells, protected APIs and invalid-invitation checks. The administrator page requires login, anonymous overview reads return 401 and foreign-origin writes return 403. Checked startup error windows were empty; no migration is required.

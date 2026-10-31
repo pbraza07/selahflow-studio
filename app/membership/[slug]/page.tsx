@@ -100,7 +100,6 @@ export default function MembershipEnrollment(){
     <span className="sf-membership-kicker">MEMBERSHIPS & RECURRING SERVICES</span>
     <h1>{data?.registrationConfig?.pageContent?.membershipTitle||(data?'Memberships at '+data.name:'Choose a membership')}</h1>
     <p>{data?.registrationConfig?.pageContent?.membershipIntro||'Choose a membership and pay securely. No membership approval is required; sessions activate after verified payment.'}</p>
-    {slug&&<GoogleBusinessGallery slug={slug} compact/>}
    </section>
    <section className="sf-membership-join-panel">
     {requested?<div role="status"><CheckCircle2 size={36}/><h2>Membership registered</h2><p>Your membership is registered without approval. Payment is still pending; no session credits are active until payment is confirmed.{registeredNumber&&<div role="status" style={{background:'#fff2a8',color:'#392b00',border:'2px solid #e0b000',padding:'14px 18px',borderRadius:12,margin:'16px 0',fontWeight:800,fontSize:20}}>Your client / membership ID: {registeredNumber}</div>}</p>{data?.canPay&&<button type="button" className="primary" onClick={()=>{setRequested(false);setStep(2);}}>Make Payment <CreditCard size={17}/></button>}<a className="outline" href={'/book/'+slug}>Return to booking</a></div>:checkoutId?<div className="sf-membership-finish">
@@ -134,6 +133,7 @@ export default function MembershipEnrollment(){
     </form>}
     </>}
    </section>
+   {slug&&data&&<div className="sf-membership-google"><GoogleBusinessGallery slug={slug} compact/></div>}
   </main>
   <PoweredBySelahFlow/>
  <BusinessAssistant slug={slug} name={data?.name}/>

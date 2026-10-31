@@ -1,3 +1,7 @@
+## Release source: v1.3.192 — Membership offers before Google reviews
+
+Deployment verification pending. Customer membership offers and registration always precede the business Google gallery/reviews on desktop and phones.
+
 ## Release source: v1.3.191 — Organized platform administrator workspace
 
 Verified LIVE on staging and production. All 558 local/staging tests, TypeScript, final builds, GitHub and live endpoint checks passed. See AGENTS.md for deployment evidence and authenticated-browser limits. Clear sections, task-focused overview, desktop sidebar and phone section selector preserve all existing administrator tools and permissions.
