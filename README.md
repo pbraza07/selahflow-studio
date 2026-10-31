@@ -1,6 +1,6 @@
 ## Release source: v1.3.193 — Marketplace-backed customer category buttons
 
-Deployment verification pending. Customer category buttons show only categories represented by current marketplace businesses.
+Verified LIVE on staging and production. All 560 local/staging tests, TypeScript, builds, GitHub checks, category API checks and public browser verification passed. See AGENTS.md for exact deployment evidence and testing limits. Customer category buttons show only categories represented by current marketplace businesses.
 
 ## Release source: v1.3.192 — Membership offers before Google reviews
 
