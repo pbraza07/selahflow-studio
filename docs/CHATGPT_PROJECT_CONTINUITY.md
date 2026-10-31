@@ -1,3 +1,11 @@
+# v1.3.195 verified LIVE in production — Concise booking client ID instructions
+
+PR #127 merged as 1f4062fea1a00342187b3ad7fb3e92ff524cddd1. Production deploy dep-dbj6ipm417fc73ak8qrg is LIVE at 2026-10-31T22:21:03.05605Z. Final-head GitHub web and native checks passed on 0886be398ec6e00a8bd675f4379a7c65eaa22456; all 560 tests passed after updating the existing prefill test's old wording expectations. Local TypeScript, the corrected seven-test prefill file and production build passed.
+
+Production versioned health, booking/payment shells, protected APIs and invalid-invitation/no-store checks passed after the rollout. An initial check during traffic transition saw v1.3.194; the post-LIVE rerun passed v1.3.195. The actual served booking JavaScript contains both concise instructions and omits the removed ID-format explanation. No error-level startup entries were returned for the checked rollout window. Interactive browser/physical-phone acceptance was not performed. No customer/business records, bookings, payments or messages were changed for QA.
+
+Staging runtime verification and deployment are blocked: Render reports selahflow-staging suspended by billing. It was not resumed, reconfigured or claimed updated. No migration is required. Earlier v1.3.195 rollout-pending notes below are superseded for production only. Documentation-only commits may follow the deployed application SHA without rebuilding.
+
 # v1.3.195 release handoff — Concise booking client ID instructions
 
 The customer booking form removes the explanation of ID generation from the returning-client box. Two short paragraphs now explain: returning clients enter their client ID to fill in saved details; first-time clients leave it blank and complete the form below. Client lookup, assigned IDs, required fields and booking behavior are unchanged. No migration or business setting update is required.
