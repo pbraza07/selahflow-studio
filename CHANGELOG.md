@@ -1,10 +1,18 @@
+# v1.3.191 verified LIVE — Organized platform administrator workspace
+
+PR #123 merged as 1ea43abc66076ab9343fe115204c492fa7caa881. Staging source 6b9deaada87fcda0cd00fe1348d21195ac5b83d8 / dep-dbimllvb9u1s73buno4g LIVE at 2026-10-31T04:22:38.179971Z; production dep-dbimq8jncjis73cq2npg LIVE at 04:24:32.454012Z. Both deployed trees equal c00388608fedbf61631d96189009dd815360dd4c. All 558 local/staging tests, final TypeScript/builds and GitHub checks passed (web 124438397365 / 124438352309; native 124438397180 / 124438352160). Both environments passed versioned health, public booking/payment shells, protected APIs and invalid-invitation checks. The administrator page requires login, anonymous overview reads return 401 and foreign-origin writes return 403. Checked startup error windows were empty; no migration is required.
+
+Desktop sidebar, phone section selector, clear task cards and role-specific sections are shipped. Real JSX/state tests exercise navigation, retained tools, ordinary/primary visibility, approval action restrictions, summary counts, empty/error states and safe/legacy section links. Signed-in live administrator browser and physical-phone visual acceptance were not exercised; no administrator approval, provider setting, credential, account permission or business record was changed for QA. The payment and team improvements from v1.3.190 remain included. Earlier pending notes below are superseded by this verified rollout.
+
+Next authorized request: put customer membership offers before the business Google reviews after this production release. Documentation-only verification commits may follow these application SHAs without rebuilding.
+
 # v1.3.191 release handoff — Organized platform administrator workspace
 
 The platform administrator page replaces its long stack of tools with a calm SelahFlow layout, a desktop sidebar, a labelled phone section selector, clear page headings and Overview / Businesses / Business approvals / Packages & team / Payments & fees / Connections / Admin access destinations. Task cards and pending counts lead directly to work. The overview separates application counts from financial settlement, shows package assignments and the review queue, and places secondary reporting notes under a disclosure. Business support and the directory come first; business management/archived records and waiver guidance sit in labelled disclosures.
 
 Approval cards show owner, location, requested package, package payment state and submission date, while the existing server performs final signature/payment/primary-role verification. Primary-only payment, commission, email and Google tools remain primary-only. All existing controls, support, package overrides, seat requests, archive/restore/purge confirmations and administrator security remain present. Sections stay mounted when hidden so navigation does not discard form drafts. Only allowed section hashes restore; unknown/role-ineligible hashes return to Overview. Loading, retry, refresh and empty states are explicit. The overview API's obsolete v1.3 not-live payment wording is replaced with a stable reconciliation note; no payment behavior changes.
 
-Full verification and staging/production rollout pending. Real component rendering/navigation tests cover tool preservation, role visibility, approval controls, counts, mobile navigation, empty/unavailable states and safe section links. No real business approval, provider setting, billing action, account permission or record is changed for QA.
+Verified LIVE on staging and production; all 558 tests and release checks passed. Real component rendering/navigation tests cover tool preservation, role visibility, approval controls, counts, mobile navigation, empty/unavailable states and safe section links. No real business approval, provider setting, billing action, account permission or record is changed for QA.
 
 # v1.3.190 verified LIVE — Stripe package fix and team booking workspace
 
