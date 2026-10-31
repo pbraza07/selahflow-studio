@@ -27,5 +27,6 @@ export function sessionRosterForOwner(session,appointments){
   .sort((a,b)=>a.name.localeCompare(b.name)||a.bookingId.localeCompare(b.bookingId));
  return {id:session.id,date:session.date,staff:session.staff,
   capacity:session.capacity,booked:clients.filter(c=>c.status!=='No-show').length,
-  remaining:Math.max(0,Number(session.capacity||0)-clients.filter(c=>c.status!=='No-show').length),clients};
+  remaining:session.manuallyFull===true?0:Math.max(0,Number(session.capacity||0)-clients.filter(c=>c.status!=='No-show').length),
+  manuallyFull:session.manuallyFull===true,clients};
 }

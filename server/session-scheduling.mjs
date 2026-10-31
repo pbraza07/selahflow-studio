@@ -36,6 +36,7 @@ export function bookedSessionCount(appointments, sessionId) {
   return appointments.filter(a => activeAppointment(a) && appointmentData(a).sessionId === sessionId).length;
 }
 export function sessionRemaining(session, appointments) {
+  if(session?.manuallyFull===true)return 0;
   return Math.max(0, Number(session.capacity) - bookedSessionCount(appointments, session.id));
 }
 export function sessionsForDate(config, date, staffId) {
@@ -58,6 +59,11 @@ export function validateBookableSessions(config) {
   if (!Array.isArray(sessions) || sessions.length > 200)
     throw Error('A business may configure up to 200 sessions.');
   const ids = new Set();
+  const fullSessionIds=config.fullSessionIds??[];
+  if(!Array.isArray(fullSessionIds)||fullSessionIds.length>500||
+     new Set(fullSessionIds).size!==fullSessionIds.length||
+     fullSessionIds.some(id=>typeof id!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(id)))
+    throw Error('Check sessions marked as full.');
   for (const session of sessions) {
     const service = (config.services || []).find(x => x.id === session.service);
     const member = (config.staff || []).find(x => x.id === session.staff);
@@ -179,7 +185,8 @@ export function computeDayAvailability({config, date, staff, services, appointme
   const sessionAvailability = {};
   const fullSessions = matching.map(s => ({
     id:s.id, date:s.date, staff:s.staff, service:s.service, start:s.start,
-    capacity:s.capacity, remaining:isBlocked(config,date,staff,s.start,s.duration+(config.buffer||0))?0:sessionRemaining(s,active)
+    capacity:s.capacity,manuallyFull:s.manuallyFull===true,
+    remaining:isBlocked(config,date,staff,s.start,s.duration+(config.buffer||0))?0:sessionRemaining(s,active)
   }));
   if (date < today) return {slots,sessionAvailability,sessions:fullSessions,earliestStart:null,firstAvailable:null};
   const duration = services.reduce((n,s) => n + s.duration,0);

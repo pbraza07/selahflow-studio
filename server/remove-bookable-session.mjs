@@ -15,6 +15,7 @@ export function removeBookableSession(config,id){
  const required=record=>record?Object.fromEntries(Object.entries(record).filter(([key])=>!removedFields.has(key))):record;
  return {...config,bookableSessions:(config.bookableSessions||[]).filter(row=>row.id!==id).map(row=>({...row,...(row.questionRequired?{questionRequired:required(row.questionRequired)}:{})})),
   sessionOverrides:(config.sessionOverrides||[]).filter(row=>row.seriesId!==id&&row.id!==id),
+  fullSessionIds:(config.fullSessionIds||[]).filter(value=>value!==id&&!value.startsWith(id+'__')),
   bookingCustomFields,bookingQuestionOrder:omit(config.bookingQuestionOrder,bookingFields),
   membershipQuestionOrder:omit(config.membershipQuestionOrder,removedFields),
   ...(Array.isArray(config.bookingPushFields)?{bookingPushFields:omit(config.bookingPushFields,bookingFields)}:{}),

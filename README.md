@@ -1,3 +1,7 @@
+## Release source: v1.3.187 — Owner session-full checkbox
+
+Deployment verification pending.
+
 ## Release source: v1.3.186 — verification pending
 
 Paid business onboarding now enforces signed agreement → Stripe-hosted package payment → primary approval → functional business page and owner dashboard. Free onboarding requires the signed agreement and approval without a card. Provider-verified paid invoices, not redirect URLs, control paid readiness.

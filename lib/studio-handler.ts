@@ -1,3 +1,4 @@
+import {setSessionFullForOwner} from '../server/session-full.mjs';
 import {teamIdentity} from '../server/team-portal.mjs';
 import {canReviewWaivers,assertWaiverAuthority} from '../server/waiver-authority.mjs';
 import {publicBookingServiceSummary} from '../server/public-booking-service.mjs';
@@ -90,6 +91,10 @@ if(b.action==='waiver_records'){
  const records=await getPool().query('SELECT w.* FROM participation_waivers w JOIN businesses biz ON biz.id=w.business_id WHERE biz.owner_id=$1 AND (w.deleted_at IS NOT NULL)=$2 ORDER BY w.signed_at DESC LIMIT 2000',[owner,b.deleted===true]);
  return reply({waivers:records.rows});
 }
+if(b.action==='session_full'){
+ if(isPublic||isTeam)return reply({error:'Action not permitted.'},403);
+ return reply(await setSessionFullForOwner({owner,input:b}));
+}
 if(b.action==='settings'){const c=cleanRemovedBookableSessions(config,b.config);
  validateCategoryWaiverSettings(c);
  if(c?.waiverLegalReview!=null){const review=c.waiverLegalReview;
@@ -140,6 +145,7 @@ try{
  await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
  const persisted=(await client.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0];
  const oldConfig=persisted?JSON.parse(persisted.data):config;
+ c.fullSessionIds=cleanRemovedBookableSessions(oldConfig,{...c,fullSessionIds:oldConfig.fullSessionIds||[]}).fullSessionIds||[]; // Only the immediate owner calendar action changes session closure.
  c.teamTimeOff=oldConfig.teamTimeOff||[]; // Calendar-managed time off cannot be overwritten by stale settings drafts.
  for(const block of c.teamTimeOff){for(let d=Date.parse(block.from);d<=Date.parse(block.to);d+=86400000){const date=new Date(d).toISOString().slice(0,10);if(sessionsForDate(c,date,block.staff).some((s:any)=>overlaps(block.start,block.end-block.start,s.start,s.duration+(c.buffer||0))))throw Error('A session overlaps saved team time off. Edit the block or choose another session time.');}}
  await assertWaiverAuthority(client,req,oldConfig,c);

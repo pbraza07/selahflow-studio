@@ -1,3 +1,9 @@
+# v1.3.187 release handoff — Owner session-full control
+
+Owners can click a bookable calendar session and check “Session full” in its private roster. The change saves immediately for that occurrence, keeps the session visible, and blocks new public, owner and team bookings plus pending-request acceptance. Unchecking restores actual remaining capacity. Existing attendees, payments, capacity and other recurring dates are preserved. The server scopes writes to the authenticated active owner and serializes them with booking confirmations using the schedule lock. Stale general settings drafts cannot overwrite closure state. No migration is required.
+
+Staging and production rollout pending. Automated regression tests exercise persisted closure/reopen, tenant isolation, stale bookings, pending approvals, recurrence, visibility and roster preservation without changing real business records.
+
 # v1.3.186 release handoff — Agreement-first paid business activation
 
 New paid business signup now enforces the complete order: read and electronically sign the current services/revenue agreement, create the private pending account, then open SelahFlow's Stripe-hosted subscription Checkout from the clearly labeled “Sign up now and pay with Stripe” action. The saved current agreement is verified server-side before Checkout can be created; returning from Checkout does not grant access. Only a signed Stripe webhook and provider-verified paid invoice can mark the requested Professional or Business package paid.

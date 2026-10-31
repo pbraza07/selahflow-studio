@@ -42,6 +42,26 @@ test('remaining seat counts and normal capacity are independent',()=>{
  assert.ok(serviceCapacityOpen(appointments,[training],600,60),'group members do not consume standard service limit');
  assert.ok(!windowFor([...appointments,...Array.from({length:3},(_,i)=>customer('more-'+i))]).slots.includes(720));
 });
+test('an owner-marked full occurrence stays published with zero spaces and cannot be booked',()=>{
+ const closed={...config,fullSessionIds:[session.id]};
+ const result=computeDayAvailability({config:closed,date,staff:'coach',services:[training],appointments:[],reservedSlots:[],today:'2026-11-01',nowMinutes:700,capacityOpen:serviceCapacityOpen});
+ assert.equal(result.sessions.length,1);
+ assert.equal(result.sessions[0].id,session.id);
+ assert.equal(result.sessions[0].remaining,0);
+ assert.equal(result.sessionAvailability[720].remaining,0);
+ assert.ok(!result.slots.includes(720));
+ assert.equal(sessionRemaining(result.sessions[0],[]),0);
+});
+test('marking one recurring occurrence full does not close the rest of the series',()=>{
+ const recurring={...session,repeat:{frequency:'weekly',every:1,until:'2026-11-09'}};
+ const closed={...config,bookableSessions:[recurring],fullSessionIds:['group-1__20261109']};
+ const first=computeDayAvailability({config:closed,date:'2026-11-02',staff:'coach',services:[training],appointments:[],reservedSlots:[],today:'2026-11-01',nowMinutes:700,capacityOpen:serviceCapacityOpen});
+ const second=computeDayAvailability({config:closed,date:'2026-11-09',staff:'coach',services:[training],appointments:[],reservedSlots:[],today:'2026-11-01',nowMinutes:700,capacityOpen:serviceCapacityOpen});
+ assert.equal(first.sessions[0].remaining,10);
+ assert.ok(first.slots.includes(720));
+ assert.equal(second.sessions[0].remaining,0);
+ assert.ok(!second.slots.includes(720));
+});
 test('a confirmed seat prevents destructive session edits',()=>{
  const appointments=[customer('one'),customer('two')];
  assert.doesNotThrow(()=>validateExistingSessionReservations([session],[],appointments),'Removing the definition preserves its reservations as retained bookings');
@@ -76,6 +96,10 @@ test('atomic confirmation serializes concurrent customers and cannot oversell se
   }};
   const options=id=>({pool,owner:'owner',services:[training],staff:'coach',
    date,start:720,duration:60,buffer:15,id,data:{sessionId:'group-1',serviceIds:['training'],services:['Group training']}});
+  await db.query('UPDATE settings SET data=$1 WHERE owner=$2',[JSON.stringify({...config,fullSessionIds:[session.id]}),'owner']);
+  await assert.rejects(confirmBooking(options('closed-by-owner')),/Session is now full/);
+  assert.equal((await db.query('SELECT COUNT(*)::int AS count FROM appointments')).rows[0].count,0);
+  await db.query('UPDATE settings SET data=$1 WHERE owner=$2',[JSON.stringify(config),'owner']);
   const results=await Promise.allSettled(Array.from({length:11},(_,i)=>confirmBooking(options('customer-'+i))));
   assert.equal(results.filter(x=>x.status==='fulfilled').length,10);
   assert.equal(results.filter(x=>x.status==='rejected'&&x.reason.status===409).length,1);
@@ -126,6 +150,8 @@ test('settings categories stay separated and offer an always-available Save cont
  }
  assert.match(owner,/sf-settings-save/);
  assert.match(owner,/Next possible 15-minute mark/);
+ assert.match(owner,/Mark session as full/);
+ assert.match(owner,/fullSessionIds/);
  const customer=await readFile(new URL('app/book/page.tsx',root),'utf8');
  assert.match(customer,/First available:/);
  assert.match(customer,/void availability\(date\)/);
