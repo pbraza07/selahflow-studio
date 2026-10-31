@@ -16,9 +16,9 @@ function receiptTime(iso:string){
 }
 const money=(value:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(value)||0);
 export default function BookingRequestCards({
- items,busy,onReview,onEdit,team,customFields=[],approvalFields
+ items,busy,onReview,onEdit,team,customFields=[],approvalFields,approvalLabel
 }:{
- items:BookingRequest[];busy:string;onReview:(id:string,accept:boolean)=>void;onEdit?:(item:BookingRequest)=>void;
+ items:BookingRequest[];busy:string;approvalLabel?:string;onReview:(id:string,accept:boolean)=>void;onEdit?:(item:BookingRequest)=>void;
  team?:{id:string;name:string}[];customFields?:{id:string;label:string}[];approvalFields?:string[];
 }){
  const visible=(id:string)=>approvalFields===undefined||approvalFields.includes(id);
@@ -58,6 +58,6 @@ export default function BookingRequestCards({
     {item.details.originalSubmission&&<div><small>Original customer name before any corrections</small><b>{item.details.originalSubmission.customerName}</b></div>}
    </div>
   </details>
-  <div className="sf-approval-buttons">{onEdit&&<button type="button" className="outline sf-booking-edit-button" disabled={!!busy} onClick={()=>onEdit(item)}><Pencil size={16}/> Edit booking details</button>}<button type="button" className="primary" disabled={!!busy} onClick={()=>onReview(item.id,true)}>{busy===item.id?'Processing…':'Accept and add to calendar'}</button><button type="button" className="outline" disabled={!!busy} onClick={()=>onReview(item.id,false)}>Decline (no calendar change)</button></div>
+  <div className="sf-approval-buttons">{onEdit&&<button type="button" className="outline sf-booking-edit-button" disabled={!!busy} onClick={()=>onEdit(item)}><Pencil size={16}/> Edit booking details</button>}<button type="button" className="primary" disabled={!!busy} onClick={()=>onReview(item.id,true)}>{busy===item.id?'Processing…':approvalLabel||'Accept and add to calendar'}</button><button type="button" className="outline" disabled={!!busy} onClick={()=>onReview(item.id,false)}>Decline (no calendar change)</button></div>
  </article>)}</div>;
 }

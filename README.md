@@ -1,3 +1,7 @@
+## Release source: v1.3.190 — Package payment fix, team sharing and workspace approvals
+
+Deployment verification pending. Package checkout explicitly uses standard Stripe Billing to avoid the account-default Managed Payments tax-code error. Public profiles gain a top Share page button; private workspaces gain an in-page booking review panel under the welcome area. Reviewer permissions remain controlled by the business owner.
+
 ## Release source: v1.3.189 — Account choices and modern business agreements
 
 Verified LIVE on staging and production. Google/Google Workspace or email/password → business details → read and sign agreement → separate Make payment. Selected package price/benefits are displayed; paid access still requires verified payment and primary approval. All 549 tests, TypeScript, builds, GitHub checks and live endpoint checks passed. See AGENTS.md for deployment evidence and real-account/payment testing limitations.
