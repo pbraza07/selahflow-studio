@@ -1,8 +1,14 @@
+# v1.3.194 verified LIVE — Marketplace logos open business landing pages
+
+PR #126 merged as 49cafc264893b68302a8cbe5abfe672f455adfe7. Staging source daa2ae57993651fcd18bf80bee2d88da48211aaf / dep-dbitdktg1s2s73e6sqpg LIVE at 2026-10-31T12:03:46.267032Z; production dep-dbitijeq1p3s73a4k700 LIVE at 12:06:10.691327Z. Both deployed application trees equal 71b5f3e26770901ba6bd8a4b998284f651112204. All 560 local/staging tests, TypeScript, production builds and final-head GitHub checks passed (web 124530108465 / 124530066341; native 124530108582 / 124530066476). Both environments passed versioned health, public booking/payment shells, protected API and invalid-invitation/no-store checks. Checked startup error windows were empty. No migration is required.
+
+Live browser verification clicked the actual Arcila Training marketplace logo on both environments and reached the matching /arcillatrng landing page with its business heading, services and booking/membership links. Production also displayed Crawford Hair Company's logo as a link to /crawfordhaircompany. Real component tests cover native anchor semantics, accessible business label, encoded slug and preserved placeholder/failed-image behavior. Physical-phone interaction was not exercised; native links support click/tap, keyboard activation and ordinary browser link controls. Existing carousel, logo dimensions and all data/payment paths are preserved. No business/customer record, booking, payment, provider setting or outgoing message was changed for QA. Earlier pending notes below are superseded by this verified rollout. Documentation-only verification commits may follow the application SHAs without rebuilding.
+
 # v1.3.194 release handoff — Marketplace logos open business landing pages
 
 Every marketplace business logo is now a native link to that business's public landing page, using its encoded slug and an accessible name identifying the business. Clicking the logo, pressing Enter when focused, or using normal browser link controls opens the same destination as the business name/View business link. Keyboard focus is visible. Placeholder and failed-image fallbacks retain the business destination; existing logo sizing, carousel behavior and all data/payment paths are preserved. No migration or business setting update is required.
 
-Full validation and staging/production rollout pending. Existing logo rendering/fallback tests also cover link semantics, tenant destination and URL encoding. No business or customer records are changed for QA.
+Verified LIVE on staging and production; all 560 tests and release checks passed. Existing logo rendering/fallback tests also cover link semantics, tenant destination and URL encoding. No business or customer records were changed for QA.
 
 # v1.3.193 verified LIVE — Customer categories follow the marketplace
 

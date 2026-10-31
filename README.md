@@ -1,6 +1,6 @@
 ## Release source: v1.3.194 — Clickable marketplace business logos
 
-Deployment verification pending. Marketplace logos open their business landing pages, including image fallbacks.
+Verified LIVE on staging and production. Marketplace logos open their business landing pages, including image fallbacks. All 560 tests, TypeScript, builds, GitHub checks, live endpoint checks and actual staging/production logo clicks passed. See AGENTS.md for deployment evidence and testing limits.
 
 ## Release source: v1.3.193 — Marketplace-backed customer category buttons
 
