@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
+import CashCommissionBilling from './cash-commission-billing';
 type Row={id:string;kind:string;source_id:string|null;status:string;gross_cents:number;fee_cents:number;refunded_fee_cents:number;created_at:string};
 type Settings={stripeSetup?:{ready:boolean;reason:string};bookingEnabled:boolean;membershipEnabled:boolean;acceptedAt:string|null;ratePercent:number;recent:Row[];totals:{kind:string;paid_count:number;collected_cents:number;refunded_cents:number}[]};
 const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
@@ -17,7 +18,7 @@ export default function BusinessCommissions(){
    {!data.acceptedAt&&<p role="status">New commissions are paused until you accept the revised 10% or $5 minimum terms. Activation is controlled by the platform administrator.</p>}
    <p><strong>Booking: {data.bookingEnabled?'Enabled · 10% or $5 minimum once':'Off'}</strong> · <strong>Membership: {data.membershipEnabled?'Enabled · 10% or $5 minimum once':'Off'}</strong></p>
    <details><summary>Review the 10% or $5 minimum fee terms</summary><ul>
-    <li>The business pays the fee from its Stripe proceeds. It is not added to the client’s price. Stripe processing costs remain separate.</li>
+    <li>The business pays the fee from its Stripe proceeds for card payments. Authorized cash commissions are billed monthly to the business billing card. It is not added to the client’s price. Stripe processing costs remain separate.</li>
     <li>Booking and membership eligibility are tracked separately for each verified client identity at each business, across your own links, referrals and the marketplace.</li>
     <li>Booking fees use the eligible service amount after discounts; separately recorded products, taxes and tips are excluded. Membership fees use the first paid membership amount after discounts.</li>
     <li>Repeat bookings, membership renewals, free or membership-covered sessions carry no new commission. Existing booking clients at activation and previously paid memberships are protected from retrospective fees.</li>
@@ -32,5 +33,6 @@ export default function BusinessCommissions(){
    {data.totals.map(t=><p key={t.kind}>{t.kind==='booking'?'Bookings':'Memberships'}: {t.paid_count} paid · collected {money(t.collected_cents)} · refunded {money(t.refunded_cents)} · recorded net {money(t.collected_cents-t.refunded_cents)}</p>)}
    {!data.recent.length?<p>No commission checkouts yet.</p>:<div style={{overflowX:'auto'}}><table><thead><tr><th>Type / created</th><th>Status</th><th>Payment</th><th>Fee / refunded</th><th>Action</th></tr></thead><tbody>{data.recent.map(r=><tr key={r.id}><td>{r.kind}<br/>{new Date(r.created_at).toLocaleString('en-US',{timeZone:'America/New_York'})} Eastern</td><td>{r.status==='reserved'?'Awaiting payment':r.status}</td><td>{money(r.gross_cents)}</td><td>{money(r.fee_cents)} / {money(r.refunded_fee_cents)}</td><td>{r.status==='reserved'&&<button type="button" className="outline" disabled={busy} onClick={()=>void post({action:'expire',id:r.id})}>Expire unpaid checkout</button>}</td></tr>)}</tbody></table></div>}
   </>}
+  <CashCommissionBilling/>
  </section>;
 }

@@ -1,3 +1,15 @@
+# v1.3.196 release handoff — Monthly cash commission billing and concise benefit tables
+
+Release source: v1.3.196.
+
+Adds opt-in monthly automatic billing for eligible cash booking and manually confirmed offline initial membership commissions. Preserves the existing 10% or $5 minimum fee, first-booking / first-membership separation, legacy-client exclusions, and administrator activation. The owner must sign a separate versioned authorization and verify a billing card in Stripe Checkout; merchant connection or package subscription is never treated as cash-billing consent. Support administrators cannot sign for owners. No business is automatically enrolled or retrospectively charged.
+
+A durable monthly ledger and invoices provide itemized owner statements, payment-failure status and a Pay outstanding balance link to the same verified Stripe invoice. Calendar months use America/New_York; a five-minute worker catches up after downtime. Invoice totals, ownership and provider payment states are verified; idempotent provider keys and frozen statements protect retry paths. Balances below $0.50 carry forward. Stripe invoice automatic collection/retries apply after finalization. Cash service sales under enabled conditions require a verified client ID; appointment payments also support linked booking settlement; retail and taxes are excluded. Offline initial membership payments accrue before credits activate; renewals do not create another commission. Accounting survives operational client deletion.
+
+Business benefits and pricing now use a concise comparison table with read-only inclusion checkboxes, real plan limits and individual expandable explanations, including payment integration across bookings, services and memberships. Existing package prices and limits are unchanged.
+
+Migration 081 is additive and opt-in; existing card commissions retain their collection method. Local validation, final GitHub checks and production rollout are in progress. Staging runtime deployment remains blocked by Render billing suspension. Real card authorization, charges and outgoing invoices are not generated for QA; these require an actual owner agreement. Billing UI: Business settings → Payment setup, or /settings/commissions. Platform invoice events reuse /api/platform-billing/webhook and STRIPE_PLATFORM_WEBHOOK_SECRET; worker polling also reconciles saved setup sessions and invoices. Automatic Stripe reminder/retry email settings remain controlled in Stripe.
+
 ## Release source: v1.3.195 — Concise booking client ID instructions
 
 Deployment verification pending. The booking client ID box uses two short instructions and omits ID-generation details.

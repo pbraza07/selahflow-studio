@@ -26,6 +26,7 @@ test('owners can record terms acceptance with both commissions off for later ini
  const settings={bookingEnabled:false,membershipEnabled:false,acceptedAt:null,ratePercent:10,recent:[],totals:[],stripeSetup:{ready:false}};
  compiled=compiled.replace(/import \{[^\n]+\} from "react\/jsx-runtime";/,"const _jsx=(type,props)=>({type,props}),_jsxs=_jsx,_Fragment='fragment';")
   .replace(/import \{ useEffect, useState \} from 'react';/,`let index=0;const useEffect=()=>{},useState=initial=>{const i=index++;return [i===0?${JSON.stringify(settings)}:i===1?true:initial,()=>{}];};`);
+ compiled=compiled.replace(/import CashCommissionBilling[^\n]+;/,"const CashCommissionBilling=()=>null;");
  const {default:OwnerControls}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
  const inputs=[],buttons=[];function visit(n){if(!n||typeof n!=='object')return;if(n.type==='input')inputs.push(n);if(n.type==='button')buttons.push(n);for(const c of [n.props?.children].flat(Infinity))visit(c);}visit(OwnerControls());
  assert.equal(inputs.length,1,'terms acceptance is available while both commission conditions are off');assert.equal(inputs[0].props.checked,true);
