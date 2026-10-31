@@ -273,8 +273,8 @@ test('owner UI offers date/service/staff/time editor with an occurrence selector
  const owner=await readFile(new URL('../app/studio/owner-dashboard.tsx',import.meta.url),'utf8');
  const route=await readFile(new URL('../app/api/studio/sessions/reschedule/route.ts',import.meta.url),'utf8');
  const renderer=await readFile(new URL('../server/session-recurrence.mjs',import.meta.url),'utf8');
- assert.match(owner,/Reschedule · keep customers/);
- assert.match(owner,/Which recurring session should change/);
+ assert.match(owner,/sf-reschedule-dialog/);
+ assert.match(owner,/Only this occurrence changes/);
  assert.match(owner,/Save new session schedule · keep customers/);
  assert.match(owner,/\/api\/studio\/sessions\/reschedule/);
  assert.match(owner,/sessionInstances\(config,d,staffId\)/);

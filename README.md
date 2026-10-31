@@ -1,3 +1,7 @@
+## Release source: v1.3.188 — Owner usability and responsive layout
+
+Deployment verification pending.
+
 ## Release source: v1.3.187 — Owner session-full checkbox
 
 Deployment verification pending.

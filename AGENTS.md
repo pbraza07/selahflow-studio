@@ -1,3 +1,15 @@
+# v1.3.188 release handoff — Clearer owner navigation and responsive layouts
+
+Owner dashboards have four plain-language daily shortcuts. Settings categories follow business setup order and expose a labelled category selector on phones instead of a horizontally scrolling category strip. The prominent reschedule action is removed from bookable-session setup cards. Existing safe schedule changes are available from Schedule → click a dated session → Reschedule session, in a separate focused dialog that preserves existing customers and pending requests. The dialog changes only the selected occurrence and does not save unrelated setup drafts.
+
+Business navigation reserves a complete row for identity on smaller screens and wraps ordinary business-name words together. Header actions wrap on a separate row. Shared form styles contain date/time fields and nested grids, stack narrow form rows, wrap toolbars and move the mobile settings save bar into normal flow to avoid covering fields. Team workspaces expose Share page and public-page preview in their toolbar on every tab; links use the public profile slug, never private workspace URLs or client data, with native share and clipboard/manual-copy fallbacks.
+
+Staging/production deployment verification pending. Local browser file fixtures are unavailable under the cloud browser URL policy; isolated component rendering and stylesheet checks cover responsive breakpoints, and deployed public pages will be checked in the browser. No real settings, appointments, client records, photos or outgoing messages are changed for QA.
+
+# v1.3.187 verified LIVE — Owner session-full checkbox
+
+PR #119 merged as e59c6d30ed32bbae317bcf94b67e25e4138c5e94. Staging 90a1250951c2ba367f414f7fa7475ff2f8119631 / dep-dbikvoh42hec73apoong LIVE at 2026-10-31T02:27:21Z; production dep-dbil47p5efls73d6av10 LIVE at 02:29:24Z. Both deployed application trees equal 1917aedb797757dbfeb06503143312da0baa9298. All 533 final local and staging tests, TypeScript, builds and GitHub validation passed. Both environments passed versioned health, public routes and protected endpoint checks. Staging additionally rejected unauthenticated, public and foreign-origin session-full actions. Checked startup error windows were empty. No real business session was toggled for QA.
+
 # v1.3.187 release handoff — Owner session-full control
 
 Owners can click a bookable calendar session and check “Session full” in its private roster. The change saves immediately for that occurrence, keeps the session visible, and blocks new public, owner and team bookings plus pending-request acceptance. Unchecking restores actual remaining capacity. Existing attendees, payments, capacity and other recurring dates are preserved. The server scopes writes to the authenticated active owner and serializes them with booking confirmations using the schedule lock. Stale general settings drafts cannot overwrite closure state. No migration is required.
