@@ -1,4 +1,6 @@
-# v1.3.190 release handoff — Public team sharing and workspace booking approvals
+# v1.3.190 release handoff — Package payment fix, team sharing and booking approvals
+
+Package subscription Checkout explicitly sets managed_payments[enabled]=false to retain SelahFlow LLC's standard Stripe Billing model when the account defaults to Managed Payments. This fixes the missing-product-tax-code rejection without inventing a tax classification, changing account-wide settings or enabling automatic tax. The versioned idempotency namespace allows retry after the previous failed request. Existing recorded open sessions are reused, and paid invoice verification, signatures, reviewer approval, pricing and first-customer commissions are preserved. Tax registration/configuration remains separate.
 
 Public team profiles have a top Share page button using native sharing with clipboard/manual-copy fallbacks. It shares only the public pathname, without query parameters or private workspace URLs. The private workspace bell moves out of the business header into a clearly labelled Bookings & approvals panel below the welcome area and before the workspace tabs. Pending request and unread confirmation counts refresh automatically. Expanding the panel shows full-width booking details, submitted answers, capacity, edit controls, Approve and add to calendar / Decline actions, then assigned confirmations and a calendar shortcut. The panel stays in normal document flow on phones.
 

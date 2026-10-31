@@ -1,6 +1,6 @@
-## Release source: v1.3.190 — Team public sharing and workspace booking approvals
+## Release source: v1.3.190 — Package payment fix, team sharing and workspace approvals
 
-Deployment verification pending. Public profiles gain a top Share page button; private workspaces gain an in-page booking review panel under the welcome area. Reviewer permissions remain controlled by the business owner.
+Deployment verification pending. Package checkout explicitly uses standard Stripe Billing to avoid the account-default Managed Payments tax-code error. Public profiles gain a top Share page button; private workspaces gain an in-page booking review panel under the welcome area. Reviewer permissions remain controlled by the business owner.
 
 ## Release source: v1.3.189 — Account choices and modern business agreements
 
