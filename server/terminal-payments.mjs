@@ -1,6 +1,6 @@
 import {stripeApi,paymentConfigured} from './membership-payments.mjs';
 import {isStaging} from './staging-safety.mjs';
-import {assertTestPayment,applyBookingPayment,recordVerifiedBookingPayment} from './stripe-checkout.mjs';
+import {assertTestPayment,applyBookingPayment,recordVerifiedBookingPayment,checkoutUrl} from './stripe-checkout.mjs';
 import {reserveCommission,attachCommissionIntent,settleTerminalCommission} from './first-customer-commissions.mjs';
 import {bookingServicePaymentOptions} from './service-payment-options.mjs';
 import {assertBookingWaiver} from './participation-waivers.mjs';
@@ -108,9 +108,21 @@ export async function applyTerminalPayment(db,businessId,account,intent,api=stri
 export async function checkTerminalPayment(pool,scope,{cancel=false}={},api=stripeApi){
  const db=await pool.connect();try{
   await db.query('BEGIN');await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[scope.business_id+':payment:'+scope.booking_id]);
+  const appointment=(await db.query("SELECT a.data FROM appointments a JOIN businesses b ON b.owner_id=a.owner AND b.status='active' WHERE a.id=$1 AND b.id=$2 FOR UPDATE OF a",[scope.booking_id,scope.business_id])).rows[0];if(!appointment)throw Error('Appointment not found in this business.');
+  if(obj(appointment.data).paymentStatus==='paid'){await db.query('COMMIT');return {paid:true,provider:obj(appointment.data).paymentProvider||'recorded'};}
   const p=(await db.query('SELECT * FROM booking_payments WHERE booking_id=$1 AND business_id=$2 FOR UPDATE',[scope.booking_id,scope.business_id])).rows[0];
   if(p?.status==='paid'){await db.query('COMMIT');return {paid:true};}
-  if(!p?.terminal_payment_intent_id){await db.query('COMMIT');return {paid:false,status:'not_started'};}
+  if(!p?.terminal_payment_intent_id){
+   if(p?.stripe_checkout_session_id){
+    const path='checkout/sessions/'+p.stripe_checkout_session_id;let session=await api(path,{method:'GET',account:p.stripe_account_id});assertTestPayment(session);
+    if(session.payment_status==='paid'){if(!await applyBookingPayment(db,scope.business_id,p.stripe_account_id,session,api))throw Error('Payment needs reconciliation. Do not charge again.');await db.query('COMMIT');return {paid:true,provider:'stripe'};}
+    if(cancel&&session.status==='open'){session=await api(path+'/expire',{account:p.stripe_account_id,idempotencyKey:'owner-checkout-expire-'+session.id});assertTestPayment(session);if(session.status!=='expired')throw Error('Stripe did not confirm checkout expiry.');}
+    if(cancel&&!['open','expired'].includes(session.status))throw Error('Payment is processing. Do not collect again.');
+    if(session.status==='expired'){await db.query("UPDATE booking_payments SET status='expired',updated_at=now() WHERE booking_id=$1 AND business_id=$2 AND status='pending'",[scope.booking_id,scope.business_id]);await db.query("UPDATE first_customer_commissions SET status='expired',updated_at=now() WHERE business_id=$1 AND stripe_checkout_session_id=$2 AND status='reserved'",[scope.business_id,session.id]);}
+    const result={paid:false,status:session.status==='open'?'checkout_open':session.status==='expired'?'expired':'processing',...(session.status==='open'?{checkoutUrl:checkoutUrl(session)}:{})};await db.query('COMMIT');return result;
+   }
+   await db.query('COMMIT');return {paid:false,status:'not_started'};
+  }
   const path='payment_intents/'+p.terminal_payment_intent_id;let pi=await api(path+'?expand[]=latest_charge',{method:'GET',account:p.stripe_account_id});assertTestPayment(pi);
   if(cancel&&['requires_payment_method','requires_confirmation','requires_capture'].includes(pi.status)){pi=await api(path+'/cancel',{account:p.stripe_account_id,idempotencyKey:'terminal-cancel-'+pi.id});assertTestPayment(pi);}
   if(cancel&&!['canceled','succeeded'].includes(pi.status))throw Error('Payment is processing. Check status before cancellation or another charge.');

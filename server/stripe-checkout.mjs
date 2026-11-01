@@ -32,24 +32,36 @@ export async function readyMerchant(db,businessId,api=stripeApi){
 
 // Server prices come from the saved booking, never the payment button's payload.
 export async function startBookingCheckout(pool,{slug,bookingId,token,origin},api=stripeApi){
- if(!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(slug||'')||!/^[-a-f0-9]{36}$/i.test(bookingId||'')||!/^[a-f0-9]{64}$/i.test(token||''))throw Error('Invalid booking payment reference.');
- const pending=await pendingDirectBooking(pool,{slug,bookingId,token},{allowApproval:true});
- if(pending&&await sessionIsFull(pool,{owner:pending.row.owner_id,config:pending.config,date:pending.row.date,staff:pending.row.staff_id,services:pending.services,start:pending.row.start_minute}))throw Error(SESSION_FULL_MESSAGE);
- await confirmDirectBookingForPayment(pool,{slug,bookingId,token,origin});
+ return bookingCheckout(pool,{slug,bookingId,token,origin},api);
+}
+/** Owner-only browser collection is separate from the token-protected public entry point. */
+export async function startOwnerOnsiteCheckout(pool,{owner,bookingId,origin},api=stripeApi){
+ const b=(await pool.query("SELECT slug FROM businesses WHERE owner_id=$1 AND status='active'",[owner])).rows[0];if(!b)throw Error('Business unavailable.');
+ return bookingCheckout(pool,{slug:b.slug,bookingId,origin},api,owner);
+}
+async function bookingCheckout(pool,{slug,bookingId,token,origin},api,onsiteOwner=null){
+ if(!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(slug||'')||!/^[-a-f0-9]{36}$/i.test(bookingId||'')||(!onsiteOwner&&!/^[a-f0-9]{64}$/i.test(token||'')))throw Error('Invalid booking payment reference.');
+ if(!onsiteOwner){
+  const pending=await pendingDirectBooking(pool,{slug,bookingId,token},{allowApproval:true});
+  if(pending&&await sessionIsFull(pool,{owner:pending.row.owner_id,config:pending.config,date:pending.row.date,staff:pending.row.staff_id,services:pending.services,start:pending.row.start_minute}))throw Error(SESSION_FULL_MESSAGE);
+  await confirmDirectBookingForPayment(pool,{slug,bookingId,token,origin});
+ }
  const db=await pool.connect();
  try{
   await db.query('BEGIN');
   const business=(await db.query("SELECT id,owner_id,name FROM businesses WHERE slug=$1 AND status='active'",[slug])).rows[0];
   if(!business)throw Error('Business unavailable.');
-  const access=(await db.query('SELECT 1 FROM customer_booking_access WHERE owner_id=$1 AND booking_id=$2 AND token_hash=$3 AND expires_at>now()',[business.owner_id,bookingId,tokenHash(token)])).rowCount;
+  if(onsiteOwner&&business.owner_id!==onsiteOwner)throw Error('Business unavailable.');
+  const access=onsiteOwner?true:(await db.query('SELECT 1 FROM customer_booking_access WHERE owner_id=$1 AND booking_id=$2 AND token_hash=$3 AND expires_at>now()',[business.owner_id,bookingId,tokenHash(token)])).rowCount;
   if(!access)throw Error('Invalid or expired booking payment link.');
   const request=(await db.query('SELECT status,appointment_id FROM booking_requests WHERE id=$1 AND business_id=$2',[bookingId,business.id])).rows[0];
   if(request&&request.status!=='accepted')throw Error('The business must approve this booking before you can pay.');
   const actualId=request?.appointment_id||bookingId;
   await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[business.id+':payment:'+actualId]);
   const appointment=(await db.query('SELECT id,data,status FROM appointments WHERE owner=$1 AND id=$2 FOR UPDATE',[business.owner_id,actualId])).rows[0];
-  if(!appointment||!['Confirmed','Checked in','Checked-in','Completed','No-show'].includes(appointment.status))throw Error('This booking is not available for payment.');
+  if(!appointment||!(onsiteOwner?['Confirmed','Scheduled','Checked in','Checked-in','Completed','No-show']:['Confirmed','Checked in','Checked-in','Completed','No-show']).includes(appointment.status))throw Error('This booking is not available for payment.');
   const data=typeof appointment.data==='string'?JSON.parse(appointment.data):appointment.data;
+  if(onsiteOwner&&data.bookingRequestId){const review=(await db.query('SELECT status,appointment_id FROM booking_requests WHERE id=$1 AND business_id=$2',[data.bookingRequestId,business.id])).rows[0];if(!review||review.status!=='accepted'||review.appointment_id!==actualId)throw Error('The business must approve this booking before you can pay.');}
   const settings=(await db.query('SELECT data FROM settings WHERE owner=$1',[business.owner_id])).rows[0];
   const config=typeof settings?.data==='string'?JSON.parse(settings.data):settings?.data||{};
   await assertBookingWaiver(db,{owner:business.owner_id,config,serviceIds:data.serviceIds||[],memberNumber:data.memberNumber});
@@ -61,7 +73,8 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
   let record=(await db.query('SELECT * FROM booking_payments WHERE booking_id=$1 AND business_id=$2 FOR UPDATE',[actualId,business.id])).rows[0];
   if(record?.status==='paid'){await queueBookingPaid(db,business.id,actualId);await db.query('COMMIT');return {paid:true};}
   if(record&&record.amount_cents!==cents)throw Error('The booking price changed. Contact the business before paying.');
-  if(!bookingServicePaymentOptions(config,data).online)throw Error('Pay onsite at the business for this service. Online payment is not enabled.');
+  const options=bookingServicePaymentOptions(config,data);
+  if(onsiteOwner?!options.onsite:!options.online)throw Error(onsiteOwner?'Pay on Site is not enabled for this service.':'Pay onsite at the business for this service. Online payment is not enabled.');
   const account=await readyMerchant(db,business.id,api);
   if(record&&record.stripe_account_id!==account)throw Error('The payment account changed. Contact the business before paying.');
   if(record?.terminal_payment_intent_id){
@@ -85,7 +98,7 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
   const eligible=Math.min(record.amount_cents,record.lines.filter(line=>line.type==='service').reduce((n,line)=>n+Math.round(Number(line.price)*100)*line.qty,0));
   const commission=await reserveCommission(db,{businessId:business.id,kind:'booking',memberNumber:data.memberNumber,sourceId:actualId,account,grossCents:cents,eligibleCents:eligible},api);
   const session=await api('checkout/sessions',{account,idempotencyKey:'booking-'+actualId+'-'+(record.stripe_checkout_session_id||record.terminal_payment_intent_id||'initial'),params:{
-   mode:'payment',...(commission?{'payment_intent_data[application_fee_amount]':commission.fee_cents,'metadata[commission_claim_id]':commission.id}:{}),'allowed_payment_method_types[0]':'card',client_reference_id:actualId,customer_email:data.email||undefined,
+   mode:'payment',...(onsiteOwner?{'managed_payments[enabled]':false}:{}),...(commission?{'payment_intent_data[application_fee_amount]':commission.fee_cents,'metadata[commission_claim_id]':commission.id}:{}),'allowed_payment_method_types[0]':'card',client_reference_id:actualId,customer_email:data.email||undefined,
    'line_items[0][quantity]':'1','line_items[0][price_data][currency]':'usd',
    'line_items[0][price_data][unit_amount]':String(record.amount_cents),
    'line_items[0][price_data][product_data][description]':data.coupon?'Includes coupon '+data.coupon.code+' · discount $'+(data.coupon.discountCents/100).toFixed(2):undefined,
@@ -93,7 +106,7 @@ export async function startBookingCheckout(pool,{slug,bookingId,token,origin},ap
    'metadata[booking_id]':actualId,'metadata[selahflow_business_id]':business.id,
    'payment_intent_data[metadata][booking_id]':actualId,
    success_url:origin+'/payment/'+slug+'?session_id={CHECKOUT_SESSION_ID}',
-   cancel_url:origin+'/payment/'+slug+'?booking_id='+encodeURIComponent(bookingId)+'&cancelled=1'
+   cancel_url:onsiteOwner?origin+'/studio/'+slug:origin+'/payment/'+slug+'?booking_id='+encodeURIComponent(bookingId)+'&cancelled=1'
   }});
   assertTestPayment(session);const url=checkoutUrl(session);
   await attachCommissionSession(db,commission,session);
