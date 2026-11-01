@@ -1,3 +1,4 @@
+import {bookingServicePaymentOptions} from '../server/service-payment-options.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PGlite} from '@electric-sql/pglite';
@@ -58,7 +59,7 @@ test('team workspace expiry and sign-out replace the protected history entry so 
  const replacements=[],effects=[];globalThis.location={replace:url=>replacements.push(url),assign:()=>assert.fail('Protected team navigation must replace history')};globalThis.fetch=async()=>({status:401,json:async()=>({error:'Sign in'})});
  const hooks={useState:initial=>[initial,()=>{}],useEffect:fn=>effects.push(fn)};
  const source=ts.transpileModule(await read('app/team/workspace/page.tsx'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText,exp={};
- new Function('require','exports',source)(id=>id==='react'?hooks:id.includes('components/')?{__esModule:true,default:()=>null,teamRequest:async()=>({})}:require(id),exp);
+ new Function('require','exports',source)(id=>id.endsWith('service-payment-options.mjs')?{bookingServicePaymentOptions}:id==='react'?hooks:id.includes('components/')?{__esModule:true,default:()=>null,teamRequest:async()=>({})}:require(id),exp);
  const tree=exp.default(),nodes=(n,out=[])=>{if(Array.isArray(n))n.forEach(x=>nodes(x,out));else if(n?.props){out.push(n);nodes(n.props.children,out);}return out;},tick=()=>new Promise(r=>setImmediate(r));
  effects[0]();await tick();assert.deepEqual(replacements,['/team/login']);nodes(tree).find(n=>n.type==='button'&&n.props.children==='Sign out').props.onClick();await tick();assert.deepEqual(replacements,['/team/login','/team/login']);
 });

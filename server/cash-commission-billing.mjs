@@ -10,6 +10,23 @@ export const cashBillingReady=()=>!!process.env.STRIPE_SECRET_KEY&&!!process.env
 const apiDefault=(path,options={})=>stripeApi(path,{...options,apiVersion:'2026-09-30.endive'});
 function safeStripeUrl(value,hosts){if(!value)return null;const u=new URL(value);if(u.protocol!=='https:'||!hosts.includes(u.hostname)||u.username||u.password)throw Error('Unsafe Stripe invoice URL.');return u.href;}
 export function easternMonth(now=new Date()){const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit'}).formatToParts(now);return parts.find(p=>p.type==='year').value+'-'+parts.find(p=>p.type==='month').value;}
+export function easternDate(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
+export function cashCollectionDate(period,day=0){
+ if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)||!Number.isInteger(day)||day<0||day>31)throw Error('Invalid collection schedule.');
+ const [year,month]=period.split('-').map(Number),last=new Date(Date.UTC(year,month+1,0)).getUTCDate();
+ return new Date(Date.UTC(year,month,day===0?1:Math.min(day,last))).toISOString().slice(0,10);
+}
+export async function saveCashCollectionSchedule(pool,{businessId,owner,input}){
+ const day=input.collectionDay;if(!Number.isInteger(day)||day<0||day>31||input.accepted!==true)throw Error('Choose a collection date and agree to automatic collection on that date.');
+ const snapshot='I authorize automatic collection of completed calendar-month cash commission statements '+(day===0?'after month end, from the first of the next month.':'on day '+day+' of the following month (the last day for shorter months).')+' Existing prepared statements and failed-payment retries keep their original schedule.';
+ const db=await pool.connect();try{await db.query('BEGIN');
+ const p=(await db.query("SELECT p.authorized_at,p.stripe_payment_method_id FROM commission_billing_profiles p JOIN businesses b ON b.id=p.business_id WHERE p.business_id=$1 AND b.owner_id=$2 AND b.status='active' FOR UPDATE OF p",[businessId,owner])).rows[0];
+ if(!p?.authorized_at||!p?.stripe_payment_method_id)throw Error('Authorize and verify a billing card before choosing a collection date.');
+ await db.query('INSERT INTO commission_billing_schedule_changes(id,business_id,owner_id,collection_day,snapshot) VALUES($1,$2,$3,$4,$5)',[randomUUID(),businessId,owner,day,snapshot]);
+ await db.query('UPDATE commission_billing_profiles SET collection_day=$1,updated_at=now() WHERE business_id=$2',[day,businessId]);
+ await db.query('COMMIT');return cashBillingInfo(pool,businessId);
+ }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
+}
 // Caller owns the payment transaction. Existing identity locks protect cash vs card races.
 export async function accrueCashCommission(db,args,api){
  const period=(await db.query("SELECT to_char(clock_timestamp() AT TIME ZONE 'America/New_York','YYYY-MM') AS period")).rows[0].period;
@@ -18,13 +35,14 @@ export async function accrueCashCommission(db,args,api){
  await db.query("UPDATE first_customer_commissions SET collection_method='cash',status='accrued',earned_at=clock_timestamp(),stripe_account_id='cash',updated_at=now() WHERE id=$1 AND business_id=$2 AND status='reserved'",[claim.id,args.businessId]);return claim;
 }
 export async function cashBillingInfo(db,businessId){
- const p=(await db.query('SELECT p.authorized_at,p.stripe_payment_method_id,c.signature_name,c.accepted_at,c.terms_version FROM commission_billing_profiles p LEFT JOIN commission_billing_consents c ON c.id=p.active_consent_id WHERE p.business_id=$1',[businessId])).rows[0];
- const pending=(await db.query("SELECT COALESCE(sum(fee_cents),0)::bigint AS cents FROM first_customer_commissions WHERE business_id=$1 AND collection_method='cash' AND status='accrued'",[businessId])).rows[0];
- const statements=(await db.query('SELECT id,period,amount_cents,status,paid_at,created_at FROM commission_monthly_statements WHERE business_id=$1 ORDER BY period DESC LIMIT 36',[businessId])).rows;
- return {configured:cashBillingReady(),authorized:!!p?.authorized_at&&!!p?.stripe_payment_method_id&&p?.terms_version===CASH_BILLING_TERMS_VERSION,authorizedAt:p?.authorized_at||null,signatureName:p?.signature_name||null,termsVersion:CASH_BILLING_TERMS_VERSION,terms:CASH_BILLING_TERMS,unbilledCents:Number(pending?.cents||0),statements};
+ const p=(await db.query('SELECT p.collection_day,p.authorized_at,p.stripe_payment_method_id,c.signature_name,c.accepted_at,c.terms_version FROM commission_billing_profiles p LEFT JOIN commission_billing_consents c ON c.id=p.active_consent_id WHERE p.business_id=$1',[businessId])).rows[0];
+ const pending=(await db.query("SELECT COALESCE(sum(fee_cents),0)::bigint AS cents,COALESCE(sum(fee_cents) FILTER (WHERE kind='booking'),0)::bigint AS booking_cents,COALESCE(sum(fee_cents) FILTER (WHERE kind='membership'),0)::bigint AS membership_cents FROM first_customer_commissions WHERE business_id=$1 AND collection_method='cash' AND status='accrued'",[businessId])).rows[0];
+ const statements=(await db.query('SELECT id,period,amount_cents,status,paid_at,created_at,collection_on::text FROM commission_monthly_statements WHERE business_id=$1 ORDER BY period DESC LIMIT 36',[businessId])).rows;
+ const items=(await db.query("SELECT id,kind,source_id,gross_cents,eligible_cents,fee_cents,earned_at FROM first_customer_commissions WHERE business_id=$1 AND collection_method='cash' AND status='accrued' ORDER BY earned_at DESC,id LIMIT 200",[businessId])).rows;
+ return {collectionDay:p?.collection_day??0,unbilledItems:items,configured:cashBillingReady(),authorized:!!p?.authorized_at&&!!p?.stripe_payment_method_id&&p?.terms_version===CASH_BILLING_TERMS_VERSION,authorizedAt:p?.authorized_at||null,signatureName:p?.signature_name||null,termsVersion:CASH_BILLING_TERMS_VERSION,terms:CASH_BILLING_TERMS,unbilledCents:Number(pending?.cents||0),unbilledBookingCents:Number(pending?.booking_cents||0),unbilledMembershipCents:Number(pending?.membership_cents||0),statements};
 }
 export async function statementDetail(db,businessId,id){
- const s=(await db.query('SELECT id,period,amount_cents,status,paid_at,created_at FROM commission_monthly_statements WHERE id=$1 AND business_id=$2',[id,businessId])).rows[0];if(!s)throw Error('Statement not found.');
+ const s=(await db.query('SELECT id,period,amount_cents,status,paid_at,created_at,collection_on::text FROM commission_monthly_statements WHERE id=$1 AND business_id=$2',[id,businessId])).rows[0];if(!s)throw Error('Statement not found.');
  const items=(await db.query('SELECT id,kind,source_id,gross_cents,eligible_cents,fee_cents,earned_at FROM first_customer_commissions WHERE business_id=$1 AND billing_statement_id=$2 ORDER BY earned_at,id',[businessId,id])).rows;return {...s,items};
 }
 export async function startCashBillingSetup(pool,{businessId,owner,input,origin},api=apiDefault){
@@ -80,10 +98,10 @@ export async function cashInvoicePaymentLink(db,businessId,id,api=apiDefault){
 export async function prepareCashStatement(pool,businessId,period){
  const db=await pool.connect();try{await db.query('BEGIN');await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[businessId+':cash-statement:'+period]);
  let s=(await db.query('SELECT * FROM commission_monthly_statements WHERE business_id=$1 AND period=$2',[businessId,period])).rows[0];
- if(!s){const p=(await db.query('SELECT stripe_customer_id FROM commission_billing_profiles WHERE business_id=$1 AND authorized_at IS NOT NULL',[businessId])).rows[0];if(!p){await db.query('COMMIT');return null;}
+ if(!s){const p=(await db.query('SELECT stripe_customer_id,collection_day FROM commission_billing_profiles WHERE business_id=$1 AND authorized_at IS NOT NULL FOR SHARE',[businessId])).rows[0];if(!p){await db.query('COMMIT');return null;}
  const rows=(await db.query("SELECT id,fee_cents FROM first_customer_commissions WHERE business_id=$1 AND collection_method='cash' AND status='accrued' AND billing_statement_id IS NULL AND to_char(earned_at AT TIME ZONE 'America/New_York','YYYY-MM')<=$2 FOR UPDATE",[businessId,period])).rows;
  const amount=rows.reduce((n,r)=>n+r.fee_cents,0);if(amount<50){await db.query('COMMIT');return null;}if(!Number.isSafeInteger(amount)||amount>99999999)throw Error('Commission statement total requires review.');
- s=(await db.query('INSERT INTO commission_monthly_statements(business_id,period,amount_cents,stripe_customer_id) VALUES($1,$2,$3,$4) RETURNING *',[businessId,period,amount,p.stripe_customer_id])).rows[0];
+ s=(await db.query('INSERT INTO commission_monthly_statements(business_id,period,amount_cents,stripe_customer_id,collection_on) VALUES($1,$2,$3,$4,$5) RETURNING *',[businessId,period,amount,p.stripe_customer_id,cashCollectionDate(period,p.collection_day)])).rows[0];
  await db.query("UPDATE first_customer_commissions SET billing_statement_id=$1,status='invoiced',updated_at=now() WHERE business_id=$2 AND id=ANY($3::uuid[])",[s.id,businessId,rows.map(r=>r.id)]);
  }await db.query('COMMIT');return s;
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
@@ -117,7 +135,7 @@ export async function sweepCashBilling(pool,{origin,now=new Date(),api=apiDefaul
  for(const c of pending)try{await reconcileCashSetup(db,c.stripe_setup_session_id,api);}catch{console.warn('Cash commission card verification pending.');}
  const months=(await db.query("SELECT DISTINCT c.business_id,to_char(c.earned_at AT TIME ZONE 'America/New_York','YYYY-MM') AS period FROM first_customer_commissions c WHERE c.collection_method='cash' AND c.status='accrued' AND to_char(c.earned_at AT TIME ZONE 'America/New_York','YYYY-MM')<$1 ORDER BY period,c.business_id LIMIT 100",[easternMonth(now)])).rows;
  for(const m of months)await prepareCashStatement(pool,m.business_id,m.period);
- const statements=(await db.query("SELECT * FROM commission_monthly_statements WHERE status IN ('draft','open','failed') AND (checked_at IS NULL OR checked_at<now()-interval '1 hour') ORDER BY checked_at NULLS FIRST,period LIMIT 100")).rows;
+ const statements=(await db.query("SELECT * FROM commission_monthly_statements WHERE status IN ('draft','open','failed') AND (collection_on IS NULL OR collection_on<=$1::date) AND (checked_at IS NULL OR checked_at<now()-interval '1 hour') ORDER BY checked_at NULLS FIRST,period LIMIT 100",[easternDate(now)])).rows;
  for(const s of statements)try{await issueCashStatement(db,s,origin,api);}catch{console.warn('Cash commission statement needs reconciliation.');}
  }finally{if(locked)await db.query('SELECT pg_advisory_unlock(81371082)');db.release();}
 }
