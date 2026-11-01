@@ -1,3 +1,11 @@
+# v1.3.199 release handoff — Confirm onsite cash and select commission collection date
+
+Owners can confirm cash from Pay on Site and pending offline memberships; team members can confirm received cash for assigned appointments and initial offline memberships of their assigned clients. Saved amounts, business/assignment scope, approval/waiver checks and paid/active-card safeguards are enforced on the server. Confirmers are retained in payment events. Cash recording atomically adds any eligible first-service or first-membership commission to the existing separate ledger; repeats, renewals and membership-covered bookings retain existing exclusions. No card is charged when recording cash.
+
+Payment setup shows recent unbilled cash items and itemized monthly statements, with a Pay outstanding balance action on failed/open invoices. After signing the existing card authorization and verifying a billing card, the actual owner can separately agree to month-end collection (from the first day after the month closes) or day 1–31 of the following month; shorter months clamp to the last day. New statements freeze their collection date; existing prepared statements and retries retain their schedule. Schedule changes have a durable owner authorization snapshot. Calendar periods and due dates use America/New_York. Migration 082 is additive and preserves existing first-of-next-month collection; no existing business is enrolled or charged by migration.
+
+Local/GitHub validation and production rollout pending. No real payment, owner consent, client record or outgoing message is created for QA. Staging remains suspended by Render billing and is not changed.
+
 # v1.3.198 verified LIVE — Onsite payment actions
 
 PR #130 merged as 02940bc0d2b1f6c42f66b169fcc70b25f7c48ec9. Production deploy dep-dbj8dprm8hqs73fifskg is LIVE (2026-11-01T00:27:10.739512Z). Final source 0440db826878dc726c11c5d26c5e98d425832398 passed all 582 tests, TypeScript, production build and native checks (workflow 41256129550; web 124699561446; native 124699561262). Local full tests/type/build also passed. The final test-only Web Push fixture pads an ECDH scalar to its required 32-byte width to remove a random fixture failure; production push validation is unchanged. No migration.

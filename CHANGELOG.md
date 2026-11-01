@@ -1,3 +1,9 @@
+# v1.3.199
+
+- Confirm onsite cash for owners and assigned team members; preserve first-service and first-membership commission eligibility.
+- Show the separate cash commission balance and freeze itemized monthly statement collection on the owner-authorized date.
+- Add migration 082 for collection schedules and consent audit; existing billing and data remain intact.
+
 ## 1.3.198
 
 - Add owner browser card checkout for approved onsite appointments, with saved prices and existing commission/receipt safeguards.
