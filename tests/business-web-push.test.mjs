@@ -5,7 +5,7 @@ import {createECDH,createDecipheriv,createPublicKey,hkdfSync,verify} from 'node:
 import {PGlite} from '@electric-sql/pglite';
 import {allowedPushEndpoint,validPushSubscription,configured,encryptPushPayload,vapidJwt,sendWebPush} from '../server/push-crypto.mjs';
 const read=async p=>readFile(new URL('../'+p,import.meta.url),'utf8');
-const keyPair=()=>{const e=createECDH('prime256v1');const p=e.generateKeys();return {private:e.getPrivateKey().toString('base64url'),public:p.toString('base64url'),ecdh:e};};
+const keyPair=()=>{const e=createECDH('prime256v1');const p=e.generateKeys(),raw=e.getPrivateKey(),scalar=Buffer.alloc(32);raw.copy(scalar,32-raw.length);return {private:scalar.toString('base64url'),public:p.toString('base64url'),ecdh:e};};
 test('v1.3.11 only trusted HTTPS push providers and valid ECDH subscriptions are allowed',()=>{
  for(const ep of [
   'https://fcm.googleapis.com/fcm/send/test',
