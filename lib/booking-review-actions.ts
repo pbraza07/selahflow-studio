@@ -1,16 +1,17 @@
 import {randomUUID} from 'node:crypto';
 import {getPool} from '../server/database.mjs';
 import {confirmBooking} from '../server/booking-approvals.mjs';
+import {assertRequestReviewer} from '../server/booking-review-access.mjs';
 import {today} from './defaults';
 import {notifyCustomerBooking} from '../server/customer-push.mjs';
-export async function reviewPendingRequest(owner:string,id:string,reviewer:string,accepted:boolean,origin:string){
+export async function reviewPendingRequest(owner:string,id:string,reviewer:string,accepted:boolean,origin:string,teamAccountId:string|null=null){
  if(!/^[a-f0-9-]{36}$/i.test(id))throw Error('Invalid booking request.');
  const pool=getPool();
  const row=(await pool.query("SELECT r.id,r.business_id,r.owner_id,r.date,r.staff_id,r.start_minute,r.duration,r.details,r.status,r.reviewer,s.data AS settings_data FROM booking_requests r JOIN settings s ON s.owner=r.owner_id JOIN businesses b ON b.id=r.business_id WHERE r.id=$1 AND r.owner_id=$2 AND b.status='active'",[id,owner])).rows[0];
  if(!row||row.status!=='pending')throw Error('This booking request has already been reviewed.');
- if(reviewer!=='owner'&&row.reviewer!==reviewer)throw Error('This request is assigned to another reviewer.');
+ await assertRequestReviewer(pool,row,reviewer,teamAccountId);
  if(!accepted){
-  const q=await pool.query("UPDATE booking_requests SET status='declined',reviewed_by=$1,reviewed_at=now() WHERE id=$2 AND owner_id=$3 AND status='pending' AND ($1='owner' OR reviewer=$1)",[reviewer,id,owner]);
+  const q=await pool.query("UPDATE booking_requests SET status='declined',reviewed_by=$1,reviewed_at=now() WHERE id=$2 AND owner_id=$3 AND status='pending' AND (($4::text IS NULL AND ($1='owner' OR reviewer=$1)) OR ($4::text IS NOT NULL AND staff_id=$1 AND EXISTS(SELECT 1 FROM team_accounts a JOIN businesses b ON b.id=a.business_id WHERE a.id=$4 AND a.staff_id=$1 AND a.business_id=booking_requests.business_id AND b.owner_id=$3 AND b.status='active' AND a.active=true AND a.must_change_password=false)))",[reviewer,id,owner,teamAccountId]);
   if(!q.rowCount)throw Error('This request has already been reviewed.');
   try{await notifyCustomerBooking(owner,id,'Declined');}catch(error){console.error('Customer decline push delivery failed',error);}
   return {ok:true,status:'declined'};
@@ -30,7 +31,7 @@ export async function reviewPendingRequest(owner:string,id:string,reviewer:strin
  const payload:any={paymentChoice:data.paymentChoice,hostTeamIds:data.hostTeamIds,memberNumber:data.memberNumber||null,firstName:data.firstName,lastName:data.lastName,dateOfBirth:data.dateOfBirth,membershipCovered:data.membershipCovered===true,membershipCreditAllowed:data.membershipCreditAllowed===true,paymentLines:data.paymentLines,coupon:data.coupon||null,customFieldTypes:data.customFieldTypes||{},name:data.customerName,email:data.customerEmail,phone:data.customerPhone,services:services.map((s:{name:string})=>s.name),
   serviceIds:services.map((s:{id:string})=>s.id),price:data.quotedPrice,channel:'Approved online booking',created:new Date().toISOString(),reviewedBy:reviewer,bookingRequestId:id,sessionId:data.sessionId||null,customAnswers:data.customAnswers||{},customFieldLabels:data.customFieldLabels||{},originalSubmission:data.originalSubmission||null,bookingDetailsEditedAt:data.correctedAt||null,policyAccepted:data.policyAccepted===true,policyAcceptedAt:data.policyAcceptedAt||null};
  await confirmBooking({owner,services,staff:row.staff_id,date:row.date,start:row.start_minute,duration:row.duration,
-  buffer:config.buffer,id:appointmentId,data:payload,pendingId:id,expectedReviewer:reviewer,notificationOrigin:origin});
+  buffer:config.buffer,id:appointmentId,data:payload,pendingId:id,expectedReviewer:reviewer,teamAccountId,expectedPending:{details:row.details,staff:row.staff_id,date:row.date,start:row.start_minute,duration:row.duration},notificationOrigin:origin});
  try{await notifyCustomerBooking(owner,id,'Confirmed');}catch(error){console.error('Customer confirmation push delivery failed',error);}
  return {ok:true,status:'accepted',appointmentId};
 }

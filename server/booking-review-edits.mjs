@@ -2,6 +2,7 @@ import {customRegistrationFields} from './registration-questions.mjs';
 import {randomUUID} from 'node:crypto';
 import {getPool} from './database.mjs';
 import {sanitizeBookingAnswers} from './booking-custom-fields.mjs';
+import {assertRequestReviewer} from './booking-review-access.mjs';
 
 export function editableBookingDetails(original,input,fields=[]){
  if(!input||typeof input!=='object'||Array.isArray(input))throw Error('Enter valid booking details.');
@@ -20,17 +21,17 @@ export function editableBookingDetails(original,input,fields=[]){
  return {...original,originalSubmission:original.originalSubmission||{customerName:original.customerName,customerEmail:original.customerEmail,customerPhone:original.customerPhone,customAnswers:original.customAnswers||{}},customerName,customerEmail,customerPhone,customAnswers,
   correctedAt:new Date().toISOString()};
 }
-export async function editPendingRequest(owner,id,reviewer,input){
+export async function editPendingRequest(owner,id,reviewer,input,teamAccountId=null){
  if(!/^[a-f0-9-]{36}$/i.test(id))throw Error('Invalid booking request.');
  const pool=getPool(),client=await pool.connect();
  try{
   await client.query('BEGIN');
   const result=await client.query(
-   "SELECT r.id,r.business_id,r.details,r.reviewer,r.status,s.data AS settings_data FROM booking_requests r JOIN settings s ON s.owner=r.owner_id JOIN businesses b ON b.id=r.business_id WHERE r.id=$1 AND r.owner_id=$2 AND b.status='active' FOR UPDATE OF r",
+   "SELECT r.id,r.owner_id,r.staff_id,r.business_id,r.details,r.reviewer,r.status,s.data AS settings_data FROM booking_requests r JOIN settings s ON s.owner=r.owner_id JOIN businesses b ON b.id=r.business_id WHERE r.id=$1 AND r.owner_id=$2 AND b.status='active' FOR UPDATE OF r",
    [id,owner]);
   const row=result.rows[0];
   if(!row||row.status!=='pending')throw Error('This request is no longer awaiting approval.');
-  if(reviewer!=='owner'&&row.reviewer!==reviewer)throw Error('This request belongs to another reviewer.');
+  await assertRequestReviewer(client,row,reviewer,teamAccountId);
   const settings=JSON.parse(row.settings_data||'{}');
   const original=JSON.parse(row.details||'{}');
   const update=editableBookingDetails(original,input,customRegistrationFields(settings,'booking',original.sessionId||null,original.serviceIds||[]));

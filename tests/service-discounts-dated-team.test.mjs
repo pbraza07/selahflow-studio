@@ -1,3 +1,4 @@
+import {assertRequestReviewer} from '../server/booking-review-access.mjs';
 import {createRequire} from 'node:module';
 import {tokenHash} from '../server/security.mjs';
 import test from 'node:test';
@@ -38,8 +39,8 @@ test('submission and actual owner approval email exact appointment details and c
   await queueBookingReceipt(db,{owner:'owner',bookingId:id,date:'2030-11-01',start:600,duration:60,staff:'coach',data:details,origin,pending:true});
   const sent=[];const send=async(channel,destination,message)=>{sent.push({channel,destination,message});return {status:'submitted',detail:'Synthetic provider acceptance'};};
   await processBookingReceipts(pool,{send});assert.equal(sent.length,1);assert.equal(sent[0].destination,details.customerEmail);assert.match(sent[0].message.text,/Booking request received/);assert.match(sent[0].message.text,/SAVE503/);assert.equal(sent[0].message.actions.some(a=>a.label==='Make Payment'),true);assert.equal(sent[0].message.actions.some(a=>a.label==='Pay on Site'),true);assert.match(sent[0].message.text,/after approval/);
-  globalThis.__serviceReview123={getPool:()=>pool,confirmBooking:o=>confirmBooking({...o,pool}),randomUUID,today:()=>new Date().toISOString().slice(0,10),notifyCustomerBooking:async()=>{}};
-  let source=(await readFile(new URL('../lib/booking-review-actions.ts',import.meta.url),'utf8')).replace(/^import .*;$/gm,'');source='const {getPool,confirmBooking,randomUUID,today,notifyCustomerBooking}=globalThis.__serviceReview123;\n'+source;
+  globalThis.__serviceReview123={assertRequestReviewer,getPool:()=>pool,confirmBooking:o=>confirmBooking({...o,pool}),randomUUID,today:()=>new Date().toISOString().slice(0,10),notifyCustomerBooking:async()=>{}};
+  let source=(await readFile(new URL('../lib/booking-review-actions.ts',import.meta.url),'utf8')).replace(/^import .*;$/gm,'');source='const {assertRequestReviewer,getPool,confirmBooking,randomUUID,today,notifyCustomerBooking}=globalThis.__serviceReview123;\n'+source;
   const review=await import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText).toString('base64'));
   const reviewToken='a'.repeat(64);await db.query("INSERT INTO booking_action_tokens(id,request_id,reviewer,token_hash,expires_at) VALUES($1,$2,'owner',$3,now()+interval '1 day')",[randomUUID(),id,tokenHash(reviewToken)]);
   const routeURL=new URL('../app/api/booking/respond/route.ts',import.meta.url),exports={},nativeRequire=createRequire(routeURL);const routeCode=ts.transpileModule(await readFile(routeURL,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
