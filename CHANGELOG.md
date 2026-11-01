@@ -1,3 +1,9 @@
+## 1.3.198
+
+- Add owner browser card checkout for approved onsite appointments, with saved prices and existing commission/receipt safeguards.
+- Make onsite payment checks reconcile Checkout and Terminal, show progress and clear next steps, and preserve paid/cancelled states.
+- Explain installed-phone requirements instead of silently launching a missing app; permit cash settlement only after verified unpaid checkout expiry.
+
 ## 1.3.197
 
 - Wrap expanded benefit descriptions within the benefit column, overriding inherited table nowrap styling. Also recover card activation and paid statements after an interrupted database write; fees are unchanged.

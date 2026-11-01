@@ -1,3 +1,13 @@
+# v1.3.198 release handoff — Working onsite payment actions and browser card checkout
+
+Fixes the no-action onsite modal: Open SelahFlow Pay was an installed-phone-only URL while the native app has not been distributed; Check payment reported not_started without explaining that no collection existed. Owners can now choose Pay by card in browser to open secure Stripe Checkout for the saved approved appointment, including onsite-only services. The client completes card-not-present checkout; browser NFC / Tap to Pay is not claimed. Native phone launching remains available under explicit installed-app requirements, with desktop/failure guidance. No native signing, distribution or device activation is performed.
+
+The shared Checkout core retains authoritative owner/tenant scope, saved amount, service payment policy, approval/waiver checks, first-customer commissions, open-checkout reuse, processing-payment exclusion and verified receipts. The public entry point still requires a private token and cannot accept an injected owner flag. Browser collection requires an authenticated owner and valid origin. Check payment now checks both Checkout and Terminal, recognizes previously recorded cash, displays progress and a checked time, and reports actionable unpaid/processing/expired states. Only verified unpaid checkout expiry allows subsequent cash settlement; cancelled Terminal and current financial history stay retained. No card charge is created merely by Check payment.
+
+Focused database/API/component tests pass. Full local validation, final GitHub checks and production rollout are pending. No migration is needed; the v1.3.197 monthly cash commission features are preserved. Staging remains suspended by Render billing. No real customer checkout, payment, client record or outgoing message is generated for QA. Physical-phone installation and NFC acceptance remain separate prerequisites.
+
+Release source: v1.3.198.
+
 # v1.3.197 verified LIVE in production — Monthly cash commission billing and concise benefits
 
 PR #128 delivered monthly cash commission billing (merge b2e61092757be5d22d9fdd51be4920fdf524de07); PR #129 finalized description wrapping and recovery after interrupted local verification writes (merge 33d7d4c5ca5a66be927cd9327941a56308ce1524). Production deploy dep-dbj7mhdg1s2s73fn3jq0 is LIVE at 2026-10-31T23:37:14.741321Z. All 572 final-head tests, TypeScript, production build and native checks passed on a48dcbf8ed62c2ff7003d9b7e75844e75cf7c589 (web 124689354673, native 124689354503). Local targeted billing, real membership route, fault-injection, benefits rendering, type and build checks also passed. Migration 081 applied on production at 23:21:41.453975668Z during v1.3.196; v1.3.197 adds no migration.
