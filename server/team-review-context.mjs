@@ -1,8 +1,8 @@
 import {teamIdentity} from './team-portal.mjs';
 import {tokenHash} from './security.mjs';
-// Reviewer rights come from current business settings, never a client-supplied staff ID.
+// Workspace identity comes from the signed-in account; bearer links keep their explicit delegated scope.
 export async function teamReviewContext(pool,req){
- const authorization=req.headers.get('authorization');let link,cfg;
+ const authorization=req.headers.get('authorization');let link,cfg,teamAccountId=null;
  if(authorization!==null){
   const token=authorization.replace(/^Bearer\s+/i,'');
   if(!/^[a-f0-9]{64}$/.test(token))throw Error('ACCESS_DENIED');
@@ -10,9 +10,10 @@ export async function teamReviewContext(pool,req){
   if(!link)throw Error('ACCESS_DENIED');cfg=JSON.parse(link.settings_data||'{}');
  }else{
   const account=await teamIdentity(pool,req);cfg=JSON.parse(account.config);
+  teamAccountId=account.id;
   link={business_id:account.business_id,staff_id:account.staff_id,owner_id:account.owner_id,business_name:account.business_name};
  }
- const canReview=cfg.bookingApprovalEnabled===true&&cfg.bookingApprovalReviewer===link.staff_id&&cfg.staff?.some(s=>s.id===link.staff_id)===true;
+ const canReview=cfg.staff?.some(s=>s.id===link.staff_id)===true&&(teamAccountId!==null||cfg.bookingApprovalEnabled===true&&cfg.bookingApprovalReviewer===link.staff_id);
  if(authorization!==null&&!canReview)throw Error('ACCESS_DENIED');
- return {pool,link,cfg,canReview};
+ return {pool,link,cfg,canReview,teamAccountId};
 }

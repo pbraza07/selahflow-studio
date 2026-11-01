@@ -1,3 +1,9 @@
+# v1.3.200
+
+- Each team workspace can approve, decline or correct bookings assigned to that team member, alongside owner dashboard approvals.
+- Approval permissions are independent of notification routing; legacy delegated links retain their scope.
+- Recheck assignment, account access and reviewed details during atomic calendar approval; preserve prices, waivers, capacity and payment safeguards.
+
 # v1.3.199
 
 - Confirm onsite cash for owners and assigned team members; preserve first-service and first-membership commission eligibility.

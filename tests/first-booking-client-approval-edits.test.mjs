@@ -92,7 +92,7 @@ test('approval editing respects owner/team authorization and audit records',asyn
  const files=await Promise.all(paths.map(f=>readFile(new URL(f,base),'utf8')));
  assert.match(files[0],/FOR UPDATE OF r/);
  assert.match(files[0],/INSERT INTO booking_request_edits/);
- assert.match(files[0],/row\.reviewer!==reviewer/);
+ assert.match(files[0],/assertRequestReviewer\(client,row,reviewer,teamAccountId\)/);
  assert.match(files[1],/editPendingRequest\(owner/);
  assert.match(files[2],/editPendingRequest\(link\.owner_id/);
  assert.match(files[3],/Edit booking details/);

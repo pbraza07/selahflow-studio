@@ -67,7 +67,8 @@ test('approval and theme integration keep occupancy mandatory and service legend
  assert.match(review,/booking request/);
  assert.match(ownerAPI,/owner=\$1/);
  assert.match(ownerAPI,/sessionReviewSummary/);
- assert.match(teamAPI,/business_id=\$1 AND reviewer=\$2/);
+ assert.match(teamAPI,/business_id=\$1 AND \(\(\$3::boolean AND staff_id=\$2/);
+ assert.match(teamAPI,/NOT \$3::boolean AND reviewer=\$2/);
  assert.match(customer,/sf-slot-count/);
  assert.match(css,/\.slot-grid button \.sf-slot-count.*color:inherit!important/);
 });
