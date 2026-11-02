@@ -6,6 +6,7 @@ import PageShortcuts from "./components/page-shortcuts";
 import {isStaging} from '../server/staging-safety.mjs';
 
 export const metadata: Metadata = {
+  verification: { google: "4rvXDWSBPDue9k4RNlmgn06ptHQeUG54aiYZ03NRgp4" },
   ...(isStaging()?{robots:{index:false,follow:false}}:{}),
   title: "SelahFlow | Smart booking & AI receptionist.",
   description: "Your bookings flow. You breathe. Smart booking & AI receptionist.",
