@@ -69,8 +69,33 @@ export function financialDate(raw,timezone='America/New_York'){
  if(!raw)return '';const text=String(raw);if(/^\d{4}-\d{2}-\d{2}$/.test(text))return text;const d=new Date(text);if(Number.isNaN(d.valueOf()))return '';
  try{return new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(d);}catch{return financialDate(raw,'America/New_York');}
 }
-export function financialRowsForRange(rows,range,date,timezone='America/New_York'){
- return rows.filter(r=>range==='All time'||(range==='Today'?financialDate(r.date,timezone)===date:financialDate(r.date,timezone).slice(0,7)===date.slice(0,7)));
+export function financialPeriodBounds(range,date,custom={}){
+ const valid=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d+'T00:00:00Z'))&&new Date(d+'T00:00:00Z').toISOString().slice(0,10)===d;
+ if(range==='All time')return {from:null,to:null};
+ if(range==='Custom date range'){
+  if(!valid(custom.from)||!valid(custom.to)||custom.from>custom.to)throw Error('Choose valid From and Through dates, with Through on or after From.');
+  return {from:custom.from,to:custom.to};
+ }
+ if(!valid(date))throw Error('Choose a valid report date.');
+ const anchor=new Date(date+'T00:00:00Z'),iso=d=>d.toISOString().slice(0,10),shift=days=>{const d=new Date(anchor);d.setUTCDate(d.getUTCDate()+days);return iso(d);};
+ if(range==='Today')return {from:date,to:date};
+ if(range==='This week')return {from:shift(-anchor.getUTCDay()),to:shift(6-anchor.getUTCDay())};
+ if(range==='This month')return {from:date.slice(0,7)+'-01',to:iso(new Date(Date.UTC(anchor.getUTCFullYear(),anchor.getUTCMonth()+1,0)))};
+ if(range==='Year to date')return {from:date.slice(0,4)+'-01-01',to:date};
+ if(range==='Past 6 months'){
+  const first=new Date(Date.UTC(anchor.getUTCFullYear(),anchor.getUTCMonth()-6,1));
+  const last=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,0)).getUTCDate();
+  first.setUTCDate(Math.min(anchor.getUTCDate(),last));return {from:iso(first),to:date};
+ }
+ throw Error('Choose a report period.');
+}
+export function financialDateInRange(raw,range,date,custom={},timezone='America/New_York'){
+ const bounds=financialPeriodBounds(range,date,custom),day=financialDate(raw,timezone);
+ return range==='All time'||!!day&&day>=bounds.from&&day<=bounds.to;
+}
+export function financialRowsForRange(rows,range,date,timezone='America/New_York',custom={}){
+ const bounds=financialPeriodBounds(range,date,custom);
+ return rows.filter(r=>{const day=financialDate(r.date,timezone);return range==='All time'||!!day&&day>=bounds.from&&day<=bounds.to;});
 }
 export function financialStageTotals(rows){
  const result=Object.fromEntries(['submitted','approved','pending_payment','paid'].map(k=>[k,{amountCents:0,count:0,unpriced:0}]));

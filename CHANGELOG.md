@@ -1,3 +1,8 @@
+# v1.3.207
+
+- Add this-week, past-six-month and year-to-date financial report periods plus inclusive custom From/Through calendar selection.
+- Apply shared Eastern-date filtering to report totals, pipeline, detail views and regular exports; preserve full pre-reset backups.
+
 # v1.3.206
 
 - Add durable service payment attribution and owner/platform commission reports by business and team member, with refunds, cash liabilities and complete paginated transaction records.
