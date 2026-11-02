@@ -2,7 +2,9 @@
 
 Client directory cards, client profiles, calendar appointment tables, membership member rows and membership history now place the badge on its own line directly beneath the client name, before contact details. One shared responsive layout preserves badge design, status, ID and wrapping for long names. Plan/type previews are unchanged. Applies across businesses; no data or payment changes.
 
-Validation and staging/production rollout pending.
+Verified LIVE November 2, 2026. PR #137 merged as a8817e799832fe78ca879672ec3edee255645ef4; production deploy dep-dbkaqafavr4c73d03f70 and staging dep-dbkao2utlv9c73fbo05g are LIVE at v1.3.202. Staging deployed final feature source d2b45723ac9fbfef5ee82754fe8bd8edd6a4e817; its tree 692551f36c921f3346d7867bcc8a155345f1179f is identical to the production merge. Final local and GitHub workflow 41471355325 (web 125365457788; native 125365458267) passed all 597 tests, TypeScript and build; staging passed its own 597 tests, TypeScript and build. Native checks cover source/prebuild/exports, not a signed phone installation. An initial README release-marker test failure was corrected before final validation.
+
+Both live environments pass versioned health, public booking/payment shells, protected API and invalid-invitation/no-store checks. Live CSS verifies the shared vertical name/badge layout with left alignment and wrapping. Search metadata, verification tag, canonical links, production sitemap/robots and staging noindex/empty sitemap remain verified. No error-level entries returned in the checked startup windows. Signed-in visual workspace/physical-phone acceptance is not claimed: the QA browser reaches sign-in. No actual customer booking, approval, consent, payment, email or business record is created or changed for QA. No migration, environment, hosting-plan or financial changes. Staging autoDeploy stays off; documentation-only [skip render] commits may follow without a rebuild.
 
 # v1.3.201 release handoff — Public search discovery and accurate booking-software keywords
 
@@ -10,7 +12,7 @@ Replaces the unsupported AI-receptionist search headline with accurate online bo
 
 Publishes dynamic /sitemap.xml and /robots.txt. Sitemap entries follow the marketplace’s existing active-business publication rule and include public platform pages; reserved/private routes and malformed slugs are excluded. Staging returns an empty sitemap and disallows crawling, preserving its global noindex. Private/account/payment routes get noindex response headers; authentication and all booking/payment paths are unchanged. This is website preparation for discovery, not a claim of Google indexing or ranking. No Search Console sitemap submission or account action is claimed. No migration or business record edits are needed.
 
-Local/GitHub checks and staging/production rollout pending. No real client registration, booking, approval, signature, card authorization, charge or outgoing message is created for QA.
+Verified before the v1.3.202 rollout: PR #135 merged as b0ebb66ee0ac55bb26632d8727e37896301c8fb7. Production dep-dbkahsvavr4c73cvlfkg and staging dep-dbkaic5g1s2s739q0bc0 both reached LIVE at v1.3.201. Final local/GitHub workflow 41468194398 passed 597 tests, TypeScript, production build and native checks. Live public titles, descriptions, canonical links, Google verification, structured data and the unchanged 57 benefits checkboxes passed; production sitemap contained 10 public URLs and staging sitemap contained none. Versioned health, public booking/payment and protected-API smoke checks passed in both environments. No Google account action or Search Console submission is claimed. These changes remain present in v1.3.202. No real client registration, booking, approval, signature, card authorization, charge or outgoing message is created for QA.
 
 # v1.3.200 verified LIVE in production and staging — Assigned team and owner approvals
 
