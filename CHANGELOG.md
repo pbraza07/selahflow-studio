@@ -1,3 +1,7 @@
+# v1.3.202
+
+- Place membership badges beneath client names consistently in directory cards, profiles, calendar lists and member/history tables, with responsive wrapping.
+
 # v1.3.201
 
 - Add accurate booking-software page titles, descriptions, canonical links, sharing metadata and public business search snippets.

@@ -1,3 +1,9 @@
+# v1.3.202 release handoff — Membership badges below client names
+
+Client directory cards, client profiles, calendar appointment tables, membership member rows and membership history now place the badge on its own line directly beneath the client name, before contact details. One shared responsive layout preserves badge design, status, ID and wrapping for long names. Plan/type previews are unchanged. Applies across businesses; no data or payment changes.
+
+Validation and staging/production rollout pending.
+
 # v1.3.201 release handoff — Public search discovery and accurate booking-software keywords
 
 Replaces the unsupported AI-receptionist search headline with accurate online booking, appointment scheduling, class booking, client/team and membership management content. Public platform pages get unique titles, descriptions, production canonical URLs and sharing metadata; the existing Google Search Console verification tag is preserved. The concise benefits table stays intact, with additional server-rendered topic explanations in expandable help sections. Public active business landing pages receive descriptions from their own public business fields and location, without customer/registration data. Organization, WebSite and WebApplication structured data identify SelahFlow and the Selah Flow name variant without invented ratings or awards.
@@ -60,7 +66,7 @@ The shared Checkout core retains authoritative owner/tenant scope, saved amount,
 
 Focused database/API/component tests pass. Full local validation, final GitHub checks and production rollout are pending. No migration is needed; the v1.3.197 monthly cash commission features are preserved. Staging remains suspended by Render billing. No real customer checkout, payment, client record or outgoing message is generated for QA. Physical-phone installation and NFC acceptance remain separate prerequisites.
 
-Release source: v1.3.201.
+Release source: v1.3.202.
 
 # v1.3.197 verified LIVE in production — Monthly cash commission billing and concise benefits
 
