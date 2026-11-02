@@ -15,7 +15,7 @@ test('player badges use a consistent pill with tier colors and a neutral ID fall
  assert.match(component,/background:'#f1f2f4'/);
 });
 
-test('player badge appears beside names in client cards, detail view, and membership enrollment',async()=>{
+test('player badge appears below names in client cards, detail view, and membership enrollment',async()=>{
  const client=await readFile(new URL('../app/components/owner-client-directory.tsx',import.meta.url),'utf8');
  const enrollment=await readFile(new URL('../app/components/owner-memberships.tsx',import.meta.url),'utf8');
  assert.match(client,/<MembershipBadge memberNumber=\{c\.memberNumber\}/);
