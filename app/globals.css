@@ -2198,6 +2198,16 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 .sf-client-name-membership>.sf-membership-level-badge{flex:none;max-width:100%;text-align:left}
 
 .sf-team-session-create,.sf-team-workspace-policy{border:1px solid var(--sf-border,#d7dfda);border-radius:12px;padding:16px;margin:16px 0;min-width:0}.sf-team-session-create summary{cursor:pointer;font-weight:750}.sf-team-workspace-policy h4{margin:0 0 12px}.sf-team-workspace-policy p,.sf-team-session-create p,.sf-team-workspace-billing p{font-size:13px;margin:10px 0;overflow-wrap:anywhere}.sf-team-workspace-billing{margin-bottom:20px}.sf-team-workspace-policy .form-row,.sf-team-session-create .form-row{display:flex;gap:12px;flex-wrap:wrap}.sf-team-workspace-policy .form-row>label,.sf-team-session-create .form-row>label{flex:1 1 140px;min-width:0}
-.sf-settings-form[data-settings-tab="team-percentages"] [data-sf-settings-group="team-percentages"]{display:block!important;grid-column:1/-1;min-width:0}
-[data-sf-settings-group="team-percentages"] td small{display:block;overflow-wrap:anywhere;margin-top:5px}
-[data-sf-settings-group="team-percentages"] table{min-width:850px}
+.sf-team-service-percentages td small{display:block;overflow-wrap:anywhere;margin-top:5px}
+.sf-team-service-percentages table{min-width:850px}
+
+.sf-settings-form[data-settings-tab="team-access"] .sf-team-settings{grid-column:1/-1;min-width:0}
+.sf-team-settings-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 18px}
+.sf-team-settings-nav button{display:flex;align-items:flex-start;gap:12px;text-align:left;padding:17px;border:1px solid #bdcec2;border-radius:13px;background:#fff;color:#193d32;min-width:0;min-height:100px}
+.sf-team-settings-nav button[aria-pressed="true"]{border-color:#236343;background:#edf5ef;box-shadow:inset 0 0 0 1px #236343}
+.sf-team-settings-nav button:focus-visible{outline:3px solid #4c956a;outline-offset:3px}
+.sf-team-settings-step{display:grid;place-items:center;flex:none;width:27px;height:27px;border-radius:50%;background:#e4eee7;font-weight:700}
+.sf-team-settings-nav b,.sf-team-settings-nav small{display:block;line-height:1.45}
+.sf-team-settings-nav small{margin-top:5px;font-size:12px;font-weight:400;color:#52685c}
+.sf-team-settings .sf-team-access-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr))}
+@media(max-width:700px){.sf-team-settings-nav{grid-template-columns:1fr;gap:8px}.sf-team-settings-nav button{min-height:0;padding:13px}}

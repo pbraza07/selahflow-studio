@@ -1,3 +1,8 @@
+# v1.3.205
+
+- Consolidate service percentages under Team logins & workspace fees with ordered access, percentage setup and transactions/balances sections.
+- Improve responsive navigation and member-card layout; preserve existing financial controls and records.
+
 # v1.3.204
 
 - Add owner-configurable team service percentages, prospective immutable service ledger, per-member balances and audited manual receipts.
