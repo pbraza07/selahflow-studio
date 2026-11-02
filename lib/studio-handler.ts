@@ -1,3 +1,4 @@
+import {stopRemovedTeamWorkspaces} from '../server/team-workspace-billing.mjs';
 import {setSessionFullForOwner} from '../server/session-full.mjs';
 import {teamIdentity} from '../server/team-portal.mjs';
 import {canReviewWaivers,assertWaiverAuthority} from '../server/waiver-authority.mjs';
@@ -145,6 +146,7 @@ try{
  await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
  const persisted=(await client.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0];
  const oldConfig=persisted?JSON.parse(persisted.data):config;
+ if(Number(c.teamSessionRevision||0)!==Number(oldConfig.teamSessionRevision||0))throw Error('Team sessions changed while these settings were open. Refresh the owner dashboard before saving.');
  c.fullSessionIds=cleanRemovedBookableSessions(oldConfig,{...c,fullSessionIds:oldConfig.fullSessionIds||[]}).fullSessionIds||[]; // Only the immediate owner calendar action changes session closure.
  c.teamTimeOff=oldConfig.teamTimeOff||[]; // Calendar-managed time off cannot be overwritten by stale settings drafts.
  for(const block of c.teamTimeOff){for(let d=Date.parse(block.from);d<=Date.parse(block.to);d+=86400000){const date=new Date(d).toISOString().slice(0,10);if(sessionsForDate(c,date,block.staff).some((s:any)=>overlaps(block.start,block.end-block.start,s.start,s.duration+(c.buffer||0))))throw Error('A session overlaps saved team time off. Edit the block or choose another session time.');}}
@@ -193,6 +195,7 @@ try{
  }
  if(JSON.stringify(oldConfig.categoryWaiver||null)!==JSON.stringify(c.categoryWaiver||null))await client.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5)',[crypto.randomUUID(),owner,new Date().toISOString(),'category_waiver_review',JSON.stringify({category:c.categoryWaiver?.category,enabled:c.categoryWaiver?.enabled,review:c.categoryWaiver?.review||null})]);
  if(JSON.stringify(oldConfig.waiverLegalReview||null)!==JSON.stringify(c.waiverLegalReview||null))await client.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5)',[crypto.randomUUID(),owner,new Date().toISOString(),'waiver_legal_review',JSON.stringify({review:c.waiverLegalReview||null})]);
+ await stopRemovedTeamWorkspaces(client,owner,oldTeam,c.staff);
  await client.query('INSERT INTO settings(owner,data) VALUES($1,$2) ON CONFLICT(owner) DO UPDATE SET data=excluded.data',[owner,JSON.stringify(c)]);
  await client.query('UPDATE businesses SET name=$1,city=COALESCE($2,city),region=COALESCE($3,region),description=COALESCE($8,description),business_model=COALESCE($5,business_model),brand_primary=COALESCE($6,brand_primary),brand_background=COALESCE($7,brand_background),updated_at=now() WHERE owner_id=$4',
   [c.name,typeof c.city==='string'?c.city:null,typeof c.region==='string'?c.region:null,owner,typeof c.business_model==='string'?c.business_model:null,c.theme?.colors?.button||null,c.theme?.colors?.page||null,typeof c.servicesDescription==='string'?c.servicesDescription.trim():null]);

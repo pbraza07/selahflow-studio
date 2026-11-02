@@ -1,3 +1,4 @@
+import {handleWorkspacePaymentEvent} from '../../../../server/team-workspace-billing.mjs';
 import {applyTerminalPayment} from '../../../../server/terminal-payments.mjs';
 import {completeInitialMembershipCheckout} from '../../../../server/membership-initial-payment.mjs';
 import {refundCommission} from '../../../../server/first-customer-commissions.mjs';
@@ -20,6 +21,7 @@ export async function POST(req:Request){
   const merchant=(await pool.query('SELECT business_id FROM merchant_accounts WHERE external_account_id=$1 AND provider=$2',[account,'stripe'])).rows[0];
   // Unknown Connect account: acknowledge but do not write local membership data.
   if(!merchant)return Response.json({received:true},{headers});
+  if(await handleWorkspacePaymentEvent(pool,{businessId:merchant.business_id,account,event}))return Response.json({received:true},{headers});
   let object=event.data.object||{};
   let subscriptionId=null,subscription:any=null;
   if(event.type==='invoice.paid'){

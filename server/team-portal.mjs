@@ -1,3 +1,4 @@
+import {assertWorkspace} from './team-workspace-state.mjs';
 import {resolveTheme} from './themes.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {tokenHash,hashPassword,verifyPassword} from './security.mjs';
@@ -6,11 +7,12 @@ import {sessionsForDate,overlaps} from './session-scheduling.mjs';
 export const teamCookie=(token,age=43200)=>`selahflow_team=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${age}${process.env.NODE_ENV==='production'?'; Secure':''}`;
 export const teamToken=req=>(req.headers.get('cookie')||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('selahflow_team='))?.slice(15)||'';
 export function portalError(message,status=400){return Object.assign(new Error(message),{status});}
-export async function teamIdentity(pool,req,allowPasswordChange=false){
+export async function teamIdentity(pool,req,allowPasswordChange=false,allowUnpaid=false){
  const token=teamToken(req);if(!/^[a-f0-9]{64}$/.test(token))throw portalError('Please sign in to your team workspace.',401);
  const a=(await pool.query(`SELECT a.*,b.owner_id,b.slug,b.name AS business_name,b.brand_primary,b.brand_background,s.data AS config FROM team_sessions t JOIN team_accounts a ON a.id=t.account_id JOIN businesses b ON b.id=a.business_id JOIN settings s ON s.owner=b.owner_id WHERE t.token_hash=$1 AND t.expires_at>now() AND a.active=true AND b.status='active'`,[tokenHash(token)])).rows[0];
  if(!a||!JSON.parse(a.config).staff?.some(s=>s.id===a.staff_id))throw portalError('Your team access is unavailable. Contact the business owner.',401);
  if(a.must_change_password&&!allowPasswordChange)throw portalError('Set your own password before continuing.',428);
+ if(!allowUnpaid&&!allowPasswordChange)assertWorkspace(a);
  return a;
 }
 export async function teamLogin(pool,input){

@@ -9,7 +9,7 @@ const root=new URL('../../',import.meta.url).pathname,require=createRequire(impo
 export function renderWorkspace({team=false,view='Overview',category='sessions'}={}){
  const cache=new Map(),empty=()=>null;let defaults,fixture;
  const profile={name:'Alex Example',phone:'',email:'',description:'',socials:[]};
- const data={id:'private-account-id',publicSlug:'example-alex',profile,business:'Example Business',branding:{slug:'example',name:'Example Business'},mustChangePassword:false,config:{},appointments:[],timeOff:[],businessBlocks:[],media:[],notes:[]};
+ const data={id:'private-account-id',publicSlug:'example-alex',profile,business:'Example Business',branding:{slug:'example',name:'Example Business'},mustChangePassword:false,billing:{feeCents:0,status:'free',allowed:true,canCreateSessions:true},config:{},appointments:[],timeOff:[],businessBlocks:[],media:[],notes:[]};
  function load(file){
   if(cache.has(file))return cache.get(file);
   if(file.endsWith('.mjs'))return require(file);

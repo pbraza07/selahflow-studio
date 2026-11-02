@@ -1,3 +1,4 @@
+import {assertNoWorkspaceContracts} from '../../../../../server/team-workspace-billing.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {getPool} from '../../../../../server/database.mjs';
 import {requireOwner} from '../../../../../lib/auth';
@@ -197,6 +198,7 @@ export async function POST(req:Request){
    const pay=await client.query(
     "SELECT COUNT(*)::int AS count FROM customer_memberships WHERE business_id=$1 AND status IN ('active','past_due','pending_payment')",
     [before.id]);
+   await assertNoWorkspaceContracts(client,before.id);
    const platformSub=await client.query('SELECT stripe_subscription_id,status,to_jsonb(business_subscriptions) AS billing FROM business_subscriptions WHERE business_id=$1',[before.id]);
    const subscribed=!!platformSub.rows[0]?.stripe_subscription_id&&platformSub.rows[0]?.status==='active';
    if(!canArchiveBusiness({members:pay.rows[0]?.count||0,subscribed,billing:platformSub.rows[0]?.billing}))

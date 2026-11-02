@@ -1,0 +1,7 @@
+import {getPool} from '../../../../server/database.mjs';
+import {requireOwner} from '../../../../lib/auth';
+import {validOrigin,trustedOrigin} from '../../../../server/security.mjs';
+import {saveWorkspacePolicy,workspaceBillingAction} from '../../../../server/team-workspace-billing.mjs';
+export const runtime='nodejs';export const dynamic='force-dynamic';
+const headers={'Cache-Control':'private, no-store'};
+export async function POST(req:Request){if(!validOrigin(req))return Response.json({error:'Invalid origin.'},{status:403,headers});try{const owner=await requireOwner(req),pool=getPool(),raw=await req.text();if(raw.length>2000)return Response.json({error:'Request too large.'},{status:413,headers});const b=JSON.parse(raw);const business=(await pool.query("SELECT id FROM businesses WHERE owner_id=$1 AND status='active'",[owner])).rows[0];if(!business)throw Error('Business unavailable.');const scope={owner,businessId:business.id,accountId:b.accountId};if(b.action==='save')return Response.json(await saveWorkspacePolicy(pool,{...scope,input:b}),{headers});if(['check','cancel'].includes(b.action))return Response.json(await workspaceBillingAction(pool,{...scope,action:b.action,origin:trustedOrigin(req)}),{headers});throw Error('Choose a workspace billing action.');}catch(e:any){return Response.json({error:e.message==='AUTH_REQUIRED'?'Please sign in as the owner.':e.message||'Workspace billing unavailable.'},{status:e.message==='AUTH_REQUIRED'?401:400,headers});}}
