@@ -1,3 +1,4 @@
+import {businessPageMetadata} from '../server/search-metadata.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -24,6 +25,7 @@ test('actual shared tenant landing page renders repeated introduction once for a
  let row;
  const Empty=()=>null;
  const load=id=>{
+  if(id.endsWith('search-metadata.mjs'))return {businessPageMetadata};
   if(id.endsWith('team-showcase.mjs'))return {businessTeamShowcase};
   if(id.endsWith('business-profile-copy.mjs'))return {businessIntroLines};
   if(id.endsWith('database.mjs'))return {getPool:()=>({query:async()=>({rows:[row]})})};

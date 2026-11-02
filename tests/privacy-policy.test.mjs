@@ -12,6 +12,7 @@ test('public privacy page renders accessible section links, current practices an
  const require=createRequire(import.meta.url);
  let source=await readFile(new URL('../app/privacy/page.tsx',import.meta.url),'utf8');
  source=source.replace(/import PublicNavigation[^\n]+;/,'const PublicNavigation=()=>null;').replace(/import PublicFooter[^\n]+;/,'const PublicFooter=()=>null;').replace(/import site[^\n]+;/,'const site={};').replace(/import styles[^\n]+;/,'const styles={};');
+ source=source.replace("'../../server/search-metadata.mjs'",JSON.stringify(new URL('../server/search-metadata.mjs',import.meta.url).href));
  const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText.replace('"react/jsx-runtime"',JSON.stringify(pathToFileURL(require.resolve('react/jsx-runtime')).href));
  const {default:Policy,metadata}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
  const html=renderToStaticMarkup(React.createElement(Policy));
