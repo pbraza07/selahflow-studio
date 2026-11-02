@@ -1,3 +1,8 @@
+# v1.3.204
+
+- Add owner-configurable team service percentages, prospective immutable service ledger, per-member balances and audited manual receipts.
+- Preserve tenant isolation, historical rates, zero-price membership services, attendance corrections and existing payment/commission flows.
+
 # v1.3.203
 
 - Team members publish assigned-service bookable sessions using shared business package limits and calendar protections.

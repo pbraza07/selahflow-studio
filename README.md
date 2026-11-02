@@ -1,3 +1,9 @@
+# v1.3.204 release handoff — Team service percentages and transaction buckets
+
+Settings → Team service percentages sets each saved member’s default owner share (0–100%, default 0%) and per-service overrides. Migration 084 records one line per newly executed booking service at Checked in/Completed, using primary booking staff and saved discounted price, excluding tax/tips. Membership-covered/free bookings have a zero base. Saved payment lines allocate multi-service totals; legacy unitemized bookings explicitly use equal allocation with exact-cent conservation. Snapshots retain staff, service, price and percentage across policy edits, reassignment and source deletion. Cancellation/no-show voids the entry; corrections reuse the original snapshot. No historical backfill. Non-calendar day/week/month/year enrollments and unlinked retail/cash sales are outside this appointment ledger.
+
+Owner-only dated buckets show service value, owner share, received and outstanding/credit, with individual transaction/payment details and former members retained. Record payment received is an explicit manual receipt with reference and audit, not an automatic debit or transfer; it is idempotent and tenant-scoped. Voiding an already settled entry exposes a member credit. No employee/customer card is charged by migration, policy editing or ledger accrual. Workspace subscriptions and platform commissions remain separate. Local validation passed: 611 full-suite tests plus 1 separately run rendered-UI interaction test (612 total), TypeScript and optimized production build. Implementation commit 08bfa6446e4e2de8b9a5fbb417427ecc8a1a9e28 is on local feature/team-service-percentages. The user explicitly approved publication and staging/production rollout in the follow-up. Remote checks and deployment verification are pending. Browser visual acceptance was unavailable because the local Chromium executable is absent; rendered React interactions passed. No real payment, client record, business setting or outgoing message was changed for QA.
+
 # v1.3.203 release handoff — Team-created sessions and optional workspace subscriptions
 
 Team workspace → My calendar → Create a bookable session publishes sessions under the signed-in member’s assigned services. Saved sessions appear in the owner calendar/public booking, count once per template/series toward the business package allowance and use normal client approval, capacity, waiver, payment and membership attendance rules. Session creation itself never consumes client credits. Transactions recheck account access, permissions, package overrides, scheduling conflicts and time off. Team-created sessions advance a revision so stale owner settings cannot erase them.
@@ -76,7 +82,7 @@ The shared Checkout core retains authoritative owner/tenant scope, saved amount,
 
 Focused database/API/component tests pass. Full local validation, final GitHub checks and production rollout are pending. No migration is needed; the v1.3.197 monthly cash commission features are preserved. Staging remains suspended by Render billing. No real customer checkout, payment, client record or outgoing message is generated for QA. Physical-phone installation and NFC acceptance remain separate prerequisites.
 
-Release source: v1.3.203.
+Release source: v1.3.204.
 
 # v1.3.197 verified LIVE in production — Monthly cash commission billing and concise benefits
 

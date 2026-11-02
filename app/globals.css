@@ -2198,3 +2198,6 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 .sf-client-name-membership>.sf-membership-level-badge{flex:none;max-width:100%;text-align:left}
 
 .sf-team-session-create,.sf-team-workspace-policy{border:1px solid var(--sf-border,#d7dfda);border-radius:12px;padding:16px;margin:16px 0;min-width:0}.sf-team-session-create summary{cursor:pointer;font-weight:750}.sf-team-workspace-policy h4{margin:0 0 12px}.sf-team-workspace-policy p,.sf-team-session-create p,.sf-team-workspace-billing p{font-size:13px;margin:10px 0;overflow-wrap:anywhere}.sf-team-workspace-billing{margin-bottom:20px}.sf-team-workspace-policy .form-row,.sf-team-session-create .form-row{display:flex;gap:12px;flex-wrap:wrap}.sf-team-workspace-policy .form-row>label,.sf-team-session-create .form-row>label{flex:1 1 140px;min-width:0}
+.sf-settings-form[data-settings-tab="team-percentages"] [data-sf-settings-group="team-percentages"]{display:block!important;grid-column:1/-1;min-width:0}
+[data-sf-settings-group="team-percentages"] td small{display:block;overflow-wrap:anywhere;margin-top:5px}
+[data-sf-settings-group="team-percentages"] table{min-width:850px}
