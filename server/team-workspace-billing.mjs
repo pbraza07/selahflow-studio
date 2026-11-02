@@ -85,3 +85,14 @@ export async function stopWorkspaceForAccountChange(db,a,{detach=false}={},api=s
  if(detach)await db.query("UPDATE team_accounts SET workspace_price_version=workspace_price_version+1,workspace_checkout_id=NULL,workspace_checkout_generation=0,workspace_subscription_id=NULL,workspace_customer_id=NULL,workspace_stripe_account_id=NULL,workspace_paid_through=NULL,workspace_consent_at=NULL,workspace_consent_version=NULL,workspace_risk_hold=false,workspace_billing_status=CASE WHEN workspace_fee_cents>0 THEN 'payment_required' ELSE 'free' END WHERE id=$1",[a.id]);
  else if(a.workspace_fee_cents>0)await db.query("UPDATE team_accounts SET workspace_billing_status='canceling',workspace_checkout_id=CASE WHEN workspace_subscription_id IS NULL THEN NULL ELSE workspace_checkout_id END,workspace_checkout_generation=workspace_checkout_generation+1 WHERE id=$1",[a.id]);
 }
+
+export async function stopRemovedTeamWorkspaces(db,owner,oldStaff,newStaff,api=stripeApi){
+ for(const removed of oldStaff.filter(member=>!newStaff.some(current=>current.id===member.id))){
+  const account=(await db.query('SELECT * FROM team_accounts WHERE business_id=(SELECT id FROM businesses WHERE owner_id=$1) AND staff_id=$2 FOR UPDATE',[owner,removed.id])).rows[0];
+  if(account&&(account.workspace_subscription_id||account.workspace_checkout_id))await stopWorkspaceForAccountChange(db,account,{},api);
+ }
+}
+export async function assertNoWorkspaceContracts(db,businessId){
+ const open=(await db.query('SELECT id FROM team_accounts WHERE business_id=$1 AND (workspace_subscription_id IS NOT NULL OR workspace_checkout_id IS NOT NULL) LIMIT 1',[businessId])).rows;
+ if(open.length)throw Error('Switch paid team workspaces to free and stop their recurring billing before archiving this business. Employee invoices and records will be preserved.');
+}

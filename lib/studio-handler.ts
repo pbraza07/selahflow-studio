@@ -1,3 +1,4 @@
+import {stopRemovedTeamWorkspaces} from '../server/team-workspace-billing.mjs';
 import {setSessionFullForOwner} from '../server/session-full.mjs';
 import {teamIdentity} from '../server/team-portal.mjs';
 import {canReviewWaivers,assertWaiverAuthority} from '../server/waiver-authority.mjs';
@@ -194,6 +195,7 @@ try{
  }
  if(JSON.stringify(oldConfig.categoryWaiver||null)!==JSON.stringify(c.categoryWaiver||null))await client.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5)',[crypto.randomUUID(),owner,new Date().toISOString(),'category_waiver_review',JSON.stringify({category:c.categoryWaiver?.category,enabled:c.categoryWaiver?.enabled,review:c.categoryWaiver?.review||null})]);
  if(JSON.stringify(oldConfig.waiverLegalReview||null)!==JSON.stringify(c.waiverLegalReview||null))await client.query('INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,$4,$5)',[crypto.randomUUID(),owner,new Date().toISOString(),'waiver_legal_review',JSON.stringify({review:c.waiverLegalReview||null})]);
+ await stopRemovedTeamWorkspaces(client,owner,oldTeam,c.staff);
  await client.query('INSERT INTO settings(owner,data) VALUES($1,$2) ON CONFLICT(owner) DO UPDATE SET data=excluded.data',[owner,JSON.stringify(c)]);
  await client.query('UPDATE businesses SET name=$1,city=COALESCE($2,city),region=COALESCE($3,region),description=COALESCE($8,description),business_model=COALESCE($5,business_model),brand_primary=COALESCE($6,brand_primary),brand_background=COALESCE($7,brand_background),updated_at=now() WHERE owner_id=$4',
   [c.name,typeof c.city==='string'?c.city:null,typeof c.region==='string'?c.region:null,owner,typeof c.business_model==='string'?c.business_model:null,c.theme?.colors?.button||null,c.theme?.colors?.page||null,typeof c.servicesDescription==='string'?c.servicesDescription.trim():null]);
