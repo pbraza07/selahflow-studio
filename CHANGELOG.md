@@ -1,3 +1,9 @@
+# v1.3.201
+
+- Add accurate booking-software page titles, descriptions, canonical links, sharing metadata and public business search snippets.
+- Publish an active-business sitemap, crawler rules and staging/private-page indexing safeguards; retain Google ownership verification.
+- Add server-rendered, expandable search topics and factual structured data without changing booking, billing or business records.
+
 # v1.3.200
 
 - Each team workspace can approve, decline or correct bookings assigned to that team member, alongside owner dashboard approvals.

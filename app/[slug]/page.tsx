@@ -1,3 +1,4 @@
+import {businessPageMetadata} from '../../server/search-metadata.mjs';
 import TeamShowcase from '../components/team-showcase';
 import {businessTeamShowcase} from '../../server/team-showcase.mjs';
 import {businessIntroLines} from '../../server/business-profile-copy.mjs';
@@ -18,6 +19,11 @@ import {googleMapsDirections,displayBusinessAddress} from '../../lib/maps';
 import GoogleBusinessGallery from '../components/google-business-gallery';
 import ShareBusinessPage from '../components/share-business-page';
 export const dynamic='force-dynamic';
+export async function generateMetadata({params}:{params:Promise<{slug:string}>}){
+ const {slug}=await params;if(!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(slug))return {robots:{index:false,follow:false}};
+ const row=(await getPool().query("SELECT name,slug,industry,description,city,region FROM businesses WHERE slug=$1 AND status='active' LIMIT 1",[slug])).rows[0];
+ return row?businessPageMetadata(row):{robots:{index:false,follow:false}};
+}
 type Service={id:string;name:string;duration:number;durationUnit?:string;durationValue?:number;price:number;description?:string};
 type Row={id:string;name:string;slug:string;industry:string;description:string;city:string;region:string;data:string|null;brand_primary:string;brand_background:string;business_model:string;has_logo:boolean};
 export default async function BusinessPage({params}:{params:Promise<{slug:string}>}){

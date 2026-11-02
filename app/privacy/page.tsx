@@ -1,10 +1,11 @@
+import {publicPageMetadata} from '../../server/search-metadata.mjs';
 import type {Metadata} from 'next';
 import PublicNavigation from '../components/public-navigation';
 import PublicFooter from '../components/public-footer';
 import site from '../site.module.css';
 import styles from './privacy.module.css';
 
-export const metadata:Metadata={title:'Privacy Policy | SelahFlow',description:'How SelahFlow handles account, booking, membership, waiver and payment information, and how to contact us about privacy.'};
+export const metadata=publicPageMetadata('/privacy');
 const sections=[['scope','Who this policy covers'],['information','Information we handle'],['use','How information is used'],['sharing','Businesses and service providers'],['google-business','Google business connections and public content'],['payments','Payments and Stripe'],['children','Children and guardian information'],['storage','Cookies and device storage'],['communications','Emails, messages and push notifications'],['retention','Retention, deletion and security'],['choices','Your choices and requests'],['updates','Updates and contact']] as const;
 export default function PrivacyPolicy(){return <div className={site.site}><PublicNavigation/><main id="main-content" className={styles.policy}>
  <header className={styles.hero}><p className={site.kicker}>SELAHFLOW · PRIVACY</p><h1>Privacy Policy</h1><p>Understand how information is handled when you use SelahFlow to manage a business, book a service or participate in a membership.</p><p className={styles.updated}>Effective and last updated: <time dateTime="2026-10-27">October 27, 2026</time></p></header>

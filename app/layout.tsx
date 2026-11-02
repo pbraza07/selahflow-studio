@@ -1,3 +1,4 @@
+import {publicPageMetadata,SEARCH_ORIGIN} from '../server/search-metadata.mjs';
 import type { Metadata } from "next";
 import "./globals.css";
 import "./usability.css";
@@ -5,11 +6,12 @@ import "./page-shortcuts.css";
 import PageShortcuts from "./components/page-shortcuts";
 import {isStaging} from '../server/staging-safety.mjs';
 
+const {alternates: _homeCanonical,...siteMetadata}=publicPageMetadata('/');
 export const metadata: Metadata = {
+  ...siteMetadata,
+  metadataBase:new URL(SEARCH_ORIGIN),
   verification: { google: "4rvXDWSBPDue9k4RNlmgn06ptHQeUG54aiYZ03NRgp4" },
   ...(isStaging()?{robots:{index:false,follow:false}}:{}),
-  title: "SelahFlow | Smart booking & AI receptionist.",
-  description: "Your bookings flow. You breathe. Smart booking & AI receptionist.",
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'SelahFlow' },
   icons: {

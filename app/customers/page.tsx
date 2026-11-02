@@ -1,3 +1,4 @@
+import {publicPageMetadata} from '../../server/search-metadata.mjs';
 import Link from 'next/link';
 import {ArrowRight, Search, Sparkles} from 'lucide-react';
 import MarketplaceCategories from '../components/marketplace-categories';
@@ -5,7 +6,7 @@ import PublicNavigation from '../components/public-navigation';
 import styles from '../site.module.css';
 import PublicFooter from '../components/public-footer';
 import audience from '../audience-pages.module.css';
-export const metadata={title:'For customers | SelahFlow',description:'Find a business, book a service and check your booking or membership status.'};
+export const metadata=publicPageMetadata('/customers');
 export default function CustomersPage(){return <div className={styles.site}>
 <PublicNavigation/>
 <main id="main-content"><section className={`${styles.hero} ${styles.discoveryHero}`}><div><p className={styles.kicker}><Sparkles size={16}/> PAUSE. FIND YOUR MOMENT.</p><h1>Make time for <em>what matters.</em></h1><p>Find services for your home, work, learning, care and more. Choose a business and a time that works for you.</p>
