@@ -145,6 +145,7 @@ try{
  await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
  const persisted=(await client.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0];
  const oldConfig=persisted?JSON.parse(persisted.data):config;
+ if(Number(c.teamSessionRevision||0)!==Number(oldConfig.teamSessionRevision||0))throw Error('Team sessions changed while these settings were open. Refresh the owner dashboard before saving.');
  c.fullSessionIds=cleanRemovedBookableSessions(oldConfig,{...c,fullSessionIds:oldConfig.fullSessionIds||[]}).fullSessionIds||[]; // Only the immediate owner calendar action changes session closure.
  c.teamTimeOff=oldConfig.teamTimeOff||[]; // Calendar-managed time off cannot be overwritten by stale settings drafts.
  for(const block of c.teamTimeOff){for(let d=Date.parse(block.from);d<=Date.parse(block.to);d+=86400000){const date=new Date(d).toISOString().slice(0,10);if(sessionsForDate(c,date,block.staff).some((s:any)=>overlaps(block.start,block.end-block.start,s.start,s.duration+(c.buffer||0))))throw Error('A session overlaps saved team time off. Edit the block or choose another session time.');}}

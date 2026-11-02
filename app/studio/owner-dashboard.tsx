@@ -61,7 +61,7 @@ const SETTINGS_AREAS=[
  {id:'availability',title:'Booking rules',description:'Booking intervals, preparation buffer, policies and tax.',icon:CalendarDays},
  {id:'questions',title:'Questions',description:'Manage all standard and custom questions, requirements and notification display here.',icon:ClipboardList},
  {id:'team',title:'Team members',description:'Staff profiles, services and contact preferences.',icon:Users},
- {id:'team-access',title:'Team logins',description:'Create private team logins and shareable personal booking pages.',icon:Users},
+ {id:'team-access',title:'Team logins & workspace fees',description:'Manage team logins, session permissions and optional recurring workspace fees.',icon:Users},
  {id:'payments',title:'Payment setup',description:'Choose Stripe or Helcim, compare fees and manage payment connections.',icon:CreditCard},
  {id:'notifications',title:'Notifications',description:'Approval requests and business-specific delivery settings.',icon:MessageCircle},
  {id:'communications',title:'Client communications',description:'Sync client contacts and send customized business-branded emails.',icon:MessageCircle},

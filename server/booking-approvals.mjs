@@ -1,3 +1,4 @@
+import {assertWorkspace} from './team-workspace-state.mjs';
 import {assertWeeklyMembershipBooking,membershipBookingActive} from './membership-weekly.mjs';
 import {bookingDiscount} from './booking-discounts.mjs';
 import {membershipAllows} from './membership-eligibility.mjs';
@@ -54,7 +55,7 @@ export async function confirmBooking(options){
    const saved=options.expectedPending;
    if(saved&&(pendingRequest.details!==saved.details||pendingRequest.staff_id!==saved.staff||pendingRequest.date!==saved.date||Number(pendingRequest.start_minute)!==Number(saved.start)||Number(pendingRequest.duration)!==Number(saved.duration)))throw conflict('Booking details changed. Refresh the request before approving.');
   }
-  if(options.teamAccountId){const team=await client.query("SELECT a.id FROM team_accounts a JOIN businesses b ON b.id=a.business_id WHERE a.id=$1 AND a.active=true AND a.must_change_password=false AND a.staff_id=$2 AND b.owner_id=$3 AND b.status='active' FOR SHARE OF a",[options.teamAccountId,staff,owner]);if(!team.rows.length)throw conflict('Team access changed. Sign in again.');}
+  if(options.teamAccountId){const team=await client.query("SELECT a.* FROM team_accounts a JOIN businesses b ON b.id=a.business_id WHERE a.id=$1 AND a.active=true AND a.must_change_password=false AND a.staff_id=$2 AND b.owner_id=$3 AND b.status='active' FOR SHARE OF a",[options.teamAccountId,staff,owner]);if(!team.rows.length)throw conflict('Team access changed. Sign in again.');assertWorkspace(team.rows[0]);}
   const prior=await client.query('SELECT id FROM appointments WHERE id=$1 AND owner=$2',[id,owner]);
   if(prior.rowCount){await client.query('COMMIT');return {id,duplicate:true};}
   const settingRow=await client.query('SELECT data FROM settings WHERE owner=$1',[owner]);

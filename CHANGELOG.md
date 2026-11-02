@@ -1,3 +1,9 @@
+# v1.3.203
+
+- Team members publish assigned-service bookable sessions using shared business package limits and calendar protections.
+- Owners choose free or recurring paid workspace access per login under Team logins & workspace fees.
+- Add explicit employee authorization, direct connected-account Stripe subscriptions, verified invoice access, cancellation and risk reconciliation; preserve existing free access and customer membership credits.
+
 # v1.3.202
 
 - Place membership badges beneath client names consistently in directory cards, profiles, calendar lists and member/history tables, with responsive wrapping.

@@ -1,3 +1,11 @@
+# v1.3.203 release handoff — Team-created sessions and optional workspace subscriptions
+
+Team workspace → My calendar → Create a bookable session publishes sessions under the signed-in member’s assigned services. Saved sessions appear in the owner calendar/public booking, count once per template/series toward the business package allowance and use normal client approval, capacity, waiver, payment and membership attendance rules. Session creation itself never consumes client credits. Transactions recheck account access, permissions, package overrides, scheduling conflicts and time off. Team-created sessions advance a revision so stale owner settings cannot erase them.
+
+Business settings → Team logins & workspace fees → each saved login controls session creation and free/paid workspace access. Existing accounts stay free; session creation defaults on. Optional weekly/monthly/yearly USD fees are charged directly to the business’s existing verified Stripe account after the team member explicitly authorizes recurring Checkout. No subscription is started by changing an owner setting or deploying the migration. Paid access follows verified online invoices; pending/failed payments, renewal, cancellation, refunds/disputes/fraud holds and retries are reconciled. Employee billing uses its own ledger, separate from customer memberships and first-customer commissions. Disabling a login stops future renewals; changing its email stops old billing and requires fresh consent. Switching to free stops future charges without refunding prior payments. Stripe tax is not automatically enabled by this feature.
+
+Additive migration 083 adds default-free workspace policy, payment references and audit tables; preserves existing records. Full local/GitHub validation and staging/production deployment pending. No real employee/customer charge, subscription, consent, booking or outgoing message is created for QA. Live signed-in/physical-device acceptance is not claimed.
+
 # v1.3.202 release handoff — Membership badges below client names
 
 Client directory cards, client profiles, calendar appointment tables, membership member rows and membership history now place the badge on its own line directly beneath the client name, before contact details. One shared responsive layout preserves badge design, status, ID and wrapping for long names. Plan/type previews are unchanged. Applies across businesses; no data or payment changes.
@@ -68,7 +76,7 @@ The shared Checkout core retains authoritative owner/tenant scope, saved amount,
 
 Focused database/API/component tests pass. Full local validation, final GitHub checks and production rollout are pending. No migration is needed; the v1.3.197 monthly cash commission features are preserved. Staging remains suspended by Render billing. No real customer checkout, payment, client record or outgoing message is generated for QA. Physical-phone installation and NFC acceptance remain separate prerequisites.
 
-Release source: v1.3.202.
+Release source: v1.3.203.
 
 # v1.3.197 verified LIVE in production — Monthly cash commission billing and concise benefits
 
