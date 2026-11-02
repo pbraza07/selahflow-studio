@@ -1,3 +1,4 @@
+import {allocatePlatformServiceFees} from './service-commission-report.mjs';
 import {trackingDateRange} from './calendar-team-tracking.mjs';
 const obj=v=>typeof v==='string'?JSON.parse(v):v||{};
 export async function servicePercentageReport(pool,{owner,from,to}){
@@ -7,15 +8,19 @@ export async function servicePercentageReport(pool,{owner,from,to}){
  const config=obj(b.data),rates=(await pool.query('SELECT staff_id,service_id,rate_bps FROM team_service_rates WHERE business_id=$1',[b.id])).rows;
  const rows=(await pool.query(`SELECT l.*,s.amount_cents AS settled_cents,s.reference,s.created_at AS settled_at,
  COALESCE(p.status,a.data::jsonb->>'paymentStatus',l.payment_status) AS customer_payment,
- a.id IS NULL AS source_removed FROM team_service_ledger l
+ a.id IS NULL AS source_removed,
+ CASE WHEN fc.status IN ('paid','refunded','accrued','invoiced') THEN fc.fee_cents-fc.refunded_fee_cents ELSE 0 END AS platform_fee_total,fc.status AS platform_fee_status FROM team_service_ledger l
  LEFT JOIN team_service_settlements s ON s.ledger_id=l.id AND s.business_id=l.business_id
  LEFT JOIN businesses b ON b.id=l.business_id
  LEFT JOIN appointments a ON a.id=l.appointment_id AND a.owner=b.owner_id
  LEFT JOIN booking_payments p ON p.business_id=l.business_id AND p.booking_id=l.appointment_id
+ LEFT JOIN service_payment_audit pa ON pa.business_id=l.business_id AND pa.source_type='booking' AND pa.source_id=l.appointment_id
+ LEFT JOIN first_customer_commissions fc ON fc.id=COALESCE(pa.commission_id,(SELECT c.id FROM first_customer_commissions c WHERE c.business_id=l.business_id AND c.kind='booking' AND c.source_id=l.appointment_id ORDER BY c.created_at DESC LIMIT 1))
  WHERE l.business_id=$1 AND l.service_date BETWEEN $2 AND $3 ORDER BY l.service_date DESC,l.id DESC`,[b.id,from,to])).rows;
+ allocatePlatformServiceFees(rows);
  // Removed members retain their own bucket and immutable transaction snapshots.
- const buckets=new Map((config.staff||[]).map(s=>[s.id,{staffId:s.id,name:s.name,serviceCents:0,ownerCents:0,settledCents:0,balanceCents:0,count:0}]));
- for(const r of rows){let b=buckets.get(r.staff_id);if(!b){b={staffId:r.staff_id,name:r.staff_name,serviceCents:0,ownerCents:0,settledCents:0,balanceCents:0,count:0};buckets.set(r.staff_id,b);}if(!r.voided){b.serviceCents+=r.amount_cents;b.ownerCents+=r.owner_cents;b.count++;}b.settledCents+=r.settled_cents||0;b.balanceCents=b.ownerCents-b.settledCents;}
+ const buckets=new Map((config.staff||[]).map(s=>[s.id,{staffId:s.id,name:s.name,serviceCents:0,ownerCents:0,settledCents:0,balanceCents:0,platformFeeCents:0,ownerNetCents:0,count:0}]));
+ for(const r of rows){let b=buckets.get(r.staff_id);if(!b){b={staffId:r.staff_id,name:r.staff_name,serviceCents:0,ownerCents:0,settledCents:0,balanceCents:0,platformFeeCents:0,ownerNetCents:0,count:0};buckets.set(r.staff_id,b);}if(!r.voided){b.serviceCents+=r.amount_cents;b.ownerCents+=r.owner_cents;b.count++;}b.settledCents+=r.settled_cents||0;b.balanceCents=b.ownerCents-b.settledCents;b.platformFeeCents+=r.platformFeeCents;b.ownerNetCents=b.ownerCents-b.platformFeeCents;}
  return {from,to,staff:(config.staff||[]).map(s=>({id:s.id,name:s.name})),services:(config.services||[]).map(s=>({id:s.id,name:s.name})),rates,rows,buckets:[...buckets.values()]};
 }
 export async function saveServicePercentage(pool,{owner,input}){

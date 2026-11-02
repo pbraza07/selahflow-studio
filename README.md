@@ -1,6 +1,14 @@
+# v1.3.206 release handoff — Service commission accounting by business and team
+
+Adds a dedicated Platform administration → Commission tracking section and owner reporting under Settings → Team logins & workspace fees → Transactions & balances. Read-only reports show service receipts, first-time platform fees collected net of fee refunds, cash commission liabilities, pending quotes and explicit zero/no-fee transactions, grouped by business and team member with 100-row pagination and complete date-range totals. Owner reports derive business scope from authentication; platform financial reports require primary administrator authorization. No commission is activated, collected or repeated by viewing reports.
+
+Additive migration 085 creates durable paid-service accounting snapshots for bookings and unlinked cash service receipts, preserving business/owner, primary team assignment, original service amount, payment reference and commission claim link across reassignment and source deletion. Linked cash is recorded once through its booking. Reconstructs only retained receipts; missing assignment/amount/payment time is explicitly labeled. Retained commission claims with missing sources remain visible in an owner/unassigned bucket. Service snapshots exclude client names/contact/identity tokens. Existing first-time eligibility, administrator switches, minimum/cap, cash consent, refunds and provider reconciliation stay unchanged; no retrospective fees are generated.
+
+The team service ledger allocates the actual recorded SelahFlow fee across service lines once, conserves cents and shows the saved owner share less that business cost. Member remainder and saved percentage bases are unchanged. Original service values and saved owner splits are shown; customer refunds and Stripe processing costs are excluded from displayed split arithmetic. Fee refunds reconcile dynamically. Full validation and rollout pending.
+
 # v1.3.205 release handoff — Organized team access, fees and earnings
 
-Settings → Team logins & workspace fees now contains three ordered sections: Logins & workspace fees; Service percentages; Transactions & balances. Removes the separate top-level percentage category. Access/session permissions and recurring workspace pricing stay together per member, followed by percentage configuration and a dedicated financial ledger view. The full-width workspace uses responsive section buttons, clearer headings and wider member cards. Existing rates, receipts, subscriptions, permissions and financial APIs are unchanged; no migration or business-data changes. Validation and deployment pending.
+Settings → Team logins & workspace fees now contains three ordered sections: Logins & workspace fees; Service percentages; Transactions & balances. Removes the separate top-level percentage category. Access/session permissions and recurring workspace pricing stay together per member, followed by percentage configuration and a dedicated financial ledger view. The full-width workspace uses responsive section buttons, clearer headings and wider member cards. Existing rates, receipts, subscriptions, permissions and financial APIs are unchanged; no migration or business-data changes. Verified LIVE November 2, 2026 via PR #140, merge fe196ac219b403214a9905a73c159d29baa6acfa. Staging dep-dbkfdb5g1s2s73fbfklg is LIVE on source a2496780d68d8917a4a1b650f743ad36864e88b7; production dep-dbkfkknavr4c73b3ne20 is LIVE on that merge. Application trees match fb9c5a874bd4daf73fd930703b0a3151acf70fa0. All 614 local, GitHub and staging tests, TypeScript and builds passed; GitHub native checks passed in workflow 41522286441. Both environments passed versioned live smoke checks and staging served organized team navigation CSS. No error-level entries returned in checked startup windows. No migration or live business/payment changes for QA. Signed-in owner visual and physical-device acceptance were not performed.
 
 # v1.3.204 release handoff — Team service percentages and transaction buckets
 
@@ -92,7 +100,7 @@ The shared Checkout core retains authoritative owner/tenant scope, saved amount,
 
 Focused database/API/component tests pass. Full local validation, final GitHub checks and production rollout are pending. No migration is needed; the v1.3.197 monthly cash commission features are preserved. Staging remains suspended by Render billing. No real customer checkout, payment, client record or outgoing message is generated for QA. Physical-phone installation and NFC acceptance remain separate prerequisites.
 
-Release source: v1.3.205.
+Release source: v1.3.206.
 
 # v1.3.197 verified LIVE in production — Monthly cash commission billing and concise benefits
 

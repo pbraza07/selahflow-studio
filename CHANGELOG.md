@@ -1,3 +1,8 @@
+# v1.3.206
+
+- Add durable service payment attribution and owner/platform commission reports by business and team member, with refunds, cash liabilities and complete paginated transaction records.
+- Show SelahFlow platform costs alongside team service shares without changing fee activation, first-time eligibility or the saved member split.
+
 # v1.3.205
 
 - Consolidate service percentages under Team logins & workspace fees with ordered access, percentage setup and transactions/balances sections.
