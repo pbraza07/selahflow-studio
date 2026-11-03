@@ -1,3 +1,9 @@
+# v1.3.214 release handoff — New session editor modal
+
+Release source: v1.3.214
+
+Create session immediately opens the new numbered draft in a native modal with all existing session fields and Save business settings. Closing retains the draft, saving retains existing validation and persists all pending settings, and failed saves keep the editor open with an error. Native modal focus/inert behavior and scroll restoration avoid scrolling to the last session. Shared owner flow applies to all businesses; plan limits and publishing rules unchanged. No migration or business-data changes. Validation and deployment pending.
+
 # v1.3.213 release handoff — Membership payment column order
 
 Release source: v1.3.213

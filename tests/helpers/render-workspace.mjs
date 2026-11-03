@@ -18,6 +18,7 @@ export function renderWorkspace({team=false,view='Overview',category='sessions'}
   const local=id=>{
    if(id==='react'&&(owner||teamPage))return {...React,useEffect:()=>{},useCallback:f=>f,useMemo:f=>f(),useRef:v=>({current:v}),useState:v=>{const index=stateIndex++;let val=typeof v==='function'?v():v;if(owner){if(v===defaults)val=fixture;if(v==='Overview')val=view;if(v==='business')val=category;}if(teamPage){if(index===1)val=data;if(index===2)val=profile;}return [val,()=>{}];}};
    if(id==='next/dynamic')return {__esModule:true,default:()=>empty};
+   if(owner&&id==='../components/session-editor-dialog')return {__esModule:true,default:({children})=>children};
    if(owner&&id.startsWith('../components/'))return {__esModule:true,default:empty,TeamCalendarDialog:empty};
    if(teamPage&&id.startsWith('../../components/'))return {__esModule:true,default:id.includes('team-page-shell')?({children})=>React.createElement('div',null,children):empty};
    if(!id.startsWith('.'))return require(id);
