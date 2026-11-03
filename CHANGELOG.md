@@ -1,3 +1,8 @@
+# v1.3.210
+
+- Add owner-reviewed Email payment link beside Pay on Site with business-scoped authorization and duplicate-send safeguards.
+- Reuse private payment pages and existing commission/payment verification; suppress stale payment requests without charging clients or recording payment on send.
+
 # v1.3.209
 
 - Use normalized email or phone with matching names and compatible birth dates as supporting first-time commission evidence.
