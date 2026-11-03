@@ -1,3 +1,7 @@
+# v1.3.212 release handoff — Shared private service slots (verification pending)
+
+Service catalog has an explicit same-time team-sharing option. Same service, start and duration can share one team member up to the existing business-wide service slot limit. Availability and atomic confirmation use the same policy; different services, staggered starts, scheduled groups, buffers and blocked time remain protected. Existing exclusive slot records remain intact and compatible records are recognized. Cancellation reopens capacity and no-show attendance corrections recheck capacity. Pending approvals reserve no seat. Migration 088 enables only Arcila Training (arcillatrng) Private Session, preserving its current six-slot limit and all other business settings; other businesses default off and can opt in deliberately. No payment, commission or credit rule changes. Tests and deployment verification pending. No live customer booking, email or payment used for QA.
+
 # v1.3.211
 
 - Show per-member payment request and provider-submission counters using existing invitation history.

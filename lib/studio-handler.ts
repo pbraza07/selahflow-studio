@@ -139,7 +139,7 @@ if(!c?.name?.trim()||c.name.length>100||!Array.isArray(c.services)||!Array.isArr
  validateServicePaymentOptions(c);
  if(c.servicesDescription!==undefined&&(typeof c.servicesDescription!=='string'||!c.servicesDescription.trim()||c.servicesDescription.trim().length>600))throw Error('Describe your services in 1–600 characters.');
  validateBookableSessions(c);
-for(const s of c.services)if(!validSlotCapacity(s.maxSlots??1))throw Error('Service slots must be between 1 and 20.');
+for(const s of c.services){if(!validSlotCapacity(s.maxSlots??1))throw Error('Service slots must be between 1 and 20.');if(s.shareTeamSlots!==undefined&&typeof s.shareTeamSlots!=='boolean')throw Error('Choose a valid team slot sharing option.');}
  for(const s of c.services)if(!s.name||s.price<0||!Number.isFinite(s.price)||!validDuration(s))throw Error('Enter a valid service duration (minutes, hours, days, weeks, months or years); prices cannot be negative.');const pool=getPool(),client=await pool.connect();
 try{
  await client.query('BEGIN');
@@ -177,7 +177,7 @@ try{
  validateExistingSessionReservations(oldConfig,c,reservationRows);
 
  const existingSchedules=(await client.query(
-  "SELECT date,staff,start,duration,status,data FROM appointments WHERE owner=$1 AND status NOT IN ('Cancelled','No-show')",
+  "SELECT id,date,staff,start,duration,status,data FROM appointments WHERE owner=$1 AND status NOT IN ('Cancelled','No-show')",
   [owner])).rows;
  // Any generated occurrence must not overlap an existing ordinary booking or
  // a different booked group session. Reservations on edited series are already
@@ -293,7 +293,7 @@ if(b.action==='session_calendar'){
  const dates=bookingDateRange(b.date,b.view);
  const clock=easternClock();
  const lastFuture=new Date(Date.now()+366*86400000).toISOString().slice(0,10);
- const appointments=(await db().prepare("SELECT date,staff,start,duration,status,data FROM appointments WHERE owner=? AND date>=? AND date<=? AND status NOT IN ('Cancelled','No-show')").bind(owner,dates[0],dates[dates.length-1]).all()).results as any[];
+ const appointments=(await db().prepare("SELECT id,date,staff,start,duration,status,data FROM appointments WHERE owner=? AND date>=? AND date<=? AND status NOT IN ('Cancelled','No-show')").bind(owner,dates[0],dates[dates.length-1]).all()).results as any[];
  return reply({timezone:'America/New_York',days:dates.map((date:string)=>{
   if(date<clock.date||date>lastFuture)return {date,sessions:[]};
   const entries=sessionsForDate(config,date,undefined).map((session:any)=>{
@@ -315,10 +315,10 @@ if(b.action==='calendar'){
  if(!staff||!services.every((s:any)=>staff.services.includes(s.id)))throw Error('Choose a qualified team member.');
  const days=bookingDateRange(b.date,b.view);
  const appointments=(await db().prepare(
-  "SELECT date,staff,start,duration,status,data FROM appointments WHERE owner=? AND date>=? AND date<=? AND status NOT IN ('Cancelled','No-show')"
+  "SELECT id,date,staff,start,duration,status,data FROM appointments WHERE owner=? AND date>=? AND date<=? AND status NOT IN ('Cancelled','No-show')"
  ).bind(owner,days[0],days[days.length-1]).all()).results as any[];
  const reservations=(await db().prepare(
-  "SELECT date,minute FROM slots WHERE owner=? AND staff=? AND date>=? AND date<=?"
+  "SELECT date,minute,appointment FROM slots WHERE owner=? AND staff=? AND date>=? AND date<=?"
  ).bind(owner,b.staff,days[0],days[days.length-1]).all()).results as any[];
  const clock=easternClock();
  const now=clock.minutes,current=clock.date;
@@ -327,17 +327,17 @@ if(b.action==='calendar'){
   if(date<current||date>lastFuture)return {date,available:0,sessions:[]};
   const result=computeDayAvailability({config,date,staff:b.staff,services,
    appointments:appointments.filter((a:any)=>a.date===date),
-   reservedSlots:reservations.filter((x:any)=>x.date===date).map((x:any)=>x.minute),
+   reservedSlots:reservations.filter((x:any)=>x.date===date),
    today:current,nowMinutes:now,capacityOpen:serviceCapacityOpen});
   return {date,available:result.slots.length,sessions:result.sessions};
  })});
 }
 async function customerAccess(bookingId:string){const token=randomBytes(32).toString('hex');await getPool().query("INSERT INTO customer_booking_access(token_hash,owner_id,booking_id) VALUES($1,$2,$3)",[tokenHash(token),owner,bookingId]);return token;}
 if(b.action==='availability'||b.action==='book'){if(isPublic)b.staff=publicBookingStaff(config,b);if(!Array.isArray(b.services)||b.services.length>10||!b.services.every((id:unknown)=>typeof id==='string'))throw Error('Choose valid services.');const services=config.services.filter((s:any)=>b.services.includes(s.id));if(!services.length||services.length!==b.services.length)throw Error('Choose valid services.');if(!services.every((s:any)=>isCalendarUnit(s.durationUnit||'minutes')&&Number.isInteger(s.duration)&&s.duration>=15&&s.duration<=480))throw Error('Term services are tracked as enrollments, not scheduled as same-day appointments. Contact the business to enroll.');if(isPublic&&b.action==='book'&&b.paymentChoice!==undefined&&(!['online','onsite'].includes(b.paymentChoice)||!servicePaymentOptions(services)[b.paymentChoice==='online'?'online':'onsite']))throw Error('Choose a payment option offered by all selected services.');const staff=config.staff.find((s:any)=>s.id===b.staff);if(!staff||!services.every((s:any)=>staff.services.includes(s.id)))throw Error('Choose a qualified team member.');if(!/^\d{4}-\d{2}-\d{2}$/.test(b.date)||new Date(b.date+'T12:00:00Z').toISOString().slice(0,10)!==b.date||b.date<today()||b.date>new Date(Date.now()+366*86400000).toISOString().slice(0,10))throw Error('Choose a date in the next year.');const duration=services.reduce((a:number,s:any)=>a+s.duration,0);
-const occupied=(await db().prepare('SELECT minute FROM slots WHERE owner=? AND date=? AND staff=?')
- .bind(owner,b.date,b.staff).all()).results.map((x:any)=>x.minute);
+const occupied=(await db().prepare('SELECT minute,appointment FROM slots WHERE owner=? AND date=? AND staff=?')
+ .bind(owner,b.date,b.staff).all()).results;
 const sameDay=(await db().prepare(
- "SELECT staff,start,duration,status,data FROM appointments WHERE owner=? AND date=? AND status NOT IN ('Cancelled','No-show')"
+ "SELECT id,staff,start,duration,status,data FROM appointments WHERE owner=? AND date=? AND status NOT IN ('Cancelled','No-show')"
 ).bind(owner,b.date).all()).results as any[];
 const clock=easternClock();
 const availability=computeDayAvailability({config,date:b.date,staff:b.staff,services,
@@ -512,4 +512,4 @@ if(b.action==='handoff'){if(!String(b.message||'').trim())throw Error('Enter a m
 }catch(e){return reply({error:(e as Error).message==='AUTH_REQUIRED'?'Please sign in.':((e as {code?:string}).code?'Unable to save right now. Please try again.':(e as Error).message)||'Unable to save. Please try again.'},(e as Error).message==='AUTH_REQUIRED'?401:400);}}
 
 async function takeLimit(key:string,max:number){const row=await db().prepare("INSERT INTO public_limits(key,count,window_start) VALUES(?,1,now()) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN 1 ELSE public_limits.count+1 END,window_start=CASE WHEN public_limits.window_start<now()-interval '15 minutes' THEN now() ELSE public_limits.window_start END RETURNING count").bind(key).first<{count:number}>();return !!row&&row.count<=max;}
-export async function publicGet(req:Request){try{const {config,owner}=await context(req,true);const merchant=await getPool().query('SELECT a.charges_enabled,a.onboarding_complete FROM merchant_accounts a JOIN businesses b ON b.id=a.business_id WHERE b.owner_id=$1',[owner]);const canPay=paymentConfigured()&&merchant.rows[0]?.charges_enabled===true&&merchant.rows[0]?.onboarding_complete===true;const brand=await db().prepare('SELECT slug,brand_primary,brand_background,business_model FROM businesses WHERE owner_id=?').bind(owner).first<{slug:string;brand_primary:string;brand_background:string;business_model:string}>();return reply({config:{waiver:publicWaiverDocument(config,brand?.brand_primary,brand?.brand_background),canPay,slug:brand?.slug,brand_primary:brand?.brand_primary,brand_background:brand?.brand_background,business_model:brand?.business_model,theme:config.theme||null,name:config.name,tagline:config.tagline,address:config.address,phone:config.phone,timezone:config.timezone,open:config.open,close:config.close,buffer:config.buffer,bookingInterval:config.bookingInterval||15,policy:config.policy,bookingEyebrow:config.bookingEyebrow,bookingHeadline:config.bookingHeadline,bookingDescription:config.bookingDescription,bookingHeaderNote:config.bookingHeaderNote,bookingPolicyTitle:config.bookingPolicyTitle,bookingPaymentNote:config.bookingPaymentNote,bookingMembershipTitle:config.bookingMembershipTitle,bookingMembershipDescription:config.bookingMembershipDescription,bookingMembershipButton:config.bookingMembershipButton,bookingOwnerLoginLabel:config.bookingOwnerLoginLabel,pageContent:config.pageContent||{},bookingShowMembership:config.bookingShowMembership!==false,bookingApprovalEnabled:config.bookingApprovalEnabled===true,hideTeamNames:config.hideTeamNames===true,...publicRegistrationSettings(config),bookableSessions:(config.bookableSessions||[]).map(({defaultTeamIds,trackSessionHost,...session}:any)=>session),bookingCustomFields:(config.bookingCustomFields||[]).map((f:any)=>({id:f.id,label:f.label,type:f.type,required:f.required,forms:f.forms,sessionIds:f.sessionIds,serviceIds:f.serviceIds,options:f.type==='select'?f.options:[]})),services:config.services.map((s:any)=>({id:s.id,name:s.name,defaultStaffId:s.defaultStaffId||'',category:s.category,duration:s.duration,durationValue:s.durationValue??s.duration,durationUnit:s.durationUnit||'minutes',maxSlots:s.maxSlots??1,price:s.price,description:s.description,paymentOptions:s.paymentOptions||'both',requiresApproval:s.requiresApproval!==false,questionRequired:s.questionRequired,requiresWaiver:s.requiresWaiver===true,membershipCreditAllowed:s.membershipCreditAllowed!==false})),staff:publicTeamMembers(config)}});}catch{return reply({error:'Online booking is temporarily unavailable. Please contact the business.'},503);}}
+export async function publicGet(req:Request){try{const {config,owner}=await context(req,true);const merchant=await getPool().query('SELECT a.charges_enabled,a.onboarding_complete FROM merchant_accounts a JOIN businesses b ON b.id=a.business_id WHERE b.owner_id=$1',[owner]);const canPay=paymentConfigured()&&merchant.rows[0]?.charges_enabled===true&&merchant.rows[0]?.onboarding_complete===true;const brand=await db().prepare('SELECT slug,brand_primary,brand_background,business_model FROM businesses WHERE owner_id=?').bind(owner).first<{slug:string;brand_primary:string;brand_background:string;business_model:string}>();return reply({config:{waiver:publicWaiverDocument(config,brand?.brand_primary,brand?.brand_background),canPay,slug:brand?.slug,brand_primary:brand?.brand_primary,brand_background:brand?.brand_background,business_model:brand?.business_model,theme:config.theme||null,name:config.name,tagline:config.tagline,address:config.address,phone:config.phone,timezone:config.timezone,open:config.open,close:config.close,buffer:config.buffer,bookingInterval:config.bookingInterval||15,policy:config.policy,bookingEyebrow:config.bookingEyebrow,bookingHeadline:config.bookingHeadline,bookingDescription:config.bookingDescription,bookingHeaderNote:config.bookingHeaderNote,bookingPolicyTitle:config.bookingPolicyTitle,bookingPaymentNote:config.bookingPaymentNote,bookingMembershipTitle:config.bookingMembershipTitle,bookingMembershipDescription:config.bookingMembershipDescription,bookingMembershipButton:config.bookingMembershipButton,bookingOwnerLoginLabel:config.bookingOwnerLoginLabel,pageContent:config.pageContent||{},bookingShowMembership:config.bookingShowMembership!==false,bookingApprovalEnabled:config.bookingApprovalEnabled===true,hideTeamNames:config.hideTeamNames===true,...publicRegistrationSettings(config),bookableSessions:(config.bookableSessions||[]).map(({defaultTeamIds,trackSessionHost,...session}:any)=>session),bookingCustomFields:(config.bookingCustomFields||[]).map((f:any)=>({id:f.id,label:f.label,type:f.type,required:f.required,forms:f.forms,sessionIds:f.sessionIds,serviceIds:f.serviceIds,options:f.type==='select'?f.options:[]})),services:config.services.map((s:any)=>({id:s.id,name:s.name,defaultStaffId:s.defaultStaffId||'',category:s.category,duration:s.duration,durationValue:s.durationValue??s.duration,durationUnit:s.durationUnit||'minutes',maxSlots:s.maxSlots??1,shareTeamSlots:s.shareTeamSlots===true,price:s.price,description:s.description,paymentOptions:s.paymentOptions||'both',requiresApproval:s.requiresApproval!==false,questionRequired:s.questionRequired,requiresWaiver:s.requiresWaiver===true,membershipCreditAllowed:s.membershipCreditAllowed!==false})),staff:publicTeamMembers(config)}});}catch{return reply({error:'Online booking is temporarily unavailable. Please contact the business.'},503);}}

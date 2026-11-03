@@ -1,3 +1,4 @@
+import {sharedService,sharesServiceTime,serviceRemaining} from './shared-service-capacity.mjs';
 import {assertWeeklyMembershipBooking} from './membership-weekly.mjs';
 import {refreshMemberPeriod} from './membership-periods.mjs';
 import {membershipAllows} from './membership-eligibility.mjs';
@@ -98,9 +99,10 @@ export async function changeAppointmentStatus(client,{owner,appointmentId,status
   const session=selectedSession(config,appointment.date,appointment.staff,services,appointment.start);
   const others=(await client.query("SELECT * FROM appointments WHERE owner=$1 AND date=$2 AND id<>$3 AND status NOT IN ('Cancelled','No-show')",[owner,appointment.date,appointmentId])).rows;
   const buffer=Number(config.buffer)||0;
-  if(others.some(a=>a.staff===appointment.staff&&overlaps(appointment.start,appointment.duration+buffer,a.start,a.duration+buffer)&&(!session||storedAppointmentData(a).sessionId!==session.id)))throw Error('This time has been rebooked. Resolve the conflicting appointment before correcting attendance.');
+  if(others.some(a=>a.staff===appointment.staff&&overlaps(appointment.start,appointment.duration+buffer,a.start,a.duration+buffer)&&(!session||storedAppointmentData(a).sessionId!==session.id)&&(session||!sharesServiceTime(a,services,appointment.start,appointment.duration))))throw Error('This time has been rebooked. Resolve the conflicting appointment before correcting attendance.');
   if(session&&bookedSessionCount(others,session.id)>=session.capacity)throw Error('This session is now full. Resolve capacity before correcting attendance.');
-  if(!session)for(let minute=appointment.start;minute<appointment.start+appointment.duration+buffer;minute+=15)await client.query('INSERT INTO slots(owner,date,staff,minute,appointment) VALUES($1,$2,$3,$4,$5)',[owner,appointment.date,appointment.staff,minute,appointmentId]);
+  if(!session&&services.some(s=>serviceRemaining(others,s,appointment.start,appointment.duration)<=0))throw Error('Service capacity has been reached. Resolve capacity before correcting attendance.');
+  if(!session&&!sharedService(services))for(let minute=appointment.start;minute<appointment.start+appointment.duration+buffer;minute+=15)await client.query('INSERT INTO slots(owner,date,staff,minute,appointment) VALUES($1,$2,$3,$4,$5)',[owner,appointment.date,appointment.staff,minute,appointmentId]);
  }
  const usage=await debitAppointmentMembershipSession(client,{
   owner,memberNumber,appointmentId,status,ledgerId,creditAllowed:appointmentData.membershipCreditAllowed!==false

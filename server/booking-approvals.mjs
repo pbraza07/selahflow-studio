@@ -1,3 +1,4 @@
+import {sharedService,sharesServiceTime,serviceRemaining} from './shared-service-capacity.mjs';
 import {assertWorkspace} from './team-workspace-state.mjs';
 import {assertWeeklyMembershipBooking,membershipBookingActive} from './membership-weekly.mjs';
 import {bookingDiscount} from './booking-discounts.mjs';
@@ -17,18 +18,7 @@ export function slotCapacity(service){const n=service?.maxSlots??1;return Number
 export function validSlotCapacity(n){return Number.isInteger(n)&&n>=1&&n<=20;}
 export function overlaps(start,duration,otherStart,otherDuration){return start<otherStart+otherDuration&&otherStart<start+duration;}
 export function serviceCapacityOpen(existing,services,start,duration){
- return services.every(s=>{
-  let busy=0;
-  for(const appointment of existing){
-   if(['Cancelled','No-show'].includes(appointment.status) || appointmentData(appointment).sessionId)continue;
-   if(!overlaps(start,duration,Number(appointment.start),Number(appointment.duration)))continue;
-   let data={};try{data=typeof appointment.data==='string'?JSON.parse(appointment.data):appointment.data||{};}catch{}
-   const ids=Array.isArray(data.serviceIds)?data.serviceIds:[];
-   const names=Array.isArray(data.services)?data.services:[];
-   if(ids.includes(s.id)||names.includes(s.name))busy++;
-  }
-  return busy<slotCapacity(s);
- });
+ return services.every(s=>serviceRemaining(existing,s,start,duration)>0);
 }
 export async function checkCapacity(pool,owner,date,services,start,duration){
  const appointments=(await pool.query("SELECT start,duration,status,data FROM appointments WHERE owner=$1 AND date=$2 AND status NOT IN ('Cancelled','No-show')",[owner,date])).rows;
@@ -99,14 +89,16 @@ export async function confirmBooking(options){
    "SELECT start,duration,status,data,staff FROM appointments WHERE owner=$1 AND date=$2 AND status NOT IN ('Cancelled','No-show')",
    [owner,date])).rows;
   const bufferMinutes=Number(buffer)||0;
+  const currentServices=services.map(s=>(config.services||[]).find(v=>v.id===s.id)||{...s,shareTeamSlots:false});
   const conflictingStaff=existing.some(a=>a.staff===staff &&
     overlaps(start,duration+bufferMinutes,Number(a.start),Number(a.duration)+bufferMinutes) &&
-    (!session || appointmentData(a).sessionId!==session.id));
+    (!session || appointmentData(a).sessionId!==session.id) &&
+    (session || !sharesServiceTime(a,currentServices,start,duration)));
   if(conflictingStaff)throw conflict('The selected team member already has another appointment at this time.');
   const taken=await client.query(
-   "SELECT a.data FROM slots sl JOIN appointments a ON a.id=sl.appointment WHERE sl.owner=$1 AND sl.date=$2 AND sl.staff=$3 AND sl.minute >= $4 AND sl.minute < $5",
+   "SELECT a.start,a.duration,a.data FROM slots sl JOIN appointments a ON a.id=sl.appointment WHERE sl.owner=$1 AND sl.date=$2 AND sl.staff=$3 AND sl.minute >= $4 AND sl.minute < $5",
    [owner,date,staff,start,start+duration+bufferMinutes]);
-  if(taken.rows.some(x=>!session || appointmentData(x).sessionId!==session.id))
+  if(taken.rows.some(x=>session?appointmentData(x).sessionId!==session.id:!sharesServiceTime(x,currentServices,start,duration)))
    throw conflict('The selected team member is no longer available. Choose another time.');
   if(session){
    if(start+duration+bufferMinutes > config.close*60 || start < config.open*60)
@@ -118,15 +110,15 @@ export async function confirmBooking(options){
    const clashes=sessionsForDate(config,date,staff).some(s=>
     overlaps(start,duration+bufferMinutes,s.start,s.duration+bufferMinutes));
    if(clashes)throw conflict('This time is reserved for a scheduled session.');
-   if(!serviceCapacityOpen(existing,services,start,duration))
+   if(!serviceCapacityOpen(existing,currentServices,start,duration))
     throw conflict('Service capacity has been reached. Choose another time or team member.');
   }
   await client.query(
    "INSERT INTO appointments(id,owner,date,staff,start,duration,data,status) VALUES($1,$2,$3,$4,$5,$6,$7,'Confirmed')",
    [id,owner,date,staff,start,duration,JSON.stringify(data)]);
-  // A group session shares the coach and start time. Only standard bookings
-  // use the unique staff-minute slots table.
-  if(!session)for(let minute=start;minute<start+duration+bufferMinutes;minute+=15){
+  // Scheduled groups and opted-in same-time services share the coach.
+  // Exclusive appointments retain unique staff-minute slot locks.
+  if(!session&&!sharedService(currentServices))for(let minute=start;minute<start+duration+bufferMinutes;minute+=15){
    await client.query('INSERT INTO slots(owner,date,staff,minute,appointment) VALUES($1,$2,$3,$4,$5)',
     [owner,date,staff,minute,id]);
   }
