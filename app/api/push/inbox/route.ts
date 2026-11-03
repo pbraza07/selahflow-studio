@@ -11,6 +11,8 @@ export async function GET(req:Request){try{
  if(reviewer==='owner'){
   const membership=await pool.query("SELECT r.id,r.created_at::text AS created_at,r.details,p.name AS plan_name,(r.owner_read_at IS NULL) AS unread FROM membership_requests r JOIN membership_plans p ON p.id=r.plan_id AND p.business_id=r.business_id WHERE r.business_id=$1 AND r.status='pending' ORDER BY r.created_at DESC LIMIT 100",[businessId]);
   for(const r of membership.rows)items.push({id:r.id,created_at:r.created_at,customerName:r.details.name,services:[r.plan_name],kind:'membership',unread:r.unread});
+  const cancellations=await pool.query("SELECT id,created_at::text AS created_at,snapshot,(owner_read_at IS NULL) AS unread FROM team_cancellation_requests WHERE business_id=$1 AND status='pending' ORDER BY created_at DESC LIMIT 100",[businessId]);
+  for(const r of cancellations.rows)items.push({id:r.id,created_at:r.created_at,customerName:r.snapshot.customerName,date:r.snapshot.date,start_minute:r.snapshot.start,services:r.snapshot.services,kind:'cancellation',unread:r.unread});
   items.sort((a,b)=>b.created_at.localeCompare(a.created_at));
  }
  return Response.json({items,unread:items.filter((x:{unread:boolean})=>x.unread).length,pending:items.length},{headers});
@@ -24,6 +26,7 @@ export async function POST(req:Request){
   if(data.action!=='markRead'||!Array.isArray(data.ids)||data.ids.length>200||!data.ids.every((x:unknown)=>typeof x==='string'&&/^[a-f0-9-]{36}$/i.test(x)))return Response.json({error:'Invalid notification selection.'},{status:400,headers});
   if(data.ids.length){
    await pool.query("INSERT INTO business_notification_reads(business_id,reviewer,request_id) SELECT r.business_id,$2,r.id FROM booking_requests r WHERE r.business_id=$1 AND r.status='pending' AND ($2='owner' OR r.reviewer=$2) AND r.id=ANY($3::text[]) ON CONFLICT(business_id,reviewer,request_id) DO NOTHING",[businessId,reviewer,data.ids]);
+   if(reviewer==='owner')await pool.query("UPDATE team_cancellation_requests SET owner_read_at=COALESCE(owner_read_at,now()) WHERE business_id=$1 AND status='pending' AND id=ANY($2::text[])",[businessId,data.ids]);
    if(reviewer==='owner')await pool.query("UPDATE membership_requests SET owner_read_at=COALESCE(owner_read_at,now()) WHERE business_id=$1 AND status='pending' AND id=ANY($2::text[])",[businessId,data.ids]);
   }
   return Response.json({ok:true},{headers});

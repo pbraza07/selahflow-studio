@@ -1,3 +1,9 @@
+# v1.3.208 release handoff — Owner-reviewed team cancellation requests
+
+Team calendar lets signed-in members request cancellation of an assigned open appointment with a reason. Requests leave customer records, appointments, reserved capacity, payments and credits unchanged. Owner Overview/Calendar has a dedicated cancellation inbox with Approve/Decline, decision history and shared notification-bell alerts. Team members see pending/approved/declined status. Only owner authorization can decide; team sessions cannot approve or delete customers.
+
+Additive migration 086 stores business-scoped requests and decision audit. Duplicate pending requests and repeated approvals are idempotent. Approval rechecks the appointment snapshot, rejects changed/closed appointments and unreconciled open Checkout/Terminal attempts, then uses the existing atomic cancellation workflow to release slots and retain history. No automatic refund or used-membership-credit reversal; owner confirmation explains this. Decline preserves the appointment. Source v1.3.208; validation/deployment pending. No customer, financial or settings data is changed for QA.
+
 # v1.3.207 release handoff — Financial report date presets and custom calendars
 
 Financial reports now includes Today, This week (Sunday–Saturday), This month, rolling Past 6 months, Year to date and All time, plus a Custom date range dropdown with native From/Through calendars, validation and Apply/Cancel. Shows exact inclusive period boundaries in Eastern time. Presets use the current Eastern date, independent of calendar navigation. Month subtraction clamps to the target month’s final day.

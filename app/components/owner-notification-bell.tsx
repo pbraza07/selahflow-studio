@@ -14,9 +14,9 @@ export default function OwnerNotificationBell({onOpen}:{onOpen:()=>void}){
  }
  return <div className="sf-notification-bell">
  <button className="sf-bell-button" aria-label={'Request alerts: '+unread+' unread'} aria-expanded={open} type="button" onClick={toggle}><Bell size={21}/>{unread>0&&<span className="sf-bell-count">{unread>99?'99+':unread}</span>}</button>
- {open&&<div className="sf-bell-popover"><div className="sf-bell-heading"><strong>Booking & membership alerts</strong><button type="button" onClick={()=>setOpen(false)} aria-label="Close notifications">×</button></div>
+ {open&&<div className="sf-bell-popover"><div className="sf-bell-heading"><strong>Booking, membership & cancellation alerts</strong><button type="button" onClick={()=>setOpen(false)} aria-label="Close notifications">×</button></div>
   <p className="sf-bell-meta">{items.length} pending requests · New items marked read when opened</p>
-  {items.length?items.slice(0,8).map(item=><div className="sf-bell-item" key={item.id}><strong>{item.kind==='membership'?'MEMBERSHIP REQUEST · ':''}{item.customerName||'Customer'}</strong><span>{item.date||'Membership'} · {(item.services||[]).join(', ')}</span></div>):<p className="sf-bell-empty">No pending requests.</p>}
+  {items.length?items.slice(0,8).map(item=><div className="sf-bell-item" key={item.id}><strong>{item.kind==='cancellation'?'CANCELLATION REQUEST · ':item.kind==='membership'?'MEMBERSHIP REQUEST · ':''}{item.customerName||'Customer'}</strong><span>{item.date||'Membership'} · {(item.services||[]).join(', ')}</span></div>):<p className="sf-bell-empty">No pending requests.</p>}
   <button type="button" className="sf-bell-review" onClick={()=>{setOpen(false);onOpen();}}>Open approval inbox →</button>
  </div>}
  </div>;

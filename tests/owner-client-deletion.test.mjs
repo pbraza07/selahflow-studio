@@ -24,6 +24,7 @@ async function fixture(){
 }
 test('one confirmed owner request deletes client without operator paperwork; retries cannot delete a new holder of the released ID',async()=>{
  const {pg,post}=await fixture();try{
+ await pg.query("INSERT INTO team_cancellation_requests(id,business_id,owner_id,appointment_id,staff_id,staff_name,reason,snapshot) VALUES('cancel','biz','owner','visit','coach','Team member','Private reason',$1::jsonb)",[JSON.stringify({customerName:'Test Person'})]);
  const body={action:'delete',clientId:profile,confirmPhrase:'DELETE CLIENT'};
  assert.equal((await post(body,'')).status,401);
  assert.equal((await post(body,'owner',false)).status,403);
@@ -31,6 +32,7 @@ test('one confirmed owner request deletes client without operator paperwork; ret
  assert.equal((await post({...body,confirmPhrase:''})).status,409);
  assert.equal((await pg.query('SELECT count(*)::int n FROM client_deletion_authorizations')).rows[0].n,0);
  const first=await post(body);assert.equal(first.status,200,await first.text());
+ assert.equal((await pg.query("SELECT count(*)::int n FROM team_cancellation_requests WHERE business_id='biz'")).rows[0].n,0);
  assert.equal((await pg.query("SELECT count(*)::int n FROM business_client_profiles WHERE owner='owner'")).rows[0].n,0);
  assert.equal((await pg.query("SELECT count(*)::int n FROM customer_booking_ids WHERE business_id='biz'")).rows[0].n,0);
  assert.equal((await pg.query("SELECT count(*)::int n FROM business_member_ids WHERE business_id='biz'")).rows[0].n,0);
