@@ -2,6 +2,7 @@
 
 - Show per-member payment request and provider-submission counters using existing invitation history.
 - Deduplicate uncertain send retries without counting worker delivery attempts or implying inbox delivery.
+- Bound stalled optional Stripe sandbox preparation during startup while preserving required migration and setup failures.
 
 # v1.3.210
 
