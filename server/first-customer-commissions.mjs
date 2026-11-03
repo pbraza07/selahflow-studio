@@ -1,5 +1,6 @@
 import {CASH_BILLING_TERMS_VERSION} from './cash-commission-terms.mjs';
-import {createHash,randomUUID} from 'node:crypto';
+import {randomUUID} from 'node:crypto';
+import {commissionContactEvidence,commissionIdentityDigest} from './commission-contact-evidence.mjs';
 import {stripeApi,paymentConfigured} from './membership-payments.mjs';
 export const COMMISSION_TERMS='first-booking-and-membership-10-min5-v2';
 export function commissionCents(cents){if(!Number.isSafeInteger(cents)||cents<0)throw Error('Invalid commission basis.');return Math.min(Math.max(0,cents-1),Math.max(500,Math.round(cents/10)));}
@@ -41,10 +42,17 @@ export async function reserveCommission(db,{businessId,kind,memberNumber,sourceI
  const fee=commissionCents(eligibleCents);if(!fee)return null;
  const identity=(await db.query('SELECT identity_key FROM business_member_ids WHERE business_id=$1 AND member_number=$2 AND retired_at IS NULL',[businessId,memberNumber||''])).rows[0];
  if(!identity)return null; // Legacy records without a verified identity are never guessed from email.
- const digest=createHash('sha256').update(policy.identity_salt+'|'+businessId+'|'+identity.identity_key).digest('hex');
- await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[businessId+':commission:'+kind+':'+digest]);
- let prior=(await db.query('SELECT * FROM first_customer_commissions WHERE business_id=$1 AND identity_digest=$2 AND kind=$3 FOR UPDATE',[businessId,digest,kind])).rows[0];
- if(prior&&['paid','refunded','accrued','invoiced'].includes(prior.status))return null;
+ const digest=commissionIdentityDigest(policy.identity_salt,businessId,identity.identity_key);
+ const evidence=await commissionContactEvidence(db,{businessId,memberNumber,identityKey:identity.identity_key,policy});
+ for(const matchedDigest of evidence.digests)await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[businessId+':commission:'+kind+':'+matchedDigest]);
+ const claims=(await db.query('SELECT * FROM first_customer_commissions WHERE business_id=$1 AND identity_digest=ANY($2::text[]) AND kind=$3 ORDER BY identity_digest FOR UPDATE',[businessId,evidence.digests,kind])).rows;
+ if(claims.some(r=>['paid','refunded','accrued','invoiced'].includes(r.status)))return null;
+ let prior=claims.find(r=>r.identity_digest===digest);
+ for(const other of claims.filter(r=>r.identity_digest!==digest&&r.status==='reserved')){
+  if(other.stripe_checkout_session_id){const session=await api('checkout/sessions/'+other.stripe_checkout_session_id,{method:'GET',account:other.stripe_account_id});if(session.status==='expired')continue;}
+  else if(other.stripe_payment_intent_id){const intent=await api('payment_intents/'+other.stripe_payment_intent_id,{method:'GET',account:other.stripe_account_id});if(intent.status==='canceled')continue;}
+  throw Error('Another first-time '+kind+' payment is open or processing for a matching client. Complete or expire that payment first.');
+ }
  if(prior?.stripe_checkout_session_id&&(prior.source_id!==sourceId||collectionMethod==='cash')&&prior.status==='reserved'){
   const session=await api('checkout/sessions/'+prior.stripe_checkout_session_id,{method:'GET',account:prior.stripe_account_id});
   if(session.status!=='expired')throw Error('Another first-time '+kind+' payment is open or processing for this client. Complete it or ask the business to expire the unpaid checkout first.');
@@ -55,14 +63,15 @@ export async function reserveCommission(db,{businessId,kind,memberNumber,sourceI
  }
  // Preserve returning/legacy/imported booking clients at activation. Membership is independently eligible.
  if(kind==='booking'){
-  const old=(await db.query('SELECT 1 FROM business_client_profiles p JOIN businesses b ON b.owner_id=p.owner WHERE b.id=$1 AND p.member_number=$2 AND (p.created_at<$3::timestamptz OR p.commission_existing_client=true) LIMIT 1',[businessId,memberNumber,policy.booking_enabled_at])).rows.length;
+  const old=(await db.query('SELECT 1 FROM business_client_profiles p JOIN businesses b ON b.owner_id=p.owner WHERE b.id=$1 AND p.member_number=ANY($2::text[]) AND (p.created_at<$3::timestamptz OR p.commission_existing_client=true) LIMIT 1',[businessId,evidence.memberNumbers,policy.booking_enabled_at])).rows.length;
   if(old)return null;
-  const paid=(await db.query("SELECT 1 FROM appointments a JOIN businesses b ON b.owner_id=a.owner LEFT JOIN booking_payments p ON p.booking_id=a.id AND p.business_id=b.id WHERE b.id=$1 AND a.id<>$3 AND a.data::jsonb->>'memberNumber'=$2 AND (p.status='paid' OR a.data::jsonb->>'paymentStatus'='paid' OR a.status='Completed') LIMIT 1",[businessId,memberNumber,sourceId])).rows.length;
+  const paid=(await db.query("SELECT 1 FROM appointments a JOIN businesses b ON b.owner_id=a.owner LEFT JOIN booking_payments p ON p.booking_id=a.id AND p.business_id=b.id WHERE b.id=$1 AND a.id<>$3 AND a.data::jsonb->>'memberNumber'=ANY($2::text[]) AND (p.status='paid' OR a.data::jsonb->>'paymentStatus'='paid' OR a.status='Completed') LIMIT 1",[businessId,evidence.memberNumbers,sourceId])).rows.length;
   if(paid)return null;
  }else{
-  const paid=(await db.query("SELECT 1 FROM customer_memberships m WHERE m.business_id=$1 AND m.member_number=$2 AND (m.initial_paid_at IS NOT NULL OR m.last_paid_at IS NOT NULL OR m.paid_through IS NOT NULL OR m.status='active' OR EXISTS(SELECT 1 FROM membership_session_ledger l WHERE l.membership_id=m.id AND l.business_id=m.business_id AND l.event_type='payment_confirmed' AND l.amount_cents>0)) LIMIT 1",[businessId,memberNumber])).rows.length;
+  const paid=(await db.query("SELECT 1 FROM customer_memberships m WHERE m.business_id=$1 AND m.member_number=ANY($2::text[]) AND (m.initial_paid_at IS NOT NULL OR m.last_paid_at IS NOT NULL OR m.paid_through IS NOT NULL OR m.status='active' OR EXISTS(SELECT 1 FROM membership_session_ledger l WHERE l.membership_id=m.id AND l.business_id=m.business_id AND l.event_type='payment_confirmed' AND l.amount_cents>0)) LIMIT 1",[businessId,evidence.memberNumbers])).rows.length;
   if(paid)return null;
  }
+ if(evidence.ambiguous)throw Error('Contact information matches multiple clients with this name. Ask the business to verify the existing Client ID or birth date before payment.');
  if(collectionMethod==='cash'){
   const billing=(await db.query('SELECT p.authorized_at FROM commission_billing_profiles p JOIN commission_billing_consents c ON c.id=p.active_consent_id WHERE p.business_id=$1 AND p.stripe_payment_method_id IS NOT NULL AND c.activated_at IS NOT NULL AND c.terms_version=$2',[businessId,CASH_BILLING_TERMS_VERSION])).rows[0];
   if(!billing?.authorized_at)throw Error('Authorize monthly cash commission billing in Business settings → Payment setup before recording this eligible cash payment.');

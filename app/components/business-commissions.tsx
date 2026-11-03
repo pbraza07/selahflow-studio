@@ -12,6 +12,7 @@ export default function BusinessCommissions(){
  return <section aria-labelledby="sf-commission-title" className="sf-business-commissions" style={{marginTop:24,paddingTop:20,borderTop:'1px solid #d5e2de'}}>
   <h3 id="sf-commission-title">First-time customer commissions</h3>
   <p>Two independent one-time fees: the greater of 10% or $5 on a client’s first eligible paid booking and, separately, their first paid membership at this business. For payments of $5 or less, the fee is capped at the payment amount minus $0.01.</p>
+  <p>Existing Client IDs remain the primary reference. Email or phone can support a repeat-client match when the name agrees and known birth dates do not conflict. Shared family contacts alone do not combine different clients.</p>
   {error&&<p role="alert" className="sf-membership-error">{error}</p>}{notice&&<p role="status">{notice}</p>}
   {!data?<p>Loading commission settings…</p>:<>
    {data.stripeSetup&&!data.stripeSetup.ready&&<p role="status">Platform Stripe setup required: {data.stripeSetup.reason}</p>}
