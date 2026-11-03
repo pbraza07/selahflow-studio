@@ -36,3 +36,11 @@ test('modal lifecycle uses native focus containment and restores background scro
  globalThis.document={activeElement:{focus:options=>{assert.equal(options.preventScroll,true);focused++;}},body:{style:{overflow:'auto'}}};
  try{h.render(props);h.refs[0].current={showModal:()=>shown++};const cleanup=h.effects[0]();assert.equal(shown,1);assert.equal(document.body.style.overflow,'hidden');cleanup();assert.equal(document.body.style.overflow,'auto');assert.equal(focused,1);}finally{globalThis.document=previous;}
 });
+
+test('Enter in session inputs uses modal save flow and leaves multiline editing alone',async()=>{
+ const h=harness();let saved=0,prevented=0;const tree=h.render({...props,onSave:async()=>{saved++;return true;}});
+ tree.props.onKeyDown({key:'Enter',nativeEvent:{isComposing:false},target:{tagName:'INPUT'},preventDefault:()=>prevented++});
+ await Promise.resolve();assert.equal(saved,1);assert.equal(prevented,1);
+ tree.props.onKeyDown({key:'Enter',nativeEvent:{isComposing:false},target:{tagName:'TEXTAREA'},preventDefault:()=>prevented++});
+ assert.equal(prevented,1);assert.equal(saved,1);
+});
