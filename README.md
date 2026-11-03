@@ -1,3 +1,9 @@
+# v1.3.209 release handoff — Email and phone evidence for first-time commissions
+
+Adds business-scoped normalized email OR phone as corroborating first-time commission evidence, alongside the existing verified Client ID/identity, normalized full name and nonconflicting known birth dates. US/international phone formatting and email case/space differences are normalized conservatively; provider-specific email aliases are not guessed. Different names sharing family contacts and conflicting known birth dates remain separate. Ambiguous same-name/contact records with multiple known birthdays require identity clarification before a new first-time payment. This is matching evidence, not email/SMS ownership verification or automatic profile merging.
+
+Additive migration 087 creates salted-hash contact evidence, commission-only identity links and indexed retained-source lookups. Linked eligibility survives subsequent contact edits and deletion of the original source, without storing readable contacts in the added financial evidence. Existing retained profiles/booking identities/membership records support historical checks; contact information deleted before this feature cannot be reconstructed. Sorted contact/identity locks and active-claim checks protect competing alternative IDs across online, onsite and cash flows. Booking and membership eligibility remain independent; returning/pre-activation client exclusions, cash consent, administrator switches, existing quoted/collected fees, provider settlement and refunds stay unchanged. No retrospective charges or automatic customer merges. Source v1.3.209; validation/deployment pending.
+
 # v1.3.208 release handoff — Owner-reviewed team cancellation requests
 
 Team calendar lets signed-in members request cancellation of an assigned open appointment with a reason. Requests leave customer records, appointments, reserved capacity, payments and credits unchanged. Owner Overview/Calendar has a dedicated cancellation inbox with Approve/Decline, decision history and shared notification-bell alerts. Team members see pending/approved/declined status. Only owner authorization can decide; team sessions cannot approve or delete customers.
@@ -112,7 +118,7 @@ The shared Checkout core retains authoritative owner/tenant scope, saved amount,
 
 Focused database/API/component tests pass. Full local validation, final GitHub checks and production rollout are pending. No migration is needed; the v1.3.197 monthly cash commission features are preserved. Staging remains suspended by Render billing. No real customer checkout, payment, client record or outgoing message is generated for QA. Physical-phone installation and NFC acceptance remain separate prerequisites.
 
-Release source: v1.3.208.
+Release source: v1.3.209.
 
 # v1.3.197 verified LIVE in production — Monthly cash commission billing and concise benefits
 

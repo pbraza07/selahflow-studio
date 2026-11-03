@@ -1,3 +1,8 @@
+# v1.3.209
+
+- Use normalized email or phone with matching names and compatible birth dates as supporting first-time commission evidence.
+- Retain only salted contact hashes and financial identity links; guard shared contacts, conflicting identities and competing payment attempts without merging profiles or changing existing fees.
+
 # v1.3.208
 
 - Add team cancellation requests, owner-only approvals, decision history and owner notification-bell alerts.
