@@ -1,3 +1,9 @@
+# v1.3.215 release handoff — Membership sessions column order
+
+Release source: v1.3.215
+
+Member enrollments now orders columns Customer / Member ID, Sessions used, Payment status / actions, Plan. Complete cells and sorting values move together, preserving all actions and counters. Payment-control spacing follows column three. Applies to all businesses; presentation only, no migration or data changes. Local validation passed: 666 tests, TypeScript, production build, and AST comparison confirming only header/data cell reorder. User approved publishing and deployment. Hosted staging and production verification pending.
+
 # v1.3.214 release handoff — New session editor modal
 
 Release source: v1.3.214
