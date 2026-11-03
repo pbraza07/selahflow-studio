@@ -51,6 +51,7 @@ export async function deleteClientPermanently(db,{owner,businessId,client,closeO
   for(const table of ['booking_action_tokens','booking_notification_attempts'])add(table,'request_id=ANY($1::text[])',[requestIds]);
   for(const table of ['booking_request_edits','business_notification_reads'])add(table,'business_id=$1 AND request_id=ANY($2::text[])',[business.id,requestIds]);
   for(const table of ['customer_booking_access','customer_booking_push'])add(table,'owner_id=$1 AND booking_id=ANY($2::text[])',[business.owner_id,bookingKeys]);
+  add('team_cancellation_requests','business_id=$1 AND appointment_id=ANY($2::text[])',[business.id,appointmentIds]);
   add('slots','owner=$1 AND appointment=ANY($2::text[])',[business.owner_id,appointmentIds]);
   add('booking_payments','business_id=$1 AND booking_id=ANY($2::text[])',[business.id,bookingKeys]);
   add('stripe_payment_receipts','business_id=$1 AND (booking_id=ANY($2::text[]) OR membership_id=ANY($3::text[]))',[business.id,bookingKeys,memberIds]);

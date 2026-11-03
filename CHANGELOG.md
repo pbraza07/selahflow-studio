@@ -1,3 +1,8 @@
+# v1.3.208
+
+- Add team cancellation requests, owner-only approvals, decision history and owner notification-bell alerts.
+- Preserve bookings until approval; use atomic cancellation with stale-appointment and open-payment safeguards, retaining customers, payments and history.
+
 # v1.3.207
 
 - Add this-week, past-six-month and year-to-date financial report periods plus inclusive custom From/Through calendar selection.
