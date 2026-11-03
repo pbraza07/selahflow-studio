@@ -1,0 +1,3 @@
+export default function MembershipPaymentRequestCount({summary}:{summary?:{request_count:number;submitted_count:number}}){
+ return <small style={{display:'block',marginTop:6}} title="Payment requests counts invitations queued using Send for payment, including past requests. Automatic email retries do not increase it. Emails submitted counts confirmed email-provider acceptance; it does not confirm inbox delivery."><span>Payment requests: <strong>{summary?.request_count??0}</strong></span><span style={{display:'block'}}>Emails submitted: <strong>{summary?.submitted_count??0}</strong></span></small>;
+}

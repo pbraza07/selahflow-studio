@@ -4,7 +4,7 @@ import {assertTestPayment} from './stripe-checkout.mjs';
 import {monthlyPeriod,anniversary,nextBillingAnchor} from './membership-periods.mjs';
 import {queueMembershipInvitation} from './membership-invitations.mjs';
 export async function membershipBillingAction(db,{business,owner,input,origin,api=stripeApi}){
- if(input.action==='sendPayment')return queueMembershipInvitation(db,{businessId:business.id,membershipId:String(input.id||''),origin});
+ if(input.action==='sendPayment')return queueMembershipInvitation(db,{businessId:business.id,membershipId:String(input.id||''),origin,requestId:input.requestId});
  if(input.action==='saveCoupon'){
   const code=String(input.code||'').trim().toUpperCase(),description=String(input.description||'').trim(),value=Number(input.value);
   if(!/^[A-Z0-9_-]{3,40}$/.test(code)||description.length>500||!['percent','fixed'].includes(input.kind)||!Number.isInteger(value)||value<1||input.kind==='percent'&&value>100||value>100000000||!['once','forever'].includes(input.duration))throw Error('Enter a valid coupon code, discount and duration.');
