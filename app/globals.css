@@ -1918,8 +1918,8 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
 .sf-owner-membership-scroll{overflow-x:auto;max-width:100%;overscroll-behavior-x:contain}
 .sf-owner-membership-scroll table{min-width:780px;table-layout:auto}
 .sf-owner-membership-scroll th,.sf-owner-membership-scroll td{vertical-align:top;line-height:1.5;overflow-wrap:anywhere;word-break:normal}
-.sf-owner-membership-scroll td:nth-child(4){min-width:230px}
-.sf-owner-membership-scroll td:nth-child(4)>div{margin-top:9px}
+.sf-owner-membership-scroll td:nth-child(2){min-width:230px}
+.sf-owner-membership-scroll td:nth-child(2)>div{margin-top:9px}
 .sf-owner-membership-scroll td button{min-height:34px;white-space:normal;max-width:100%;line-height:1.35}
 .sf-owner-membership-scroll td small{overflow-wrap:anywhere}
 .sf-member-status{max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.35}

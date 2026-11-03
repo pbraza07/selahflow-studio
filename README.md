@@ -1,3 +1,9 @@
+# v1.3.213 release handoff — Membership payment column order
+
+Release source: v1.3.213
+
+Member enrollments now orders columns Customer / Member ID, Payment status / actions, Plan, Sessions used. Both headers and complete row cells move together, retaining sorting, payment controls, counters and renewal form behavior. Shared owner component applies to all businesses. Presentation only; no migration, business-setting, membership or payment changes. Validation and deployment pending.
+
 # v1.3.212 release handoff — Shared private service slots
 
 Release source: v1.3.212
