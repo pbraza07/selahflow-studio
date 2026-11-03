@@ -38,6 +38,7 @@ test('owner queues one private email, authorizes online for this appointment, cr
  assert.equal((await s.request()).queued,false);assert.equal((await s.request({key:randomUUID()})).queued,false);
  await s.db.query("UPDATE booking_client_messages SET updated_at=now()-interval '2 minutes'");const key=randomUUID();assert.equal((await s.request({key})).queued,true);assert.equal((await s.message()).id,key);assert.equal((await s.db.query('SELECT payment_url FROM booking_client_flows')).rows[0].payment_url,link);
  await s.db.query("UPDATE booking_client_messages SET status='unknown'");assert.equal((await s.request({key})).queued,false);await assert.rejects(s.request({key:randomUUID()}),/delivery outcome/);
+ await s.db.query("UPDATE booking_client_messages SET status='failed',attempts=3");assert.equal((await s.request({key})).queued,false);const fresh=randomUUID();assert.equal((await s.request({key:fresh})).queued,true);assert.equal((await s.message()).id,fresh);assert.equal((await s.message()).attempts,0);
 });
 test('owner rejects stale, unapproved, paid, covered, invalid, foreign and unavailable payment requests without side effects',async t=>{
  const s=await setup(t);await assert.rejects(s.request({confirmed:false}),/confirm/);await assert.rejects(s.request({},'other'),/unavailable/);await assert.rejects(s.request({expectedEmail:'other@example.test'}),/changed/);await assert.rejects(s.request({expectedAmountCents:1}),/changed/);
