@@ -1,3 +1,9 @@
+# v1.3.210 release handoff — Email appointment payment links
+
+Owner appointment actions now include Email payment link beside Pay on Site, shared by the calendar table, appointment details and roster. A review dialog shows the saved client email and amount before the owner explicitly sends. The action queues one branded transactional email containing the private payment page; it does not send SMS, create a Stripe checkout, charge a card or mark the booking paid. Existing client booking messages show provider delivery status. Complete Stripe onboarding is required. Sending explicitly permits online payment for that appointment, including an onsite-only/team-created appointment, without changing catalog settings or removing an existing onsite option. Existing first-time commissions, waivers, pricing and payment verification apply when the client pays.
+
+Owner-only, business-scoped server checks reject stale recipient/amount, unapproved, cancelled, already paid, covered/free bookings and open phone card collections. Stable request IDs avoid duplicate queueing after timeouts. Unknown/processing email outcomes require checking delivery before another request; submitted emails have a one-minute resend cooldown. Valid private links are reused and expired links renewed. The worker suppresses stale requests after recorded cash/card payment, coverage, cancellation, recipient or amount changes. No schema migration. Source v1.3.210; deployment verification pending. QA uses synthetic database/component fixtures and protected-route smoke; no real customer email or charge is authorized for QA. Signed-in visual, physical-device and real-provider email acceptance are not claimed.
+
 # v1.3.209 release handoff — Email and phone evidence for first-time commissions
 
 Adds business-scoped normalized email OR phone as corroborating first-time commission evidence, alongside the existing verified Client ID/identity, normalized full name and nonconflicting known birth dates. US/international phone formatting and email case/space differences are normalized conservatively; provider-specific email aliases are not guessed. Different names sharing family contacts and conflicting known birth dates remain separate. Ambiguous same-name/contact records with multiple known birthdays require identity clarification before a new first-time payment. This is matching evidence, not email/SMS ownership verification or automatic profile merging.
@@ -118,7 +124,7 @@ The shared Checkout core retains authoritative owner/tenant scope, saved amount,
 
 Focused database/API/component tests pass. Full local validation, final GitHub checks and production rollout are pending. No migration is needed; the v1.3.197 monthly cash commission features are preserved. Staging remains suspended by Render billing. No real customer checkout, payment, client record or outgoing message is generated for QA. Physical-phone installation and NFC acceptance remain separate prerequisites.
 
-Release source: v1.3.209.
+Release source: v1.3.210.
 
 # v1.3.197 verified LIVE in production — Monthly cash commission billing and concise benefits
 

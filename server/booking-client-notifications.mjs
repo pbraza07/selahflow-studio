@@ -25,7 +25,7 @@ async function enqueue(db,row,event,link,origin){
  }
 }
 /** Called inside the same transaction that accepts a pending request. */
-export async function queueApprovedBooking(db,{bookingId,requestId,origin}){
+export async function queueApprovedBooking(db,{bookingId,requestId,origin,notify=true,refreshExpired=false}){
  const row=(await db.query("SELECT a.*,b.id AS business_id,b.name,b.slug FROM appointments a JOIN businesses b ON b.owner_id=a.owner WHERE a.id=$1 AND b.status='active'",[bookingId])).rows[0];
  if(!row)return;
  const data=dataOf(row.data);
@@ -38,10 +38,10 @@ export async function queueApprovedBooking(db,{bookingId,requestId,origin}){
  const token=randomBytes(32).toString('hex'),expiry=new Date(Date.now()+30*86400000).toISOString();
  // A fragment keeps the private token out of server access logs and referrers.
  const link=host.origin+'/payment/'+encodeURIComponent(row.slug)+'#booking_id='+encodeURIComponent(requestId||bookingId)+'&token='+token;
- const inserted=await db.query('INSERT INTO booking_client_flows(booking_id,business_id,request_id,payment_url,expires_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING booking_id',[bookingId,row.business_id,requestId,link,expiry]);
+ const inserted=await db.query('INSERT INTO booking_client_flows(booking_id,business_id,request_id,payment_url,expires_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT(booking_id) DO UPDATE SET payment_url=excluded.payment_url,expires_at=excluded.expires_at WHERE $6::boolean AND booking_client_flows.expires_at<=now() RETURNING booking_id',[bookingId,row.business_id,requestId,link,expiry,refreshExpired]);
  if(!inserted.rowCount)return;
  await db.query('INSERT INTO customer_booking_access(token_hash,owner_id,booking_id,expires_at) VALUES($1,$2,$3,$4)',[tokenHash(token),row.owner,requestId||bookingId,expiry]);
- await enqueue(db,row,'payment_link',link,host.origin);
+ if(notify)await enqueue(db,row,'payment_link',link,host.origin);
 }
 /** Called inside the verified financial receipt transaction. */
 export async function queueBookingPaid(db,businessId,bookingId){
@@ -60,9 +60,9 @@ export async function processClientMessages(pool=getPool(),{send=sendNotificatio
   if(!item)break;
   processed++;
   try{
-   const state=(await pool.query("SELECT f.business_id,a.status AS appointment_status,f.expires_at,p.status AS payment_status,ma.charges_enabled,ma.onboarding_complete FROM booking_client_flows f JOIN businesses b ON b.id=f.business_id JOIN appointments a ON a.id=f.booking_id AND a.owner=b.owner_id LEFT JOIN booking_payments p ON p.booking_id=f.booking_id AND p.business_id=f.business_id LEFT JOIN merchant_accounts ma ON ma.business_id=f.business_id AND ma.provider='stripe' WHERE f.booking_id=$1 AND b.status='active'",[item.booking_id])).rows[0];
+   const state=(await pool.query("SELECT f.business_id,a.status AS appointment_status,a.data::jsonb->>'paymentStatus' AS recorded_payment_status,a.data::jsonb->>'membershipCovered' AS membership_covered,a.data::jsonb->>'price' AS current_price,a.data::jsonb->>'email' AS current_email,f.expires_at,p.status AS payment_status,ma.charges_enabled,ma.onboarding_complete FROM booking_client_flows f JOIN businesses b ON b.id=f.business_id JOIN appointments a ON a.id=f.booking_id AND a.owner=b.owner_id LEFT JOIN booking_payments p ON p.booking_id=f.booking_id AND p.business_id=f.business_id LEFT JOIN merchant_accounts ma ON ma.business_id=f.business_id AND ma.provider='stripe' WHERE f.booking_id=$1 AND b.status='active'",[item.booking_id])).rows[0];
    let result;
-   if(!state||item.event_type==='payment_confirmation'&&state.payment_status!=='paid'||item.event_type==='payment_link'&&(state.appointment_status==='Cancelled'||state.payment_status==='paid'||new Date(state.expires_at)<=new Date()))result={status:'superseded',detail:'Booking or payment is no longer eligible for this message'};
+   if(!state||item.event_type==='payment_confirmation'&&state.payment_status!=='paid'||item.event_type==='payment_link'&&(state.appointment_status==='Cancelled'||state.payment_status==='paid'||state.recorded_payment_status==='paid'||state.membership_covered==='true'||Number(state.current_price)<=0||new Date(state.expires_at)<=new Date()||dataOf(item.message).ownerPaymentEmail&&(dataOf(item.message).quotedAmountCents!==Math.round(Number(state.current_price)*100)||String(item.destination).trim().toLowerCase()!==String(state.current_email||'').trim().toLowerCase())))result={status:'superseded',detail:'Booking or payment is no longer eligible for this message'};
    else if(item.channel==='email'?!validEmail(item.destination):!validE164(item.destination))result={status:'invalid_destination',detail:item.channel==='sms'?'Registration phone missing or invalid; use +country code and number':'Registration email missing or invalid'};
    // Deliver the approved booking and its private payment page even when card
    // onboarding is incomplete; that page reports availability honestly.
