@@ -2213,3 +2213,13 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 @media(max-width:700px){.sf-team-settings-nav{grid-template-columns:1fr;gap:8px}.sf-team-settings-nav button{min-height:0;padding:13px}}
 
 .sf-service-commission-report{margin-top:28px;padding-top:22px;border-top:1px solid #d5e2de;min-width:0}.sf-service-commission-report td small{display:block;margin-top:5px;overflow-wrap:anywhere}.sf-service-commission-report table{min-width:950px}.sf-service-commission-report .form-row{display:flex;gap:14px;flex-wrap:wrap}.sf-service-commission-report label{display:block;margin:10px 0}.sf-service-commission-report :is(input,select){display:block;margin-top:6px;max-width:100%;padding:10px;border:1px solid #bdcec2;border-radius:9px;background:#fff;color:#193d32;min-height:42px}
+
+/* New session editor stays above the workspace without moving the owner's page. */
+.app-shell dialog.sf-new-session-dialog{width:min(960px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 32px);margin:auto;padding:22px;border:1px solid var(--line,#d6e0da);border-radius:20px;background:var(--bg,#fff);color:var(--text,#123f3a);overflow:auto;overscroll-behavior:contain;box-shadow:0 20px 80px #0004}
+.sf-new-session-dialog::backdrop{background:#102b2866}
+.app-shell .sf-new-session-header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}
+.app-shell .sf-new-session-header h2{margin:0 0 8px}
+.app-shell .sf-new-session-header p,.app-shell .sf-new-session-actions p{margin:0;font-size:14px;line-height:1.5}
+.app-shell .sf-new-session-actions{display:block;padding-top:18px;border-top:1px solid var(--line,#d6e0da)}
+.app-shell .sf-new-session-actions .button-row{margin-top:12px;justify-content:flex-end;flex-wrap:wrap}
+@media(max-width:650px){.app-shell dialog.sf-new-session-dialog{padding:14px;width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.app-shell .sf-new-session-actions button{flex:1;min-height:44px}}

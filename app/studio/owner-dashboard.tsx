@@ -1,5 +1,6 @@
 'use client';
 import {financialDateInRange} from '../../server/financial-pipeline.mjs';
+import SessionEditorDialog from '../components/session-editor-dialog';
 import TeamCalendar,{TeamCalendarDialog} from '../components/team-calendar';
 import OwnerTeamSettings from '../components/owner-team-settings';
 import BusinessAssistant from '../components/business-assistant';
@@ -145,7 +146,7 @@ useEffect(()=>{refresh();fetch('/api/business',{cache:'no-store'}).then(r=>r.jso
  document.addEventListener('visibilitychange',resume);
  return()=>{window.clearInterval(timer);document.removeEventListener('visibilitychange',resume);};
 },[view]);useEffect(()=>{const listener=()=>refresh();window.addEventListener('selahflow:booking-reviewed',listener);window.addEventListener('selahflow:memberships-updated',listener);return()=>{window.removeEventListener('selahflow:booking-reviewed',listener);window.removeEventListener('selahflow:memberships-updated',listener);};},[]);useEffect(()=>{if(toast){const t=setTimeout(()=>setToast(''),4500);return()=>clearTimeout(t);}},[toast]);
-async function action(data:Any){setBusy(true);try{const r=await fetch('/api/studio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,key:crypto.randomUUID()})});const d=await r.json() as Any;if(r.status===401){window.location.assign('/login');return;}if(!r.ok)throw Error(d.error);return d;}catch(e){setToast((e as Error).message);return null;}finally{setBusy(false);}}
+async function action(data:Any,onError?:(message:string)=>void){setBusy(true);try{const r=await fetch('/api/studio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,key:crypto.randomUUID()})});const d=await r.json() as Any;if(r.status===401){window.location.assign('/login');return;}if(!r.ok)throw Error(d.error);return d;}catch(e){setToast((e as Error).message);onError?.((e as Error).message);return null;}finally{setBusy(false);}}
 const slotRequest=useRef(0);
 const active=appointments.filter(a=>a.status!=='Cancelled'&&a.status!=='No-show');
 const display=appointments;
@@ -155,6 +156,7 @@ const serviceAccent=(name:string)=>{const service=(config.services||[]).find((v:
 const recurrenceEndDefault=(starting:string)=>{const d=new Date(starting+'T12:00:00Z');if(Number.isNaN(d.getTime()))return starting;d.setUTCDate(d.getUTCDate()+84);return d.toISOString().slice(0,10);};
 const recurrenceMaxDate=(start:string)=>{const d=new Date(start+'T12:00:00Z');if(Number.isNaN(d.getTime()))return start;d.setUTCDate(d.getUTCDate()+3653);return d.toISOString().slice(0,10);};
 const safeOccurrenceCount=(session:Any)=>{try{return recurrenceCount(session);}catch{return 0;}};
+const [newSessionId,setNewSessionId]=useState<string|null>(null);
 const updateSession=(id:string,update:Any)=>setConfig((c:Any)=>({...c,bookableSessions:(c.bookableSessions||[]).map((item:Any)=>item.id===id?{...item,...update}:item)}));
 const removeSession=(id:string)=>{if(window.confirm('Remove this bookable session and all its recurring/rescheduled dates? Existing customer bookings, pending requests, payments and history will be retained. Save business settings to finish removal.'))setConfig((c:Any)=>removeBookableSession(c,id));};
 const hasPublishedSession=(a:Any)=>!!a.sessionId&&sessionsOn(a.date).some((session:Any)=>session.id===a.sessionId);
@@ -410,14 +412,22 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
  <h2>Create & manage sessions</h2>
  <p className="muted">Schedule one-time or recurring group sessions. Choose the service, team member, date, start time and total seats. Recurring sessions can repeat daily, weekly or monthly until an end date. Customers book each date independently, and available seats appear in both calendars.</p>
  {Array.isArray(config.sessionTemplateSuggestions)&&config.sessionTemplateSuggestions.length>0&&<p className="muted">Suggested session template for your business: <strong>{config.sessionTemplateSuggestions.join(', ')}</strong>. Use Create session to choose a real date, service, team member, time and capacity. Nothing is scheduled automatically.</p>}
- <button type="button" className="outline sf-add-session" disabled={!!planBenefits&&(config.bookableSessions||[]).length>=planBenefits.limits.sessionSeries} title={planBenefits?'Your plan allows '+planBenefits.limits.sessionSeries+' scheduled session templates':''} onClick={()=>
+ <button type="button" className="outline sf-add-session" disabled={!!planBenefits&&(config.bookableSessions||[]).length>=planBenefits.limits.sessionSeries} title={planBenefits?'Your plan allows '+planBenefits.limits.sessionSeries+' scheduled session templates':''} onClick={()=>{
+  const id=crypto.randomUUID();
   setConfig((c:Any)=>({...c,bookableSessions:[...(c.bookableSessions||[]),{
-   id:crypto.randomUUID(),date,service:c.staff[0]?.services[0]||c.services[0]?.id||'',
+   id,date,service:c.staff[0]?.services[0]||c.services[0]?.id||'',
    staff:c.staff[0]?.id||'',start:Math.max(0,(c.open||9)*60),capacity:10,membershipCreditAllowed:true,onlyScheduledTime:true,autoAssignStaff:true,defaultTeamIds:[]
-  }]}))}><Plus size={16}/> Create session</button>
+  }]}));
+  setNewSessionId(id);
+ }}><Plus size={16}/> Create session</button>
  <p className="muted">Remove a session to stop offering its dates for new bookings. Existing customer records are kept. Save business settings to apply changes.</p>
  {(config.bookableSessions||[]).length===0&&<p className="muted sf-session-empty">No sessions configured yet. Create a session to publish a one-time date or a repeating schedule.</p>}
- {(config.bookableSessions||[]).map((x:Any,i:number)=><div key={x.id} className="sf-session-editor sf-recurring-session-editor">
+ {(config.bookableSessions||[]).map((x:Any,i:number)=><SessionEditorDialog key={x.id} open={newSessionId===x.id} sessionNumber={i+1} busy={busy} onClose={()=>setNewSessionId(null)} onSave={async()=>{
+  let failure='';
+  const result=await action({action:'settings',config},message=>{failure=message;});
+  if(!result)throw Error(failure||'Session was not saved. Please sign in and try again.');
+  await refresh(true);setNewSessionId(null);setToast('Session and business settings saved successfully.');return true;
+ }}><div className="sf-session-editor sf-recurring-session-editor">
   <div className="sf-session-editor-heading">
    <div><span className="sf-session-editor-eyebrow">SESSION {i+1}</span><h3>{config.services.find((v:Any)=>v.id===x.service)?.name||'New session'}</h3>
     <small>{x.repeat?'Recurring schedule':'One-time session'} · {timeLabel(x.start)} Eastern</small></div>
@@ -476,7 +486,7 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
 
   <p className="sf-session-capacity"><b>{sessionLeft(firstSeriesOccurrence(config,x.id)||x)}/{(firstSeriesOccurrence(config,x.id)||x).capacity} slots left</b> on the first occurrence · {sessionBookings((firstSeriesOccurrence(config,x.id)||x).id)} confirmed customer{sessionBookings((firstSeriesOccurrence(config,x.id)||x).id)===1?'':'s'}{x.repeat&&<> · Later dates have independent availability</>}</p>
 
- </div>)}
+ </div></SessionEditorDialog>)}
  <p className="muted sf-session-save-hint">To change a booked date, open <b>Schedule</b>, click the session and choose <b>Reschedule session</b>. This keeps customers and saves immediately. Use <b>Save business settings</b> for session setup changes.</p>
 </section><section className="panel padded sf-settings-card" data-sf-settings-group="availability"><h2>Booking rules & sales</h2><BookingBlockoutSettings config={config} setConfig={setConfig}/><div className="sf-settings-booking-rule"><Clock size={20} aria-hidden="true"/><div><strong>Booking start intervals: {config.bookingInterval||15} minutes</strong><p>Customers can choose available start times on the selected interval. Same-day bookings begin at the next eligible mark, with no extra one-hour notice.</p><small>Existing appointments and scheduled group sessions retain their original times.</small></div></div><label>Booking interval<select value={config.bookingInterval||15} onChange={e=>setConfig({...config,bookingInterval:Number(e.target.value)})}>{[5,10,15,20,30,60].map(n=><option key={n} value={n}>Every {n} minutes</option>)}</select></label><label>Time between bookings (minutes)<input type="number" min="0" max="60" step="15" value={config.buffer} onChange={e=>setConfig({...config,buffer:+e.target.value})}/></label><label>Cancellation policy<textarea value={config.policy} onChange={e=>setConfig({...config,policy:e.target.value})}/></label><label>Checkout tax (%)<input type="number" min="0" max="20" step="0.01" value={config.tax} onChange={e=>setConfig({...config,tax:+e.target.value})}/></label><p className="muted">One configurable tax rate. Set the correct rate before recording sales; item-specific tax rules are not yet enabled.</p></section></div><section className="panel padded sf-settings-card" data-sf-settings-group="notifications"><h2>Booking approvals & notifications</h2>
 {!supportBusinessName&&<DevicePushControls/>}<p className="muted">Use Require approval in the service catalog to choose which new bookings need approval before payment. Enable booking approval notifications to alert the owner and selected team reviewer. Each device must enable push separately above. Incoming requests also appear in the dashboard inbox. Email and SMS require their own provider setup; device push uses the configured push service.</p><label className="sf-toggle-row"><input type="checkbox" checked={config.bookingApprovalEnabled===true} onChange={e=>setConfig({...config,bookingApprovalEnabled:e.target.checked})}/> Enable booking approval notifications</label><label>Where should booking review notifications be sent?<select value={config.bookingApprovalReviewer||'owner'} disabled={!config.bookingApprovalEnabled} onChange={e=>setConfig({...config,bookingApprovalReviewer:e.target.value})}><option value="owner">Business owner (dashboard inbox)</option>{config.staff.map((s:Any)=><option key={s.id} value={s.id}>{s.name} · Team reviewer</option>)}</select></label><div className="sf-notification-checkboxes"><label className="sf-toggle-row"><input type="checkbox" checked={config.bookingNotifyEmail===true} onChange={e=>setConfig({...config,bookingNotifyEmail:e.target.checked})}/> Send booking details and Accept/Decline link by email</label>
