@@ -1,3 +1,8 @@
+# v1.3.211
+
+- Show per-member payment request and provider-submission counters using existing invitation history.
+- Deduplicate uncertain send retries without counting worker delivery attempts or implying inbox delivery.
+
 # v1.3.210
 
 - Add owner-reviewed Email payment link beside Pay on Site with business-scoped authorization and duplicate-send safeguards.

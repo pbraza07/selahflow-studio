@@ -1,3 +1,4 @@
+import {membershipInvitationSummary} from '../../../../server/membership-invitations.mjs';
 import {accrueCashCommission} from '../../../../server/cash-commission-billing.mjs';
 import {deleteOwnerMembership} from '../../../../server/owner-membership-deletion.mjs';
 import {validateWeeklySessions,membershipUsageSummary,assertWeeklyMembershipBooking} from '../../../../server/membership-weekly.mjs';
@@ -49,7 +50,7 @@ export async function GET(req:Request){
   const settings=(await pool.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0]?.data;
   const catalog=typeof settings==='string'?JSON.parse(settings):settings||{};
   const coupons=(await pool.query('SELECT id,code,description,kind,value,duration,expires_at,active FROM business_coupons WHERE business_id=$1 ORDER BY created_at DESC',[business.id])).rows;
-  const invitations=(await pool.query('SELECT membership_id,status,detail,created_at FROM membership_payment_invitations WHERE business_id=$1 ORDER BY created_at DESC',[business.id])).rows;
+  const invitations=await membershipInvitationSummary(pool,business.id);
   const profiles=(await pool.query('SELECT member_number,registration_answers,registration_field_labels FROM business_client_profiles WHERE owner=$1 AND archived=false AND deleted_at IS NULL',[owner])).rows;
   const account=merchant.rows[0]||{};
   const individual=(await pool.query('SELECT limits FROM business_entitlement_overrides WHERE business_id=$1',[business.id])).rows[0]?.limits||{};

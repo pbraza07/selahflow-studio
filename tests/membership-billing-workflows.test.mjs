@@ -9,7 +9,7 @@ import {readFile,readdir} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
 import {monthlyPeriod,refreshMemberPeriod,nextBillingAnchor} from '../server/membership-periods.mjs';
 import {couponTotal,checkoutCoupon} from '../server/business-coupons.mjs';
-import {queueMembershipInvitation,invitationDetails,processMembershipInvitations} from '../server/membership-invitations.mjs';
+import {queueMembershipInvitation,invitationDetails,processMembershipInvitations,membershipInvitationSummary} from '../server/membership-invitations.mjs';
 import {membershipBillingAction} from '../server/membership-billing-actions.mjs';
 import {applyMembershipInvoice} from '../server/stripe-checkout.mjs';
 import {confirmDirectBookingForPayment,reconcileUncheckedBookings} from '../server/direct-booking-approval.mjs';
@@ -135,3 +135,28 @@ test('numbered media release is included in the signed document and recorded wit
 test('custom multi-month recurrence stays on the original billing cadence after a backdated override',()=>{assert.equal(nextBillingAnchor('2026-01-31T12:00:00Z',new Date('2026-03-21T12:00:00Z'),3).toISOString(),'2026-04-30T12:00:00.000Z');assert.equal(nextBillingAnchor('2026-01-31T12:00:00Z',new Date('2026-04-30T12:00:00Z'),3).toISOString(),'2026-07-31T12:00:00.000Z');});
 
 test('legacy annual manual payments keep their purchased year while monthly credit boundaries and financial history remain unchanged',async()=>{const {pg}=await fixture();try{await pg.exec("UPDATE membership_plans SET interval_unit='year'; UPDATE customer_memberships SET status='expired',last_paid_at=now()-interval '40 days',initial_paid_at=now()-interval '40 days',paid_through=now()-interval '40 days'+interval '1 month',credit_period_end=now()+interval '20 days',monthly_sessions=8,sessions_included=8,sessions_used=3,stripe_subscription_id=NULL");const before=(await pg.query('SELECT * FROM customer_memberships')).rows[0];await pg.exec(await readFile(new URL('../migrations/054_legacy_manual_billing_periods.sql',import.meta.url),'utf8'));const after=(await pg.query('SELECT * FROM customer_memberships')).rows[0];assert.equal(after.status,'active');assert.equal(new Date(after.paid_through).getUTCFullYear(),new Date(before.last_paid_at).getUTCFullYear()+1);assert.equal(after.sessions_used,3);assert.equal(after.price_cents,before.price_cents);assert.equal(new Date(after.credit_period_end).toISOString(),new Date(before.credit_period_end).toISOString());await pg.exec("UPDATE customer_memberships SET stripe_subscription_id='sub_existing',paid_through=now()+interval '1 month'");const provider=(await pg.query('SELECT paid_through FROM customer_memberships')).rows[0];await pg.exec(await readFile(new URL('../migrations/054_legacy_manual_billing_periods.sql',import.meta.url),'utf8'));assert.equal(new Date((await pg.query('SELECT paid_through FROM customer_memberships')).rows[0].paid_through).toISOString(),new Date(provider.paid_through).toISOString());}finally{await pg.close();}});
+
+
+test('payment request counters include historical requests, separate provider submissions, and ignore automatic retries and replayed requests',async()=>{
+ const {pg,db,pool}=await fixture();try{
+ const input={action:'sendPayment',id:'11111111-1111-4111-8111-111111111111',requestId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'},args={business:{id:'biz'},owner:'owner',input,origin:'https://example.test'};
+ assert.deepEqual(await membershipInvitationSummary(db,'biz'),[]);
+ await membershipBillingAction(db,args);assert.equal((await membershipBillingAction(db,args)).alreadyQueued,true);
+ let summary=(await membershipInvitationSummary(db,'biz'))[0];assert.equal(summary.request_count,1);assert.equal(summary.submitted_count,0);assert.equal(summary.status,'queued');
+ await processMembershipInvitations(pool,{send:async()=>({status:'not_configured',detail:'Fixture provider unavailable'})});summary=(await membershipInvitationSummary(db,'biz'))[0];assert.equal(summary.request_count,1);assert.equal(summary.submitted_count,0);assert.equal(summary.status,'not_configured');
+ await pg.exec("UPDATE membership_payment_invitations SET next_attempt_at=now()");await processMembershipInvitations(pool,{send:async()=>({status:'failed',detail:'Fixture retry'})});assert.equal((await membershipInvitationSummary(db,'biz'))[0].request_count,1);
+ await pg.exec("UPDATE membership_payment_invitations SET next_attempt_at=now()");await processMembershipInvitations(pool,{send:async()=>({status:'submitted',detail:'Fixture accepted'})});assert.equal((await membershipInvitationSummary(db,'biz'))[0].submitted_count,1);
+ await membershipBillingAction(db,{...args,input:{...input,requestId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'}});summary=(await membershipInvitationSummary(db,'biz'))[0];assert.equal(summary.request_count,2);assert.equal(summary.submitted_count,1);
+ assert.equal((await pg.query('SELECT status FROM customer_memberships')).rows[0].status,'pending_payment');assert.equal((await pg.query('SELECT * FROM membership_session_ledger')).rows.length,0);
+ assert.deepEqual(Object.keys(summary).sort(),['created_at','detail','membership_id','request_count','status','submitted_count'].sort());
+ }finally{await pg.close();}
+});
+test('payment request counts are business-scoped and invalid or ineligible sends do not increase them',async()=>{
+ const {pg,db}=await fixture();try{
+ const args={businessId:'biz',membershipId:'11111111-1111-4111-8111-111111111111',origin:'https://example.test',requestId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc'};
+ await assert.rejects(queueMembershipInvitation(db,{...args,requestId:'invalid'}),/Invalid/);await assert.rejects(queueMembershipInvitation(db,{...args,businessId:'foreign'}),/Choose/);assert.deepEqual(await membershipInvitationSummary(db,'biz'),[]);
+ await queueMembershipInvitation(db,args);assert.deepEqual(await membershipInvitationSummary(db,'foreign'),[]);
+ await pg.exec("INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,status,price_cents,sessions_included,sessions_used,stripe_account_id) VALUES('second','biz','plan','Second Client','second@example.test','pending_payment',3000,0,0,'')");await assert.rejects(queueMembershipInvitation(db,{...args,membershipId:'second'}),/Invalid/);
+ await pg.exec("UPDATE customer_memberships SET status='active' WHERE id='11111111-1111-4111-8111-111111111111'");await assert.rejects(queueMembershipInvitation(db,{...args,requestId:'dddddddd-dddd-4ddd-8ddd-dddddddddddd'}),/Choose/);assert.equal((await membershipInvitationSummary(db,'biz'))[0].request_count,1);
+ }finally{await pg.close();}
+});

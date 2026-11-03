@@ -1,3 +1,7 @@
+# v1.3.211 release handoff — Membership payment request counters
+
+Memberships shows Payment requests and Emails submitted beneath each member’s payment actions. Counts derive from retained business-scoped invitation records, including existing history. Payment requests counts owner-queued invitations, including failed/not-configured requests; Emails submitted counts confirmed provider acceptance, not inbox delivery. Latest invitation status remains visible. Zero is shown before the first request. Automatic delivery attempts do not increase counts. Stable request IDs survive uncertain browser retries and deduplicate the same send without creating another invitation. New explicit sends after a confirmed response remain separate requests. No schema migration, payment or membership-credit change. Source v1.3.211; deployment verification pending. QA uses synthetic database/component fixtures and protected-route smoke; no real customer email or charge is used for QA.
+
 # v1.3.210 release handoff — Email appointment payment links
 
 Owner appointment actions now include Email payment link beside Pay on Site, shared by the calendar table, appointment details and roster. A review dialog shows the saved client email and amount before the owner explicitly sends. The action queues one branded transactional email containing the private payment page; it does not send SMS, create a Stripe checkout, charge a card or mark the booking paid. Existing client booking messages show provider delivery status. Complete Stripe onboarding is required. Sending explicitly permits online payment for that appointment, including an onsite-only/team-created appointment, without changing catalog settings or removing an existing onsite option. Existing first-time commissions, waivers, pricing and payment verification apply when the client pays.
@@ -124,7 +128,7 @@ The shared Checkout core retains authoritative owner/tenant scope, saved amount,
 
 Focused database/API/component tests pass. Full local validation, final GitHub checks and production rollout are pending. No migration is needed; the v1.3.197 monthly cash commission features are preserved. Staging remains suspended by Render billing. No real customer checkout, payment, client record or outgoing message is generated for QA. Physical-phone installation and NFC acceptance remain separate prerequisites.
 
-Release source: v1.3.210.
+Release source: v1.3.211.
 
 # v1.3.197 verified LIVE in production — Monthly cash commission billing and concise benefits
 
