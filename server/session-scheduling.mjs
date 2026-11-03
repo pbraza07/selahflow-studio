@@ -1,3 +1,4 @@
+import {sharedService,sharesServiceTime,serviceRemaining} from './shared-service-capacity.mjs';
 import {isBlocked} from './booking-blockouts.mjs';
 import {sessionInstances,recurrenceDates,recurringSessionForDate,validateRecurrence,originalSessionOccurrence} from './session-recurrence.mjs';
 /** Pure, business-scoped session and appointment availability helpers.
@@ -200,9 +201,15 @@ export function computeDayAvailability({config, date, staff, services, appointme
     const staffCollision = active.some(a =>
       a.staff === staff &&
       overlaps(start,duration+buffer,Number(a.start),Number(a.duration)+buffer) &&
-      (!session || appointmentData(a).sessionId !== session.id)
+      (!session || appointmentData(a).sessionId !== session.id) &&
+      (session || !sharesServiceTime(a,services,start,duration))
     );
-    const occupied = [...minutes].some(t => t >= start && t < start + duration + buffer);
+    const occupied = [...minutes].some(slot => {
+      const t=typeof slot==='number'?slot:slot.minute;
+      if(t<start||t>=start+duration+buffer)return false;
+      const appointment=typeof slot==='object'?active.find(a=>a.id===slot.appointment):null;
+      return !appointment||!!session||!sharesServiceTime(appointment,services,start,duration);
+    });
     if (session) {
       const remaining = sessionRemaining(session,active);
       sessionAvailability[start] = {remaining,capacity:session.capacity,id:session.id,membershipCreditAllowed:session.membershipCreditAllowed!==false};
@@ -215,7 +222,11 @@ export function computeDayAvailability({config, date, staff, services, appointme
         overlaps(start,duration+buffer,Number(a.start),Number(a.duration)+buffer));
       const ordinaryAppointments = active.filter(a => !appointmentData(a).sessionId);
       if (!occupied && !reservedForSession && !staffCollision && !otherGroupBooking &&
-          capacityOpen(ordinaryAppointments,services,start,duration)) slots.push(start);
+          capacityOpen(ordinaryAppointments,services,start,duration)){
+        slots.push(start);
+        const shared=sharedService(services);
+        if(shared)sessionAvailability[start]={remaining:serviceRemaining(ordinaryAppointments,shared,start,duration),capacity:shared.maxSlots,membershipCreditAllowed:shared.membershipCreditAllowed!==false};
+      }
     }
   }
   return {slots,sessionAvailability,sessions:fullSessions,earliestStart:date===today?earliest:null,firstAvailable:slots[0]??null};
