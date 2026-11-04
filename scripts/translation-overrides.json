@@ -1870,5 +1870,29 @@
   "Request alerts: {0} unread": {
     "es": "Alertas de solicitudes: {0} sin leer",
     "pt": "Alertas de solicitações: {0} não lidos"
+  },
+  "Sales & memberships": {
+    "es": "Ventas y membresías",
+    "pt": "Vendas e assinaturas"
+  },
+  "History & account": {
+    "es": "Historial y cuenta",
+    "pt": "Histórico e conta"
+  },
+  "Client website · View home": {
+    "es": "Sitio del negocio · Ver página",
+    "pt": "Site do negócio · Ver página"
+  },
+  "Website & branding": {
+    "es": "Sitio web e identidad visual",
+    "pt": "Site e identidade visual"
+  },
+  "Bookings may begin at {0} — the next {1}-minute mark.": {
+    "es": "Las reservas pueden comenzar a las {0}, en el próximo intervalo de {1} minutos.",
+    "pt": "Os agendamentos podem começar às {0}, no próximo intervalo de {1} minutos."
+  },
+  "The next {0}-minute booking mark is {1}, but that earlier time is unavailable.": {
+    "es": "El próximo intervalo de {0} minutos es a las {1}, pero ese horario no está disponible.",
+    "pt": "O próximo intervalo de {0} minutos é às {1}, mas esse horário não está disponível."
   }
 }
