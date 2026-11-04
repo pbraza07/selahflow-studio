@@ -2,11 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {JSDOM} from 'jsdom';
-import React,{act,useState} from 'react';
-import {createRoot} from 'react-dom/client';
 import {createRequire} from 'node:module';
 import ts from 'typescript';
 import {createPageTranslator,createCopyTranslator,validLanguage,languages} from '../server/page-translation.mjs';
+// Render builds set NODE_ENV=production. Interactive tests need React's test
+// helpers; select the test runtime before importing either React renderer.
+process.env.NODE_ENV='test';
+const {default:React,act,useState}=await import('react');
+const {createRoot}=await import('react-dom/client');
 const catalog={Save:'Guardar',Paid:'Pagado',Pending:'Pendiente','Email address':'Correo electrónico','Book a service':'Reservar un servicio','{0} of {1} spaces remaining':'{0} de {1} plazas disponibles'};
 const wait=()=>new Promise(resolve=>setTimeout(resolve,45));
 function page(html){return new JSDOM(`<!doctype html><body>${html}</body>`,{pretendToBeVisual:true,url:'https://example.test'});}
