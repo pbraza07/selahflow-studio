@@ -146,7 +146,7 @@ export async function applyMembershipInvoice(db,businessId,account,invoice,subsc
  const subscriptionId=invoiceSubscriptionId(invoice),paidThrough=invoicePaidThrough(invoice),memberId=subscription.metadata?.membership_id;
  if(!subscriptionId||subscription.id!==subscriptionId||!paidThrough||subscription.metadata?.selahflow_business_id!==businessId)return false;
  const member=(await db.query('SELECT * FROM customer_memberships WHERE id=$1 AND business_id=$2 AND stripe_account_id=$3 FOR UPDATE',[memberId,businessId,account])).rows[0];
- if(!member||Number(invoice.billing_reason==='subscription_create'?(member.first_invoice_cents??member.price_cents):(member.renewal_invoice_cents??member.price_cents))>invoice.amount_paid||(member.stripe_subscription_id&&member.stripe_subscription_id!==subscriptionId))return false;
+ if(!member||member.billing_type==='package'||Number(invoice.billing_reason==='subscription_create'?(member.first_invoice_cents??member.price_cents):(member.renewal_invoice_cents??member.price_cents))>invoice.amount_paid||(member.stripe_subscription_id&&member.stripe_subscription_id!==subscriptionId))return false;
  const starts=(invoice.lines?.data||[]).map(l=>l.period?.start).filter(Number.isSafeInteger);
  const paidAt=invoice.billing_reason==='subscription_create'&&invoice.status_transitions?.paid_at?new Date(invoice.status_transitions.paid_at*1000):starts.length?new Date(Math.min(...starts)*1000):new Date();
  return recordMembershipPaidPeriod(db,{businessId,account,member,reference:invoice.id,amountCents:invoice.amount_paid,paidAt,paidThrough,subscription,customerId:typeof invoice.customer==='string'?invoice.customer:null,renewal:invoice.billing_reason==='subscription_cycle'});

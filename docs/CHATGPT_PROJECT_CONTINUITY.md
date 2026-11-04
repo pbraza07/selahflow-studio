@@ -1,3 +1,11 @@
+# v1.3.216 release handoff — Recurring memberships and one-time service packages
+
+Release source: v1.3.216
+
+The shared Membership/Packages tab offers a payment-type selector when creating an offer. Memberships retain recurring billing; service packages charge once for a fixed total session allowance with no automatic renewal or monthly reset. Package credits remain until used. Owner forms, customer checkout, invitations and receipts explain the selected payment terms. Existing offers remain memberships.
+
+Migration 089 adds plan/enrollment billing types, snapshots enrollment terms and prevents converting enrolled offers between payment types. Package checkout uses a one-time payment, does not save recurring authorization or create a subscription, and activates credits only after verified payment or existing manual-payment confirmation. Repeated payment events remain idempotent; full refunds deactivate package access. Existing first-time commission and tenant-isolation policies remain in force. No real customer transactions are created for QA. Release validation and deployment verification pending.
+
 # v1.3.215 release handoff — Membership sessions column order
 
 Release source: v1.3.215

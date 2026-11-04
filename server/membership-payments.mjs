@@ -4,11 +4,13 @@ export const paymentConfigured=()=>Boolean(process.env.STRIPE_SECRET_KEY&&proces
 export const stripeConfigured=()=>Boolean(process.env.STRIPE_SECRET_KEY);
 export function validateMembershipPlan(data){
  const name=String(data?.name||'').trim(),description=String(data?.description||'').trim();
- const interval=String(data?.interval||'');
+ const billingType=data?.billingType??'membership';
+ if(!['membership','package'].includes(billingType))throw Error('Choose a membership or service package.');
+ const interval=billingType==='package'?'month':String(data?.interval||'');
  const price=Number(data?.priceCents);
  if(name.length<2||name.length>100||description.length>1000||!['week','month','year'].includes(interval)||
  !Number.isSafeInteger(price)||price<100||price>100000000)throw Error('Enter a plan name, weekly/monthly/yearly billing and a valid price of at least $1.00.');
- return {name,description,interval,price};
+ return {name,description,interval,price,...(billingType==='package'?{billingType}:{})};
 }
 export function googleListingUrl(value){
  const raw=String(value||'').trim();

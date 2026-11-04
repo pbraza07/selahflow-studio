@@ -1,3 +1,4 @@
+import {applyPackageRefund} from '../../../../server/package-refunds.mjs';
 import {handleWorkspacePaymentEvent} from '../../../../server/team-workspace-billing.mjs';
 import {applyTerminalPayment} from '../../../../server/terminal-payments.mjs';
 import {completeInitialMembershipCheckout} from '../../../../server/membership-initial-payment.mjs';
@@ -56,7 +57,7 @@ export async function POST(req:Request){
     else await applyBookingPayment(db,merchant.business_id,account,object);
    }else if(event.type==='checkout.session.completed'&&object.mode==='subscription'&&object.client_reference_id&&object.subscription){
     const id=object.client_reference_id;
-    await db.query("UPDATE customer_memberships SET stripe_checkout_session_id=$1,stripe_customer_id=$2,stripe_subscription_id=$3,updated_at=now() WHERE id=$4 AND business_id=$5 AND stripe_account_id=$6 AND stripe_checkout_session_id=$1 AND (stripe_subscription_id IS NULL OR stripe_subscription_id=$3)",
+    await db.query("UPDATE customer_memberships SET stripe_checkout_session_id=$1,stripe_customer_id=$2,stripe_subscription_id=$3,updated_at=now() WHERE id=$4 AND business_id=$5 AND stripe_account_id=$6 AND stripe_checkout_session_id=$1 AND billing_type='membership' AND (stripe_subscription_id IS NULL OR stripe_subscription_id=$3)",
      [object.id,typeof object.customer==='string'?object.customer:null,typeof object.subscription==='string'?object.subscription:null,id,merchant.business_id,account]);
     // Do NOT activate here: a completed Checkout Session by itself is not
     // proof that a recurring subscription's first invoice was paid.
@@ -67,6 +68,7 @@ export async function POST(req:Request){
     await db.query("UPDATE booking_payments SET status='expired',updated_at=now() WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 AND status='pending'",[merchant.business_id,account,object.id]);
    }else if(event.type==='charge.refunded'){
     await refundCommission(db,{businessId:merchant.business_id,account,charge:object});
+    await applyPackageRefund(db,{businessId:merchant.business_id,account,charge:object});
    }else if(event.type==='invoice.payment_failed'){
     const sub=invoiceSubscriptionId(object);
     if(sub)await db.query(

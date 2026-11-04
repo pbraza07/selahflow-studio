@@ -6,7 +6,8 @@ export function validateWeeklySessions(value){
  if(!Number.isInteger(value)||value<1||value>3)throw Error('Choose one, two or three sessions per week.');
  return value;
 }
-export function membershipUsageSummary(weekly,monthly){
+export function membershipUsageSummary(weekly,monthly,billingType='membership'){
+ if(billingType==='package')return `${monthly??0} total sessions. One-time payment; no automatic renewal or monthly reset. Credits remain until used.`;
  return weekly?`${weekly} session${weekly===1?'':'s'} per week. Seven-day weeks start on the membership initial date and restart at each monthly anniversary; a partial fifth week is included. Unused weekly sessions do not roll over.`:`${monthly??0} sessions each membership month. Unused sessions do not roll over.`;
 }
 // Work in business date labels, avoiding DST shifts and fixed 28/30-day months.

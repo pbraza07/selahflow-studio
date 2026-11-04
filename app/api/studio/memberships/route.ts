@@ -40,8 +40,8 @@ export async function GET(req:Request){
   const {pool,business,owner}=await ctx(req);
   await refreshMembershipPeriods(pool,business.id);
   const [plans,members,merchant,usageCounts,ledger,groups]=await Promise.all([
-   pool.query('SELECT id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",weekly_sessions AS "weeklySessions",group_id AS "groupId",badge,interval_count AS "intervalCount",credit_eligibility AS "creditEligibility",active FROM membership_plans WHERE business_id=$1 ORDER BY display_order,created_at DESC',[business.id]),
-   pool.query("SELECT m.id,m.price_cents,m.stripe_account_id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.initial_paid_at,m.billing_start_override,m.credit_period_start,m.credit_period_end,m.stripe_subscription_id,m.stripe_interval_unit,m.stripe_interval_count,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
+   pool.query('SELECT billing_type AS "billingType",id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",weekly_sessions AS "weeklySessions",group_id AS "groupId",badge,interval_count AS "intervalCount",credit_eligibility AS "creditEligibility",active FROM membership_plans WHERE business_id=$1 ORDER BY display_order,created_at DESC',[business.id]),
+   pool.query("SELECT m.billing_type,m.id,m.price_cents,m.stripe_account_id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.initial_paid_at,m.billing_start_override,m.credit_period_start,m.credit_period_end,m.stripe_subscription_id,m.stripe_interval_unit,m.stripe_interval_count,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
    pool.query("SELECT external_account_id,charges_enabled,onboarding_complete FROM merchant_accounts WHERE business_id=$1",[business.id]),
    pool.query("SELECT membership_id,COUNT(*)::int AS recorded_sessions FROM membership_session_ledger WHERE business_id=$1 AND event_type='session_used' GROUP BY membership_id",[business.id]),
    pool.query('SELECT l.membership_id,l.appointment_id,l.event_type,l.session_delta,l.amount_cents,l.created_at,a.status AS appointment_status,a.date AS service_date,a.data::jsonb->\'services\' AS service_names FROM membership_session_ledger l LEFT JOIN appointments a ON a.id=l.appointment_id AND a.owner=(SELECT owner_id FROM businesses WHERE id=l.business_id) WHERE l.business_id=$1 ORDER BY l.created_at DESC',[business.id]),
@@ -57,7 +57,7 @@ export async function GET(req:Request){
   const benefits=planEntitlements(business.plan_code,business.subscription_status);
   if(Number.isInteger(individual.membershipPlans))benefits.limits.membershipPlans=individual.membershipPlans;
   const emailDelivery=await deliveryProviderStatusWithConnection(pool);
-  return Response.json({coupons,invitations,businessName:business.name,emailDelivery:{provider:emailDelivery.emailProvider,ready:emailDelivery.emailConfigured},memberIdPolicy:business.member_id_policy,creditOptions:{services:(catalog.services||[]).map((s:any)=>({id:s.id,name:s.name})),sessions:(catalog.bookableSessions||[]).map((s:any)=>({id:s.id,name:((catalog.services||[]).find((v:any)=>v.id===s.service)?.name||'Session')+' · '+s.date+' · '+String(Math.floor(s.start/60)).padStart(2,'0')+':'+String(s.start%60).padStart(2,'0')+(s.repeat?' (recurring series)':'')}))},plans:plans.rows.map((p:any)=>({...p,usageSummary:membershipUsageSummary(p.weeklySessions,p.sessionsIncluded),creditSummary:membershipEligibilitySummary(p.creditEligibility,catalog)})),groups:groups.rows,members:members.rows.map((m:any)=>{const actual=Number(usageCounts.rows.find((u:any)=>u.membership_id===m.id)?.recorded_sessions||0);const plan=plans.rows.find((p:any)=>p.id===m.plan_id);const profile=profiles.find((p:any)=>p.member_number&&p.member_number===m.member_number);return {...m,current_profile_answers:{...m.registration_answers,...(profile?.registration_answers||{})},current_profile_labels:{...m.registration_field_labels,...(profile?.registration_field_labels||{})},badge:plan?.badge||groups.rows.find((g:any)=>g.id===plan?.groupId)?.badge||null,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
+  return Response.json({coupons,invitations,businessName:business.name,emailDelivery:{provider:emailDelivery.emailProvider,ready:emailDelivery.emailConfigured},memberIdPolicy:business.member_id_policy,creditOptions:{services:(catalog.services||[]).map((s:any)=>({id:s.id,name:s.name})),sessions:(catalog.bookableSessions||[]).map((s:any)=>({id:s.id,name:((catalog.services||[]).find((v:any)=>v.id===s.service)?.name||'Session')+' · '+s.date+' · '+String(Math.floor(s.start/60)).padStart(2,'0')+':'+String(s.start%60).padStart(2,'0')+(s.repeat?' (recurring series)':'')}))},plans:plans.rows.map((p:any)=>({...p,usageSummary:membershipUsageSummary(p.weeklySessions,p.sessionsIncluded,p.billingType),creditSummary:membershipEligibilitySummary(p.creditEligibility,catalog)})),groups:groups.rows,members:members.rows.map((m:any)=>{const actual=Number(usageCounts.rows.find((u:any)=>u.membership_id===m.id)?.recorded_sessions||0);const plan=plans.rows.find((p:any)=>p.id===m.plan_id);const profile=profiles.find((p:any)=>p.member_number&&p.member_number===m.member_number);return {...m,current_profile_answers:{...m.registration_answers,...(profile?.registration_answers||{})},current_profile_labels:{...m.registration_field_labels,...(profile?.registration_field_labels||{})},badge:plan?.badge||groups.rows.find((g:any)=>g.id===plan?.groupId)?.badge||null,recorded_sessions:actual,history:ledger.rows.filter((e:any)=>e.membership_id===m.id)};}),planBenefits:benefits,
    payments:{configured:paymentConfigured(),connected:!!account.external_account_id,
     ready:paymentConfigured()&&account.charges_enabled===true&&account.onboarding_complete===true}}, {headers});
  }catch(e){return error(e);}
@@ -108,15 +108,16 @@ export async function POST(req:Request){
      'SELECT COUNT(*)::int AS count FROM membership_plans WHERE business_id=$1 AND active=TRUE',
      [business.id])).rows[0]?.count||0);
     if(input.action==='save'){
-     const plan=validateMembershipPlan(input);const intervalCount=Number(input.intervalCount??1);if(!Number.isInteger(intervalCount)||intervalCount<1||(intervalCount>12||plan.interval==='year'&&intervalCount>3))throw Error('Choose recurrence every 1 to 12 periods, or 1 to 3 years.');
+     const plan=validateMembershipPlan(input);const billingType=input.billingType??'membership';const intervalCount=billingType==='package'?1:Number(input.intervalCount??1);if(!Number.isInteger(intervalCount)||intervalCount<1||(intervalCount>12||plan.interval==='year'&&intervalCount>3))throw Error('Choose recurrence every 1 to 12 periods, or 1 to 3 years.');
      const settings=(await client.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0]?.data;
      const eligibility=validateMembershipEligibility(input.creditEligibility,typeof settings==='string'?JSON.parse(settings):settings||{});
      const groupId=await requireMembershipGroup(client,business.id,input.groupId);
      const badge=validateMembershipBadge(input.badge);
      const active=input.active!==false;
+     if(billingType==='package'&&input.weeklySessions!=null)throw Error('Packages use a fixed total session allowance.');
      const weeklySessions=validateWeeklySessions(input.weeklySessions);
      const sessionsIncluded=weeklySessions?weeklySessions*5:Number(input.sessionsIncluded??0);
-     if(!Number.isInteger(sessionsIncluded)||sessionsIncluded<0||sessionsIncluded>100000)throw Error('Enter a valid session allowance.');
+     if(!Number.isInteger(sessionsIncluded)||sessionsIncluded<(billingType==='package'?1:0)||sessionsIncluded>100000)throw Error('Enter a valid session allowance.');
      if(input.id){
       if(!/^[a-f0-9-]{36}$/i.test(input.id))throw Error('Invalid membership offer.');
       const old=(await client.query(
@@ -126,14 +127,14 @@ export async function POST(req:Request){
       if(active&&!old.active&&count>=limit)
        throw Error('Your '+planEntitlements(record?.plan_code,record?.status).name+' plan allows up to '+limit+' active customer membership offers. Existing offers are preserved.');
       await client.query(
-       'UPDATE membership_plans SET name=$1,description=$2,interval_unit=$3,price_cents=$4,active=$5,updated_at=now(),sessions_included=$8,group_id=CASE WHEN $10 THEN $9 ELSE group_id END,badge=CASE WHEN $12 THEN $11::jsonb ELSE badge END,credit_eligibility=COALESCE($13::jsonb,credit_eligibility),interval_count=$14,weekly_sessions=CASE WHEN $16 THEN $15 ELSE weekly_sessions END WHERE id=$6 AND business_id=$7',
-       [plan.name,plan.description,plan.interval,plan.price,active,input.id,business.id,sessionsIncluded,groupId,input.groupId!==undefined,badge?JSON.stringify(badge):null,input.badge!==undefined,eligibility?JSON.stringify(eligibility):null,intervalCount,weeklySessions,input.weeklySessions!==undefined]);
+       'UPDATE membership_plans SET name=$1,description=$2,interval_unit=$3,price_cents=$4,active=$5,updated_at=now(),sessions_included=$8,group_id=CASE WHEN $10 THEN $9 ELSE group_id END,badge=CASE WHEN $12 THEN $11::jsonb ELSE badge END,credit_eligibility=COALESCE($13::jsonb,credit_eligibility),interval_count=$14,weekly_sessions=CASE WHEN $16 THEN $15 ELSE weekly_sessions END,billing_type=$17 WHERE id=$6 AND business_id=$7',
+       [plan.name,plan.description,plan.interval,plan.price,active,input.id,business.id,sessionsIncluded,groupId,input.groupId!==undefined,badge?JSON.stringify(badge):null,input.badge!==undefined,eligibility?JSON.stringify(eligibility):null,intervalCount,weeklySessions,input.weeklySessions!==undefined,billingType]);
      }else{
       if(active&&count>=limit)
        throw Error('Your '+planEntitlements(record?.plan_code,record?.status).name+' plan allows up to '+limit+' active customer membership offers. Existing offers are preserved.');
       await client.query(
-       'INSERT INTO membership_plans(id,business_id,name,description,interval_unit,price_cents,active,sessions_included,group_id,badge,credit_eligibility,interval_count,weekly_sessions) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13)',
-       [randomUUID(),business.id,plan.name,plan.description,plan.interval,plan.price,active,sessionsIncluded,groupId,badge?JSON.stringify(badge):null,JSON.stringify(eligibility||{mode:'all',serviceIds:[],sessionIds:[]}),intervalCount,weeklySessions]);
+       'INSERT INTO membership_plans(id,business_id,name,description,interval_unit,price_cents,active,sessions_included,group_id,badge,credit_eligibility,interval_count,weekly_sessions,billing_type) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14)',
+       [randomUUID(),business.id,plan.name,plan.description,plan.interval,plan.price,active,sessionsIncluded,groupId,badge?JSON.stringify(badge):null,JSON.stringify(eligibility||{mode:'all',serviceIds:[],sessionIds:[]}),intervalCount,weeklySessions,billingType]);
      }
     }else{
      if(!/^[a-f0-9-]{36}$/i.test(input.id||''))throw Error('Invalid membership offer.');
@@ -163,6 +164,7 @@ export async function POST(req:Request){
     await client.query('BEGIN');
     const member=(await client.query("SELECT m.*,p.interval_unit,p.interval_count,p.sessions_included AS plan_sessions,p.price_cents FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 AND m.id=$2 FOR UPDATE",[business.id,id])).rows[0];
     if(!member)throw Error('Member not found.');
+    if(member.billing_type==='package'&&input.action==='renewMembership')throw Error('One-time packages cannot be renewed as memberships.');
     if(member.stripe_account_id?.startsWith('acct_'))throw Error('Stripe manages this membership payment and renewal. Do not confirm it manually.');
     if(input.action==='renewMembership'&&String(input.memberNumber||'').trim().toUpperCase()!==String(member.member_number||'').toUpperCase())throw Error('Enter the client membership number to renew.');
     if(input.action==='renewMembership'&&member.status!=='active')throw Error('Confirm the initial payment before renewing this membership.');

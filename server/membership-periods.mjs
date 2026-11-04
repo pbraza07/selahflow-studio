@@ -5,7 +5,7 @@ export function monthlyPeriod(anchor,at=new Date()){
  const a=new Date(anchor),now=new Date(at);let n=Math.max(0,(now.getUTCFullYear()-a.getUTCFullYear())*12+now.getUTCMonth()-a.getUTCMonth());if(anniversary(a,n)>now)n=Math.max(0,n-1);return {start:anniversary(a,n),end:anniversary(a,n+1)};
 }
 export async function refreshMemberPeriod(db,member,at=new Date()){
- if(!member.initial_paid_at||!member.credit_period_end)return member;
+ if(member.billing_type==='package'||!member.initial_paid_at||!member.credit_period_end)return member;
  const now=new Date(at);
  if(member.paid_through&&new Date(member.paid_through)<=now){await db.query("UPDATE customer_memberships SET status='expired',updated_at=now() WHERE id=$1 AND business_id=$2 AND status='active'",[member.id,member.business_id]);return {...member,status:member.status==='active'?'expired':member.status};}
  if(member.status!=='active')return member;
