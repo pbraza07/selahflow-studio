@@ -58,7 +58,8 @@ test('the rendered lookup result includes type, package, sessions left and exist
  const {default:Result}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
  const membership={name:'Private Pro',type:'Private Training',status:'active',sessionsLeft:11,sessionsIncluded:16,sessionsUsed:5};
  const html=renderToStaticMarkup(React.createElement(Result,{membership,result:{date:'2026-10-16',status:'No-show',service:'Small Group Training',serviceType:'Soccer'}}));
- for(const text of ['Membership type: Private Training','Membership package: Private Pro','Sessions left: 11','Latest booking: No-show','Booking date: 2026-10-16','Service: Small Group Training','Service type: Soccer'])assert.ok(html.includes(text),text);
+ const visible=html.replace(/<[^>]*>/g,'');
+ for(const text of ['Membership type: Private Training','Membership package: Private Pro','Sessions left: 11','Latest booking: No-show','Booking date: 2026-10-16','Service: Small Group Training','Service type: Soccer'])assert.ok(visible.includes(text),text);
  const noVisit=renderToStaticMarkup(React.createElement(Result,{membership,result:null}));assert.match(noVisit,/Sessions left: 11/);assert.match(noVisit,/No recent booking/);
  const noPlan=renderToStaticMarkup(React.createElement(Result,{membership:null,result:{date:'2026-10-16',status:'Confirmed'}}));assert.match(noPlan,/No membership is assigned/);assert.doesNotMatch(noPlan,/0 sessions left/);
 });
