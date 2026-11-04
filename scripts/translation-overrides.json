@@ -1602,5 +1602,105 @@
   "Landscaping / lawn care": {
     "es": "Jardinería y cuidado del césped",
     "pt": "Paisagismo e cuidados com o gramado"
+  },
+  "SELAHFLOW · PAUSE & FLOW": {
+    "es": "SELAHFLOW · PAUSE & FLOW",
+    "pt": "SELAHFLOW · PAUSE & FLOW"
+  },
+  "Online booking.": {
+    "es": "Reservas online.",
+    "pt": "Agendamento online."
+  },
+  "A smoother day for your business.": {
+    "es": "Un día más tranquilo para tu negocio.",
+    "pt": "Um dia mais tranquilo para o seu negócio."
+  },
+  "Appointment scheduling, class bookings and membership management for service businesses. Find a business and book your next visit, or give your team and customers a simpler way to stay organized.": {
+    "es": "Gestiona citas, clases y membresías para tu negocio de servicios. Encuentra un negocio y reserva tu próxima visita, o facilita la organización de tu equipo y tus clientes.",
+    "pt": "Gerencie agendamentos, aulas e assinaturas no seu negócio de serviços. Encontre um negócio e agende sua próxima visita ou simplifique a organização da sua equipe e dos seus clientes."
+  },
+  "Appointment scheduling, class booking and membership management for service businesses. Explore branded booking pages, team tools and payment integrations.": {
+    "es": "Gestión de citas, clases y membresías para negocios de servicios. Descubre páginas de reservas personalizadas, herramientas para tu equipo e integraciones de pago.",
+    "pt": "Gerencie agendamentos, aulas e assinaturas no seu negócio de serviços. Conheça páginas de agendamento com a sua marca, ferramentas para a equipe e integrações de pagamento."
+  },
+  "Find a business, choose your next session and know what’s happening with your registration or membership.": {
+    "es": "Encuentra un negocio, elige tu próxima sesión y consulta el estado de tu registro o membresía.",
+    "pt": "Encontre um negócio, escolha sua próxima sessão e acompanhe seu cadastro ou sua assinatura."
+  },
+  "Meet your calmer workday. Explore booking tools, client and membership management, plans and how partnering with SelahFlow works.": {
+    "es": "Disfruta de una jornada más organizada. Conoce las herramientas de reservas, la gestión de clientes y membresías, los planes y cómo trabajar con SelahFlow.",
+    "pt": "Tenha um dia de trabalho mais organizado. Conheça as ferramentas de agendamento, a gestão de clientes e assinaturas, os planos e como funciona a parceria com o SelahFlow."
+  },
+  "For customers": {
+    "es": "Para clientes",
+    "pt": "Para clientes"
+  },
+  "For businesses": {
+    "es": "Para negocios",
+    "pt": "Para negócios"
+  },
+  "For business owners": {
+    "es": "Para propietarios de negocios",
+    "pt": "Para proprietários de negócios"
+  },
+  "Find your next appointment": {
+    "es": "Encuentra tu próxima cita",
+    "pt": "Encontre seu próximo atendimento"
+  },
+  "Explore business benefits": {
+    "es": "Conoce los beneficios para tu negocio",
+    "pt": "Conheça os benefícios para o seu negócio"
+  },
+  "Register your business": {
+    "es": "Registra tu negocio",
+    "pt": "Cadastre seu negócio"
+  },
+  "Your bookings flow. You breathe.": {
+    "es": "Tus reservas fluyen. Tú respiras.",
+    "pt": "Seus agendamentos fluem. Você respira."
+  },
+  "Book with": {
+    "es": "Reservar con",
+    "pt": "Agendar com"
+  },
+  "Book with a business": {
+    "es": "Reservar con un negocio",
+    "pt": "Agendar com um negócio"
+  },
+  "Book online": {
+    "es": "Reservar online",
+    "pt": "Agendar online"
+  },
+  "View profile & book": {
+    "es": "Ver perfil y reservar",
+    "pt": "Ver perfil e agendar"
+  },
+  "Find Local Businesses & Book Services | SelahFlow": {
+    "es": "Encuentra negocios locales y reserva servicios | SelahFlow",
+    "pt": "Encontre negócios locais e agende serviços | SelahFlow"
+  },
+  "Find Services & Book Appointments Online | SelahFlow": {
+    "es": "Encuentra servicios y reserva citas online | SelahFlow",
+    "pt": "Encontre serviços e agende atendimentos online | SelahFlow"
+  },
+  "SelahFlow STAGING · Test data only · Sandbox payments": {
+    "es": "SelahFlow STAGING · Solo datos de prueba · Pagos de prueba",
+    "pt": "SelahFlow STAGING · Somente dados de teste · Pagamentos de teste"
+  },
+  "Appointment": {
+    "es": "Cita",
+    "pt": "Agendamento"
+  },
+  "Appointment calendar": {
+    "es": "Calendario de citas",
+    "pt": "Calendário de agendamentos"
+  },
+  "Appointment history": {
+    "es": "Historial de citas",
+    "pt": "Histórico de agendamentos"
+  },
+  "APPOINTMENT BOOKING": {
+    "es": "RESERVA DE CITA",
+    "pt": "AGENDAMENTO DE ATENDIMENTO"
   }
 }

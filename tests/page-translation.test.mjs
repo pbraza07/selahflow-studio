@@ -63,7 +63,9 @@ test('both bundled catalogs contain complete matching keys and business-critical
  assert.deepEqual(Object.keys(es).sort(),Object.keys(pt).sort());assert.ok(Object.keys(es).length>5000);
  assert.equal(es['Membership/Packages'],'Membresías/Paquetes');assert.equal(pt['Membership/Packages'],'Assinaturas/Pacotes');
  assert.equal(es['Make Payment'],'Realizar pago');assert.equal(pt['Make Payment'],'Efetuar pagamento');
- for(const pack of [es,pt])for(const [key,value] of Object.entries(pack)){assert.equal(typeof value,'string');assert.ok(value.trim(),key);assert.deepEqual((key.match(/\{\d+\}/g)||[]).sort(),(value.match(/\{\d+\}/g)||[]).sort(),key);}
+ assert.equal(pt['Book with a business'],'Agendar com um negócio');
+ assert.equal(es['SELAHFLOW · PAUSE & FLOW'],'SELAHFLOW · PAUSE & FLOW');
+ for(const pack of [es,pt])for(const [key,value] of Object.entries(pack)){assert.equal(typeof value,'string');assert.ok(value.trim(),key);assert.doesNotMatch(value,/&(?:amp|quot|lt|gt);/,key);assert.deepEqual((key.match(/\{\d+\}/g)||[]).sort(),(value.match(/\{\d+\}/g)||[]).sort(),key);}
 });
 test('page titles, date labels and native confirmations translate without changing their return values',()=>{
  const dom=page('<p>Wed, Nov 4, 2026</p>'),doc=dom.window.document;doc.title='Book a service';
