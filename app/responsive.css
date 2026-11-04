@@ -1,0 +1,164 @@
+/* Shared layout contracts. Keep business palettes, field values and workflow logic intact. */
+:where(body){overflow-wrap:break-word}
+:where(button,a,label,summary,h1,h2,h3,h4,p,small,[role=alert],[role=status]){overflow-wrap:anywhere}
+body :is(button,.primary,.outline){white-space:normal;max-width:100%;line-height:1.45}
+:where(button,a)>svg{flex-shrink:0}
+:where(input,select,textarea){max-width:100%}
+:where(img,video,canvas){max-width:100%}
+:where(input,select,textarea,summary,[tabindex]):focus-visible{outline:3px solid var(--sf-button,#315e50);outline-offset:3px}
+:where(.form-row,.two-col,.stats,.overview-grid,.checkout-grid,.service-grid,.client-grid)>*{min-width:0}
+:where(.form-row,.two-col){grid-template-columns:repeat(2,minmax(0,1fr))}
+.button-row,.panel-title,.modal-footer,.public-header{flex-wrap:wrap}
+:where(.panel,.card,.padded,.sf-settings-main,.sf-settings-panels,.public-booking){min-width:0;max-width:100%}
+:where(.table-wrap,.calendar-scroll,.sf-owner-membership-scroll,.sf-table-scroll){min-width:0;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+.sf-table-scroll{width:100%;border-radius:inherit}
+.sf-table-scroll:focus-visible{outline-offset:-3px}
+.sf-table-scroll table{min-width:640px;white-space:normal}
+.sf-table-scroll :is(th,td){vertical-align:top;overflow-wrap:anywhere;white-space:normal;line-height:1.5;min-width:100px;max-width:360px}
+.sf-table-scroll :is(th,td):has(input[type=checkbox]){min-width:48px}
+.sf-table-scroll .sf-sort-heading{align-items:flex-start;text-align:left;white-space:normal;min-height:36px}
+.sf-table-scroll :is(button,.outline,.primary){white-space:normal}
+.sf-table-scroll td .person{min-width:150px}
+.sf-skip-link{position:fixed;left:12px;top:-120px;z-index:3000;padding:12px 18px;border-radius:8px;background:#fff;color:#123f3a;font-weight:700}
+.sf-skip-link:focus{top:12px}
+.app-shell .sidebar{width:248px;padding:24px 16px;gap:0}
+.app-shell .main-wrap{margin-left:248px;min-width:0}
+.app-shell .sidebar .studio-switch{margin:22px 0 12px;padding:12px}
+.app-shell .sidebar .brand{padding:0}
+.app-shell .sidebar .nav-item{gap:10px;text-align:left;line-height:1.4;padding:11px 12px;font-size:13px}
+.app-shell .sidebar .nav-item>span{min-width:0;overflow-wrap:anywhere}
+.app-shell .sidebar .nav-item.selected{box-shadow:inset 3px 0 0 var(--sf-button,#315e50);font-weight:700}
+.app-shell .sidebar-bottom{padding-top:18px}
+.app-shell .topbar{height:auto;min-height:76px;padding:16px clamp(18px,3vw,38px);gap:16px;flex-wrap:wrap}
+.app-shell :is(.top-actions,.breadcrumb){min-width:0;flex-wrap:wrap;gap:10px}
+.app-shell .breadcrumb{font-size:13px;flex:1 1 160px}
+.app-shell .top-actions{justify-content:flex-end;flex:1 1 340px}
+.app-shell .top-actions .private-label{flex-basis:100%;text-align:right;font-size:11px}
+.app-shell .main-wrap>main{padding:28px clamp(16px,3vw,38px) 48px}
+.app-shell .page-heading{margin-bottom:24px}
+.app-shell .page-heading>div{min-width:0}
+.app-shell .page-heading-actions{max-width:100%;display:flex;flex-wrap:wrap}
+.app-shell .page-heading-actions button{min-height:46px}
+.app-shell .eyebrow{letter-spacing:.09em;font-size:11px;line-height:1.5}
+.app-shell .stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.app-shell .sf-stat-action{display:flex;flex-direction:column;align-items:stretch;text-align:left;padding:20px;gap:0;box-shadow:0 3px 14px #123f3a06}
+.sf-stat-title{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;font-size:12px;line-height:1.5}
+.app-shell .sf-stat-action strong{font-size:clamp(24px,2.4vw,32px);line-height:1.25;margin:14px 0 8px;overflow-wrap:anywhere}
+.sf-stat-description{font-size:12px;line-height:1.5;flex:1}
+.sf-stat-link{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;margin-top:18px}
+.app-shell .sf-stat-action:hover{border-color:var(--sf-button)!important;box-shadow:0 5px 18px #123f3a12}
+.app-shell .sf-owner-quick-actions{margin-block:0 24px}
+.app-shell .sf-owner-quick-actions button{min-height:100px;align-items:center;border-radius:14px;padding:17px}
+.app-shell .sf-owner-quick-actions b{line-height:1.45}
+.app-shell .panel{border-radius:14px;box-shadow:0 3px 14px #123f3a04}
+.app-shell .panel-title{align-items:flex-start;flex-wrap:wrap;gap:14px;padding:20px}
+.app-shell .panel-title>div{min-width:0}
+.app-shell .date-controls{flex-wrap:wrap;min-width:0}
+.app-shell .date-controls input{max-width:160px;min-width:130px}
+.app-shell .toolbar select{min-height:44px;max-width:100%}
+.app-shell .toolbar :is(button,.icon-btn){min-height:44px;min-width:44px}
+.app-shell .bar-chart{gap:clamp(6px,1.6vw,24px);padding-inline:18px}
+.app-shell .sf-section-loading{margin:16px 0;padding:24px;border:1px solid var(--sf-border,#dce4dc);border-radius:14px;background:var(--sf-surface,#fff);color:var(--sf-on-surface,#123f3a);font-size:14px;line-height:1.6}
+.app-shell .sf-settings-save{z-index:20;max-width:100%;flex-wrap:wrap}
+.app-shell .sf-settings-nav-item{white-space:normal}
+.app-shell .sf-settings-card{overflow:visible}
+.app-shell #owner-appointment-list{scroll-margin-top:20px}
+.modal-backdrop{z-index:1000;padding:clamp(8px,2vw,24px);overflow-y:auto;overscroll-behavior:contain}
+:where(.booking-modal,[role=dialog],dialog){min-width:0;max-width:calc(100vw - 24px)}
+.booking-modal{width:min(680px,100%);max-height:calc(100dvh - 24px)}
+.modal-header,.modal-footer,.sf-roster-header{gap:12px;flex-shrink:0;min-width:0}
+:where(.modal-header,.sf-roster-header)>div{min-width:0}
+:where(.modal-header,.sf-roster-header)>button{flex-shrink:0;min-width:44px;min-height:44px}
+.modal-body{min-height:0;overscroll-behavior:contain}
+.modal-footer{flex-wrap:wrap}
+:where(.modal-footer,.sf-new-session-actions) .button-row{flex-wrap:wrap}
+:where(.toast){max-width:calc(100vw - 24px);overflow-wrap:anywhere;z-index:2000;line-height:1.5}
+.sf-bell-popover{min-width:0;max-height:min(420px,calc(100dvh - 140px));overscroll-behavior:contain;overflow-wrap:anywhere}
+.sf-bell-heading{align-items:flex-start;gap:10px}
+.sf-bell-heading button{min-width:36px;min-height:36px;flex-shrink:0}
+:where(.sf-address-list){max-height:min(310px,40dvh)}
+@media(max-width:1180px){
+ .app-shell .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .app-shell .overview-grid{grid-template-columns:minmax(0,1fr)}
+ .app-shell .reception-card{padding:22px}
+}
+@media(min-width:651px) and (max-width:1000px){
+ .app-shell .sidebar{width:210px;padding-inline:12px}
+ .app-shell .main-wrap{margin-left:210px}
+ .app-shell .sf-settings-layout{display:block}
+ .app-shell .sf-settings-nav{display:none}
+ .app-shell .sf-settings-category-picker{display:grid;margin:0 0 18px}
+ .app-shell .sf-settings-category-picker select{width:100%;min-height:44px}
+ .app-shell .two-col{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:650px){
+ .app-shell .sidebar{width:min(320px,88vw);padding:20px 16px}
+ .app-shell .main-wrap{margin-left:0}
+ .app-shell .topbar{padding:12px 16px;gap:10px}
+ .app-shell .breadcrumb{flex-basis:100%}
+ .app-shell .top-actions{flex-basis:100%;justify-content:flex-start}
+ .app-shell .top-actions>.outline{display:inline-flex;min-height:40px}
+ .app-shell .top-actions .private-label{display:none}
+ .app-shell .page-heading-actions{display:flex;width:100%}
+ .app-shell .page-heading-actions button{flex:1}
+ .app-shell :is(.two-col,.form-row){grid-template-columns:minmax(0,1fr)}
+ .app-shell .sf-stat-action{padding:16px}
+ .app-shell .sf-owner-quick-actions>div{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .app-shell .sf-owner-quick-actions button{padding:14px;gap:8px;align-items:flex-start}
+ .app-shell .sf-owner-quick-actions button>svg:first-child{width:18px;height:18px}
+ .app-shell .sf-settings-save{bottom:0;border-radius:12px 12px 0 0}
+ :where(input:not([type=checkbox]):not([type=radio]),select,textarea){font-size:16px}
+ .sf-bell-popover{position:fixed;left:12px;right:12px;top:110px;width:auto;max-height:calc(100dvh - 134px)}
+ .booking-modal .modal-header,.booking-modal .modal-body,.booking-modal .modal-footer{padding:16px}
+ .booking-modal .steps{flex-wrap:wrap}
+ .booking-modal .steps>div{flex:1;min-width:0;white-space:normal}
+ .sf-global-tools{gap:0 6px}
+}
+@media(max-width:380px){
+ .app-shell .sf-owner-quick-actions>div,.app-shell .stats{grid-template-columns:minmax(0,1fr)}
+ .app-shell .top-actions{gap:6px}
+ .app-shell .top-actions .small{padding:8px;font-size:12px}
+ .public-page .form-row{grid-template-columns:minmax(0,1fr)}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+@media print{.sf-skip-link{display:none}.sf-table-scroll{overflow:visible}.sf-table-scroll table{min-width:0}}
+
+@media(min-width:1001px){body:has(.app-shell) .sf-global-tools{margin-left:248px;padding-inline:24px}}
+@media(min-width:651px) and (max-width:1000px){body:has(.app-shell) .sf-global-tools{margin-left:210px;padding-inline:16px}}
+
+.app-shell .top-actions{flex:0 1 auto}
+.app-shell .top-actions .private-label{flex-basis:auto}
+.app-shell[data-selah-theme] .sidebar .sf-workspace-search input{background:var(--sf-header,#123f3a)!important;color:var(--sf-on-header,#fff)!important;-webkit-text-fill-color:var(--sf-on-header,#fff)!important;border-color:currentColor!important}
+.app-shell[data-selah-theme] .sidebar .sf-workspace-search input::placeholder{color:var(--sf-on-header,#fff)!important;-webkit-text-fill-color:var(--sf-on-header,#fff)!important;opacity:.85}
+#owner-request-inbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px;margin-bottom:24px}
+#owner-request-inbox:empty{display:none}
+#owner-request-inbox>:not(.sf-inbox-clear){grid-column:1/-1;margin:0}
+.sf-inbox-clear{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border:1px solid var(--sf-border,#d8e1d7);border-radius:12px;background:var(--sf-surface,#fff);color:var(--sf-on-surface,#123f3a);min-width:0}
+.sf-inbox-clear h2{font-size:14px;line-height:1.4}
+.sf-inbox-clear p{font-size:12px;margin-top:4px}
+.sf-inbox-clear button{flex-shrink:0;min-height:40px}
+.sf-team-shell,.sf-team-shell>*,.sf-team-business-header a{min-width:0}
+.sf-team-shell :is(.form-row,.two-col)>*{min-width:0}
+.sf-team-shell :is(.button-row,.sf-team-profile-heading,.sf-team-share){flex-wrap:wrap}
+@media(max-width:1400px){.app-shell .top-actions .private-label{display:none}}
+@media(max-width:650px){.sf-team-shell .form-row{grid-template-columns:minmax(0,1fr)}.sf-team-shell{padding-inline:16px}.app-shell .top-actions{flex-basis:100%}}
+
+.app-shell details.sf-settings-intro{padding:16px 20px;margin-bottom:18px}
+.sf-settings-intro>summary{cursor:pointer;font-size:14px;font-weight:650;min-height:32px;line-height:1.6}
+.sf-settings-intro[open]>summary{margin-bottom:18px}
+
+@media(max-width:900px){
+ body:has(.app-shell) .sf-global-tools{margin-left:0;padding-inline:16px}
+ .app-shell .sidebar{display:none;position:fixed;inset:0 auto 0 0;width:min(320px,88vw);height:100dvh;z-index:110;padding:20px 16px;box-shadow:10px 0 60px #123f3a22}
+ .app-shell .sidebar.show{display:flex}
+ .app-shell .main-wrap{margin-left:0}
+ .app-shell .mobile-menu{display:inline-flex;min-width:44px;min-height:44px}
+ .app-shell .sf-menu-close{display:flex;align-self:flex-end;gap:8px;align-items:center;min-height:44px;margin-bottom:12px;background:transparent!important;color:var(--sf-on-header,#fff)!important;border:1px solid currentColor!important}
+ .sf-menu-backdrop{display:block;position:fixed;inset:0;z-index:105;width:100%;height:100dvh;border:0;border-radius:0;background:#0009}
+}
+
+.booking-modal .booking-service{align-items:flex-start}
+.booking-modal .booking-service>div{min-width:0}
+.booking-modal .booking-service>b{white-space:nowrap;flex-shrink:0}
+.booking-modal .booking-service>.select-check{flex-shrink:0;margin-top:2px}
+@media(max-width:500px){.booking-modal .booking-service{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px}.booking-modal .booking-service>b{grid-column:2;grid-row:2}.booking-modal .booking-service>div{grid-column:2;grid-row:1}}

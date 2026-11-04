@@ -5,7 +5,7 @@ function text(node:any):string{if(node==null||typeof node==='boolean')return '';
 export function compareTableValues(a:string,b:string){const n=(s:string)=>/^[\s$€£%+\-,\d.]+$/.test(s)&&s.trim()?Number(s.replace(/[^\d.\-]/g,'')):NaN;const x=n(a),y=n(b);if(Number.isFinite(x)&&Number.isFinite(y))return x-y;return a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'});}
 export default function SortableTable({children,...props}:TableHTMLAttributes<HTMLTableElement>){
  const [sort,setSort]=useState<{index:number;direction:1|-1}|null>(null);
- return <table {...props}>{Children.map(children,section=>{
+ return <div className="sf-table-scroll" role="region" aria-label={props['aria-label']||'Scrollable table'} tabIndex={0}><table {...props}>{Children.map(children,section=>{
  if(!isValidElement<any>(section))return section;
  if(section.type==='thead')return cloneElement(section,{},Children.map((section as ReactElement<any>).props.children,row=>isValidElement<any>(row)?cloneElement(row,{},Children.map(row.props.children,(cell,i)=>{
  if(!isValidElement<any>(cell))return cell;const label=text(cell.props.children);if(!label||/^(select|actions?)$/i.test(label))return cell;
@@ -13,5 +13,5 @@ export default function SortableTable({children,...props}:TableHTMLAttributes<HT
  })):row));
  if(section.type==='tbody'&&sort){const rows=Children.toArray((section as ReactElement<any>).props.children) as ReactElement<any>[];return cloneElement(section,{},rows.map((row,index)=>({row,index})).sort((a,b)=>{const value=(r:ReactElement<any>)=>{if(!isValidElement<any>(r))return '';return text(Children.toArray(r.props.children)[sort.index]);};return sort.direction*compareTableValues(value(a.row),value(b.row))||a.index-b.index;}).map(x=>x.row));}
  return section;
- })}</table>;
+ })}</table></div>;
 }

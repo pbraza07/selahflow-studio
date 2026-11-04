@@ -1702,5 +1702,197 @@
   "APPOINTMENT BOOKING": {
     "es": "RESERVA DE CITA",
     "pt": "AGENDAMENTO DE ATENDIMENTO"
+  },
+  "Bookable sessions": {
+    "es": "Sesiones disponibles",
+    "pt": "Sessões disponíveis"
+  },
+  "Team management": {
+    "es": "Gestión del equipo",
+    "pt": "Gestão da equipe"
+  },
+  "Skip to workspace content": {
+    "es": "Ir al contenido del espacio de trabajo",
+    "pt": "Ir para o conteúdo do espaço de trabalho"
+  },
+  "Loading this section…": {
+    "es": "Cargando esta sección…",
+    "pt": "Carregando esta seção…"
+  },
+  "Scrollable table": {
+    "es": "Tabla con desplazamiento",
+    "pt": "Tabela com rolagem"
+  },
+  "Manage plans, credits and renewals": {
+    "es": "Gestiona planes, créditos y renovaciones",
+    "pt": "Gerencie planos, créditos e renovações"
+  },
+  "Settings were not saved.": {
+    "es": "No se guardaron los ajustes.",
+    "pt": "As configurações não foram salvas."
+  },
+  "Your changes are still here. Review the details and try again.": {
+    "es": "Tus cambios siguen aquí. Revisa los datos e inténtalo de nuevo.",
+    "pt": "Suas alterações continuam aqui. Confira os dados e tente novamente."
+  },
+  "Create and manage one-time or recurring sessions, times and capacity.": {
+    "es": "Crea y gestiona sesiones únicas o recurrentes, horarios y plazas.",
+    "pt": "Crie e gerencie sessões avulsas ou recorrentes, horários e vagas."
+  },
+  "Manage team profiles, logins, workspace fees and availability.": {
+    "es": "Gestiona perfiles, accesos, cuotas y disponibilidad del equipo.",
+    "pt": "Gerencie perfis, acessos, taxas do espaço de trabalho e disponibilidade da equipe."
+  },
+  "Connect payment providers and review payment setup.": {
+    "es": "Conecta proveedores de pago y revisa la configuración.",
+    "pt": "Conecte provedores de pagamento e confira a configuração."
+  },
+  "Booking approvals": {
+    "es": "Aprobaciones de reservas",
+    "pt": "Aprovações de agendamentos"
+  },
+  "No requests waiting.": {
+    "es": "No hay solicitudes pendientes.",
+    "pt": "Nenhuma solicitação pendente."
+  },
+  "Workspace plan & setup information": {
+    "es": "Plan y configuración del espacio de trabajo",
+    "pt": "Plano e configuração do espaço de trabalho"
+  },
+  "Payment setup": {
+    "pt": "Configuração de pagamentos",
+    "es": "Configuración de pagos"
+  },
+  "YOUR BUSINESS AT A GLANCE": {
+    "es": "TU NEGOCIO DE UN VISTAZO",
+    "pt": "SEU NEGÓCIO EM RESUMO"
+  },
+  "Toggle menu": {
+    "es": "Abrir o cerrar el menú",
+    "pt": "Abrir ou fechar o menu"
+  },
+  "New booking": {
+    "es": "Nueva reserva",
+    "pt": "Novo agendamento"
+  },
+  "Create a booking.": {
+    "es": "Crear una reserva.",
+    "pt": "Criar um agendamento."
+  },
+  "CREATE A BOOKING": {
+    "es": "CREAR UNA RESERVA",
+    "pt": "CRIAR UM AGENDAMENTO"
+  },
+  "Close booking": {
+    "es": "Cerrar reserva",
+    "pt": "Fechar agendamento"
+  },
+  "What would you like to do?": {
+    "es": "¿Qué quieres hacer?",
+    "pt": "O que você gostaria de fazer?"
+  },
+  "View schedule": {
+    "es": "Ver agenda",
+    "pt": "Ver agenda"
+  },
+  "Schedule": {
+    "es": "Agenda",
+    "pt": "Agenda"
+  },
+  "Sessions, bookings and attendance": {
+    "es": "Sesiones, reservas y asistencia",
+    "pt": "Sessões, agendamentos e presença"
+  },
+  "Details, visits and memberships": {
+    "es": "Datos, visitas y membresías",
+    "pt": "Dados, visitas e assinaturas"
+  },
+  "Choose a service, date and seats": {
+    "es": "Elige servicio, fecha y plazas",
+    "pt": "Escolha serviço, data e vagas"
+  },
+  "Filter team member": {
+    "es": "Filtrar por miembro del equipo",
+    "pt": "Filtrar por membro da equipe"
+  },
+  "Services, retail & memberships · selected day": {
+    "es": "Servicios, productos y membresías · día seleccionado",
+    "pt": "Serviços, produtos e assinaturas · dia selecionado"
+  },
+  "Of configured opening hours": {
+    "es": "Del horario de apertura configurado",
+    "pt": "Do horário de funcionamento configurado"
+  },
+  "Booked time": {
+    "es": "Tiempo reservado",
+    "pt": "Tempo agendado"
+  },
+  "Upcoming value": {
+    "es": "Importe por cobrar",
+    "pt": "Valor a receber"
+  },
+  "Unpaid confirmed quotes · not revenue": {
+    "es": "Reservas confirmadas sin pagar · no son ingresos cobrados",
+    "pt": "Agendamentos confirmados não pagos · não são receita recebida"
+  },
+  "Bookings, requests and daily activity in one place.": {
+    "es": "Reservas, solicitudes y actividad diaria en un solo lugar.",
+    "pt": "Agendamentos, solicitações e atividade diária em um só lugar."
+  },
+  "CLIENT": {
+    "es": "CLIENTE",
+    "pt": "CLIENTE"
+  },
+  "SERVICE": {
+    "es": "SERVICIO",
+    "pt": "SERVIÇO"
+  },
+  "DATE": {
+    "es": "FECHA",
+    "pt": "DATA"
+  },
+  "TIME": {
+    "es": "HORA",
+    "pt": "HORA"
+  },
+  "STATUS": {
+    "es": "ESTADO",
+    "pt": "STATUS"
+  },
+  "Scheduled appointments": {
+    "es": "Citas programadas",
+    "pt": "Agendamentos marcados"
+  },
+  "Show all appointments ({0})": {
+    "es": "Mostrar todas las citas ({0})",
+    "pt": "Mostrar todos os agendamentos ({0})"
+  },
+  "Request alerts: {0} unread": {
+    "es": "Alertas de solicitudes: {0} sin leer",
+    "pt": "Alertas de solicitações: {0} não lidos"
+  },
+  "Sales & memberships": {
+    "es": "Ventas y membresías",
+    "pt": "Vendas e assinaturas"
+  },
+  "History & account": {
+    "es": "Historial y cuenta",
+    "pt": "Histórico e conta"
+  },
+  "Client website · View home": {
+    "es": "Sitio del negocio · Ver página",
+    "pt": "Site do negócio · Ver página"
+  },
+  "Website & branding": {
+    "es": "Sitio web e identidad visual",
+    "pt": "Site e identidade visual"
+  },
+  "Bookings may begin at {0} — the next {1}-minute mark.": {
+    "es": "Las reservas pueden comenzar a las {0}, en el próximo intervalo de {1} minutos.",
+    "pt": "Os agendamentos podem começar às {0}, no próximo intervalo de {1} minutos."
+  },
+  "The next {0}-minute booking mark is {1}, but that earlier time is unavailable.": {
+    "es": "El próximo intervalo de {0} minutos es a las {1}, pero ese horario no está disponible.",
+    "pt": "O próximo intervalo de {0} minutos é às {1}, mas esse horário não está disponível."
   }
 }
