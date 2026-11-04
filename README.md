@@ -1,3 +1,9 @@
+# v1.3.218 release handoff — Responsive owner workspace and shared layouts
+
+Release source: v1.3.218
+
+Shared layout improvements cover translated text, narrow screens, scrollable tables, modal sizing, focus indicators and owner navigation. Direct Bookable sessions, Team management and Payment setup destinations open the existing settings panels; all original destinations and unsaved-settings protection remain. Dashboard metrics open related lists, schedule or date-filtered reports. Pending requests precede quick actions. Owner booking, appointment details and session roster receive focus containment and restoration. Settings failures retain drafts and show a persistent inline error. No API, authorization, database, payment, commission, booking or email rule changes. Validation and deployment pending; do not treat this source note as LIVE evidence.
+
 # v1.3.217 release handoff — App-wide interface languages
 
 Release source: v1.3.217

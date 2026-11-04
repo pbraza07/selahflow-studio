@@ -4,8 +4,8 @@ import {filteredWorkspaceGroups,workspaceGroups,hasUnsavedWorkspaceChanges} from
 
 test('workspace search finds tools by purpose and preserves every existing destination',()=>{
  const all=workspaceGroups.flatMap(group=>group.items);
- assert.equal(all.length,13);assert.equal(new Set(all).size,13);
- assert.deepEqual(filteredWorkspaceGroups('  PAYMENT  ').flatMap(group=>group.items),['Checkout','Reports','Settings']);
+ assert.equal(all.length,16);assert.equal(new Set(all).size,16);
+ assert.deepEqual(filteredWorkspaceGroups('  PAYMENT  ').flatMap(group=>group.items),['Checkout','Reports','Payments','Settings']);
  assert.deepEqual(filteredWorkspaceGroups('booking rules').flatMap(group=>group.items),['Settings']);
  assert.equal(filteredWorkspaceGroups('does not exist').length,0);
  assert.deepEqual(filteredWorkspaceGroups().flatMap(group=>group.items),all);
