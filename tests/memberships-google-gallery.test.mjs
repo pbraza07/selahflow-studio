@@ -81,7 +81,7 @@ test('public booking and business pages link to memberships, owner dashboard can
  ].map(f=>readFile(new URL(f,base),'utf8')));
  assert.match(files[0],/OwnerMemberships/);
  assert.match(files[1],/Explore memberships/);
- assert.match(files[2],/View memberships/);
+ assert.match(files[2],/View Membership\/Packages/);
  assert.match(files[3],/Google Maps business listing link/);
  assert.match(files[4],/Next photo/);
  assert.match(files[4],/Previous photo/);
