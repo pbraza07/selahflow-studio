@@ -23,7 +23,7 @@ export default function PlanBenefitCards({placement='home'}:{placement?:'home'|'
     return <article key={code} id={placement==='pricing'?code:undefined} className={styles.planCard} data-plan={code}>
      <div className={styles.planCardTop}>
       <span className={styles.planTier}>{code==='professional'?'POPULAR FOR GROWING TEAMS':code==='business'?'MORE ROOM TO SCALE':'GET STARTED'}</span>
-      <h3>{plan.name}</h3>
+      <h3 translate="no">{plan.name}</h3>
       <p className={styles.planSubtitle}>{plan.summary}</p>
       <p className={styles.planPrice}>${(plan.monthlyCents/100).toFixed(2)}<span>/month</span></p>
       <p className={styles.planPriceNote}>{isPaid?'Monthly subscription · sign agreement, then pay securely with Stripe':'No monthly package fee'}</p>

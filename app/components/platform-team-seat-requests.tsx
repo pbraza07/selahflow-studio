@@ -55,7 +55,7 @@ export default function PlatformTeamSeatRequests({onChanged}:{onChanged:()=>Prom
   {message&&<p className="sf-extra-seat-notice" role="status">{message}</p>}
   {loading&&!data?<p>Loading extra team member requests…</p>:!pending.length?<p className="sf-platform-no-team-requests">No extra team member requests are awaiting approval.</p>:
    <div className="sf-platform-seat-list">{pending.map(r=><article key={r.id} className="sf-platform-seat-request">
-    <div className="sf-platform-seat-request-heading"><div><strong>{r.businessName}</strong><small>/{r.slug} · {r.ownerEmail}</small></div>
+    <div className="sf-platform-seat-request-heading"><div><strong translate="no">{r.businessName}</strong><small>/{r.slug} · {r.ownerEmail}</small></div>
      <span className="sf-platform-seat-waiting"><Clock3 size={14}/> Awaiting review</span></div>
     <div className="sf-platform-seat-request-details">
      <div><small>Proposed member</small><b><UserPlus size={15}/> {r.teamMemberName}</b></div>
@@ -73,7 +73,7 @@ export default function PlatformTeamSeatRequests({onChanged}:{onChanged:()=>Prom
   {history.length>0&&<div className="sf-platform-seat-history">
    <button type="button" className="outline" onClick={()=>setShowHistory(v=>!v)}>{showHistory?'Hide':'Show'} reviewed requests ({history.length})</button>
    {showHistory&&<div className="sf-platform-seat-list">{history.map(r=><article key={r.id} className="sf-platform-seat-request">
-    <div className="sf-platform-seat-request-heading"><div><strong>{r.businessName} — {r.teamMemberName}</strong><small>{r.ownerEmail} · {when(r.createdAt)}</small></div>
+    <div className="sf-platform-seat-request-heading"><div><strong><span translate="no">{r.businessName}</span> — {r.teamMemberName}</strong><small>{r.ownerEmail} · {when(r.createdAt)}</small></div>
      <span className={'sf-extra-seat-status '+r.status}>{r.status==='approved'?'Approved +1 seat':r.status}</span></div>
     <p>{r.reason}</p>
     {r.reviewNote&&<p><b>Review note:</b> {r.reviewNote}</p>}

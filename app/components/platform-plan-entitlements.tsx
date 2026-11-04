@@ -71,12 +71,12 @@ export default function PlatformPlanEntitlements({onChanged}:{onChanged:()=>Prom
       setReason('');setConfirmName('');setAck(false);setBenefitDraft(Object.fromEntries(Object.entries(benefitOverrides[id]||{}).map(([k,v])=>[k,String(v)])));
      }}>
       <option value="">Choose a business</option>
-      {businesses.map(b=><option key={b.id} value={b.id}>{b.name} · {PLANS[b.planCode]?.name||'Free'} · {b.status}</option>)}
+      {businesses.map(b=><option translate="no" key={b.id} value={b.id}>{b.name} · {PLANS[b.planCode]?.name||'Free'} · {b.status}</option>)}
      </select>
     </label>
     {current&&<div className={styles.planAdminCurrent}>
-     <h3>{current.name}</h3>
-     <p>Current plan: <strong>{current.planBenefits.name}</strong> · {current.status}</p>
+     <h3 translate="no">{current.name}</h3>
+     <p>Current plan: <strong translate="no">{current.planBenefits.name}</strong> · {current.status}</p>
      <p>Up to <b>{current.planBenefits.limits.services}</b> catalog services, <b>{current.planBenefits.limits.bookingFields}</b> booking questions, <b>{current.planBenefits.limits.sessionSeries}</b> session templates and <b>{current.planBenefits.limits.membershipPlans}</b> membership offers.</p>
      {current.hasConnectedSubscription&&<p>A Stripe subscription exists for this business; change its tier through billing management, not manual assignment.</p>}
     </div>}
@@ -85,7 +85,7 @@ export default function PlatformPlanEntitlements({onChanged}:{onChanged:()=>Prom
      <label className={styles.planAdminLabel}>Assign benefits for
       <select value={target} onChange={e=>setTarget(e.target.value as PlanCode)}>
        {(Object.entries(PLANS) as [PlanCode,(typeof PLANS)[PlanCode]][]).map(([code,p])=>
-        <option key={code} value={code}>{p.name} — up to {p.bookableStaff} staff, {p.limits.services} services</option>)}
+        <option translate="no" key={code} value={code}>{p.name} — up to {p.bookableStaff} staff, {p.limits.services} services</option>)}
       </select>
      </label>
      <label className={styles.planAdminLabel}>Reason / external authorization reference

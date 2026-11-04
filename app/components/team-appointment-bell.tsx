@@ -16,7 +16,7 @@ export default function TeamAppointmentBell({onOpen,onChanged}:{onOpen:()=>void;
   </button>
   <div id="team-booking-details" hidden={!open} className="sf-team-booking-details">
    <TeamBookingReview embedded onCount={setPending} onChanged={changed}/>
-   <section className="sf-team-confirmations"><h2>My appointment confirmations</h2><p>Only appointments assigned to you appear here. Times are Eastern.</p>{error&&<p role="alert" className="error">{error}</p>}{items.length?<div className="sf-team-confirmation-list">{items.map(i=><article key={i.id}><strong>{i.customerName}</strong><span>{i.date} · {time(i.start)} Eastern</span><span>{i.services.join(', ')||'Appointment'} · {i.teamMember}</span></article>)}</div>:!error&&<p>No assigned appointment confirmations.</p>}<button type="button" className="outline" onClick={()=>{setOpen(false);onOpen();}}><CalendarDays size={17}/> Open my calendar</button></section>
+   <section className="sf-team-confirmations"><h2>My appointment confirmations</h2><p>Only appointments assigned to you appear here. Times are Eastern.</p>{error&&<p role="alert" className="error">{error}</p>}{items.length?<div className="sf-team-confirmation-list">{items.map(i=><article key={i.id}><strong translate="no">{i.customerName}</strong><span>{i.date} · {time(i.start)} Eastern</span><span>{i.services.join(', ')||'Appointment'} · {i.teamMember}</span></article>)}</div>:!error&&<p>No assigned appointment confirmations.</p>}<button type="button" className="outline" onClick={()=>{setOpen(false);onOpen();}}><CalendarDays size={17}/> Open my calendar</button></section>
   </div>
  </section>;
 }

@@ -13,7 +13,7 @@ test('owner business workspace card opens the matching tenant public homepage, n
  assert.match(card,/aria-label=\{"Open "\+config\.name\+" business homepage"\}/);
  assert.match(card,/title=\{"View "\+config\.name\+" business homepage"\}/);
  assert.match(card,/onClick=\{\(\)=>setMobile\(false\)\}/);
- assert.match(card,/<b>\{config\.name\}<\/b>/);
+ assert.match(card,/<b translate="no">\{config\.name\}<\/b>/);
  assert.match(card,/Client website · View home/);
  assert.match(card,/className="studio-switch-go"/);
  assert.match(card,/encodeURIComponent\(publicSlug\|\|businessSlug\)/);
