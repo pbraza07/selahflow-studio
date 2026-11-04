@@ -4,6 +4,8 @@ import "./globals.css";
 import "./usability.css";
 import "./page-shortcuts.css";
 import PageShortcuts from "./components/page-shortcuts";
+import LanguageSelector from './components/language-selector';
+import './languages.css';
 import {isStaging} from '../server/staging-safety.mjs';
 
 const {alternates: _homeCanonical,...siteMetadata}=publicPageMetadata('/');
@@ -28,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased"><PageShortcuts/>{isStaging()&&<div role="status" style={{background:'#8a4b00',color:'#fff',padding:'10px 16px',textAlign:'center',fontWeight:700}}>SelahFlow STAGING · Test data only · Sandbox payments</div>}{children}</body>
+      <body className="antialiased"><div className="sf-global-tools"><PageShortcuts/><LanguageSelector/></div>{isStaging()&&<div role="status" style={{background:'#8a4b00',color:'#fff',padding:'10px 16px',textAlign:'center',fontWeight:700}}>SelahFlow STAGING · Test data only · Sandbox payments</div>}{children}</body>
     </html>
   );
 }

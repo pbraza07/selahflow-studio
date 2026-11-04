@@ -5,7 +5,7 @@ export type WaiverSignature={mediaConsent?:boolean;signature:string;role:string;
 export function WaiverDocument({document,children}:{document:any;children?:React.ReactNode}){
  const colors=document.colors||{};
  return <article className="sf-waiver-document" style={{background:'#fff',color:'#171717',border:'1px solid '+(colors.border||'#bbb'),borderRadius:12,overflow:'hidden'}}>
-  <header style={{background:colors.header||'#111',color:accessibleText(colors.header||'#111'),padding:'18px 22px',borderBottom:'6px solid '+(colors.hero||colors.button||'#555')}}><strong style={{fontSize:23,color:'inherit'}}>{document.businessName}</strong><div style={{fontSize:14,marginTop:4}}>{document.title}</div></header>
+  <header style={{background:colors.header||'#111',color:accessibleText(colors.header||'#111'),padding:'18px 22px',borderBottom:'6px solid '+(colors.hero||colors.button||'#555')}}><strong translate="no" style={{fontSize:23,color:'inherit'}}>{document.businessName}</strong><div style={{fontSize:14,marginTop:4}}>{document.title}</div></header>
   <div className="sf-waiver-body" style={{padding:'18px 22px'}}>{document.sections.map(([title,body]:string[],index:number)=><section key={title} style={{margin:'0 0 12px'}}><strong style={{color:'#171717',fontSize:13}}>{index+1}. {title}</strong><p style={{color:'#171717',fontSize:13,lineHeight:1.45,margin:'3px 0 0'}}>{body}</p></section>)}{children}</div>
  </article>;
 }
@@ -14,8 +14,8 @@ export default function ParticipationWaiver({document,dob,participantName,value,
  const patch=(changes:Partial<WaiverSignature>)=>onChange({...value,version:document.version,documentHash:document.hash,...changes});
  return <section className="sf-booking-waiver" aria-label="Participation waiver" style={{margin:'20px 0'}}>
   <h3>Participation waiver</h3>
-  {document.acceptingSignatures===false?<p role="alert">This business is reviewing its current waiver. Contact the business before booking this service.</p>:checking?<p role="status">Checking for a signed waiver…</p>:error?<p role="alert">{error} <button type="button" className="outline" onClick={onRetry}>Retry waiver check</button></p>:signed?<p role="status">A signed waiver is already on file for your unique ID at {document.businessName}. You do not need to sign again.</p>:<>
-  <p>Required for the current document for your unique ID at {document.businessName}. Please read before signing. A parent or guardian must sign for participants under 18.</p>
+  {document.acceptingSignatures===false?<p role="alert">This business is reviewing its current waiver. Contact the business before booking this service.</p>:checking?<p role="status">Checking for a signed waiver…</p>:error?<p role="alert">{error} <button type="button" className="outline" onClick={onRetry}>Retry waiver check</button></p>:signed?<p role="status">A signed waiver is already on file for your unique ID at <span translate="no">{document.businessName}</span>. You do not need to sign again.</p>:<>
+  <p>Required for the current document for your unique ID at <span translate="no">{document.businessName}</span>. Please read before signing. A parent or guardian must sign for participants under 18.</p>
   <WaiverDocument document={document}/>
   <p><strong>Participant:</strong> {participantName||'Enter participant details above'}</p>
   <div className="form-grid"><label>Signing as<select required value={value.role} onChange={e=>patch({role:e.target.value,signature:'',accepted:false})}><option value="">Choose signer</option>{!minor&&<option value="self">Participant (18 or older)</option>}<option value="parent">Parent</option><option value="guardian">Legal guardian</option></select></label>

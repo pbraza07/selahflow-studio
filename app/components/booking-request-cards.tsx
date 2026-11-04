@@ -24,7 +24,7 @@ export default function BookingRequestCards({
  const visible=(id:string)=>approvalFields===undefined||approvalFields.includes(id);
  return <div className="sf-approval-list">{items.map(item=><article className="sf-approval-card" key={item.id}>
   <div className="sf-approval-title">
-   <div><strong>{item.details.customerName||'New customer'}</strong><span>Requested {activityDate(item.date)} · {approvalTime(item.start_minute)} Eastern · {item.duration} minutes</span></div>
+   <div><strong translate="no">{item.details.customerName||'New customer'}</strong><span>Requested {activityDate(item.date)} · {approvalTime(item.start_minute)} Eastern · {item.duration} minutes</span></div>
    <span className="sf-request-badge">Awaiting review{item.details.correctedAt?' · Edited':''}</span>
   </div>
   <div className="sf-approval-activity" aria-label="Requested activity schedule">
@@ -40,22 +40,22 @@ export default function BookingRequestCards({
   <div className="sf-approval-detail-grid">
    {visible('services')&&<div><small>Service / activity</small><b>{(item.details.services||[]).join(', ')||'Not specified'}</b></div>}
    {visible('team')&&<div><small>Team member</small><b>{team?.find(s=>s.id===item.staff_id)?.name||item.staff_id}</b></div>}
-   {visible('customerEmail')&&item.details.customerEmail&&<div><small>Customer email</small><b>{item.details.customerEmail}</b></div>}
-   {visible('customerPhone')&&item.details.customerPhone&&<div><small>Customer phone</small><b>{item.details.customerPhone}</b></div>}
+   {visible('customerEmail')&&item.details.customerEmail&&<div><small>Customer email</small><b translate="no">{item.details.customerEmail}</b></div>}
+   {visible('customerPhone')&&item.details.customerPhone&&<div><small>Customer phone</small><b translate="no">{item.details.customerPhone}</b></div>}
    {customFields.filter(f=>visible(f.id)&&item.details.customAnswers?.[f.id]!==undefined).map(f=><div key={f.id}><small>{f.label}</small><b>{typeof item.details.customAnswers?.[f.id]==='boolean'?(item.details.customAnswers?.[f.id]?'Yes':'No'):String(item.details.customAnswers?.[f.id])}</b></div>)}
    {visible('quotedPrice')&&<div><small>Service quote</small><b>{money(item.details.quotedPrice||0)} <span className="sf-approval-unpaid">· No payment collected</span></b></div>}
    {visible('receivedAt')&&<div><small>Request received</small><b>{receiptTime(item.created_at)}</b></div>}
   </div>
   <details className="sf-approval-all-submitted"><summary>View all customer-provided booking information</summary>
    <div className="sf-approval-detail-grid">
-    <div><small>Name provided</small><b>{item.details.customerName}</b></div>
-    <div><small>Email provided</small><b>{item.details.customerEmail}</b></div>
-    <div><small>Phone provided</small><b>{item.details.customerPhone||'Not provided'}</b></div>
+    <div><small>Name provided</small><b translate="no">{item.details.customerName}</b></div>
+    <div><small>Email provided</small><b translate="no">{item.details.customerEmail}</b></div>
+    <div><small>Phone provided</small><b translate="no">{item.details.customerPhone||'Not provided'}</b></div>
     <div><small>Service(s)</small><b>{(item.details.services||[]).join(', ')}</b></div>
     <div><small>Activity date and time</small><b>{activityDate(item.date)} · {approvalTime(item.start_minute)} Eastern</b></div>
     <div><small>Quote</small><b>{money(item.details.quotedPrice||0)}</b></div>
     {Object.entries(item.details.customAnswers||{}).map(([id,value])=><div key={id}><small>{item.details.customFieldLabels?.[id]||customFields.find(f=>f.id===id)?.label||id}</small><b>{typeof value==='boolean'?(value?'Yes':'No'):String(value)}</b></div>)}
-    {item.details.originalSubmission&&<div><small>Original customer name before any corrections</small><b>{item.details.originalSubmission.customerName}</b></div>}
+    {item.details.originalSubmission&&<div><small>Original customer name before any corrections</small><b translate="no">{item.details.originalSubmission.customerName}</b></div>}
    </div>
   </details>
   <div className="sf-approval-buttons">{onEdit&&<button type="button" className="outline sf-booking-edit-button" disabled={!!busy} onClick={()=>onEdit(item)}><Pencil size={16}/> Edit booking details</button>}<button type="button" className="primary" disabled={!!busy} onClick={()=>onReview(item.id,true)}>{busy===item.id?'Processing…':approvalLabel||'Accept and add to calendar'}</button><button type="button" className="outline" disabled={!!busy} onClick={()=>onReview(item.id,false)}>Decline (no calendar change)</button></div>

@@ -1,0 +1,1606 @@
+{
+  "Home": {
+    "es": "Inicio",
+    "pt": "Início"
+  },
+  "Back": {
+    "es": "Volver",
+    "pt": "Voltar"
+  },
+  "Pages": {
+    "es": "Páginas",
+    "pt": "Páginas"
+  },
+  "Dashboard": {
+    "es": "Panel de control",
+    "pt": "Painel de controle"
+  },
+  "Overview": {
+    "es": "Resumen",
+    "pt": "Visão geral"
+  },
+  "Calendar": {
+    "es": "Calendario",
+    "pt": "Calendário"
+  },
+  "Bookings": {
+    "es": "Reservas",
+    "pt": "Agendamentos"
+  },
+  "Booking": {
+    "es": "Reserva",
+    "pt": "Agendamento"
+  },
+  "Appointments": {
+    "es": "Citas",
+    "pt": "Agendamentos"
+  },
+  "All appointments": {
+    "es": "Todas las citas",
+    "pt": "Todos os agendamentos"
+  },
+  "Clients": {
+    "es": "Clientes",
+    "pt": "Clientes"
+  },
+  "Customers": {
+    "es": "Clientes",
+    "pt": "Clientes"
+  },
+  "Team": {
+    "es": "Equipo",
+    "pt": "Equipe"
+  },
+  "Team member": {
+    "es": "Miembro del equipo",
+    "pt": "Membro da equipe"
+  },
+  "Team members": {
+    "es": "Miembros del equipo",
+    "pt": "Membros da equipe"
+  },
+  "All team members": {
+    "es": "Todos los miembros del equipo",
+    "pt": "Todos os membros da equipe"
+  },
+  "Services": {
+    "es": "Servicios",
+    "pt": "Serviços"
+  },
+  "Service": {
+    "es": "Servicio",
+    "pt": "Serviço"
+  },
+  "Service catalog": {
+    "es": "Catálogo de servicios",
+    "pt": "Catálogo de serviços"
+  },
+  "Service(s)": {
+    "es": "Servicio(s)",
+    "pt": "Serviço(s)"
+  },
+  "Services & prices": {
+    "es": "Servicios y precios",
+    "pt": "Serviços e preços"
+  },
+  "Reports": {
+    "es": "Informes",
+    "pt": "Relatórios"
+  },
+  "Settings": {
+    "es": "Configuración",
+    "pt": "Configurações"
+  },
+  "Branding": {
+    "es": "Identidad de marca",
+    "pt": "Identidade visual"
+  },
+  "Memberships": {
+    "es": "Membresías",
+    "pt": "Assinaturas"
+  },
+  "Membership": {
+    "es": "Membresía",
+    "pt": "Assinatura"
+  },
+  "Membership/Packages": {
+    "es": "Membresías/Paquetes",
+    "pt": "Assinaturas/Pacotes"
+  },
+  "Membership / Packages": {
+    "es": "Membresías / Paquetes",
+    "pt": "Assinaturas / Pacotes"
+  },
+  "Memberships / Packages": {
+    "es": "Membresías / Paquetes",
+    "pt": "Assinaturas / Pacotes"
+  },
+  "Membership & Packages": {
+    "es": "Membresías y paquetes",
+    "pt": "Assinaturas e pacotes"
+  },
+  "Memberships & Packages": {
+    "es": "Membresías y paquetes",
+    "pt": "Assinaturas e pacotes"
+  },
+  "Recurring membership": {
+    "es": "Membresía recurrente",
+    "pt": "Assinatura recorrente"
+  },
+  "One-time service package": {
+    "es": "Paquete de servicios de pago único",
+    "pt": "Pacote de serviços com pagamento único"
+  },
+  "Service package": {
+    "es": "Paquete de servicios",
+    "pt": "Pacote de serviços"
+  },
+  "Create membership or package": {
+    "es": "Crear membresía o paquete",
+    "pt": "Criar assinatura ou pacote"
+  },
+  "Membership ID": {
+    "es": "ID de membresía",
+    "pt": "ID da assinatura"
+  },
+  "Client ID": {
+    "es": "ID del cliente",
+    "pt": "ID do cliente"
+  },
+  "Customer / Member ID": {
+    "es": "Cliente / ID de miembro",
+    "pt": "Cliente / ID de assinante"
+  },
+  "Customer/Member ID": {
+    "es": "Cliente/ID de miembro",
+    "pt": "Cliente/ID de assinante"
+  },
+  "Sessions used": {
+    "es": "Sesiones utilizadas",
+    "pt": "Sessões utilizadas"
+  },
+  "Sessions left": {
+    "es": "Sesiones restantes",
+    "pt": "Sessões restantes"
+  },
+  "Sessions booked": {
+    "es": "Sesiones reservadas",
+    "pt": "Sessões agendadas"
+  },
+  "Payment status / actions": {
+    "es": "Estado del pago / acciones",
+    "pt": "Status do pagamento / ações"
+  },
+  "Payment Status/Actions": {
+    "es": "Estado del pago/acciones",
+    "pt": "Status do pagamento/ações"
+  },
+  "Payment requests": {
+    "es": "Solicitudes de pago",
+    "pt": "Solicitações de pagamento"
+  },
+  "Emails submitted": {
+    "es": "Correos enviados al proveedor",
+    "pt": "E-mails enviados ao provedor"
+  },
+  "Payment status": {
+    "es": "Estado del pago",
+    "pt": "Status do pagamento"
+  },
+  "Booking status": {
+    "es": "Estado de la reserva",
+    "pt": "Status do agendamento"
+  },
+  "Booking Status": {
+    "es": "Estado de la reserva",
+    "pt": "Status do agendamento"
+  },
+  "Membership status": {
+    "es": "Estado de la membresía",
+    "pt": "Status da assinatura"
+  },
+  "Payment": {
+    "es": "Pago",
+    "pt": "Pagamento"
+  },
+  "Payments": {
+    "es": "Pagos",
+    "pt": "Pagamentos"
+  },
+  "Make Payment": {
+    "es": "Realizar pago",
+    "pt": "Efetuar pagamento"
+  },
+  "Make payment": {
+    "es": "Realizar pago",
+    "pt": "Efetuar pagamento"
+  },
+  "Pay now": {
+    "es": "Pagar ahora",
+    "pt": "Pagar agora"
+  },
+  "Pay on Site": {
+    "es": "Pagar en el establecimiento",
+    "pt": "Pagar no local"
+  },
+  "Pay onsite": {
+    "es": "Pagar en el establecimiento",
+    "pt": "Pagar no local"
+  },
+  "Pay cash": {
+    "es": "Pagar en efectivo",
+    "pt": "Pagar em dinheiro"
+  },
+  "Check payment": {
+    "es": "Consultar pago",
+    "pt": "Verificar pagamento"
+  },
+  "Send for Payment": {
+    "es": "Enviar solicitud de pago",
+    "pt": "Enviar solicitação de pagamento"
+  },
+  "Email payment link": {
+    "es": "Enviar enlace de pago por correo",
+    "pt": "Enviar link de pagamento por e-mail"
+  },
+  "Payment received": {
+    "es": "Pago recibido",
+    "pt": "Pagamento recebido"
+  },
+  "Payment pending": {
+    "es": "Pago pendiente",
+    "pt": "Pagamento pendente"
+  },
+  "Pending payment": {
+    "es": "Pago pendiente",
+    "pt": "Pagamento pendente"
+  },
+  "Paid": {
+    "es": "Pagado",
+    "pt": "Pago"
+  },
+  "Unpaid": {
+    "es": "Sin pagar",
+    "pt": "Não pago"
+  },
+  "Pending": {
+    "es": "Pendiente",
+    "pt": "Pendente"
+  },
+  "Accepted": {
+    "es": "Aceptado",
+    "pt": "Aceito"
+  },
+  "Approved": {
+    "es": "Aprobado",
+    "pt": "Aprovado"
+  },
+  "Submitted": {
+    "es": "Enviado",
+    "pt": "Enviado"
+  },
+  "Cancelled": {
+    "es": "Cancelado",
+    "pt": "Cancelado"
+  },
+  "Canceled": {
+    "es": "Cancelado",
+    "pt": "Cancelado"
+  },
+  "Completed": {
+    "es": "Completado",
+    "pt": "Concluído"
+  },
+  "Checked in": {
+    "es": "Asistencia registrada",
+    "pt": "Presença registrada"
+  },
+  "No-show": {
+    "es": "Ausencia",
+    "pt": "Ausência"
+  },
+  "No show": {
+    "es": "Ausencia",
+    "pt": "Ausência"
+  },
+  "Awaiting approval": {
+    "es": "Pendiente de aprobación",
+    "pt": "Aguardando aprovação"
+  },
+  "Pending approval": {
+    "es": "Pendiente de aprobación",
+    "pt": "Aguardando aprovação"
+  },
+  "Approve": {
+    "es": "Aprobar",
+    "pt": "Aprovar"
+  },
+  "Decline": {
+    "es": "Rechazar",
+    "pt": "Recusar"
+  },
+  "Cancel": {
+    "es": "Cancelar",
+    "pt": "Cancelar"
+  },
+  "Close": {
+    "es": "Cerrar",
+    "pt": "Fechar"
+  },
+  "Close details": {
+    "es": "Cerrar detalles",
+    "pt": "Fechar detalhes"
+  },
+  "Save": {
+    "es": "Guardar",
+    "pt": "Salvar"
+  },
+  "Save changes": {
+    "es": "Guardar cambios",
+    "pt": "Salvar alterações"
+  },
+  "Save business settings": {
+    "es": "Guardar configuración del negocio",
+    "pt": "Salvar configurações do negócio"
+  },
+  "Edit": {
+    "es": "Editar",
+    "pt": "Editar"
+  },
+  "Delete": {
+    "es": "Eliminar",
+    "pt": "Excluir"
+  },
+  "Delete selected": {
+    "es": "Eliminar seleccionados",
+    "pt": "Excluir selecionados"
+  },
+  "Permanently delete": {
+    "es": "Eliminar definitivamente",
+    "pt": "Excluir permanentemente"
+  },
+  "Delete permanently": {
+    "es": "Eliminar definitivamente",
+    "pt": "Excluir permanentemente"
+  },
+  "Create": {
+    "es": "Crear",
+    "pt": "Criar"
+  },
+  "Create session": {
+    "es": "Crear sesión",
+    "pt": "Criar sessão"
+  },
+  "New session": {
+    "es": "Nueva sesión",
+    "pt": "Nova sessão"
+  },
+  "Session": {
+    "es": "Sesión",
+    "pt": "Sessão"
+  },
+  "Sessions": {
+    "es": "Sesiones",
+    "pt": "Sessões"
+  },
+  "Session full": {
+    "es": "Sesión completa",
+    "pt": "Sessão lotada"
+  },
+  "Session is now full.": {
+    "es": "La sesión está completa.",
+    "pt": "A sessão está lotada."
+  },
+  "Group session": {
+    "es": "Sesión en grupo",
+    "pt": "Sessão em grupo"
+  },
+  "Private session": {
+    "es": "Sesión privada",
+    "pt": "Sessão particular"
+  },
+  "Book a service": {
+    "es": "Reservar un servicio",
+    "pt": "Agendar um serviço"
+  },
+  "Book now": {
+    "es": "Reservar ahora",
+    "pt": "Agendar agora"
+  },
+  "Book appointment": {
+    "es": "Reservar cita",
+    "pt": "Agendar atendimento"
+  },
+  "Book another visit": {
+    "es": "Reservar otra visita",
+    "pt": "Agendar outra visita"
+  },
+  "Choose a service": {
+    "es": "Elegir un servicio",
+    "pt": "Escolher um serviço"
+  },
+  "Choose your services": {
+    "es": "Elige tus servicios",
+    "pt": "Escolha seus serviços"
+  },
+  "Choose a team member": {
+    "es": "Elegir un miembro del equipo",
+    "pt": "Escolher um membro da equipe"
+  },
+  "Select a date": {
+    "es": "Seleccionar fecha",
+    "pt": "Selecionar data"
+  },
+  "Date": {
+    "es": "Fecha",
+    "pt": "Data"
+  },
+  "Time": {
+    "es": "Hora",
+    "pt": "Horário"
+  },
+  "Start time": {
+    "es": "Hora de inicio",
+    "pt": "Horário de início"
+  },
+  "End time": {
+    "es": "Hora de finalización",
+    "pt": "Horário de término"
+  },
+  "Duration": {
+    "es": "Duración",
+    "pt": "Duração"
+  },
+  "Capacity": {
+    "es": "Capacidad",
+    "pt": "Capacidade"
+  },
+  "slots left": {
+    "es": "plazas restantes",
+    "pt": "vagas restantes"
+  },
+  "sessions left": {
+    "es": "sesiones restantes",
+    "pt": "sessões restantes"
+  },
+  "sessions": {
+    "es": "sesiones",
+    "pt": "sessões"
+  },
+  "minutes": {
+    "es": "minutos",
+    "pt": "minutos"
+  },
+  "minutes ·": {
+    "es": "minutos ·",
+    "pt": "minutos ·"
+  },
+  "Day": {
+    "es": "Día",
+    "pt": "Dia"
+  },
+  "Week": {
+    "es": "Semana",
+    "pt": "Semana"
+  },
+  "Month": {
+    "es": "Mes",
+    "pt": "Mês"
+  },
+  "Year": {
+    "es": "Año",
+    "pt": "Ano"
+  },
+  "day": {
+    "es": "día",
+    "pt": "dia"
+  },
+  "week": {
+    "es": "semana",
+    "pt": "semana"
+  },
+  "month": {
+    "es": "mes",
+    "pt": "mês"
+  },
+  "year": {
+    "es": "año",
+    "pt": "ano"
+  },
+  "days": {
+    "es": "días",
+    "pt": "dias"
+  },
+  "weeks": {
+    "es": "semanas",
+    "pt": "semanas"
+  },
+  "months": {
+    "es": "meses",
+    "pt": "meses"
+  },
+  "years": {
+    "es": "años",
+    "pt": "anos"
+  },
+  "Today": {
+    "es": "Hoy",
+    "pt": "Hoje"
+  },
+  "This week": {
+    "es": "Esta semana",
+    "pt": "Esta semana"
+  },
+  "This month": {
+    "es": "Este mes",
+    "pt": "Este mês"
+  },
+  "All time": {
+    "es": "Todo el período",
+    "pt": "Todo o período"
+  },
+  "Custom date range": {
+    "es": "Intervalo de fechas personalizado",
+    "pt": "Intervalo de datas personalizado"
+  },
+  "Sunday": {
+    "es": "Domingo",
+    "pt": "Domingo"
+  },
+  "Monday": {
+    "es": "Lunes",
+    "pt": "Segunda-feira"
+  },
+  "Tuesday": {
+    "es": "Martes",
+    "pt": "Terça-feira"
+  },
+  "Wednesday": {
+    "es": "Miércoles",
+    "pt": "Quarta-feira"
+  },
+  "Thursday": {
+    "es": "Jueves",
+    "pt": "Quinta-feira"
+  },
+  "Friday": {
+    "es": "Viernes",
+    "pt": "Sexta-feira"
+  },
+  "Saturday": {
+    "es": "Sábado",
+    "pt": "Sábado"
+  },
+  "January": {
+    "es": "Enero",
+    "pt": "Janeiro"
+  },
+  "February": {
+    "es": "Febrero",
+    "pt": "Fevereiro"
+  },
+  "March": {
+    "es": "Marzo",
+    "pt": "Março"
+  },
+  "April": {
+    "es": "Abril",
+    "pt": "Abril"
+  },
+  "May": {
+    "es": "Mayo",
+    "pt": "Maio"
+  },
+  "June": {
+    "es": "Junio",
+    "pt": "Junho"
+  },
+  "July": {
+    "es": "Julio",
+    "pt": "Julho"
+  },
+  "August": {
+    "es": "Agosto",
+    "pt": "Agosto"
+  },
+  "September": {
+    "es": "Septiembre",
+    "pt": "Setembro"
+  },
+  "October": {
+    "es": "Octubre",
+    "pt": "Outubro"
+  },
+  "November": {
+    "es": "Noviembre",
+    "pt": "Novembro"
+  },
+  "December": {
+    "es": "Diciembre",
+    "pt": "Dezembro"
+  },
+  "Next": {
+    "es": "Siguiente",
+    "pt": "Próximo"
+  },
+  "Previous": {
+    "es": "Anterior",
+    "pt": "Anterior"
+  },
+  "Continue": {
+    "es": "Continuar",
+    "pt": "Continuar"
+  },
+  "Confirm": {
+    "es": "Confirmar",
+    "pt": "Confirmar"
+  },
+  "Details": {
+    "es": "Detalles",
+    "pt": "Detalhes"
+  },
+  "View details": {
+    "es": "Ver detalles",
+    "pt": "Ver detalhes"
+  },
+  "Search": {
+    "es": "Buscar",
+    "pt": "Buscar"
+  },
+  "Filter by": {
+    "es": "Filtrar por",
+    "pt": "Filtrar por"
+  },
+  "Clear filters": {
+    "es": "Quitar filtros",
+    "pt": "Limpar filtros"
+  },
+  "Refresh": {
+    "es": "Actualizar",
+    "pt": "Atualizar"
+  },
+  "Try again": {
+    "es": "Reintentar",
+    "pt": "Tentar novamente"
+  },
+  "Loading…": {
+    "es": "Cargando…",
+    "pt": "Carregando…"
+  },
+  "Saving…": {
+    "es": "Guardando…",
+    "pt": "Salvando…"
+  },
+  "Checking…": {
+    "es": "Comprobando…",
+    "pt": "Verificando…"
+  },
+  "Processing…": {
+    "es": "Procesando…",
+    "pt": "Processando…"
+  },
+  "Working…": {
+    "es": "Procesando…",
+    "pt": "Processando…"
+  },
+  "Deleting…": {
+    "es": "Eliminando…",
+    "pt": "Excluindo…"
+  },
+  "Email": {
+    "es": "Correo electrónico",
+    "pt": "E-mail"
+  },
+  "Email address": {
+    "es": "Dirección de correo electrónico",
+    "pt": "Endereço de e-mail"
+  },
+  "Phone": {
+    "es": "Teléfono",
+    "pt": "Telefone"
+  },
+  "Phone number": {
+    "es": "Número de teléfono",
+    "pt": "Número de telefone"
+  },
+  "Password": {
+    "es": "Contraseña",
+    "pt": "Senha"
+  },
+  "Current password": {
+    "es": "Contraseña actual",
+    "pt": "Senha atual"
+  },
+  "New password": {
+    "es": "Nueva contraseña",
+    "pt": "Nova senha"
+  },
+  "Confirm new password": {
+    "es": "Confirmar nueva contraseña",
+    "pt": "Confirmar nova senha"
+  },
+  "Change password": {
+    "es": "Cambiar contraseña",
+    "pt": "Alterar senha"
+  },
+  "Show password": {
+    "es": "Mostrar contraseña",
+    "pt": "Mostrar senha"
+  },
+  "Hide password": {
+    "es": "Ocultar contraseña",
+    "pt": "Ocultar senha"
+  },
+  "Sign in": {
+    "es": "Iniciar sesión",
+    "pt": "Entrar"
+  },
+  "Sign out": {
+    "es": "Cerrar sesión",
+    "pt": "Sair"
+  },
+  "Log out": {
+    "es": "Cerrar sesión",
+    "pt": "Sair"
+  },
+  "Sign up": {
+    "es": "Registrarse",
+    "pt": "Cadastrar-se"
+  },
+  "Full name": {
+    "es": "Nombre completo",
+    "pt": "Nome completo"
+  },
+  "First name": {
+    "es": "Nombre",
+    "pt": "Nome"
+  },
+  "Last name": {
+    "es": "Apellidos",
+    "pt": "Sobrenome"
+  },
+  "Customer name": {
+    "es": "Nombre del cliente",
+    "pt": "Nome do cliente"
+  },
+  "Date of birth": {
+    "es": "Fecha de nacimiento",
+    "pt": "Data de nascimento"
+  },
+  "Business name": {
+    "es": "Nombre del negocio",
+    "pt": "Nome do negócio"
+  },
+  "Business profile": {
+    "es": "Perfil del negocio",
+    "pt": "Perfil do negócio"
+  },
+  "Business workspace": {
+    "es": "Espacio de trabajo del negocio",
+    "pt": "Área de trabalho do negócio"
+  },
+  "Business owner sign in": {
+    "es": "Acceso del propietario del negocio",
+    "pt": "Acesso do proprietário do negócio"
+  },
+  "Business sign in": {
+    "es": "Acceso del negocio",
+    "pt": "Acesso do negócio"
+  },
+  "Team sign in": {
+    "es": "Acceso del equipo",
+    "pt": "Acesso da equipe"
+  },
+  "Your business": {
+    "es": "Tu negocio",
+    "pt": "Seu negócio"
+  },
+  "Find a business": {
+    "es": "Buscar un negocio",
+    "pt": "Buscar um negócio"
+  },
+  "Marketplace": {
+    "es": "Directorio de negocios",
+    "pt": "Marketplace"
+  },
+  "Find your next opening.": {
+    "es": "Encuentra tu próxima cita.",
+    "pt": "Encontre seu próximo horário."
+  },
+  "Platform administration": {
+    "es": "Administración de la plataforma",
+    "pt": "Administração da plataforma"
+  },
+  "Platform administrator": {
+    "es": "Administrador de la plataforma",
+    "pt": "Administrador da plataforma"
+  },
+  "Primary administrator": {
+    "es": "Administrador principal",
+    "pt": "Administrador principal"
+  },
+  "SelahFlow home": {
+    "es": "Inicio de SelahFlow",
+    "pt": "Início do SelahFlow"
+  },
+  "Business home": {
+    "es": "Página de inicio del negocio",
+    "pt": "Página inicial do negócio"
+  },
+  "Booking page": {
+    "es": "Página de reservas",
+    "pt": "Página de agendamentos"
+  },
+  "Membership page": {
+    "es": "Página de membresías",
+    "pt": "Página de assinaturas"
+  },
+  "Privacy Policy": {
+    "es": "Política de privacidad",
+    "pt": "Política de privacidade"
+  },
+  "Help": {
+    "es": "Ayuda",
+    "pt": "Ajuda"
+  },
+  "Client history": {
+    "es": "Historial del cliente",
+    "pt": "Histórico do cliente"
+  },
+  "History": {
+    "es": "Historial",
+    "pt": "Histórico"
+  },
+  "Client communications": {
+    "es": "Comunicaciones con clientes",
+    "pt": "Comunicações com clientes"
+  },
+  "Add client": {
+    "es": "Añadir cliente",
+    "pt": "Adicionar cliente"
+  },
+  "Add team member": {
+    "es": "Añadir miembro del equipo",
+    "pt": "Adicionar membro da equipe"
+  },
+  "Not available": {
+    "es": "No disponible",
+    "pt": "Não disponível"
+  },
+  "Not provided": {
+    "es": "No facilitado",
+    "pt": "Não informado"
+  },
+  "Not recorded": {
+    "es": "No registrado",
+    "pt": "Não registrado"
+  },
+  "Not assigned": {
+    "es": "Sin asignar",
+    "pt": "Não atribuído"
+  },
+  "Not specified": {
+    "es": "No especificado",
+    "pt": "Não especificado"
+  },
+  "Not connected": {
+    "es": "Sin conectar",
+    "pt": "Não conectado"
+  },
+  "Not configured": {
+    "es": "Sin configurar",
+    "pt": "Não configurado"
+  },
+  "Amount": {
+    "es": "Importe",
+    "pt": "Valor"
+  },
+  "Amount paid": {
+    "es": "Importe pagado",
+    "pt": "Valor pago"
+  },
+  "Quoted price": {
+    "es": "Precio presupuestado",
+    "pt": "Preço informado"
+  },
+  "Paid revenue": {
+    "es": "Ingresos cobrados",
+    "pt": "Receita recebida"
+  },
+  "Membership payments": {
+    "es": "Pagos de membresías",
+    "pt": "Pagamentos de assinaturas"
+  },
+  "Price": {
+    "es": "Precio",
+    "pt": "Preço"
+  },
+  "Plan": {
+    "es": "Plan",
+    "pt": "Plano"
+  },
+  "Status": {
+    "es": "Estado",
+    "pt": "Status"
+  },
+  "Actions": {
+    "es": "Acciones",
+    "pt": "Ações"
+  },
+  "Yes": {
+    "es": "Sí",
+    "pt": "Sim"
+  },
+  "No": {
+    "es": "No",
+    "pt": "Não"
+  },
+  "All": {
+    "es": "Todos",
+    "pt": "Todos"
+  },
+  "None": {
+    "es": "Ninguno",
+    "pt": "Nenhum"
+  },
+  "Active": {
+    "es": "Activo",
+    "pt": "Ativo"
+  },
+  "Inactive": {
+    "es": "Inactivo",
+    "pt": "Inativo"
+  },
+  "Enabled": {
+    "es": "Activado",
+    "pt": "Ativado"
+  },
+  "Disabled": {
+    "es": "Desactivado",
+    "pt": "Desativado"
+  },
+  "Owner and team workspaces require their own sign-in.": {
+    "es": "Los espacios del propietario y del equipo requieren su propio inicio de sesión.",
+    "pt": "As áreas do proprietário e da equipe exigem seus próprios acessos."
+  },
+  "Accent": {
+    "es": "Acento",
+    "pt": "Destaque"
+  },
+  "Accent details": {
+    "es": "Detalles destacados",
+    "pt": "Detalhes de destaque"
+  },
+  "Assign member": {
+    "es": "Asignar miembro",
+    "pt": "Atribuir membro"
+  },
+  "Assigned team member": {
+    "es": "Miembro del equipo asignado",
+    "pt": "Membro da equipe atribuído"
+  },
+  "Assigned team member:": {
+    "es": "Miembro del equipo asignado:",
+    "pt": "Membro da equipe atribuído:"
+  },
+  "Attended": {
+    "es": "Asistió",
+    "pt": "Compareceu"
+  },
+  "Attended only": {
+    "es": "Solo asistentes",
+    "pt": "Somente presentes"
+  },
+  "Awaiting Send": {
+    "es": "Pendiente de envío",
+    "pt": "Aguardando envio"
+  },
+  "Awaiting review": {
+    "es": "Pendiente de revisión",
+    "pt": "Aguardando análise"
+  },
+  "Awaiting owner approval": {
+    "es": "Pendiente de aprobación del propietario",
+    "pt": "Aguardando aprovação do proprietário"
+  },
+  "Badge": {
+    "es": "Distintivo",
+    "pt": "Emblema"
+  },
+  "Barbershop": {
+    "es": "Barbería",
+    "pt": "Barbearia"
+  },
+  "Blowout": {
+    "es": "Secado y peinado",
+    "pt": "Escova e finalização"
+  },
+  "Brow artistry workshop": {
+    "es": "Taller de diseño de cejas",
+    "pt": "Oficina de design de sobrancelhas"
+  },
+  "Brow serum": {
+    "es": "Sérum para cejas",
+    "pt": "Sérum para sobrancelhas"
+  },
+  "Brow studio": {
+    "es": "Estudio de cejas",
+    "pt": "Estúdio de sobrancelhas"
+  },
+  "Business social media": {
+    "es": "Redes sociales del negocio",
+    "pt": "Redes sociais do negócio"
+  },
+  "Button hover": {
+    "es": "Botón al pasar el cursor",
+    "pt": "Botão ao passar o cursor"
+  },
+  "Cancel status lookup": {
+    "es": "Cancelar consulta de estado",
+    "pt": "Cancelar consulta de status"
+  },
+  "Catering": {
+    "es": "Servicio de catering",
+    "pt": "Serviço de bufê"
+  },
+  "Check in": {
+    "es": "Registrar asistencia",
+    "pt": "Registrar presença"
+  },
+  "Check on Google Maps": {
+    "es": "Consultar en Google Maps",
+    "pt": "Consultar no Google Maps"
+  },
+  "Checkout": {
+    "es": "Pago",
+    "pt": "Finalizar pagamento"
+  },
+  "Closet organization": {
+    "es": "Organización de armarios",
+    "pt": "Organização de armários"
+  },
+  "Collapse all": {
+    "es": "Contraer todo",
+    "pt": "Recolher tudo"
+  },
+  "Compare": {
+    "es": "Comparar",
+    "pt": "Comparar"
+  },
+  "Coupon": {
+    "es": "Cupón",
+    "pt": "Cupom"
+  },
+  "Coupon:": {
+    "es": "Cupón:",
+    "pt": "Cupom:"
+  },
+  "Coupons": {
+    "es": "Cupones",
+    "pt": "Cupons"
+  },
+  "CUSTOMER RELATIONSHIPS": {
+    "es": "RELACIONES CON CLIENTES",
+    "pt": "RELACIONAMENTO COM CLIENTES"
+  },
+  "DEFAULT TEAM MEMBER": {
+    "es": "MIEMBRO DEL EQUIPO PREDETERMINADO",
+    "pt": "MEMBRO DA EQUIPE PADRÃO"
+  },
+  "DURATION UNIT": {
+    "es": "UNIDAD DE DURACIÓN",
+    "pt": "UNIDADE DE DURAÇÃO"
+  },
+  "Dance studio": {
+    "es": "Estudio de danza",
+    "pt": "Estúdio de dança"
+  },
+  "Document organizer": {
+    "es": "Organizador de documentos",
+    "pt": "Organizador de documentos"
+  },
+  "Draft · awaiting Send": {
+    "es": "Borrador · pendiente de envío",
+    "pt": "Rascunho · aguardando envio"
+  },
+  "EDIT CLIENT": {
+    "es": "EDITAR CLIENTE",
+    "pt": "EDITAR CLIENTE"
+  },
+  "Emails submitted:": {
+    "es": "Correos enviados al proveedor:",
+    "pt": "E-mails enviados ao provedor:"
+  },
+  "Exit support and discard unsaved changes?": {
+    "es": "¿Salir del soporte y descartar los cambios sin guardar?",
+    "pt": "Sair do suporte e descartar as alterações não salvas?"
+  },
+  "Footer": {
+    "es": "Pie de página",
+    "pt": "Rodapé"
+  },
+  "Garage organization": {
+    "es": "Organización de garajes",
+    "pt": "Organização de garagens"
+  },
+  "Gem": {
+    "es": "Gema",
+    "pt": "Joia"
+  },
+  "Generative AI": {
+    "es": "IA generativa",
+    "pt": "IA generativa"
+  },
+  "Google rating": {
+    "es": "Valoración de Google",
+    "pt": "Avaliação no Google"
+  },
+  "Google reviewer": {
+    "es": "Autor de la reseña de Google",
+    "pt": "Autor da avaliação do Google"
+  },
+  "Google reviews": {
+    "es": "Reseñas de Google",
+    "pt": "Avaliações do Google"
+  },
+  "Grant revoked": {
+    "es": "Permiso revocado",
+    "pt": "Permissão revogada"
+  },
+  "Handyman": {
+    "es": "Servicios de reparaciones",
+    "pt": "Serviços de reparos"
+  },
+  "Headings": {
+    "es": "Encabezados",
+    "pt": "Títulos"
+  },
+  "Helcim activation requested.": {
+    "es": "Se ha solicitado la activación de Helcim.",
+    "pt": "Ativação do Helcim solicitada."
+  },
+  "Helcim setup": {
+    "es": "Configuración de Helcim",
+    "pt": "Configuração do Helcim"
+  },
+  "Home organizing": {
+    "es": "Organización del hogar",
+    "pt": "Organização da casa"
+  },
+  "Homebuyer guide": {
+    "es": "Guía para compradores de vivienda",
+    "pt": "Guia para compradores de imóveis"
+  },
+  "Homebuyer workshop": {
+    "es": "Taller para compradores de vivienda",
+    "pt": "Oficina para compradores de imóveis"
+  },
+  "Inbox organization": {
+    "es": "Organización de la bandeja de entrada",
+    "pt": "Organização da caixa de entrada"
+  },
+  "Label set": {
+    "es": "Conjunto de etiquetas",
+    "pt": "Conjunto de etiquetas"
+  },
+  "Legal guardian": {
+    "es": "Tutor legal",
+    "pt": "Responsável legal"
+  },
+  "Login email": {
+    "es": "Correo de acceso",
+    "pt": "E-mail de acesso"
+  },
+  "MEMBERSHIP PROGRAM": {
+    "es": "PROGRAMA DE MEMBRESÍAS",
+    "pt": "PROGRAMA DE ASSINATURAS"
+  },
+  "MEMBERSHIP REQUEST": {
+    "es": "SOLICITUD DE MEMBRESÍA",
+    "pt": "SOLICITAÇÃO DE ASSINATURA"
+  },
+  "MEMBERSHIP REQUEST ·": {
+    "es": "SOLICITUD DE MEMBRESÍA ·",
+    "pt": "SOLICITAÇÃO DE ASSINATURA ·"
+  },
+  "Main": {
+    "es": "Principal",
+    "pt": "Principal"
+  },
+  "Mark": {
+    "es": "Marca",
+    "pt": "Marca"
+  },
+  "Moisturizer": {
+    "es": "Crema hidratante",
+    "pt": "Hidratante"
+  },
+  "Mon": {
+    "es": "Lun",
+    "pt": "Seg"
+  },
+  "Tue": {
+    "es": "Mar",
+    "pt": "Ter"
+  },
+  "Wed": {
+    "es": "Mié",
+    "pt": "Qua"
+  },
+  "Thu": {
+    "es": "Jue",
+    "pt": "Qui"
+  },
+  "Fri": {
+    "es": "Vie",
+    "pt": "Sex"
+  },
+  "Sat": {
+    "es": "Sáb",
+    "pt": "Sáb"
+  },
+  "Sun": {
+    "es": "Dom",
+    "pt": "Dom"
+  },
+  "Moving assistance": {
+    "es": "Ayuda con mudanzas",
+    "pt": "Ajuda com mudanças"
+  },
+  "NO SUBSCRIPTION UPGRADE": {
+    "es": "SIN CAMBIO DE SUSCRIPCIÓN",
+    "pt": "SEM ALTERAÇÃO DA ASSINATURA"
+  },
+  "OWNER WORKSPACE": {
+    "es": "ESPACIO DEL PROPIETARIO",
+    "pt": "ÁREA DO PROPRIETÁRIO"
+  },
+  "One session": {
+    "es": "Una sesión",
+    "pt": "Uma sessão"
+  },
+  "PAGE COLORS": {
+    "es": "COLORES DE LA PÁGINA",
+    "pt": "CORES DA PÁGINA"
+  },
+  "PAYMENT BUTTONS": {
+    "es": "BOTONES DE PAGO",
+    "pt": "BOTÕES DE PAGAMENTO"
+  },
+  "PLATFORM ADMINISTRATORS": {
+    "es": "ADMINISTRADORES DE LA PLATAFORMA",
+    "pt": "ADMINISTRADORES DA PLATAFORMA"
+  },
+  "PLATFORM PLAN ENTITLEMENTS": {
+    "es": "PRESTACIONES DE LOS PLANES DE LA PLATAFORMA",
+    "pt": "RECURSOS DOS PLANOS DA PLATAFORMA"
+  },
+  "PLATFORM WORKSPACE": {
+    "es": "ESPACIO DE LA PLATAFORMA",
+    "pt": "ÁREA DA PLATAFORMA"
+  },
+  "POPULAR FOR GROWING TEAMS": {
+    "es": "POPULAR ENTRE EQUIPOS EN CRECIMIENTO",
+    "pt": "POPULAR ENTRE EQUIPES EM CRESCIMENTO"
+  },
+  "PRICE ($)": {
+    "es": "PRECIO ($)",
+    "pt": "PREÇO ($)"
+  },
+  "Parent": {
+    "es": "Padre o madre",
+    "pt": "Pai ou mãe"
+  },
+  "Pill": {
+    "es": "Cápsula",
+    "pt": "Cápsula"
+  },
+  "Plan:": {
+    "es": "Plan:",
+    "pt": "Plano:"
+  },
+  "Platform admin": {
+    "es": "Administrador de la plataforma",
+    "pt": "Administrador da plataforma"
+  },
+  "Plumbing": {
+    "es": "Fontanería",
+    "pt": "Serviços hidráulicos"
+  },
+  "Policy organizer": {
+    "es": "Organizador de políticas",
+    "pt": "Organizador de políticas"
+  },
+  "Powered by": {
+    "es": "Desarrollado por",
+    "pt": "Desenvolvido por"
+  },
+  "Powered by SelahFlow": {
+    "es": "Desarrollado por SelahFlow",
+    "pt": "Desenvolvido por SelahFlow"
+  },
+  "Public business page": {
+    "es": "Página pública del negocio",
+    "pt": "Página pública do negócio"
+  },
+  "Publicly listed": {
+    "es": "Publicado en el directorio",
+    "pt": "Publicado no marketplace"
+  },
+  "Publish bookable session": {
+    "es": "Publicar sesión reservable",
+    "pt": "Publicar sessão para agendamento"
+  },
+  "RECEPTIONIST PREVIEW": {
+    "es": "VISTA PREVIA DEL ASISTENTE",
+    "pt": "PRÉVIA DO ASSISTENTE"
+  },
+  "RESET PAID REVENUE": {
+    "es": "RESTABLECER INGRESOS COBRADOS",
+    "pt": "ZERAR RECEITA RECEBIDA"
+  },
+  "Recipe collection": {
+    "es": "Colección de recetas",
+    "pt": "Coleção de receitas"
+  },
+  "Reconnect Gmail": {
+    "es": "Reconectar Gmail",
+    "pt": "Reconectar Gmail"
+  },
+  "Retry waiver check": {
+    "es": "Reintentar verificación de exención",
+    "pt": "Tentar verificar o termo novamente"
+  },
+  "Reviewed:": {
+    "es": "Revisado:",
+    "pt": "Revisado:"
+  },
+  "SELAHFLOW · OWNER WORKSPACE": {
+    "es": "SELAHFLOW · ESPACIO DEL PROPIETARIO",
+    "pt": "SELAHFLOW · ÁREA DO PROPRIETÁRIO"
+  },
+  "SELAHFLOW ADMIN": {
+    "es": "ADMINISTRACIÓN DE SELAHFLOW",
+    "pt": "ADMINISTRAÇÃO DO SELAHFLOW"
+  },
+  "SIMULTANEOUS SLOTS": {
+    "es": "PLAZAS SIMULTÁNEAS",
+    "pt": "VAGAS SIMULTÂNEAS"
+  },
+  "SelahFlow Pay setup": {
+    "es": "Configuración de SelahFlow Pay",
+    "pt": "Configuração do SelahFlow Pay"
+  },
+  "SelahFlow assistant": {
+    "es": "Asistente de SelahFlow",
+    "pt": "Assistente do SelahFlow"
+  },
+  "SelahFlow booking": {
+    "es": "Reserva de SelahFlow",
+    "pt": "Agendamento do SelahFlow"
+  },
+  "SelahFlow commission": {
+    "es": "Comisión de SelahFlow",
+    "pt": "Comissão do SelahFlow"
+  },
+  "SelahFlow fee": {
+    "es": "Tarifa de SelahFlow",
+    "pt": "Taxa do SelahFlow"
+  },
+  "Shampoo": {
+    "es": "Champú",
+    "pt": "Xampu"
+  },
+  "Sheet": {
+    "es": "Hoja",
+    "pt": "Planilha"
+  },
+  "Show": {
+    "es": "Mostrar",
+    "pt": "Mostrar"
+  },
+  "Show in marketplace": {
+    "es": "Mostrar en el directorio",
+    "pt": "Mostrar no marketplace"
+  },
+  "Show on": {
+    "es": "Mostrar en",
+    "pt": "Mostrar em"
+  },
+  "Signed": {
+    "es": "Firmado",
+    "pt": "Assinado"
+  },
+  "Signer": {
+    "es": "Firmante",
+    "pt": "Signatário"
+  },
+  "Signing as": {
+    "es": "Firma como",
+    "pt": "Assinando como"
+  },
+  "Sketchbook": {
+    "es": "Cuaderno de bocetos",
+    "pt": "Caderno de esboços"
+  },
+  "Skip to content": {
+    "es": "Ir al contenido",
+    "pt": "Ir para o conteúdo"
+  },
+  "Spray tan": {
+    "es": "Bronceado con aerógrafo",
+    "pt": "Bronzeamento a jato"
+  },
+  "Star": {
+    "es": "Estrella",
+    "pt": "Estrela"
+  },
+  "Styling workshop": {
+    "es": "Taller de peinado",
+    "pt": "Oficina de penteados"
+  },
+  "Submission receipt": {
+    "es": "Justificante de envío",
+    "pt": "Comprovante de envio"
+  },
+  "Suspended": {
+    "es": "Suspendido",
+    "pt": "Suspenso"
+  },
+  "TEAM MEMBER": {
+    "es": "MIEMBRO DEL EQUIPO",
+    "pt": "MEMBRO DA EQUIPE"
+  },
+  "Tab": {
+    "es": "Pestaña",
+    "pt": "Aba"
+  },
+  "Tagline": {
+    "es": "Eslogan",
+    "pt": "Slogan"
+  },
+  "Tan touch-up": {
+    "es": "Retoque de bronceado",
+    "pt": "Retoque de bronzeamento"
+  },
+  "Tanning studio": {
+    "es": "Centro de bronceado",
+    "pt": "Estúdio de bronzeamento"
+  },
+  "Team reviewer": {
+    "es": "Responsable de revisión del equipo",
+    "pt": "Revisor da equipe"
+  },
+  "Tenant onboarding": {
+    "es": "Registro inicial del negocio",
+    "pt": "Cadastro inicial do negócio"
+  },
+  "Tradeoffs": {
+    "es": "Ventajas e inconvenientes",
+    "pt": "Vantagens e desvantagens"
+  },
+  "Trophy": {
+    "es": "Trofeo",
+    "pt": "Troféu"
+  },
+  "Tutoring": {
+    "es": "Clases particulares",
+    "pt": "Aulas particulares"
+  },
+  "Tutoring session": {
+    "es": "Clase particular",
+    "pt": "Aula particular"
+  },
+  "Urgency": {
+    "es": "Urgencia",
+    "pt": "Urgência"
+  },
+  "Video storyboard": {
+    "es": "Guion gráfico de vídeo",
+    "pt": "Roteiro visual de vídeo"
+  },
+  "View itemized statement": {
+    "es": "Ver extracto detallado",
+    "pt": "Ver demonstrativo detalhado"
+  },
+  "Waivers:": {
+    "es": "Exenciones de responsabilidad:",
+    "pt": "Termos de responsabilidade:"
+  },
+  "Wellness education group": {
+    "es": "Grupo de educación sobre bienestar",
+    "pt": "Grupo de educação sobre bem-estar"
+  },
+  "Wellness journal": {
+    "es": "Diario de bienestar",
+    "pt": "Diário de bem-estar"
+  },
+  "Workbook": {
+    "es": "Libro de trabajo",
+    "pt": "Pasta de trabalho"
+  },
+  "· SELAHFLOW BUSINESS": {
+    "es": "· NEGOCIO SELAHFLOW",
+    "pt": "· NEGÓCIO SELAHFLOW"
+  },
+  "of": {
+    "es": "de",
+    "pt": "de"
+  },
+  "or": {
+    "es": "o",
+    "pt": "ou"
+  },
+  "every": {
+    "es": "cada",
+    "pt": "a cada"
+  },
+  "pending": {
+    "es": "pendiente",
+    "pt": "pendente"
+  },
+  "paid": {
+    "es": "pagado",
+    "pt": "pago"
+  },
+  "approved": {
+    "es": "aprobado",
+    "pt": "aprovado"
+  },
+  "submitted": {
+    "es": "enviado",
+    "pt": "enviado"
+  },
+  "cancelled": {
+    "es": "cancelado",
+    "pt": "cancelado"
+  },
+  "completed": {
+    "es": "completado",
+    "pt": "concluído"
+  },
+  "refunded": {
+    "es": "reembolsado",
+    "pt": "reembolsado"
+  },
+  "selected": {
+    "es": "seleccionados",
+    "pt": "selecionados"
+  },
+  "records": {
+    "es": "registros",
+    "pt": "registros"
+  },
+  "entries": {
+    "es": "entradas",
+    "pt": "registros"
+  },
+  "team members": {
+    "es": "miembros del equipo",
+    "pt": "membros da equipe"
+  },
+  "service": {
+    "es": "servicio",
+    "pt": "serviço"
+  },
+  "services": {
+    "es": "servicios",
+    "pt": "serviços"
+  },
+  "package": {
+    "es": "paquete",
+    "pt": "pacote"
+  },
+  "workspace": {
+    "es": "espacio de trabajo",
+    "pt": "área de trabalho"
+  },
+  "landscaping / lawn care": {
+    "es": "Jardinería y cuidado del césped",
+    "pt": "Paisagismo e cuidados com o gramado"
+  },
+  "Landscaping / lawn care": {
+    "es": "Jardinería y cuidado del césped",
+    "pt": "Paisagismo e cuidados com o gramado"
+  }
+}

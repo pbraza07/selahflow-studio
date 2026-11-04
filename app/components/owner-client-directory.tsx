@@ -167,18 +167,18 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    <div className="sf-client-profile-tabs" role="group" aria-label="Client profile sections">{['History','Details','Membership','Sessions'].map(tab=><button type="button" key={tab} className={profileTab===tab?'primary':'outline'} aria-pressed={profileTab===tab} onClick={()=>setProfileTab(tab)}>{tab}</button>)}</div>
    <article className="sf-client-profile">
     <div className="sf-client-profile-heading"><span className="sf-client-avatar" aria-hidden="true">{selected.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span>
-     <div><h3 className="sf-client-name-membership">{selected.name}<MembershipBadge memberNumber={selected.memberNumber} membershipName={selected.membershipName} membershipStatus={selected.membershipStatus} sessionsIncluded={selected.membershipDetails?.sessionsIncluded} sessionsUsed={selected.membershipDetails?.sessionsUsed} badge={selected.membershipBadge}/></h3><p>{selected.email||'No email recorded'}{selected.phone?' · '+selected.phone:''}</p>
+     <div><h3 className="sf-client-name-membership"><span translate="no">{selected.name}</span><MembershipBadge memberNumber={selected.memberNumber} membershipName={selected.membershipName} membershipStatus={selected.membershipStatus} sessionsIncluded={selected.membershipDetails?.sessionsIncluded} sessionsUsed={selected.membershipDetails?.sessionsUsed} badge={selected.membershipBadge}/></h3><p><span translate="no">{selected.email||'No email recorded'}</span>{selected.phone?' · '+selected.phone:''}</p>
       <span className="sf-client-profile-note">Service history and attendance for this business only</span></div>
     </div>
     <section hidden={profileTab!=='Details'} className="sf-client-first-booking sf-client-registration-overview">
      <div className="sf-client-history-heading"><h3>Client information & registration</h3><small>Current client record, including original registration details when available</small></div>
      <div className="sf-client-first-details">
-      <div><small>Full name</small><b>{selected.name}</b></div>
+      <div><small>Full name</small><b translate="no">{selected.name}</b></div>
       <div><small>First name</small><b>{selected.firstName||selected.name.trim().split(/\s+/)[0]||'Not available'}</b></div>
       <div><small>Last name</small><b>{selected.lastName||selected.name.trim().split(/\s+/).slice(1).join(' ')||'Not available'}</b></div>
       <div><small>Birth date</small><b>{dateOnly(selected.dateOfBirth||selected.firstBooking?.dateOfBirth)?humanDate(dateOnly(selected.dateOfBirth||selected.firstBooking?.dateOfBirth)):'Not recorded'}</b></div>
-      <div><small>Email address</small><b>{selected.email||'Not provided'}</b></div>
-      <div><small>Phone number</small><b>{selected.phone||'Not provided'}</b></div>
+      <div><small>Email address</small><b translate="no">{selected.email||'Not provided'}</b></div>
+      <div><small>Phone number</small><b translate="no">{selected.phone||'Not provided'}</b></div>
       <div><small>Unique membership ID</small><b>{selected.memberNumber||'Not assigned'}</b></div>
       <div><small>Membership level</small><b>{selected.membershipName||'No membership package'}</b></div>
       <div><small>Membership status</small><b>{membershipDisplayStatus({status:selected.membershipStatus,sessionsIncluded:selected.membershipDetails?.sessionsIncluded,sessionsUsed:selected.membershipDetails?.sessionsUsed}).replaceAll('_',' ')}</b></div>
@@ -189,10 +189,10 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
      <div className="sf-client-history-heading"><h3>Membership registration</h3><small>Membership enrollment and the answers submitted when registering</small></div>
      <div className="sf-client-first-details">
       <div><small>Registered full name</small><b>{selected.membershipRegistration?.name||selected.name}</b></div>
-      <div><small>Registered first name</small><b>{selected.membershipRegistration?.firstName||'Not available'}</b></div>
-      <div><small>Registered last name</small><b>{selected.membershipRegistration?.lastName||'Not available'}</b></div>
-      <div><small>Registered email</small><b>{selected.membershipRegistration?.email||'Not provided'}</b></div>
-      <div><small>Registered phone</small><b>{selected.membershipRegistration?.phone||'Not provided'}</b></div>
+      <div><small>Registered first name</small><b translate="no">{selected.membershipRegistration?.firstName||'Not available'}</b></div>
+      <div><small>Registered last name</small><b translate="no">{selected.membershipRegistration?.lastName||'Not available'}</b></div>
+      <div><small>Registered email</small><b translate="no">{selected.membershipRegistration?.email||'Not provided'}</b></div>
+      <div><small>Registered phone</small><b translate="no">{selected.membershipRegistration?.phone||'Not provided'}</b></div>
       <div><small>Registered birth date</small><b>{selected.membershipRegistration?.dateOfBirth?humanDate(selected.membershipRegistration.dateOfBirth):'Not recorded'}</b></div>
       <div><small>Membership package</small><b>{selected.membershipName}</b></div>
       <div><small>Membership ID</small><b>{selected.memberNumber||'Not assigned'}</b></div>
@@ -314,7 +314,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    </div>
    <p className="muted" role="status">{filtered.length} matching {filtered.length===1?'client':'clients'} · Filters apply together</p>
    {filtered.length?<div className="sf-client-directory-grid">{filtered.map(c=><article className="sf-client-summary" key={c.id}>
-    <div className="sf-client-summary-top"><span className="sf-client-avatar" aria-hidden="true">{c.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span><div><h3 className="sf-client-name-membership">{c.name}<MembershipBadge memberNumber={c.memberNumber} membershipName={c.membershipName} membershipStatus={c.membershipStatus} sessionsIncluded={c.membershipDetails?.sessionsIncluded} sessionsUsed={c.membershipDetails?.sessionsUsed} badge={c.membershipBadge}/></h3><p>{c.email||c.phone||'Contact not provided'}</p></div></div>
+    <div className="sf-client-summary-top"><span className="sf-client-avatar" aria-hidden="true">{c.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span><div><h3 className="sf-client-name-membership"><span translate="no">{c.name}</span><MembershipBadge memberNumber={c.memberNumber} membershipName={c.membershipName} membershipStatus={c.membershipStatus} sessionsIncluded={c.membershipDetails?.sessionsIncluded} sessionsUsed={c.membershipDetails?.sessionsUsed} badge={c.membershipBadge}/></h3><p>{c.email||c.phone||'Contact not provided'}</p></div></div>
     <div className="sf-client-summary-metrics"><span><b>{c.bookedSessions}</b> sessions booked</span><span><b>{c.attendedSessions}</b> attended</span><span><b>{c.attendanceDays.length}</b> attendance days</span></div>
     {!!c.latestBookingAnswers?.length&&<p className="sf-client-booking-answer-preview">{c.latestBookingAnswers.length} booking question{c.latestBookingAnswers.length===1?'':'s'} answered · See full details</p>}
     <div className="sf-client-summary-types"><small>Service types</small><strong>{c.serviceTypes.join(' · ')||'Not categorized'}</strong></div>
@@ -332,13 +332,13 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    {showRemoved&&<div className="sf-client-removed-list">
     <p className="muted">Previously archived clients can be restored or permanently deleted along with their linked records.</p>
     {archived.length?<div className="sf-client-removed-toolbar"><label><input type="checkbox" checked={archived.every(c=>removedSelection.includes(c.id))} onChange={e=>setRemovedSelection(e.target.checked?archived.map(c=>c.id):[])}/> Select all</label><button type="button" className="outline sf-client-remove" disabled={!removedSelection.length||!!actionBusy} onClick={()=>void deleteRemoved()}><Trash2 size={16}/> Delete selected ({removedSelection.length})</button></div>:null}
-    {archived.length?archived.map(c=><div key={c.id} className="sf-client-removed-row"><label><input type="checkbox" aria-label={'Select '+c.name} checked={removedSelection.includes(c.id)} onChange={e=>setRemovedSelection(prev=>e.target.checked?[...prev,c.id]:prev.filter(id=>id!==c.id))}/></label><div><b>{c.name}</b><small>{c.email||c.phone||'No contact details'}</small></div>
+    {archived.length?archived.map(c=><div key={c.id} className="sf-client-removed-row"><label><input type="checkbox" aria-label={'Select '+c.name} checked={removedSelection.includes(c.id)} onChange={e=>setRemovedSelection(prev=>e.target.checked?[...prev,c.id]:prev.filter(id=>id!==c.id))}/></label><div><b translate="no">{c.name}</b><small>{c.email||c.phone||'No contact details'}</small></div>
      <button type="button" className="outline" disabled={!!actionBusy} onClick={()=>void restoreClient(c.id)}><RotateCcw size={15}/> Restore</button>
     </div>):<p className="muted">No removed clients.</p>}
    </div>}
   </div>
   {editing&&<ClientEditor config={registrationConfig} client={editing==='new'?null:editing}
    onClose={()=>{if(!saving)setEditing(null);}} onSave={saveClient} busy={saving} error={editError}/>}
-  {removing&&<div className="sf-client-editor-backdrop" role="presentation"><section className="sf-client-editor" role="dialog" aria-modal="true" aria-labelledby="remove-client-title"><header><div className="sf-client-editor-heading"><Trash2 size={20}/><div><small>CLIENT DIRECTORY</small><h2 id="remove-client-title">Remove {removing.name}?</h2></div></div></header><p className="sf-client-editor-note">Permanently delete this client’s registration, membership, bookings, attendance, and saved payment and email records from this business. This cannot be undone. Provider records at Stripe and emails already delivered are not erased. Unpaid Stripe checkout links are expired before deletion; active subscriptions must be canceled first. Required accounting records and signed waivers are retained separately. Their ID is released immediately and can be reused when they or another client register again.</p>{actionError&&<p role="alert" className="alert">{actionError}</p>}<footer><button type="button" className="outline" disabled={!!actionBusy} onClick={()=>setRemoving(null)}>Keep client</button><button type="button" className="primary" disabled={!!actionBusy} onClick={()=>void confirmRemoveClient()}><Trash2 size={16}/>{actionBusy?'Removing…':'Delete permanently'}</button></footer></section></div>}
+  {removing&&<div className="sf-client-editor-backdrop" role="presentation"><section className="sf-client-editor" role="dialog" aria-modal="true" aria-labelledby="remove-client-title"><header><div className="sf-client-editor-heading"><Trash2 size={20}/><div><small>CLIENT DIRECTORY</small><h2 id="remove-client-title">Remove <span translate="no">{removing.name}</span>?</h2></div></div></header><p className="sf-client-editor-note">Permanently delete this client’s registration, membership, bookings, attendance, and saved payment and email records from this business. This cannot be undone. Provider records at Stripe and emails already delivered are not erased. Unpaid Stripe checkout links are expired before deletion; active subscriptions must be canceled first. Required accounting records and signed waivers are retained separately. Their ID is released immediately and can be reused when they or another client register again.</p>{actionError&&<p role="alert" className="alert">{actionError}</p>}<footer><button type="button" className="outline" disabled={!!actionBusy} onClick={()=>setRemoving(null)}>Keep client</button><button type="button" className="primary" disabled={!!actionBusy} onClick={()=>void confirmRemoveClient()}><Trash2 size={16}/>{actionBusy?'Removing…':'Delete permanently'}</button></footer></section></div>}
  </section>;
 }

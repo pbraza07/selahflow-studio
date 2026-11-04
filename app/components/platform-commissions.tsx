@@ -21,7 +21,7 @@ export default function PlatformCommissions(){
   {stripe&&<p role="status">Stripe commission setup: {stripe.ready?'Ready':'Setup required'} · {stripe.reason}</p>}
   {stripe&&!stripe.ready&&<button type="button" className={styles.button} disabled={!!busy} onClick={()=>void post({action:'configureWebhooks'},'webhooks','Stripe commission setup refreshed.')}>Configure commission webhook events</button>}
   {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
-  {businesses.map(b=><div key={b.id} style={{borderBottom:'1px solid #d5e2de',padding:'12px 0'}}><h3>{b.name}</h3>
+  {businesses.map(b=><div key={b.id} style={{borderBottom:'1px solid #d5e2de',padding:'12px 0'}}><h3 translate="no">{b.name}</h3>
    <p>{b.commissions.acceptedAt?'Business terms accepted':'Business terms not yet accepted'} · Stripe account: {b.paymentReady?'Ready':'Setup required'}</p>
    <BusinessCommissionControls business={b} stripe={stripe} busy={!!busy} onChange={(kind,enabled)=>void post({action:'setEnabled',businessId:b.id,kind,enabled},b.id,b.name+': '+kind+' commission '+(enabled?'enabled.':'disabled.'))}/>
    <p>Recorded net commissions: ${(b.commissions.totals.reduce((n,t)=>n+t.collected_cents-t.refunded_cents,0)/100).toFixed(2)}</p>

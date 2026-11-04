@@ -178,7 +178,7 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
   <div className="sf-platform-manage-search"><Search size={18}/><input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find business to edit, remove or restore" aria-label="Search businesses to manage"/>
    <span>{items.length} businesses</span></div>
   <div className="sf-platform-business-rows">{items.map(b=><article key={b.id} className="sf-platform-business-row">
-   <div><strong>{b.name}</strong><small><b>Owner login email:</b> {b.owner_email}</small>
+   <div><strong translate="no">{b.name}</strong><small><b>Owner login email:</b> {b.owner_email}</small>
     <small>/{b.slug} · {b.industry}</small><small>Password: protected · existing password cannot be displayed</small>
     {b.status==='archived'&&<small><b>Archived — historical business data retained for restoration</b>{b.archived_at?' · '+new Date(b.archived_at).toLocaleDateString():''}</small>}
    </div>
@@ -200,7 +200,7 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
   {separating&&<div className="sf-platform-confirm-backdrop">
    <section role="dialog" aria-modal="true" aria-label="Separate business ownership" className="sf-platform-confirm">
     <h3>Separate business owner account</h3>
-    <p>Move {separating.name} and its booking history to a new owner login, while retaining your platform administrator account. This does not delete the business.</p>
+    <p>Move <span translate="no">{separating.name}</span> and its booking history to a new owner login, while retaining your platform administrator account. This does not delete the business.</p>
     <label>New owner email<input type="email" value={separateEmail} onChange={e=>setSeparateEmail(e.target.value)}/></label>
     <label>Confirm exact business name<input value={separateConfirm} onChange={e=>setSeparateConfirm(e.target.value)}/></label>
     {error&&<p className="sf-platform-error" role="alert">{error}</p>}
@@ -211,7 +211,7 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
   {purging&&<div className="sf-platform-confirm-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!working)setPurging(null)}}>
  <section role="dialog" aria-modal="true" aria-labelledby="sf-purge-title" className="sf-platform-confirm">
  <h3 id="sf-purge-title"><ShieldAlert size={20}/> Permanently delete archived business</h3>
- <p><strong>{purging.name}</strong> and its booking, client, staff, and business history will be erased from the active database. This cannot be undone. The owner login will be deleted only if not shared with another business or platform administrator. External provider records and backups may remain.</p>
+ <p><strong translate="no">{purging.name}</strong> and its booking, client, staff, and business history will be erased from the active database. This cannot be undone. The owner login will be deleted only if not shared with another business or platform administrator. External provider records and backups may remain.</p>
  <p>Active payment connections or subscription obligations block this operation.</p>
  <label>Type the business name exactly<input autoComplete="off" value={purgeName} onChange={e=>setPurgeName(e.target.value)}/></label>
  <label>Type PERMANENTLY DELETE<input autoComplete="off" value={purgePhrase} onChange={e=>setPurgePhrase(e.target.value)}/></label>
@@ -222,7 +222,7 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
 {changingEmail&&<div className="sf-platform-confirm-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!working)setChangingEmail(null)}}>
    <section role="dialog" aria-modal="true" aria-labelledby="sf-platform-email-title" className="sf-platform-confirm">
     <h3 id="sf-platform-email-title"><Mail size={20}/> Update owner's login email</h3>
-    <p><b>Business:</b> {changingEmail.name}</p>
+    <p><b>Business:</b> <span translate="no">{changingEmail.name}</span></p>
     <p>The new email will be used for owner sign-in. All existing sign-in sessions will be revoked. The original business workspace, bookings, customers, staff, branding, subscription and archived history will stay attached to the same owner account.</p>
     <div className="sf-platform-confirm-fields">
      <label>New owner login email<input type="email" autoComplete="off" required maxLength={254} value={newLoginEmail} onChange={e=>setNewLoginEmail(e.target.value)} placeholder="owner@example.com"/></label>
@@ -232,7 +232,7 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
     <div role="status" style={{margin:'12px 0',fontSize:14,lineHeight:1.6}}>
      <strong>Required before updating:</strong>
      <div style={{color:oldEmailConfirmation.trim().toLowerCase()===changingEmail.owner_email.toLowerCase()?'#176b48':'#a13d25'}}>{oldEmailConfirmation.trim().toLowerCase()===changingEmail.owner_email.toLowerCase()?'✓':'○'} Current owner email must match the registered address.</div>
-     <div style={{color:emailConfirmation.trim()===changingEmail.name?'#176b48':'#a13d25'}}>{emailConfirmation.trim()===changingEmail.name?'✓':'○'} Enter the business name exactly: <strong>{changingEmail.name}</strong> (not an email address).</div>
+     <div style={{color:emailConfirmation.trim()===changingEmail.name?'#176b48':'#a13d25'}}>{emailConfirmation.trim()===changingEmail.name?'✓':'○'} Enter the business name exactly: <strong translate="no">{changingEmail.name}</strong> (not an email address).</div>
      <div style={{color:/^[^\\s@<>]+@[^\\s@<>]+\\.[^\\s@<>]+$/.test(newLoginEmail.trim())&&newLoginEmail.trim().toLowerCase()!==changingEmail.owner_email.toLowerCase()?'#176b48':'#a13d25'}}>{/^[^\\s@<>]+@[^\\s@<>]+\\.[^\\s@<>]+$/.test(newLoginEmail.trim())&&newLoginEmail.trim().toLowerCase()!==changingEmail.owner_email.toLowerCase()?'✓':'○'} New email must be valid and different from the current email.</div>
     </div>
     <p><small>Inform the owner of the updated login email through a trusted channel. This change does not automatically send an email or reveal their password.</small></p>
@@ -247,7 +247,7 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
   {resetting&&<div className="sf-platform-confirm-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!working)setResetting(null)}}>
    <section role="dialog" aria-modal="true" aria-labelledby="sf-platform-reset-title" className="sf-platform-confirm">
     <h3 id="sf-platform-reset-title"><KeyRound size={20}/> Reset owner password?</h3>
-    <p><b>Business:</b> {resetting.name}</p><p><b>Owner:</b> {resetting.owner_email}</p>
+    <p><b>Business:</b> <span translate="no">{resetting.name}</span></p><p><b>Owner:</b> {resetting.owner_email}</p>
     <p>The owner's current password is not readable. A random temporary password will replace it, every active session will be signed out, and the owner must choose a new private password at next sign-in. This action will be audited.</p>
     <label>Type the exact business name to confirm<input autoFocus value={resetConfirmation} onChange={e=>setResetConfirmation(e.target.value)}/></label>
     <div><button type="button" className="outline" onClick={()=>setResetting(null)} disabled={working}>Cancel</button>
@@ -257,7 +257,7 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
   </div>}
   {removing&&<div className="sf-platform-confirm-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget&&!working)setRemoving(null)}}>
    <section role="dialog" aria-modal="true" aria-labelledby="sf-platform-archive-title" className="sf-platform-confirm">
-    <h3 id="sf-platform-archive-title"><ShieldAlert size={20}/> Archive {removing.name}?</h3>
+    <h3 id="sf-platform-archive-title"><ShieldAlert size={20}/> Archive <span translate="no">{removing.name}</span>?</h3>
     <p><b>This does not permanently delete the business.</b> Its original owner account, services, team, calendar, client records, attendance, booking questions, appointments, memberships, transactions and branding remain in the database. Public discovery and booking access are disabled while archived.</p>
     <p>Restore the same business later to recover its history and settings, then review and reactivate it. Active or pending recurring payments must be resolved before archiving.</p>
     <label>Type the exact business name to confirm<input autoFocus value={confirmation} onChange={e=>setConfirmation(e.target.value)}/></label>

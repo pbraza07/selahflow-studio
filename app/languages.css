@@ -1,0 +1,11 @@
+.sf-global-tools{position:relative;z-index:70;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:4px 16px;min-height:48px;padding:0 clamp(12px,4vw,60px);background:#f7f4ec;color:#294b43;border-bottom:1px solid #294b4310}
+.sf-global-tools .sf-page-shortcuts{padding:0;border:0;min-height:48px;flex:0 0 auto}
+.sf-languages{position:relative;flex:0 0 auto;font:500 12px/1.4 Arial,sans-serif}
+.sf-language-buttons{display:flex;gap:3px;align-items:center}
+.sf-language-button{display:flex;align-items:center;gap:6px;min-width:44px;min-height:44px;padding:6px 9px;border:1px solid transparent;border-radius:8px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.sf-language-button img{display:block;object-fit:cover;border-radius:2px;box-shadow:0 0 0 1px #294b4325}
+.sf-language-button:hover{background:#294b4309}.sf-language-button[aria-pressed=true]{background:#e5ebe1;border-color:#315e5055;font-weight:700}
+.sf-language-button:focus-visible{outline:2px solid #315e50;outline-offset:2px}
+.sf-language-status:not(:empty){position:absolute;right:0;top:100%;z-index:100;width:min(300px,90vw);padding:10px;background:#fffdf8;border:1px solid #dbe1d8;border-radius:8px;box-shadow:0 4px 15px #123f3a22}
+@media(max-width:640px){.sf-global-tools{gap:0 8px;padding-inline:12px}.sf-language-button{padding:6px 8px}.sf-language-button span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}}
+@media print{.sf-global-tools{display:none}}

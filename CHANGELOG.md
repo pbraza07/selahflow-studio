@@ -1,3 +1,9 @@
+# v1.3.217 release handoff — App-wide interface languages
+
+Release source: v1.3.217
+
+Shared root navigation adds US English, Spain Spanish and Brazil Portuguese flag controls at the top right on every app page. Language persists on the visitor device and across tabs. Same-origin, on-demand static catalogs cover more than 6,000 interface strings per language, including forms, owner/team/admin navigation, dynamic status messages and dialogs. Translations are prepared offline with Argos-compatible models, with curated interface/financial vocabulary and protected numbers, brands and interpolation slots. No page text, client record or private dashboard content is sent to an external translation service. Only display text and accessible labels change; input/option values, URLs, IDs, financial records and API authorization remain canonical. Saved custom business content without an interface-catalog match, PDFs, outgoing emails, native apps and external provider pages retain their original language. English source remains the canonical text. No migration, provider account or environment change. Automated interaction tests include actual React reconciliation, dynamic nodes, protected/editable text, controlled forms and restoration. Deployment and browser verification pending; do not describe this source note as LIVE.
+
 # v1.3.216 release handoff — Recurring memberships and one-time service packages
 
 Release source: v1.3.216

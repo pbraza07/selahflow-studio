@@ -31,7 +31,7 @@ export default function BookingApprovalEditor({item,fields,onClose,onSave,busy,e
       <input type={field.type==='number'?'number':field.type==='date'?'date':'text'} required={field.required} maxLength={field.type==='text'?500:undefined}
        value={String(data.customAnswers[field.id]||'')} onChange={e=>answer(field.id,e.target.value)}/>}</label>)}</>}
     {original&&<details className="sf-booking-editor-original"><summary><History size={15}/> View original customer submission</summary>
-     <div><p><b>Name:</b> {original.customerName}</p><p><b>Email:</b> {original.customerEmail}</p><p><b>Phone:</b> {original.customerPhone||'Not provided'}</p>
+     <div><p><b>Name:</b> <span translate="no">{original.customerName}</span></p><p><b>Email:</b> <span translate="no">{original.customerEmail}</span></p><p><b>Phone:</b> <span translate="no">{original.customerPhone||'Not provided'}</span></p>
      {fields.map(f=>original.customAnswers?.[f.id]!==undefined?<p key={f.id}><b>{f.label}:</b> {String(original.customAnswers[f.id])}</p>:null)}</div>
     </details>}
     {error&&<p className="sf-membership-error" role="alert">{error}</p>}
