@@ -13,6 +13,7 @@ export async function membershipBillingAction(db,{business,owner,input,origin,ap
  }
  if(input.action==='toggleCoupon'){await db.query('UPDATE business_coupons SET active=$1 WHERE business_id=$2 AND id=$3',[input.active===true,business.id,input.id]);return {ok:true};}
  const member=(await db.query('SELECT m.*,p.interval_unit,p.interval_count,p.name AS plan_name FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE m.id=$1 AND m.business_id=$2 FOR UPDATE OF m',[input.id,business.id])).rows[0];
+ if(member?.billing_type==='package'&&['setInitialDate','syncRecurrence'].includes(input.action))throw Error('Service packages do not have recurring billing.');
  if(!member)throw Error('Choose a member in this business.');
  const requestId=String(input.requestId||'');if(!/^[a-f0-9-]{36}$/i.test(requestId))throw Error('Invalid update request.');
  if(input.action==='setInitialDate'){

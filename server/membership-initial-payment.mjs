@@ -1,3 +1,6 @@
+import {randomUUID} from 'node:crypto';
+import {applyManualPeriod} from './manual-membership-period.mjs';
+import {queueMembershipPaymentEmail} from './membership-payment-emails.mjs';
 import {stripeApi} from './membership-payments.mjs';
 import {assertTestPayment,recordMembershipPaidPeriod} from './stripe-checkout.mjs';
 import {settleCommission} from './first-customer-commissions.mjs';
@@ -7,11 +10,25 @@ export async function completeInitialMembershipCheckout(db,{businessId,account,s
  assertTestPayment(session);
  if(session.mode!=='payment'||session.payment_status!=='paid'||session.currency!=='usd'||session.metadata?.membership_initial!=='true'||session.metadata?.selahflow_business_id!==businessId||typeof session.payment_intent!=='string'||typeof session.customer!=='string')return false;
  const member=(await db.query('SELECT * FROM customer_memberships WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 FOR UPDATE',[businessId,account,session.id])).rows[0];
- if(!member||member.stripe_initial_checkout_mode!=='payment'||!member.stripe_recurring_authorized_at||session.client_reference_id!==member.id||session.metadata?.membership_id!==member.id||session.amount_total!==Number(member.first_invoice_cents)||!member.stripe_renewal_product_id)return false;
+ if(!member||member.stripe_initial_checkout_mode!=='payment'||(member.billing_type!=='package'&&!member.stripe_recurring_authorized_at)||session.client_reference_id!==member.id||session.metadata?.membership_id!==member.id||session.amount_total!==Number(member.first_invoice_cents)||(member.billing_type!=='package'&&!member.stripe_renewal_product_id))return false;
+ if((member.billing_type==='package')!==(session.metadata?.one_time_package==='true'))return false;
  if((await db.query('SELECT 1 FROM stripe_payment_receipts WHERE stripe_account_id=$1 AND provider_reference=$2 AND business_id=$3 AND membership_id=$4',[account,session.payment_intent,businessId,member.id])).rows.length)return true;
  const pi=await api('payment_intents/'+session.payment_intent+'?expand[]=latest_charge',{method:'GET',account});assertTestPayment(pi);
  if(pi.status!=='succeeded'||pi.amount_received!==session.amount_total||pi.currency!=='usd'||pi.customer!==session.customer||typeof pi.payment_method!=='string'||pi.metadata?.membership_id!==member.id||pi.metadata?.selahflow_business_id!==businessId||!Number.isSafeInteger(pi.latest_charge?.created))throw Error('Initial membership payment needs provider reconciliation.');
- const paidAt=new Date(pi.latest_charge.created*1000),count=Number(member.stripe_interval_count)||1,unit=member.stripe_interval_unit;
+ const paidAt=new Date(pi.latest_charge.created*1000);
+ if(member.billing_type==='package'){
+  if(pi.latest_charge?.refunded===true)throw Error('This package payment was refunded.');
+  if(member.stripe_subscription_id||member.stripe_recurring_authorized_at||member.initial_paid_at)throw Error('Package payment requires reconciliation.');
+  await settleCommission(db,{businessId,account,session},api);
+  const receipt=await db.query('INSERT INTO stripe_payment_receipts(stripe_account_id,provider_reference,business_id,membership_id,amount_cents) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING provider_reference',[account,pi.id,businessId,member.id,session.amount_total]);
+  if(!receipt.rowCount)return true;
+  const allocation=await applyManualPeriod(db,{member,credits:Number(member.stripe_sessions_per_period),plan:member,now:paidAt}),paymentId=randomUUID();
+  await db.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[paymentId,businessId,member.id,'stripe:'+pi.id,allocation.allocated,session.amount_total]);
+  await db.query('UPDATE customer_memberships SET stripe_customer_id=$1,stripe_initial_paid_at=$2 WHERE id=$3 AND business_id=$4',[session.customer,paidAt.toISOString(),member.id,businessId]);
+  await queueMembershipPaymentEmail(db,{businessId,paymentId,paymentMethod:'Stripe'});
+  return true;
+ }
+ const count=Number(member.stripe_interval_count)||1,unit=member.stripe_interval_unit;
  const boundary=unit==='month'?nextBillingAnchor(membershipAnchor({...member,initial_paid_at:paidAt}),paidAt,count):unit==='year'?anniversary(paidAt,12*count):new Date(paidAt.getTime()+7*86400000*count);
  // Search this Checkout-created customer before provisioning, including retries beyond Stripe's idempotency window.
  const existing=await api('subscriptions?customer='+encodeURIComponent(session.customer)+'&status=all&limit=100',{method:'GET',account});

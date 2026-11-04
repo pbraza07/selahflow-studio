@@ -1,6 +1,12 @@
 import {weeklyMonthCredits} from './membership-weekly.mjs';
 import {anniversary,monthlyPeriod,membershipAnchor,nextBillingAnchor} from './membership-periods.mjs';
 export async function applyManualPeriod(db,{member,credits,plan,now=new Date()}){
+ if((plan.billing_type||member.billing_type)==='package'){
+  if(member.initial_paid_at)throw Error('This package has already been paid. It cannot renew automatically.');
+  if(!Number.isSafeInteger(Number(credits))||Number(credits)<1)throw Error('A package must include at least one session.');
+  await db.query("UPDATE customer_memberships SET sessions_included=$1,sessions_used=0,status='active',initial_paid_at=$2,last_paid_at=$2,monthly_sessions=0,credit_period_start=NULL,credit_period_end=NULL,paid_through=NULL,updated_at=now() WHERE id=$3 AND business_id=$4",[Number(credits),new Date(now).toISOString(),member.id,member.business_id]);
+  return {allocated:Number(credits),paidThrough:null};
+ }
  const initial=member.initial_paid_at||now,anchor=membershipAnchor({...member,initial_paid_at:initial}),period=monthlyPeriod(anchor,now);
  const weekly=(await db.query('SELECT weekly_sessions FROM membership_plans WHERE id=$1 AND business_id=$2',[plan.plan_id||plan.id||member.plan_id,member.business_id])).rows[0]?.weekly_sessions;
  if(weekly)credits=weeklyMonthCredits({...member,initial_paid_at:initial},weekly,now);

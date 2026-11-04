@@ -15,9 +15,10 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
   await db.query('BEGIN');
   const business=(await db.query("SELECT b.id,b.owner_id,b.name,b.slug,s.data FROM businesses b LEFT JOIN settings s ON s.owner=b.owner_id WHERE b.slug=$1 AND b.status='active'",[body.slug])).rows[0];
   if(!business)throw Error('Business unavailable.');
-  const plan=(await db.query('SELECT * FROM membership_plans WHERE id=$1 AND business_id=$2 AND active=true',[body.planId,business.id])).rows[0];
+  const plan=(await db.query('SELECT * FROM membership_plans WHERE id=$1 AND business_id=$2 AND active=true FOR SHARE',[body.planId,business.id])).rows[0];
   if(!plan)throw Error('Choose an available membership.');
-  if(body.termsAccepted!==true||body.recurringAccepted!==true)throw Error('Please accept recurring billing and membership terms.');
+  const oneTime=plan.billing_type==='package';
+  if(body.termsAccepted!==true||!oneTime&&body.recurringAccepted!==true)throw Error('Please accept recurring billing and membership terms.');
   const config=typeof business.data==='string'?JSON.parse(business.data):business.data||{};
   const details=membershipRequestDetails(config,body);
   const name=details.name,email=details.email.toLowerCase(),dob=details.dateOfBirth;
@@ -59,11 +60,12 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
    if(previous.status!=='expired'){await db.query('COMMIT');return {returnUrl:origin+'/membership/'+business.slug+'?checkout=success&session_id='+encodeURIComponent(previous.id)};}
   }
   const coupon=await checkoutCoupon(db,business.id,couponCode,Number(member.price_cents),account,api);
+  if(oneTime&&coupon&&coupon.total<1)throw Error('A paid service package requires a positive total after discounts.');
   const count=Number(plan.interval_count)||1;
   let anchor=null;if(member.billing_start_override){const start=new Date((member.billing_start_override instanceof Date?member.billing_start_override.toISOString():String(member.billing_start_override)).slice(0,10)+'T12:00:00Z');let n=1;while(anniversary(start,n)<=new Date())n++;anchor=Math.floor(anniversary(start,n).getTime()/1000);}
   const commission=await reserveCommission(db,{businessId:business.id,kind:'membership',memberNumber:number,sourceId:member.id,account,grossCents:coupon?coupon.total:Number(member.price_cents)},api);
-  const initialPayment=!!commission||member.stripe_initial_checkout_mode==='payment';
-  if(initialPayment&&!member.stripe_renewal_product_id){const product=await api('products',{account,idempotencyKey:'membership-renewal-product-'+member.id,params:{name:business.name+' · '+plan.name,'metadata[membership_id]':member.id}});if(!/^prod_[A-Za-z0-9]+$/.test(product.id||''))throw Error('Stripe renewal product unavailable.');member.stripe_renewal_product_id=product.id;}
+  const initialPayment=oneTime||!!commission||member.stripe_initial_checkout_mode==='payment';
+  if(initialPayment&&!oneTime&&!member.stripe_renewal_product_id){const product=await api('products',{account,idempotencyKey:'membership-renewal-product-'+member.id,params:{name:business.name+' · '+plan.name,'metadata[membership_id]':member.id}});if(!/^prod_[A-Za-z0-9]+$/.test(product.id||''))throw Error('Stripe renewal product unavailable.');member.stripe_renewal_product_id=product.id;}
   const params={
    mode:'subscription','allowed_payment_method_types[0]':'card','line_items[0][quantity]':'1',
    'line_items[0][price_data][currency]':'usd','line_items[0][price_data][unit_amount]':String(member.price_cents),
@@ -84,10 +86,15 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
     'custom_text[submit][message]':'You authorize '+business.name+' to save this card for recurring membership payments of $'+((coupon?.duration==='forever'?coupon.total:Number(member.price_cents))/100).toFixed(2)+' every '+count+' '+member.stripe_interval_unit+'(s), starting after the initial paid period, until cancelled through the business. No second payment is due today.',
     ...(commission?{'payment_intent_data[application_fee_amount]':commission.fee_cents,'metadata[commission_claim_id]':commission.id}:{})});
   }
+  if(oneTime){
+   delete params['payment_intent_data[setup_future_usage]'];
+   params['metadata[one_time_package]']='true';
+   params['custom_text[submit][message]']='One-time service package payment. No subscription or automatic renewal. Session credits remain until used.';
+  }
   const session=await api('checkout/sessions',{account,idempotencyKey:'membership-'+member.id+'-'+(member.stripe_checkout_session_id||'initial'),params});
   assertTestPayment(session);const url=checkoutUrl(session);
   await attachCommissionSession(db,commission,session);
-  await db.query('UPDATE customer_memberships SET stripe_initial_checkout_mode=$1,stripe_renewal_product_id=$2,stripe_renewal_coupon_id=$3,stripe_recurring_authorized_at=COALESCE(stripe_recurring_authorized_at,now()) WHERE id=$4 AND business_id=$5',[initialPayment?'payment':'subscription',member.stripe_renewal_product_id||null,coupon?.duration==='forever'?coupon.stripe_coupon_id:null,member.id,business.id]);
+  await db.query('UPDATE customer_memberships SET stripe_initial_checkout_mode=$1,stripe_renewal_product_id=$2,stripe_renewal_coupon_id=$3,stripe_recurring_authorized_at=CASE WHEN billing_type=\'package\' THEN NULL ELSE COALESCE(stripe_recurring_authorized_at,now()) END WHERE id=$4 AND business_id=$5',[initialPayment?'payment':'subscription',member.stripe_renewal_product_id||null,coupon?.duration==='forever'?coupon.stripe_coupon_id:null,member.id,business.id]);
   await db.query('UPDATE customer_memberships SET stripe_checkout_session_id=$1,stripe_interval_count=$4,first_invoice_cents=$5,renewal_invoice_cents=$6,updated_at=now() WHERE id=$2 AND business_id=$3',[session.id,member.id,business.id,count,coupon?coupon.total:member.price_cents,coupon?.duration==='forever'?coupon.total:member.price_cents]);
   await db.query('COMMIT');return {checkoutUrl:url};
  }catch(error){await db.query('ROLLBACK');throw error;}finally{db.release();}
