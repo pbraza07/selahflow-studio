@@ -1,0 +1,78 @@
+import {reconcileMembershipPayment} from '../server/membership-reconciliation.mjs';
+import {deliverOwnerPaymentPush} from '../server/owner-payment-push.mjs';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile,readdir} from 'node:fs/promises';
+import {randomUUID} from 'node:crypto';
+import {PGlite} from '@electric-sql/pglite';
+import {membershipBillingAction} from '../server/membership-billing-actions.mjs';
+import {startMembershipCheckout} from '../server/membership-checkout.mjs';
+import {completeInitialMembershipCheckout} from '../server/membership-initial-payment.mjs';
+import {applyMembershipInvoice} from '../server/stripe-checkout.mjs';
+import {bookingDiscount} from '../server/booking-discounts.mjs';
+import {saveCommissionSettings} from '../server/first-customer-commissions.mjs';
+
+for(const billingType of ['package','membership'])test('free lifetime '+billingType+' validates zero fulfillment, replay, renewal and tenant scope',async t=>{
+ const old={...process.env};Object.assign(process.env,{STRIPE_SECRET_KEY:'sk_test_fixture',STRIPE_CONNECT_WEBHOOK_SECRET:'whsec_fixture'});
+ const pg=new PGlite();t.after(async()=>{await pg.close();for(const k of Object.keys(process.env))if(!(k in old))delete process.env[k];Object.assign(process.env,old);});
+ for(const f of(await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort())await pg.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8'));
+ const query=async(s,v)=>{const r=await pg.query(s,v);return {...r,rowCount:r.rows.length||r.affectedRows||0};};const db={query,release(){}},pool={query,connect:async()=>db};
+ const tx=async fn=>{await query('BEGIN');try{const r=await fn();await query('COMMIT');return r;}catch(e){await query('ROLLBACK');throw e;}};
+ await pg.exec("INSERT INTO users(id,email,password_hash) VALUES('u1','one@example.test','hash'),('u2','two@example.test','hash'); INSERT INTO businesses(id,owner_id,slug,name,status) VALUES('b1','u1','one','One','active'),('b2','u2','two','Two','active'); INSERT INTO merchant_accounts(business_id,external_account_id,charges_enabled,onboarding_complete) VALUES('b1','acct_one',true,true);");
+ await query("INSERT INTO business_push_subscriptions(id,business_id,reviewer,endpoint,p256dh,auth) VALUES('device','b1','owner','device-one','x','x'),('other-device','b2','owner','device-two','x','x')");
+ await query("INSERT INTO membership_plans(id,business_id,name,interval_unit,price_cents,sessions_included,billing_type) VALUES('p1','b1','Five sessions','month',2000,5,$1)",[billingType]);
+ await tx(()=>saveCommissionSettings(db,{businessId:'b1',actor:'u1',bookingEnabled:true,membershipEnabled:true,acceptTerms:true}));
+ await membershipBillingAction(db,{business:{id:'b1'},owner:'u1',input:{action:'saveCoupon',code:'FREEFOREVER',freeLifetime:true,kind:'fixed',value:5,duration:'once',expiresAt:'2020-01-01'}});
+ const coupon=(await query('SELECT * FROM business_coupons')).rows[0];assert.equal(coupon.kind,'percent');assert.equal(coupon.value,100);assert.equal(coupon.duration,'forever');assert.equal(coupon.expires_at,null);
+ const services=[{id:'s1',name:'Session',price:20},{id:'s2',name:'Service',price:10}];
+ const discount=await bookingDiscount(db,{businessId:'b1',services,code:'FREEFOREVER'});assert.equal(discount.price,0);assert.ok(discount.paymentLines.every(l=>l.price===0));
+ await assert.rejects(bookingDiscount(db,{businessId:'b2',services,code:'FREEFOREVER'}),/active coupon/);
+ const body={slug:'one',planId:'p1',requestId:randomUUID(),firstName:'Free',lastName:'Customer',email:'free@example.test',dateOfBirth:'2000-01-02',termsAccepted:true,recurringAccepted:true,couponCode:'FREEFOREVER'};
+ let params;const session={id:'cs_test_free123',livemode:false,status:'open',url:'https://checkout.stripe.com/c/pay/test_free'};
+ const api=async(path,o)=>{if(path.startsWith('accounts/'))return {charges_enabled:true,details_submitted:true};assert.equal(o.account,'acct_one');if(path==='coupons'){assert.equal(o.params.percent_off,100);assert.equal(o.params.duration,'forever');return {id:'coupon_free'};}if(path==='checkout/sessions'){params=o.params;assert.equal(params['discounts[0][coupon]'],'coupon_free');assert.equal(params['payment_intent_data[application_fee_amount]'],undefined);return session;}throw Error('Unexpected provider operation: '+path);};
+ await startMembershipCheckout(pool,body,'https://example.test',api);
+ let member=(await query('SELECT * FROM customer_memberships')).rows[0];assert.equal(member.first_invoice_cents,0);assert.equal(member.renewal_invoice_cents,0);assert.equal(member.sessions_included,0);
+ if(billingType==='package'){
+  assert.equal(params.mode,'payment');assert.ok(!Object.keys(params).some(k=>k.startsWith('payment_intent_data[')));
+  const completed={...session,status:'complete',mode:'payment',payment_status:'no_payment_required',currency:'usd',payment_intent:null,subscription:null,customer:'cus_free',created:Math.floor(Date.now()/1000),amount_total:0,client_reference_id:member.id,metadata:{membership_id:member.id,selahflow_business_id:'b1',membership_initial:'true',one_time_package:'true'}};
+  for(const bad of [{...completed,status:'open'},{...completed,amount_total:1},{...completed,client_reference_id:'foreign'},{...completed,payment_intent:'pi_other'},{...completed,metadata:{...completed.metadata,commission_claim_id:'claim'}}])assert.equal(await tx(()=>completeInitialMembershipCheckout(db,{businessId:'b1',account:'acct_one',session:bad},api)),false);
+  assert.equal(await tx(()=>completeInitialMembershipCheckout(db,{businessId:'b2',account:'acct_one',session:completed},api)),false);
+  assert.equal(await tx(()=>completeInitialMembershipCheckout(db,{businessId:'b1',account:'acct_other',session:completed},api)),false);
+  const recoveryApi=async(path,o)=>{assert.equal(o.method,'GET');assert.equal(o.account,'acct_one');assert.equal(path,'checkout/sessions/'+session.id);return completed;};
+  await assert.rejects(reconcileMembershipPayment(pool,{businessId:'b2',membershipId:member.id},recoveryApi),/Member not found/);
+  const recovered=await reconcileMembershipPayment(pool,{businessId:'b1',membershipId:member.id},recoveryApi);assert.equal(recovered.status,'active');
+  await query('UPDATE customer_memberships SET sessions_used=2');
+  assert.equal(await tx(()=>completeInitialMembershipCheckout(db,{businessId:'b1',account:'acct_one',session:completed},api)),true);
+  member=(await query('SELECT * FROM customer_memberships')).rows[0];assert.equal(member.sessions_used,2);assert.equal(member.paid_through,null);
+ }else{
+  assert.equal(params.mode,'subscription');assert.equal(params.payment_method_collection,'if_required');
+  const sub={id:'sub_free',livemode:false,status:'active',metadata:{membership_id:member.id,selahflow_business_id:'b1'}};
+  const invoice={id:'in_free1',livemode:false,status:'paid',amount_paid:0,currency:'usd',billing_reason:'subscription_create',subscription:sub.id,customer:'cus_free',lines:{data:[{period:{start:1896091200,end:1898769600}}]}};
+  assert.equal(await tx(()=>applyMembershipInvoice(db,'b2','acct_one',invoice,sub)),false);
+  assert.equal(await tx(()=>applyMembershipInvoice(db,'b1','acct_one',{...invoice,status:'open'},sub)),false);
+  sub.customer='cus_free';sub.latest_invoice=invoice.id;
+  const completed={...session,status:'complete',mode:'subscription',customer:'cus_free',subscription:sub.id,client_reference_id:member.id,metadata:sub.metadata};
+  const recoveryApi=async(path,o)=>{assert.equal(o.method,'GET');assert.equal(o.account,'acct_one');if(path==='checkout/sessions/'+session.id)return completed;if(path==='subscriptions/'+sub.id)return sub;if(path.startsWith('invoices/'+invoice.id))return invoice;throw Error('Unexpected provider call '+path);};
+  await assert.rejects(reconcileMembershipPayment(pool,{businessId:'b1',membershipId:member.id},async(path,o)=>path.startsWith('checkout/')?{...completed,client_reference_id:'foreign'}:recoveryApi(path,o)),/does not match/);
+  const recovered=await reconcileMembershipPayment(pool,{businessId:'b1',membershipId:member.id},recoveryApi);assert.equal(recovered.status,'active');
+  assert.equal((await reconcileMembershipPayment(pool,{businessId:'b1',membershipId:member.id},recoveryApi)).credited,0);
+  await query('UPDATE customer_memberships SET sessions_used=3');
+  const renewal={...invoice,id:'in_free2',billing_reason:'subscription_cycle',lines:{data:[{period:{start:1898769600,end:1901188800}}]}};
+  assert.equal(await tx(()=>applyMembershipInvoice(db,'b1','acct_one',renewal,sub)),true);
+  member=(await query('SELECT * FROM customer_memberships')).rows[0];assert.equal(member.sessions_used,0);
+  await query('UPDATE customer_memberships SET sessions_used=1');
+  assert.equal(await tx(()=>applyMembershipInvoice(db,'b1','acct_one',renewal,sub)),true);
+  member=(await query('SELECT * FROM customer_memberships')).rows[0];assert.equal(member.sessions_used,1);
+ }
+ assert.equal(member.status,'active');assert.equal(member.sessions_included,5);
+ const emails=(await query('SELECT message FROM membership_payment_emails')).rows;
+ assert.equal(emails.length,billingType==='package'?1:2);
+ assert.match(emails[0].message.subject,/activation confirmed/);assert.match(emails[0].message.text,/no payment required/);
+ const sent=[];await deliverOwnerPaymentPush(pool,{enabled:true,send:async(s,p)=>{sent.push({s,p});return {status:'submitted'};}});
+ assert.equal(sent.length,emails.length);assert.ok(sent.every(x=>x.s.endpoint==='device-one'&&x.p.body.includes('activated · Free ($0.00)')));
+ await deliverOwnerPaymentPush(pool,{enabled:true,send:async()=>{throw Error('Do not repeat delivery');}});
+
+ assert.ok((await query('SELECT amount_cents FROM membership_session_ledger')).rows.every(r=>r.amount_cents===0));
+ await membershipBillingAction(db,{business:{id:'b1'},owner:'u1',input:{action:'toggleCoupon',id:coupon.id,active:false}});
+ await assert.rejects(bookingDiscount(db,{businessId:'b1',services,code:'FREEFOREVER'}),/active coupon/);
+});

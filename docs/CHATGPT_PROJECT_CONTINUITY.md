@@ -1,3 +1,13 @@
+# v1.3.223 release handoff — Free lifetime coupons and activation recovery
+
+Release source: v1.3.223
+
+Implemented locally: numeric 1/2/3 weekly session choices; free lifetime coupon preset; zero-total package fulfillment and membership renewals; owner Check payment / activation verifies the saved Stripe checkout/invoice using GET calls without creating a charge. Free activations queue an explicit $0 client email and an alert for opted-in owner devices, once per verified receipt. Existing session limits, identity checks, tenant isolation, credits and paid transactions are preserved. Migrations 095/096 allow verified zero-total membership/package receipts and activation alerts; no historical alert backfill.
+
+Production diagnosis November 5, 2026: Render remains LIVE on v1.3.222 / e5d8724e36a37f3738f81136ad66824627e030bc. Logs at 19:23:00Z and 19:23:14Z show membership webhook failure on stripe_payment_receipts_amount_cents_check, explaining the blocked free activation. The affected live enrollment has not been changed.
+
+Final local validation passed: 728/728 tests, TypeScript and production build. Tests cover free package and membership recovery, zero invoices, renewal, used-credit preservation, replay, wrong tenant/account/identity rejection, queued client emails, owner-device alerts and the actual owner verification button. Synthetic provider/database fixtures only; no real customer charge, email or device alert was used for QA. The user explicitly authorized GitHub publication and deployment on November 5, 2026. This release is NOT LIVE; staging and production acceptance remain unverified. Release branch: feature/lifetime-free-coupons. Deployment verification pending.
+
 # v1.3.222 release handoff — Per-member weekly session override
 
 Release source: v1.3.222

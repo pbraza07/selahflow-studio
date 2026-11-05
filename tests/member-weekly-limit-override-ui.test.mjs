@@ -19,7 +19,7 @@ async function fixture(){
  const dom=new JSDOM('<div id="app"></div>',{url:'https://example.test/studio/example',pretendToBeVisual:true}),globals=['window','document','navigator','Event','fetch','IS_REACT_ACT_ENVIRONMENT'],old=Object.fromEntries(globals.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
  for(const [k,v] of Object.entries({window:dom.window,document:dom.window.document,navigator:dom.window.navigator,Event:dom.window.Event,IS_REACT_ACT_ENVIRONMENT:true}))Object.defineProperty(globalThis,k,{value:v,configurable:true,writable:true});
  const state={enabled:false,fail:false,hold:false,posted:null,resolvePost:null,deferGet:false,resolveGet:null},calls=[];
- const payload=()=>({plans:[{id:'weekly-plan',name:'Weekly',weeklySessions:1,active:true,priceCents:10000,interval:'month',sessionsIncluded:5},{id:'monthly-plan',name:'Monthly',weeklySessions:null,active:true,priceCents:10000,interval:'month',sessionsIncluded:5}],members:[member('weekly','weekly-plan',{weekly_sessions:1,weekly_limit_override:state.enabled}),member('monthly','monthly-plan',{weekly_sessions:null})],groups:[],planBenefits:{name:'Business',limits:{membershipPlans:10}},payments:{configured:true,connected:true,ready:true},creditOptions:{services:[],sessions:[]},memberIdPolicy:'initials_birthdate',businessName:'Example'});
+ const payload=()=>({plans:[{id:'weekly-plan',name:'Weekly',weeklySessions:1,active:true,priceCents:10000,interval:'month',sessionsIncluded:5},{id:'monthly-plan',name:'Monthly',weeklySessions:null,active:true,priceCents:10000,interval:'month',sessionsIncluded:5}],members:[member('weekly','weekly-plan',{weekly_sessions:1,weekly_limit_override:state.enabled}),member('monthly','monthly-plan',{weekly_sessions:null,status:'pending_payment',stripe_account_id:'acct_fixture',stripe_subscription_id:'sub_fixture'})],groups:[],planBenefits:{name:'Business',limits:{membershipPlans:10}},payments:{configured:true,connected:true,ready:true},creditOptions:{services:[],sessions:[]},memberIdPolicy:'initials_birthdate',businessName:'Example'});
  globalThis.fetch=async(url,options={})=>{
   calls.push({url,options});
   if(options.method==='POST'){
@@ -84,4 +84,12 @@ test('translated override copy preserves the member identity and checkbox value'
    assert.doesNotMatch(document.getElementById(control.getAttribute('aria-describedby')).textContent,/Remaining credits/);
   }
  }finally{translator?.dispose();await f.cleanup();}
+});
+
+test('Stripe-managed pending membership offers provider verification instead of manual confirmation',async()=>{
+ const f=await fixture();try{
+  const button=[...document.querySelectorAll('button')].find(b=>b.textContent==='Check payment / activation');assert.ok(button);
+  await act(async()=>button.click());assert.equal(f.state.posted.action,'checkPayment');assert.equal(f.state.posted.id,'monthly');
+  assert.ok(![...document.querySelectorAll('button')].some(b=>b.textContent==='Confirm membership payment'));
+ }finally{await f.cleanup();}
 });

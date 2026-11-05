@@ -60,7 +60,6 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
    if(previous.status!=='expired'){await db.query('COMMIT');return {returnUrl:origin+'/membership/'+business.slug+'?checkout=success&session_id='+encodeURIComponent(previous.id)};}
   }
   const coupon=await checkoutCoupon(db,business.id,couponCode,Number(member.price_cents),account,api);
-  if(oneTime&&coupon&&coupon.total<1)throw Error('A paid service package requires a positive total after discounts.');
   const count=Number(plan.interval_count)||1;
   let anchor=null;if(member.billing_start_override){const start=new Date((member.billing_start_override instanceof Date?member.billing_start_override.toISOString():String(member.billing_start_override)).slice(0,10)+'T12:00:00Z');let n=1;while(anniversary(start,n)<=new Date())n++;anchor=Math.floor(anniversary(start,n).getTime()/1000);}
   const commission=await reserveCommission(db,{businessId:business.id,kind:'membership',memberNumber:number,sourceId:member.id,account,grossCents:coupon?coupon.total:Number(member.price_cents)},api);
@@ -76,7 +75,7 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
    ...(email?{customer_email:email}:{}),client_reference_id:member.id,
    'metadata[membership_id]':member.id,'metadata[selahflow_business_id]':business.id,
    'subscription_data[metadata][membership_id]':member.id,'subscription_data[metadata][selahflow_business_id]':business.id,
-   'payment_method_collection':'always',success_url:origin+'/membership/'+business.slug+'?checkout=success&session_id={CHECKOUT_SESSION_ID}',
+   'payment_method_collection':coupon?.total===0&&coupon?.duration==='forever'?'if_required':'always',success_url:origin+'/membership/'+business.slug+'?checkout=success&session_id={CHECKOUT_SESSION_ID}',
    cancel_url:origin+'/membership/'+business.slug+'?checkout=cancelled'
   };
   if(initialPayment){
@@ -90,6 +89,10 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
    delete params['payment_intent_data[setup_future_usage]'];
    params['metadata[one_time_package]']='true';
    params['custom_text[submit][message]']='One-time service package payment. No subscription or automatic renewal. Session credits remain until used.';
+  }
+  if(oneTime&&coupon?.total===0){
+   for(const key of Object.keys(params))if(key.startsWith('payment_intent_data['))delete params[key];
+   params['custom_text[submit][message]']='Free service package. No payment or subscription. Session credits remain until used.';
   }
   const session=await api('checkout/sessions',{account,idempotencyKey:'membership-'+member.id+'-'+(member.stripe_checkout_session_id||'initial'),params});
   assertTestPayment(session);const url=checkoutUrl(session);

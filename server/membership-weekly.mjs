@@ -3,7 +3,7 @@ import {membershipAnchor,monthlyPeriod,businessDate} from './membership-periods.
 
 export function validateWeeklySessions(value){
  if(value===undefined||value===null||value==='')return null;
- if(!Number.isInteger(value)||value<1||value>3)throw Error('Choose one, two or three sessions per week.');
+ if(!Number.isInteger(value)||value<1||value>3)throw Error('Choose 1, 2 or 3 sessions per week.');
  return value;
 }
 export function membershipUsageSummary(weekly,monthly,billingType='membership'){

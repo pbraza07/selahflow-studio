@@ -1,3 +1,4 @@
+import {reconcileMembershipPayment} from '../../../../server/membership-reconciliation.mjs';
 import {membershipInvitationSummary} from '../../../../server/membership-invitations.mjs';
 import {accrueCashCommission} from '../../../../server/cash-commission-billing.mjs';
 import {deleteOwnerMembership} from '../../../../server/owner-membership-deletion.mjs';
@@ -168,6 +169,10 @@ export async function POST(req:Request){
     return Response.json({ok:true,planLimit:limit},{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}
    finally{client.release();}
+  }
+  if(input.action==='checkPayment'){
+   if(!/^[a-f0-9-]{36}$/i.test(String(input.id||'')))throw Error('Invalid member.');
+   return Response.json(await reconcileMembershipPayment(pool,{businessId:business.id,membershipId:input.id}),{headers});
   }
   if(input.action==='confirmManualPayment'||input.action==='renewMembership'){
    const id=String(input.id||'');
