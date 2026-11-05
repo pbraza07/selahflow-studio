@@ -2242,5 +2242,49 @@
   "Invalid daily payment reminder setting.": {
     "es": "Configuración de recordatorios diarios de pago no válida.",
     "pt": "Configuração inválida de lembretes diários de pagamento."
+  },
+  "Override weekly session limit": {
+    "es": "Ignorar el límite semanal de sesiones",
+    "pt": "Ignorar o limite semanal de sessões"
+  },
+  "Applies only to this member. Remaining credits and membership dates still apply.": {
+    "es": "Se aplica solo a este miembro. Los créditos restantes y las fechas de la membresía siguen vigentes.",
+    "pt": "Aplica-se somente a este membro. Os créditos restantes e as datas da assinatura continuam valendo."
+  },
+  "This plan has no weekly session limit.": {
+    "es": "Este plan no tiene límite semanal de sesiones.",
+    "pt": "Este plano não tem limite semanal de sessões."
+  },
+  "Saving weekly limit…": {
+    "es": "Guardando el límite semanal…",
+    "pt": "Salvando o limite semanal…"
+  },
+  "Weekly session limit overridden for this member.": {
+    "es": "Se ignorará el límite semanal de sesiones para este miembro.",
+    "pt": "O limite semanal de sessões será ignorado para este membro."
+  },
+  "Weekly session limit restored for this member.": {
+    "es": "Se restableció el límite semanal de sesiones para este miembro.",
+    "pt": "O limite semanal de sessões foi restaurado para este membro."
+  },
+  "Unable to confirm the weekly session limit. Refresh and try again.": {
+    "es": "No se pudo confirmar el límite semanal de sesiones. Actualiza la página e inténtalo de nuevo.",
+    "pt": "Não foi possível confirmar o limite semanal de sessões. Atualize a página e tente novamente."
+  },
+  "Choose a valid member and weekly limit override.": {
+    "es": "Elige un miembro válido y una opción válida para el límite semanal.",
+    "pt": "Escolha um membro válido e uma opção válida para o limite semanal."
+  },
+  "Choose a member from this business.": {
+    "es": "Elige un miembro de este negocio.",
+    "pt": "Escolha um membro deste negócio."
+  },
+  "Choose a membership with a weekly session limit.": {
+    "es": "Elige una membresía con límite semanal de sesiones.",
+    "pt": "Escolha uma assinatura com limite semanal de sessões."
+  },
+  "No membership sessions remaining for this membership month. Existing bookings and used sessions count toward the allowance.": {
+    "es": "No quedan sesiones de membresía para este mes de membresía. Las reservas existentes y las sesiones utilizadas cuentan para el límite.",
+    "pt": "Não há sessões restantes neste mês da assinatura. Os agendamentos existentes e as sessões utilizadas contam para o limite."
   }
 }

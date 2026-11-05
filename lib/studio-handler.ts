@@ -365,7 +365,7 @@ if(b.key){
  if(b.notMember!==true){
   const number=String(b.memberNumber||'').trim().toUpperCase();
   if(!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(number))throw Error('Enter your client membership ID or choose N/A.');
-  const member=await db().prepare("SELECT m.customer_name,m.date_of_birth,m.status,m.sessions_included,m.sessions_used,m.paid_through,m.initial_paid_at,m.billing_start_override,p.weekly_sessions,p.credit_eligibility FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id JOIN businesses biz ON biz.id=m.business_id WHERE biz.owner_id=? AND m.member_number=?").bind(owner,number).first() as any;
+  const member=await db().prepare("SELECT m.weekly_limit_override,m.credit_period_start,m.credit_period_end,m.customer_name,m.date_of_birth,m.status,m.sessions_included,m.sessions_used,m.paid_through,m.initial_paid_at,m.billing_start_override,p.weekly_sessions,p.credit_eligibility FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id JOIN businesses biz ON biz.id=m.business_id WHERE biz.owner_id=? AND m.member_number=?").bind(owner,number).first() as any;
   const customer=await db().prepare("SELECT c.first_name,c.last_name,c.date_of_birth FROM customer_booking_ids c JOIN businesses biz ON biz.id=c.business_id WHERE biz.owner_id=? AND c.member_number=?").bind(owner,number).first() as any;
   if(!member&&!customer)throw Error('Membership ID was not found for this business.');
   const expectedName=String(member?.customer_name||[customer?.first_name,customer?.last_name].join(' ')).trim().replace(/\s+/g,' ').toLowerCase();

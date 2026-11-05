@@ -1,6 +1,6 @@
 import {sharedService,sharesServiceTime,serviceRemaining} from './shared-service-capacity.mjs';
 import {assertWorkspace} from './team-workspace-state.mjs';
-import {assertWeeklyMembershipBooking,membershipBookingActive} from './membership-weekly.mjs';
+import {assertWeeklyMembershipBooking,membershipBookingActive,recordWeeklyOverrideBooking} from './membership-weekly.mjs';
 import {bookingDiscount} from './booking-discounts.mjs';
 import {membershipAllows} from './membership-eligibility.mjs';
 import {hasUsableMembership} from './member-badge-state.mjs';
@@ -74,9 +74,10 @@ export async function confirmBooking(options){
   if(isBlocked(config,date,staff,start,duration+(Number(buffer)||0)))throw conflict('This date and time is blocked by the business. Choose another time.');
   const session=selectedSession(config,date,staff,services,start);
   const sessionId=data?.sessionId || null;
+  let weeklyMember=null;
   if(data.membershipCovered===true){
-   await assertWeeklyMembershipBooking(client,{owner,memberNumber:data.memberNumber,date,excludeIds:[id,pendingId].filter(Boolean)});
-   const member=(await client.query('SELECT m.status,m.sessions_included,m.sessions_used,m.paid_through,m.initial_paid_at,m.billing_start_override,p.weekly_sessions,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2',[owner,data.memberNumber])).rows[0];
+   weeklyMember=await assertWeeklyMembershipBooking(client,{owner,memberNumber:data.memberNumber,date,excludeIds:[id,pendingId].filter(Boolean)});
+   const member=(await client.query('SELECT m.weekly_limit_override,m.credit_period_start,m.credit_period_end,m.status,m.sessions_included,m.sessions_used,m.paid_through,m.initial_paid_at,m.billing_start_override,p.weekly_sessions,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2',[owner,data.memberNumber])).rows[0];
    const current=services.map(s=>(config.services||[]).find(v=>v.id===s.id)||s);
    const allowed=session?session.membershipCreditAllowed!==false:current.every(s=>s.membershipCreditAllowed!==false);
    if(!member||!membershipBookingActive(member,date)||!allowed||!membershipAllows(member.credit_eligibility,{serviceIds:services.map(s=>s.id),sessionId,seriesId:session?.seriesId}))throw conflict('Membership credits do not cover this booking anymore. Refresh and book with the current price.');
@@ -116,6 +117,7 @@ export async function confirmBooking(options){
   await client.query(
    "INSERT INTO appointments(id,owner,date,staff,start,duration,data,status) VALUES($1,$2,$3,$4,$5,$6,$7,'Confirmed')",
    [id,owner,date,staff,start,duration,JSON.stringify(data)]);
+  await recordWeeklyOverrideBooking(client,{member:weeklyMember,appointmentId:id,date});
   // Scheduled groups and opted-in same-time services share the coach.
   // Exclusive appointments retain unique staff-minute slot locks.
   if(!session&&!sharedService(currentServices))for(let minute=start;minute<start+duration+bufferMinutes;minute+=15){

@@ -1,3 +1,13 @@
+# v1.3.222 release handoff — Per-member weekly session override
+
+Release source: v1.3.222
+
+Owners can use Override weekly session limit for an individual member in Memberships/Packages. The setting defaults to off and applies only to that member. Enabling it bypasses the weekly session count while preserving paid membership dates, remaining membership-month credits, eligible services, booking capacity and approval rules. Turning it off restores the plan's weekly cap without deleting existing bookings or usage.
+
+The owner-only, tenant-scoped change is validated on the server and serialized with booking changes. Additive migration 094 preserves existing members and payment/usage records. The checkbox saves per member and includes English, Spanish and Portuguese copy.
+
+Implementation is on feature/member-weekly-limit-override; validation and deployment verification are pending. No real membership, booking, payment or outgoing message is changed for QA. Record exact checks and LIVE deploys before reporting completion.
+
 # v1.3.221 release handoff — Daily pending-payment email reminders
 
 Release source: v1.3.221

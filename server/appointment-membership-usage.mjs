@@ -1,5 +1,5 @@
 import {sharedService,sharesServiceTime,serviceRemaining} from './shared-service-capacity.mjs';
-import {assertWeeklyMembershipBooking} from './membership-weekly.mjs';
+import {assertWeeklyMembershipBooking,recordHistoricalOverrideUsage} from './membership-weekly.mjs';
 import {refreshMemberPeriod} from './membership-periods.mjs';
 import {membershipAllows} from './membership-eligibility.mjs';
 import {selectedSession,bookedSessionCount,overlaps,appointmentData as storedAppointmentData} from './session-scheduling.mjs';
@@ -28,7 +28,7 @@ export async function debitAppointmentMembershipSession(client,{owner,memberNumb
  if(member)member=await refreshMemberPeriod(client,member);
  if(!member)return {deducted:false,alreadyDeducted:false,memberFound:false,remaining:null};
  if(member.status!=='active')return {deducted:false,alreadyDeducted:false,memberFound:true,active:false,remaining:null};
- let appliesToCurrentPeriod=true;
+ let appliesToCurrentPeriod=true,monthlyAllocation=null,appointmentDate=null;
  const remaining=Number(member.sessions_included)-Number(member.sessions_used);
  const prior=await client.query(
   "SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='session_used' LIMIT 1",
@@ -45,7 +45,8 @@ export async function debitAppointmentMembershipSession(client,{owner,memberNumb
   const appointment=(await client.query('SELECT date FROM appointments WHERE owner=$1 AND id=$2',[owner,appointmentId])).rows[0];
   if(!appointment)throw Error('Appointment unavailable.');
   appliesToCurrentPeriod=appointment.date>=new Date(member.credit_period_start).toISOString().slice(0,10)&&appointment.date<new Date(member.credit_period_end).toISOString().slice(0,10);
-  await assertWeeklyMembershipBooking(client,{owner,memberNumber:number,date:appointment.date,excludeIds:[appointmentId]});
+  appointmentDate=appointment.date;
+  monthlyAllocation=(await assertWeeklyMembershipBooking(client,{owner,memberNumber:number,date:appointment.date,excludeIds:[appointmentId],existingAppointmentId:appointmentId})).monthlyAllocation;
  }
  if(remaining<=0&&!member.weekly_sessions)return {deducted:false,alreadyDeducted:false,memberFound:true,active:false,exhausted:true,remaining:0};
  const inserted=await client.query(
@@ -53,6 +54,7 @@ export async function debitAppointmentMembershipSession(client,{owner,memberNumb
   [ledgerId,member.business_id,member.id,appointmentId]
  );
  if(!inserted.rowCount)return {deducted:false,alreadyDeducted:true,memberFound:true,active:true,remaining};
+ if(member.weekly_sessions&&!appliesToCurrentPeriod)await recordHistoricalOverrideUsage(client,{member,date:appointmentDate,allocation:monthlyAllocation});
  if(member.weekly_sessions&&!appliesToCurrentPeriod)return {deducted:true,alreadyDeducted:false,memberFound:true,active:true,remaining:Math.max(0,remaining)};
  const updated=await client.query(
   "UPDATE customer_memberships SET sessions_used=sessions_used+1,updated_at=now() WHERE business_id=$1 AND id=$2 AND sessions_used<sessions_included RETURNING sessions_used,sessions_included",
