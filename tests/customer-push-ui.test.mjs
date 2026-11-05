@@ -8,16 +8,16 @@ process.env.NODE_ENV='test';
 const {default:React,act}=await import('react');
 const {createRoot}=await import('react-dom/client');
 const require=createRequire(import.meta.url);
-async function fixture({permission='default',ios=false,standalone=false}={}){
+async function fixture({permission='default',ios=false,standalone=false,draft=false,decision='granted'}={}){
  const dom=new JSDOM('<div id="app"></div>',{url:'https://example.test',pretendToBeVisual:true});
  const names=['window','document','navigator','Notification','localStorage','fetch','IS_REACT_ACT_ENVIRONMENT'],prior=Object.fromEntries(names.map(name=>[name,Object.getOwnPropertyDescriptor(globalThis,name)]));
- let active=false,sub=null;const calls=[];
+ let active=false,sub=null;const calls=[],choices=[];
  const subscription={endpoint:'https://web.push.apple.com/my-device',toJSON:()=>({endpoint:'https://web.push.apple.com/my-device',keys:{p256dh:'public',auth:'auth'}})};
  const registration={pushManager:{getSubscription:async()=>sub}};
  Object.defineProperty(dom.window.navigator,'userAgent',{value:ios?'iPhone':'Test browser'});
  dom.window.matchMedia=()=>({matches:standalone});
  dom.window.PushManager=function(){};
- const notification={permission,requestPermission:async()=>{calls.push('permission');notification.permission='granted';return 'granted';}};dom.window.Notification=notification;
+ const notification={permission,requestPermission:async()=>{calls.push('permission');notification.permission=decision;return decision;}};dom.window.Notification=notification;
  Object.defineProperty(dom.window.navigator,'serviceWorker',{value:{getRegistration:async()=>registration,register:async()=>{calls.push('register');return registration;},ready:Promise.resolve(registration)}});
  const fetcher=async(url,options)=>{
   if(url==='/api/push/customer-key'){calls.push('config');return {ok:true,json:async()=>({publicKey:'fixture'})};}
@@ -27,9 +27,9 @@ async function fixture({permission='default',ios=false,standalone=false}={}){
  };
  for(const [name,value] of Object.entries({window:dom.window,document:dom.window.document,navigator:dom.window.navigator,Notification:notification,localStorage:dom.window.localStorage,fetch:fetcher,IS_REACT_ACT_ENVIRONMENT:true}))Object.defineProperty(globalThis,name,{value,writable:true,configurable:true});
  const exports={},code=ts.transpileModule(readFileSync(new URL('../app/components/customer-booking-push.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
- new Function('require','exports',code)(id=>id.endsWith('browser-push.mjs')?{ensurePushSubscription:async()=>{calls.push('subscribe-browser');sub=subscription;return sub;}}:require(id),exports);
- const root=createRoot(document.querySelector('#app'));await act(async()=>root.render(React.createElement(exports.default,{id:'booking1',token:'a'.repeat(64)})));
- return {calls,notification,button:()=>document.querySelector('button'),click:async()=>act(async()=>document.querySelector('button').click()),cleanup:async()=>{await act(async()=>root.unmount());dom.window.close();for(const name of names){if(prior[name])Object.defineProperty(globalThis,name,prior[name]);else delete globalThis[name];}}};
+ new Function('require','exports',code)(id=>id.endsWith('browser-push.mjs')?{ensurePushSubscription:async()=>{calls.push('subscribe-browser');sub=subscription;return sub;}}:id.endsWith('browser-customer-booking.mjs')?require('../lib/browser-customer-booking.mjs'):require(id),exports);
+ const root=createRoot(document.querySelector('#app'));await act(async()=>root.render(React.createElement(exports.default,draft?{onPreparedChange:value=>choices.push(value)}:{id:'booking1',token:'a'.repeat(64)})));
+ return {calls,choices,notification,button:()=>document.querySelector('button'),click:async()=>act(async()=>document.querySelector('button').click()),cleanup:async()=>{await act(async()=>root.unmount());dom.window.close();for(const name of names){if(prior[name])Object.defineProperty(globalThis,name,prior[name]);else delete globalThis[name];}}};
 }
 test('client opts in by direct tap, preserves private local access, and disables only this booking on this device',async()=>{
  const f=await fixture();try{
@@ -42,4 +42,28 @@ test('blocked permission and uninstalled iPhone show actionable guidance without
  for(const options of [{permission:'denied'},{ios:true}]){
   const f=await fixture(options);try{assert.equal(f.button().disabled,true);assert.match(document.body.textContent,options.ios?/Home Screen.*to book and enable notifications/:/Notifications are blocked/);assert.ok(!f.calls.includes('permission'));}finally{await f.cleanup();}
  }
+});
+
+test('booking-page opt-in asks only on tap and prepares only the current booking, with no anonymous server subscription',async()=>{
+ const f=await fixture({draft:true});try{
+  assert.match(f.button().textContent,/Enable session notifications/);assert.equal(f.button().type,'button');
+  assert.match(document.body.textContent,/Session confirmations & payment links/);assert.equal(document.querySelector('a'),null);
+  assert.deepEqual(f.choices,[]);assert.ok(!f.calls.includes('permission'));f.calls.length=0;
+  await f.click();assert.equal(f.calls[0],'permission');assert.equal(f.choices.length,1);assert.equal(f.choices[0].endpoint,'https://web.push.apple.com/my-device');
+  assert.equal(f.calls.some(c=>typeof c==='object'),false,'No booking API call before booking exists');
+  assert.equal(localStorage.getItem('selahflow:customer-bookings'),null);assert.match(document.body.textContent,/Ready after booking/);
+  await f.click();assert.equal(f.choices.at(-1),null);assert.match(f.button().textContent,/Enable session notifications/);
+  assert.equal(f.calls.some(c=>c?.action==='unsubscribe'),false,'Other bookings retain their device subscription');
+ }finally{await f.cleanup();}
+});
+test('refused permission and iPhone install requirements never select booking notifications',async()=>{
+ const refused=await fixture({draft:true,decision:'denied'});try{
+  await refused.click();assert.deepEqual(refused.choices,[]);assert.match(document.body.textContent,/not enabled/);assert.ok(!refused.calls.includes('register'));
+ }finally{await refused.cleanup();}
+ const iphone=await fixture({draft:true,ios:true});try{
+  assert.equal(iphone.button().disabled,true);assert.match(document.body.textContent,/Share → Add to Home Screen/);assert.deepEqual(iphone.choices,[]);
+ }finally{await iphone.cleanup();}
+ const installed=await fixture({draft:true,ios:true,standalone:true});try{
+  assert.equal(installed.button().disabled,false);await installed.click();assert.equal(installed.choices.length,1);
+ }finally{await installed.cleanup();}
 });

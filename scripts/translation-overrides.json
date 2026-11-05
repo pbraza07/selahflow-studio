@@ -2190,5 +2190,45 @@
   "Bookings use the scheduled date; membership submissions use the registration date; paid entries use the payment date. Date filters use Eastern time. Amounts exclude tax and tips; refunds and operating expenses are not deducted. Each unpaid obligation appears in one stage; paid receipts are separate transactions. A membership-covered visit has a $0 quote. Canceled, declined, no-show quotes and removed services are excluded. Past-due membership amounts estimate one package period, not a provider invoice balance. Unlinked manual sales remain separate from bookings; link a cash sale at Checkout to settle its booking. Revenue resets continue to hide previously cleared paid entries.": {
     "es": "Las reservas usan la fecha programada; las solicitudes de membresía, la fecha de inscripción; y los pagos, la fecha de cobro. Los filtros de fecha usan la hora del Este. Los importes no incluyen impuestos ni propinas; no se descuentan reembolsos ni gastos operativos. Cada importe pendiente figura en una sola etapa; los cobros son transacciones separadas. Las visitas cubiertas por una membresía tienen un importe estimado de $0. Se excluyen los presupuestos de citas canceladas, rechazadas o con inasistencia, y los servicios eliminados. Los importes de membresías vencidas estiman un período del paquete, no el saldo de una factura del proveedor. Las ventas manuales sin vincular permanecen separadas de las reservas; vincula la venta en efectivo en Caja para liquidar su reserva. Al restablecer los ingresos, los pagos anteriores retirados del informe siguen ocultos.",
     "pt": "Os agendamentos usam a data marcada; as solicitações de assinatura, a data de cadastro; e os pagamentos, a data de recebimento. Os filtros de data usam o horário do leste dos EUA. Os valores não incluem impostos nem gorjetas; reembolsos e despesas operacionais não são descontados. Cada valor pendente aparece em uma única etapa; os recebimentos são transações separadas. Uma sessão coberta pela assinatura tem valor estimado de $0. Estimativas de agendamentos cancelados, recusados ou com falta e serviços removidos são excluídos. Valores de assinaturas em atraso estimam um período do pacote, não o saldo de uma fatura do provedor. Vendas manuais sem vínculo continuam separadas dos agendamentos; vincule a venda em dinheiro no Caixa para quitar o agendamento. Ao redefinir a receita, os pagamentos anteriores retirados do relatório continuam ocultos."
+  },
+  "Session confirmations & payment links": {
+    "es": "Confirmaciones de sesiones y enlaces de pago",
+    "pt": "Confirmações de sessões e links de pagamento"
+  },
+  "Enable session notifications": {
+    "es": "Activar notificaciones de sesiones",
+    "pt": "Ativar notificações de sessões"
+  },
+  "Ready after booking": {
+    "es": "Listas al reservar",
+    "pt": "Prontas após o agendamento"
+  },
+  "Turn off for this booking": {
+    "es": "Desactivar para esta reserva",
+    "pt": "Desativar para este agendamento"
+  },
+  "Ready. Complete your booking to receive session confirmation alerts and a link to pay when payment is due.": {
+    "es": "Listo. Completa tu reserva para recibir avisos de confirmación de la sesión y un enlace para pagar cuando corresponda.",
+    "pt": "Pronto. Conclua seu agendamento para receber avisos de confirmação da sessão e um link para pagar quando houver pagamento pendente."
+  },
+  "Session notifications are not selected for this booking.": {
+    "es": "Las notificaciones de sesiones no están seleccionadas para esta reserva.",
+    "pt": "As notificações de sessões não estão selecionadas para este agendamento."
+  },
+  "Your booking is saved, but device alerts could not be enabled. Use Enable booking notifications below to try again.": {
+    "es": "Tu reserva está guardada, pero no se pudieron activar las alertas del dispositivo. Usa Activar notificaciones de reserva abajo para volver a intentarlo.",
+    "pt": "Seu agendamento foi salvo, mas não foi possível ativar os alertas do dispositivo. Use Ativar notificações de agendamento abaixo para tentar novamente."
+  },
+  "Wait for notification setup to finish, then confirm your booking.": {
+    "es": "Espera a que termine la configuración de notificaciones y luego confirma tu reserva.",
+    "pt": "Aguarde a conclusão da configuração de notificações e confirme seu agendamento."
+  },
+  "Web Push is unavailable in this browser. You can still use your booking confirmation and payment options.": {
+    "es": "Las notificaciones push no están disponibles en este navegador. Puedes seguir usando la confirmación de tu reserva y las opciones de pago.",
+    "pt": "As notificações push não estão disponíveis neste navegador. Você ainda pode usar a confirmação do agendamento e as opções de pagamento."
+  },
+  ". Confirm the business and address before saving. Automated client emails include a Write a review button for this Google listing.": {
+    "es": ". Confirma el negocio y la dirección antes de guardar. Los correos automáticos a los clientes incluyen un botón Escribir una reseña para esta ficha de Google.",
+    "pt": ". Confirme a empresa e o endereço antes de salvar. Os e-mails automáticos aos clientes incluem um botão Escrever uma avaliação para este perfil do Google."
   }
 }

@@ -65,7 +65,7 @@ function componentLoader(){
 test('real owner React interactions open settings aliases, actionable metrics and retain session drafts after failed saves',async()=>{
  const dom=new JSDOM('<div id="app"></div>',{pretendToBeVisual:true,url:'https://example.test/studio/example'});
  const old={window:globalThis.window,document:globalThis.document,fetch:globalThis.fetch,IS_REACT_ACT_ENVIRONMENT:globalThis.IS_REACT_ACT_ENVIRONMENT};
- Object.assign(globalThis,{window:dom.window,document:dom.window.document,IS_REACT_ACT_ENVIRONMENT:true});window.scrollTo=()=>{};window.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}});window.confirm=()=>false;
+ Object.assign(globalThis,{window:dom.window,document:dom.window.document,IS_REACT_ACT_ENVIRONMENT:true});window.HTMLElement.prototype.scrollIntoView=()=>{};window.scrollTo=()=>{};window.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}});window.confirm=()=>false;
  const load=componentLoader(),config=structuredClone(load(rootPath+'lib/defaults.ts').defaultSettings);config.bookableSessions=[];config.name='Fixture Business';
  const posts=[];globalThis.fetch=async(url,options={})=>{
   if(options.method==='POST'){posts.push(JSON.parse(options.body));return Response.json({error:'Service is required.'},{status:422});}

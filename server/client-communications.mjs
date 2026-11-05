@@ -71,7 +71,7 @@ export async function reviewCommunication(pool,{owner,campaignId,env=process.env
   const current=(await communicationContacts(db,business)).contacts,brand=await loadBusinessEmailBrand(db,{businessId:business.id});
   const changed=recipients.some(r=>r.status!=='draft'||!current.some(x=>x.id===r.contact_id&&!x.unsubscribed&&x.email===r.email&&x.names.join(', ')===r.names&&JSON.stringify([...x.sourceIds].sort())===JSON.stringify([...obj(r.source_ids)].sort())));
   const refreshReason=!recipients.length||changed?'Contacts changed. Review your current recipients and create a fresh preview.':Date.now()-new Date(c.created_at).getTime()>24*3600000?'Preview expired. Create a fresh preview before sending.':digestBrand(brand)!==c.brand_digest?'Business branding changed. Create a fresh preview before sending.':'';
-  const result={id:c.id,subject:c.subject,body:c.body,actionLabel:c.action_label,actionUrl:c.action_url,contactIds:recipients.map(r=>r.contact_id),recipientCount:recipients.length,recipients:recipients.map(r=>({email:r.email,names:[r.names]})),refreshReason,...previewDelivery(recipients,env),html:recipients.length?brandedEmailHtml({...communicationMessage(c,recipients[0],business),emailBrand:brand},{logoSrc:brand.logo?'data:image/png;base64,'+brand.logo.toString('base64'):undefined}):''};
+  const result={id:c.id,subject:c.subject,body:c.body,actionLabel:c.action_label,actionUrl:c.action_url,contactIds:recipients.map(r=>r.contact_id),recipientCount:recipients.length,recipients:recipients.map(r=>({email:r.email,names:[r.names]})),refreshReason,...previewDelivery(recipients,env),html:recipients.length?brandedEmailHtml({...communicationMessage(c,recipients[0],business),emailBrand:brand,reviewUrl:brand.googleReviewUrl},{logoSrc:brand.logo?'data:image/png;base64,'+brand.logo.toString('base64'):undefined}):''};
   await db.query('COMMIT');return result;
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
 }
@@ -91,7 +91,7 @@ export async function previewCommunication(pool,{owner,input,origin,env=process.
    example??=communicationMessage(campaign,recipient,business);
   }
   await db.query('COMMIT');
-  return {id,subject:content.subject,...previewDelivery(recipients,env),recipientCount:recipients.length,recipients:recipients.map(r=>({email:r.email,names:r.names})),html:brandedEmailHtml({...example,emailBrand:brand},{logoSrc:brand.logo?'data:image/png;base64,'+brand.logo.toString('base64'):undefined})};
+  return {id,subject:content.subject,...previewDelivery(recipients,env),recipientCount:recipients.length,recipients:recipients.map(r=>({email:r.email,names:r.names})),html:brandedEmailHtml({...example,emailBrand:brand,reviewUrl:brand.googleReviewUrl},{logoSrc:brand.logo?'data:image/png;base64,'+brand.logo.toString('base64'):undefined})};
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
 }
 export async function queueCommunication(pool,{owner,campaignId,retry=false,env=process.env}){
