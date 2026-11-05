@@ -176,3 +176,13 @@ body .sf-money{display:inline-block;white-space:nowrap;overflow-wrap:normal;word
 .report-row>b,.receipt-line>b,.receipt-line>span:last-child,.receipt-total>b,.service-bottom>b,.modal-footer>div>b{flex-shrink:0;white-space:nowrap;overflow-wrap:normal;word-break:normal;font-variant-numeric:tabular-nums}
 .report-row>b,.receipt-line>b,.receipt-line>span:last-child{margin-left:auto;text-align:right}
 :where(.sf-client-metrics,.sf-client-summary-metrics,.sf-roster-metrics) :is(b,strong){white-space:nowrap;overflow-wrap:normal;font-variant-numeric:tabular-nums}
+
+/* Keep the toolbar bell below the mobile drawer and alongside device opt-in. */
+.app-shell .sf-notification-bell{z-index:60;flex:0 0 auto}
+.app-shell .main-wrap[inert]{isolation:isolate}
+.sf-owner-notification-actions{display:flex;align-items:center;gap:10px;min-width:0;max-width:100%}
+.sf-owner-notification-actions>:last-child{min-width:0;flex:1}
+.public-booking>.sf-booking-notification-opt-in{margin:0 0 20px;text-align:left}
+.sf-booking-notification-opt-in .sf-push-settings-head>div{flex:1 1 220px;min-width:0}
+.sf-booking-notification-opt-in .sf-push-buttons button{min-height:44px;justify-content:center}
+.sf-booking-notification-opt-in p{line-height:1.55}

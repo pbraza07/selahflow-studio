@@ -48,7 +48,7 @@ test('support denies ordinary owners, expired/revoked admin sessions, inactive b
 test('support is wired into owner APIs and pages, with explicit entry/exit and no device notification enrollment',async()=>{
  assert.match(await read('lib/auth.ts'),/return supportOwner\(getPool\(\),req/);
  assert.match(await read('app/studio/[slug]/page.tsx'),/supportBusinessName=\{support.name\}/);
- const dashboard=await read('app/studio/owner-dashboard.tsx');assert.match(dashboard,/Administrator support/);assert.match(dashboard,/Exit support/);assert.match(dashboard,/!supportBusinessName&&<DevicePushControls/);assert.match(dashboard,/!supportBusinessName&&<><OwnerNotificationBell[\s\S]*?<OwnerDeviceNotifications\/>\<\/>/);
+ const dashboard=await read('app/studio/owner-dashboard.tsx');assert.match(dashboard,/Administrator support/);assert.match(dashboard,/Exit support/);assert.match(dashboard,/!supportBusinessName&&<DevicePushControls/);assert.match(dashboard,/!supportBusinessName&&<div className="sf-owner-notification-actions"[^>]*><OwnerNotificationBell[\s\S]*?<OwnerDeviceNotifications\/><\/div>/);
  assert.match(await read('app/components/platform-business-directory.tsx'),/Open owner workspace for support/);
  for(const p of ['/api/studio','/api/studio/clients','/api/branding/logo'])assert.equal(isSupportWorkspacePath(p),true);
  for(const p of ['/api/platform/admins','/api/account/password','/api/studioevil','/api/public/payments/booking','/api/push'])assert.equal(isSupportWorkspacePath(p),false);

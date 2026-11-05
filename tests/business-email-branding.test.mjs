@@ -61,6 +61,31 @@ test('central delivery applies canonical branding for both providers, keeps send
 });
 test('every business email producer passes canonical branding context and damaged uploads retain business identity',async()=>{
  for(const [file,pattern] of [['booking-receipts','businessId:item.business_id'],['membership-payment-emails','businessId:item.business_id'],['membership-invitations','businessId:r.business_id'],['booking-client-notifications','businessId:state.business_id'],['owner-form-notifications','businessId:row.business_id'],['notification-delivery','businessId:data.business_id']])assert.ok((await readFile(new URL('../server/'+file+'.mjs',import.meta.url),'utf8')).includes(pattern),file);
- assert.ok((await readFile(new URL('../lib/studio-handler.ts',import.meta.url),'utf8')).includes('{ownerId:owner}'));
+ assert.ok((await readFile(new URL('../lib/studio-handler.ts',import.meta.url),'utf8')).includes('{ownerId:owner,clientEmail:true}'));
  const {pg,db}=await fixture();try{await pg.query('INSERT INTO business_logos(business_id,mime_type,bytes) VALUES($1,$2,$3)',['biz-a','image/png',Buffer.from('damaged upload')]);const brand=await loadBusinessEmailBrand(db,{businessId:'biz-a'});assert.equal(brand.logo,null);assert.match(brandedEmailHtml({...message,emailBrand:brand}),/Business a/);}finally{await pg.close();}
+});
+
+test('all client email delivery uses its own exact Google review link in Gmail and Resend without losing payment actions',async()=>{
+ const {pg,db}=await fixture();try{
+  await pg.exec("INSERT INTO business_google_profiles(business_id,place_id) VALUES('biz-a','ChIJBusinessA123'),('biz-b','ChIJBusinessB456')");
+  const sent=[],env={EMAIL_PROVIDER:'resend',RESEND_API_KEY:'fixture',RESEND_FROM_EMAIL:'sender@example.test'};
+  const fetcher=async(url,options)=>{sent.push(JSON.parse(options.body));return Response.json({id:'test-provider'});};
+  const content={...message,reviewUrl:'https://search.google.com/local/writereview?placeid=ChIJFORGED123',actions:[...message.actions,...[1,2,3].map(i=>({label:'Action '+i,url:'https://example.test/action'+i}))]};
+  for(const businessId of ['biz-a','biz-b']){
+   await sendNotificationChannel('email','client@example.test',content,env,fetcher,{businessId,brandingDb:db,kind:'transactional-client'});
+   const email=sent.at(-1),expected=businessId==='biz-a'?'ChIJBusinessA123':'ChIJBusinessB456';
+   assert.match(email.html,/Write a review/);assert.ok(email.html.includes('placeid='+expected));assert.ok(email.text.includes('placeid='+expected));
+   assert.doesNotMatch(email.html,/ChIJFORGED123/);assert.match(email.html,/Make payment/);assert.match(email.html,/Action 3/);assert.equal((email.html.match(/>Write a review</g)||[]).length,1);
+  }
+  await sendNotificationChannel('email','client@example.test',content,env,fetcher,{ownerId:'a',brandingDb:db,clientEmail:true});assert.match(sent.at(-1).html,/ChIJBusinessA123/);
+  await sendNotificationChannel('email','owner@example.test',content,env,fetcher,{businessId:'biz-a',brandingDb:db});assert.doesNotMatch(sent.at(-1).html,/Write a review|ChIJFORGED123/);
+  await pg.exec("UPDATE business_google_profiles SET place_id='' WHERE business_id='biz-a'");
+  await sendNotificationChannel('email','client@example.test',content,env,fetcher,{businessId:'biz-a',brandingDb:db,kind:'transactional-client'});assert.doesNotMatch(sent.at(-1).html,/Write a review|ChIJBusinessB456/);assert.match(sent.at(-1).html,/Make payment/);
+  const gmailEnv={EMAIL_PROVIDER:'gmail',GMAIL_CLIENT_ID:'fixture',GMAIL_CLIENT_SECRET:'fixture',GMAIL_TOKEN_ENCRYPTION_KEY:'a'.repeat(64)};
+  await pg.query("INSERT INTO platform_gmail_connection(id,email,encrypted_refresh_token,status,connected_by) VALUES('shared','sender@gmail.com',$1,'connected','a')",[sealGmail('synthetic-refresh','refresh',gmailEnv)]);
+  let mime='';const gmailFetch=async(url,options)=>url.includes('/token')?Response.json({access_token:'fixture'}):(mime=Buffer.from(JSON.parse(options.body).raw,'base64url').toString(),Response.json({id:'gmail-fixture'}));
+  await sendNotificationChannel('email','client@example.test',content,gmailEnv,gmailFetch,{businessId:'biz-b',brandingDb:db,kind:'transactional-client'});
+  assert.match(htmlFromMime(mime),/ChIJBusinessB456/);assert.match(htmlFromMime(mime),/Make payment/);
+  const plain=mime.match(/Content-Type: text\/plain;[^\r]+\r\nContent-Transfer-Encoding: base64\r\n\r\n([A-Za-z0-9+/=\r\n]+?)\r\n--/);assert.ok(plain);assert.match(Buffer.from(plain[1].replace(/\s/g,''),'base64').toString(),/Write a review for Business b: https:\/\/search.google.com\/local\/writereview\?placeid=ChIJBusinessB456/);
+ }finally{await pg.close();}
 });

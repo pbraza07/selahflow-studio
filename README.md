@@ -1,3 +1,15 @@
+# v1.3.220 release handoff — Booking notifications, mobile bell and Google review emails
+
+Release source: v1.3.220
+
+The client booking form now shows Enable session notifications before a booking is submitted, on all booking steps. Explicit opt-in prepares this device, then the successful booking privately registers its subscription before any checkout redirect. Failed or refused notification setup does not undo a booking; the confirmation keeps retry controls. Acceptance alerts retain the existing secure booking/payment destination and server-side eligibility checks. iPhone/iPad guidance explains Home Screen installation. Opt-in is per booking and device, with English, Spanish and Portuguese copy.
+
+Owner notification controls stay together in the toolbar. The mobile bell is below the menu/backdrop, and the inactive content has an isolated stacking context so controls cannot overlap the menu logo. No database migration or booking/payment/business-rule changes.
+
+Automated client emails include a separate Write a review button using the current business’s saved Google Place ID or exact Google review link. Shared Gmail/Resend HTML and plain text delivery cover booking/approval/payment, membership/package, and registration emails without replacing payment actions. Missing or invalid listing identities omit the review link; owner/staff alerts do not request client reviews.
+
+Implementation complete; validation and deployment are pending. No real customer data or messages are used for QA.
+
 # v1.3.219 release handoff — Device payment alerts and financial layouts
 
 Release source: v1.3.219
