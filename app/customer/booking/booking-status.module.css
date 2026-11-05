@@ -1,4 +1,4 @@
-.main{max-width:780px;margin:clamp(20px,5vw,56px) auto;padding:0 clamp(16px,4vw,32px);min-width:0}
+.main.main{max-width:780px;margin:clamp(20px,5vw,56px) auto;padding:0 clamp(16px,4vw,32px);min-width:0}
 .card{background:var(--sf-surface,#fff);border:1px solid var(--sf-border,#d9e4df);border-radius:20px;padding:clamp(20px,4vw,32px);box-shadow:0 12px 36px #143f3510;margin:20px 0;min-width:0}
 .card h2,.card p{overflow-wrap:break-word;word-break:normal}
 .badge{display:inline-block;border-radius:30px;padding:8px 14px;background:var(--sf-selected,#eaf3ee);color:var(--sf-on-selected,#204c40);font-weight:700;line-height:1.4;margin-bottom:16px}
