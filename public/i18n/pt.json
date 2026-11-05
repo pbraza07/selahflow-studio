@@ -545,7 +545,7 @@
  "Book a client / block time off": "Reserve um cliente / bloco de tempo livre",
  "Book a service": "Agendar um serviço",
  "Book a service.": "Reserve um serviço.",
- "Book a session": "Reserve uma sessão",
+ "Book a session": "Agendar uma sessão",
  "Book a session / live availability": "Reserve uma sessão / disponibilidade ao vivo",
  "Book a session with": "Reserve uma sessão com",
  "Book a session:": "Reserve uma sessão:",
@@ -6342,5 +6342,12 @@
  "Limit time to use sessions": "Limitar o prazo para usar as sessões",
  "Valid for days after confirmed payment": "Dias de validade após o pagamento confirmado",
  "No expiry. Sessions remain available until used.": "Sem vencimento. As sessões ficam disponíveis até serem usadas.",
- "Changes apply to new enrollments. Existing package validity stays unchanged.": "As alterações se aplicam a novas inscrições. A validade dos pacotes existentes permanece igual."
+ "Changes apply to new enrollments. Existing package validity stays unchanged.": "As alterações se aplicam a novas inscrições. A validade dos pacotes existentes permanece igual.",
+ "Choose offer": "Escolha uma oferta",
+ "Details and payment": "Dados e pagamento",
+ "Continue to available times": "Continuar para os horários disponíveis",
+ "Continue to your details": "Continuar para seus dados",
+ "Add more services or continue to choose a time.": "Adicione mais serviços ou continue para escolher um horário.",
+ "Choose another time": "Escolher outro horário",
+ "This session is no longer available. Choose another session or time.": "Esta sessão não está mais disponível. Escolha outra sessão ou horário."
 }

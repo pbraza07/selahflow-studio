@@ -1,7 +1,8 @@
 'use client';
 import PoweredBySelahFlow from '../../components/powered-by-selahflow';
 
-import {useEffect,useState} from 'react';
+import {focusClientAction} from '../../../lib/client-flow-focus.mjs';
+import {useEffect,useState,useRef} from 'react';
 import BookingPayment from '../../components/booking-payment';
 import BusinessNavigation from '../../components/business-navigation';
 import {themeStyles} from '../../../server/themes.mjs';
@@ -12,6 +13,8 @@ export default function PaymentReturn(){
  const [preferOnsite,setPreferOnsite]=useState(false);
  const [description,setDescription]=useState(''),[linkError,setLinkError]=useState('');
  const [business,setBusiness]=useState<any>(null);
+ const paymentResult=useRef<HTMLElement>(null);
+ useEffect(()=>{if(status!=='checking')focusClientAction(paymentResult.current);},[status]);
  useEffect(()=>{const slug=window.location.pathname.split('/')[2]||'';let stopped=false;void fetch('/api/booking?slug='+encodeURIComponent(slug)).then(r=>r.json()).then(d=>{if(!stopped&&d.config)setBusiness(d.config);}).catch(()=>{});return()=>{stopped=true;};},[]);
  useEffect(()=>{
   const slug=window.location.pathname.split('/')[2]||'';setSlug(slug);
@@ -33,7 +36,7 @@ export default function PaymentReturn(){
   }catch{if(!cancelled)setStatus('unavailable');clearInterval(timer);}};
   const timer=setInterval(check,3000);void check();return()=>{cancelled=true;clearInterval(timer);};
  },[retry]);
- return <div data-selah-theme="true" style={business?themeStyles(business.theme,business.brand_primary,business.brand_background) as CSSProperties:undefined}><BusinessNavigation slug={slug} name={business?.name||'Booking payment'}/><main className="public-loading" style={{maxWidth:640,margin:'40px auto',padding:24}}><h1>{status==='paid'?'Payment received':status==='cancelled'?'Checkout cancelled':preferOnsite?'Pay on Site':'Booking payment'}</h1>
+ return <div data-selah-theme="true" style={business?themeStyles(business.theme,business.brand_primary,business.brand_background) as CSSProperties:undefined}><BusinessNavigation slug={slug} name={business?.name||'Booking payment'}/><main ref={paymentResult} tabIndex={-1} aria-label="Booking payment next step" className="public-loading" style={{maxWidth:640,margin:'40px auto',padding:24}}><h1>{status==='paid'?'Payment received':status==='cancelled'?'Checkout cancelled':preferOnsite?'Pay on Site':'Booking payment'}</h1>
   <p role="status">{status==='covered'?'No payment is due for this free or membership-covered booking.':preferOnsite&&status!=='paid'?'Select Pay on Site below to save your preference. Payment remains due until the business collects it.':status==='onsite'?'Payment is due at the business. Select Pay on Site below to save your preference.':status==='ready'?'Select Make Payment to pay securely with Stripe. Services with approval turned off do not require owner approval.':['full','awaiting_approval'].includes(status)?'':status==='invalid_link'?linkError:status==='paid'?'Your payment has been recorded.':status==='cancelled'?(access?'Checkout was cancelled. Your booking remains saved and unpaid; you can retry below.':'Checkout was cancelled. Your booking remains saved. Check your registration to retry payment.'):status==='unavailable'?'We could not verify the payment yet. Do not pay again if your bank shows a payment; retry verification or contact the business.':status==='expired'?'This checkout link has expired. Check your registration to retry payment.':'Checking your payment with Stripe. Please wait before trying another payment.'}</p>
   {status==='full'&&<p role="status"><strong>Session is now full.</strong> Please choose another session. Booking and payment are unavailable for this request.</p>}
   {status==='awaiting_approval'&&<p role="status">Payment becomes available after the business accepts your booking.</p>}

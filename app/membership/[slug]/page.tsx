@@ -1,4 +1,5 @@
 'use client';
+import {focusClientAction} from '../../../lib/client-flow-focus.mjs';
 import BusinessAssistant from '../../components/business-assistant';
 
 import PoweredBySelahFlow from '../../components/powered-by-selahflow';
@@ -27,6 +28,10 @@ export default function MembershipEnrollment(){
  const lookupGeneration=useRef(0);
  const [lookupBusy,setLookupBusy]=useState(false),[lookupMessage,setLookupMessage]=useState('');
  const requestId=useRef('');
+ const flowContent=useRef<HTMLElement>(null),errorContent=useRef<HTMLParagraphElement>(null),previousFlow=useRef('1:false');
+ useEffect(()=>{const next=step+':'+requested;if(next!==previousFlow.current)focusClientAction(flowContent.current);previousFlow.current=next;},[step,requested]);
+ useEffect(()=>{if(error)focusClientAction(errorContent.current);},[error]);
+ useEffect(()=>{if(result?.status==='active'||result?.status==='payment_failed')focusClientAction(flowContent.current);},[result?.status]);
  const [checkoutId,setCheckoutId]=useState('');
  useEffect(()=>{
   const path=window.location.pathname.split('/').filter(Boolean);
@@ -60,7 +65,7 @@ export default function MembershipEnrollment(){
  function chooseGroup(id:string){setGroupTab(id);if(data&&!plansForMembershipTab(data.plans,id).some((p:Plan)=>p.id===planId))setPlanId('');requestId.current='';}
  async function pay(e:React.FormEvent){
   e.preventDefault();
-  if(!plan||!data)return;
+  if(!plan||!data||busy)return;
   const online=(e.nativeEvent as SubmitEvent).submitter?.getAttribute('value')==='online';
   setBusy(true);setError('');
   try{
@@ -101,19 +106,19 @@ export default function MembershipEnrollment(){
     <h1>{data?.registrationConfig?.pageContent?.membershipTitle||(data?'Membership/Packages at '+data.name:'Choose a membership')}</h1>
     <p>{data?.registrationConfig?.pageContent?.membershipIntro||'Choose a membership and pay securely. No membership approval is required; sessions activate after verified payment.'}</p>
    </section>
-   <section className="sf-membership-join-panel">
-    {requested?<div role="status"><CheckCircle2 size={36}/><h2>Membership registered</h2><p>Your membership is registered without approval. Payment is still pending; no session credits are active until payment is confirmed.{registeredNumber&&<div role="status" style={{background:'#fff2a8',color:'#392b00',border:'2px solid #e0b000',padding:'14px 18px',borderRadius:12,margin:'16px 0',fontWeight:800,fontSize:20}}>Your client / membership ID: {registeredNumber}</div>}</p>{data?.canPay&&<button type="button" className="primary" onClick={()=>{setRequested(false);setStep(2);}}>Make Payment <CreditCard size={17}/></button>}<a className="outline" href={'/book/'+slug}>Return to booking</a></div>:checkoutId?<div className="sf-membership-finish">
+   <section ref={flowContent} tabIndex={-1} aria-label={requested?"Registration result":checkoutId?"Payment result":"Membership or package step "+step+" of 2"} className="sf-membership-join-panel">
+    {requested?<div role="status"><CheckCircle2 size={36}/><h2>Membership registered</h2><p>Your membership is registered without approval. Payment is still pending; no session credits are active until payment is confirmed.</p>{registeredNumber&&<div role="status" style={{background:'#fff2a8',color:'#392b00',border:'2px solid #e0b000',padding:'14px 18px',borderRadius:12,margin:'16px 0',fontWeight:800,fontSize:20}}>Your client / membership ID: {registeredNumber}</div>}{data?.canPay&&<button type="button" className="primary" onClick={()=>{setRequested(false);setStep(2);}}>Make Payment <CreditCard size={17}/></button>}<a className="outline" href={'/book/'+slug}>Return to booking</a></div>:checkoutId?<div className="sf-membership-finish">
      <ShieldCheck size={36}/><h2>{result?.status==='active'?(result.billingType==='package'?'Your service package is active!':'Your membership is active!'):'Checking your payment'}</h2>
      {result?.status==='active'?<><p>Payment has been verified for <b>{result.plan}</b>.</p><p><b>Your client / membership ID: {result.memberNumber}</b><br/>{result.sessionsLeft} sessions left</p>{result.paidThrough&&<p>Current paid period ends {new Date(result.paidThrough).toLocaleDateString('en-US')}.</p>}</>:
       <><p>{result?.status==='payment_failed'?'Your payment did not complete.': 'Stripe is processing your payment. A membership is not active until the payment is verified.'}</p>{result?.memberNumber&&<div role="status" style={{background:'#fff2a8',color:'#392b00',border:'2px solid #e0b000',padding:'14px 18px',borderRadius:12,fontWeight:800,fontSize:20}}>Your client / membership ID: {result.memberNumber}</div>}</>}
-     <a className="primary" href={'/book/'+slug}>Return to booking</a>
+     <a className="primary" href={'/book/'+slug}>{result?.status==='active'?'Book a session':'Return to booking'}</a>
     </div>:<>
-    <div className="sf-membership-steps">{['Choose plan','Your details',data?.canPay?'Make Payment':'Register · pay later'].map((label,i)=><span key={label} className={step===i+1?'active':''}>{i+1}. {label}</span>)}</div>
-    {error&&<p className="sf-membership-error" role="alert">{error}</p>}
+    <div className="sf-membership-steps" aria-label="Purchase progress">{['Choose offer','Details and payment'].map((label,i)=><span key={label} aria-current={step===i+1?'step':undefined} className={step===i+1?'active':''}>{i+1}. {label}</span>)}</div>
+    {error&&<p ref={errorContent} tabIndex={-1} className="sf-membership-error" role="alert">{error}</p>}
     {!data?<p>Loading available plans…</p>:step===1?<><h2>Choose a membership or service package</h2>
      {tabs.length>0&&<div className="sf-membership-type-tabs" role="tablist" aria-label="Membership types">{tabs.map((tab:{id:string;name:string;badge?:MembershipBadgeDesign|null},i:number)=><button key={tab.id} type="button" id={'membership-type-'+tab.id} role="tab" aria-selected={groupTab===tab.id} aria-controls="membership-plan-options" tabIndex={groupTab===tab.id?0:-1} onClick={()=>chooseGroup(tab.id)} onKeyDown={e=>{let next=i;if(e.key==='ArrowRight')next=(i+1)%tabs.length;else if(e.key==='ArrowLeft')next=(i+tabs.length-1)%tabs.length;else if(e.key==='Home')next=0;else if(e.key==='End')next=tabs.length-1;else return;e.preventDefault();chooseGroup(tabs[next].id);document.getElementById('membership-type-'+tabs[next].id)?.focus();}}>{tab.badge?<MembershipBadge membershipName={tab.name} membershipStatus="active" sessionsIncluded={1} sessionsUsed={0} badge={tab.badge}/>:tab.name}</button>)}</div>}
      <div id="membership-plan-options" role={tabs.length?'tabpanel':undefined} aria-labelledby={tabs.length?'membership-type-'+groupTab:undefined}>
-     {data.plans.length?<div className="sf-membership-plans">{visiblePlans.map((p:Plan)=><button key={p.id} type="button" aria-pressed={planId===p.id} className={planId===p.id?'selected':''} onClick={()=>{setPlanId(p.id);setAccept(false);setDiscount(null);requestId.current='';}}>
+     {data.plans.length?<div className="sf-membership-plans">{visiblePlans.map((p:Plan)=><button key={p.id} type="button" aria-pressed={planId===p.id} className={planId===p.id?'selected':''} onClick={()=>{setPlanId(p.id);setAccept(false);setDiscount(null);setError('');requestId.current='';setStep(2);}}>
       <span><b translate="no">{p.name}</b>{p.badge&&<span className="sf-membership-plan-badge"><MembershipBadge membershipName={p.name} membershipStatus="active" sessionsIncluded={1} sessionsUsed={0} badge={p.badge}/></span>}<small>{p.description||(p.billingType==='package'?'One-time service package':'Recurring business membership')}</small><small>{p.usageSummary}</small><small>{p.creditSummary}</small></span>
       <strong>{price(p.priceCents)} <small>{p.billingType==='package'?'one-time':'/ '+(p.intervalCount||1)+' '+p.interval}</small></strong>
      </button>)}</div>:<p className="sf-membership-empty">No memberships are available yet. Contact the business for more information.</p>}
