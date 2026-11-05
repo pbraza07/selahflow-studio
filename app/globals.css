@@ -2223,3 +2223,11 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 .app-shell .sf-new-session-actions{display:block;padding-top:18px;border-top:1px solid var(--line,#d6e0da)}
 .app-shell .sf-new-session-actions .button-row{margin-top:12px;justify-content:flex-end;flex-wrap:wrap}
 @media(max-width:650px){.app-shell dialog.sf-new-session-dialog{padding:14px;width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.app-shell .sf-new-session-actions button{flex:1;min-height:44px}}
+
+/* Per-member weekly scheduling exception stays within the session allowance cell. */
+.sf-member-weekly-override{min-width:190px;max-width:280px;margin-top:14px;padding-top:12px;border-top:1px solid var(--sf-border);white-space:normal}
+.sf-member-weekly-override label{display:flex;flex-direction:row;align-items:flex-start;gap:9px;margin-top:0;line-height:1.45;cursor:pointer}
+.sf-member-weekly-override input[type=checkbox]{flex:0 0 20px;width:20px;height:20px;min-height:20px;margin:1px 0 0;accent-color:var(--sf-button,#123f3a)}
+.sf-member-weekly-override label span{min-width:0;overflow-wrap:break-word;word-break:normal}
+.sf-member-weekly-override small{line-height:1.5}
+.sf-member-weekly-override [role=alert]{color:var(--sf-danger,#a32a29);opacity:1}

@@ -1,7 +1,7 @@
 import {membershipInvitationSummary} from '../../../../server/membership-invitations.mjs';
 import {accrueCashCommission} from '../../../../server/cash-commission-billing.mjs';
 import {deleteOwnerMembership} from '../../../../server/owner-membership-deletion.mjs';
-import {validateWeeklySessions,membershipUsageSummary,assertWeeklyMembershipBooking} from '../../../../server/membership-weekly.mjs';
+import {validateWeeklySessions,membershipUsageSummary,assertWeeklyMembershipBooking,recordHistoricalOverrideUsage} from '../../../../server/membership-weekly.mjs';
 import {applyManualPeriod} from '../../../../server/manual-membership-period.mjs';
 import {membershipBillingAction} from '../../../../server/membership-billing-actions.mjs';
 import {monthlyPeriod,anniversary,refreshMembershipPeriods} from '../../../../server/membership-periods.mjs';
@@ -41,7 +41,7 @@ export async function GET(req:Request){
   await refreshMembershipPeriods(pool,business.id);
   const [plans,members,merchant,usageCounts,ledger,groups]=await Promise.all([
    pool.query('SELECT billing_type AS "billingType",id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",weekly_sessions AS "weeklySessions",group_id AS "groupId",badge,interval_count AS "intervalCount",credit_eligibility AS "creditEligibility",active FROM membership_plans WHERE business_id=$1 ORDER BY display_order,created_at DESC',[business.id]),
-   pool.query("SELECT m.billing_type,m.id,m.price_cents,m.stripe_account_id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.initial_paid_at,m.billing_start_override,m.credit_period_start,m.credit_period_end,m.stripe_subscription_id,m.stripe_interval_unit,m.stripe_interval_count,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
+   pool.query("SELECT m.weekly_limit_override,p.weekly_sessions,m.billing_type,m.id,m.price_cents,m.stripe_account_id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.initial_paid_at,m.billing_start_override,m.credit_period_start,m.credit_period_end,m.stripe_subscription_id,m.stripe_interval_unit,m.stripe_interval_count,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
    pool.query("SELECT external_account_id,charges_enabled,onboarding_complete FROM merchant_accounts WHERE business_id=$1",[business.id]),
    pool.query("SELECT membership_id,COUNT(*)::int AS recorded_sessions FROM membership_session_ledger WHERE business_id=$1 AND event_type='session_used' GROUP BY membership_id",[business.id]),
    pool.query('SELECT l.membership_id,l.appointment_id,l.event_type,l.session_delta,l.amount_cents,l.created_at,a.status AS appointment_status,a.date AS service_date,a.data::jsonb->\'services\' AS service_names FROM membership_session_ledger l LEFT JOIN appointments a ON a.id=l.appointment_id AND a.owner=(SELECT owner_id FROM businesses WHERE id=l.business_id) WHERE l.business_id=$1 ORDER BY l.created_at DESC',[business.id]),
@@ -68,6 +68,22 @@ export async function POST(req:Request){
   const {pool,business,owner}=await ctx(req);
   const raw=await req.text();if(raw.length>8000)throw Error('Request too large.');
   const input=JSON.parse(raw);
+  if(input.action==='setWeeklyLimitOverride'){
+   if(typeof input.id!=='string'||!/^[a-f0-9-]{36}$/i.test(input.id)||typeof input.enabled!=='boolean')throw Error('Choose a valid member and override setting.');
+   const client=await pool.connect();
+   try{
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
+    const member=(await client.query('SELECT m.id,m.weekly_limit_override,m.billing_type,p.weekly_sessions FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE m.id=$1 AND m.business_id=$2 FOR UPDATE OF m',[input.id,business.id])).rows[0];
+    if(!member)throw Error('Choose a member from this business.');
+    if(input.enabled&&(member.billing_type==='package'||!member.weekly_sessions))throw Error('Choose a membership with a weekly session limit.');
+    if(member.weekly_limit_override!==input.enabled){
+     await client.query('UPDATE customer_memberships SET weekly_limit_override=$1,updated_at=now() WHERE id=$2 AND business_id=$3',[input.enabled,input.id,business.id]);
+     await client.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'membership_weekly_limit_override',$4)",[randomUUID(),owner,new Date().toISOString(),JSON.stringify({businessId:business.id,membershipId:input.id,previous:member.weekly_limit_override,enabled:input.enabled,changedBy:owner})]);
+    }
+    await client.query('COMMIT');return Response.json({ok:true,weeklyLimitOverride:input.enabled},{headers});
+   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
+  }
   if(['sendPayment','saveCoupon','toggleCoupon','setInitialDate','syncRecurrence'].includes(input.action)){const db=await pool.connect();try{await db.query('BEGIN');await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);const result=await membershipBillingAction(db,{business,owner,input,origin:trustedOrigin(req)});await db.query('COMMIT');return Response.json(result,{headers});}catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}}
   if(input.action==='saveIdPolicy'){
    if(!MEMBER_ID_POLICIES.includes(input.policy))throw Error('Choose a valid membership ID format.');
@@ -194,19 +210,20 @@ export async function POST(req:Request){
    try{
     await client.query('BEGIN');
     await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
-    const member=(await client.query('SELECT m.id,m.member_number,m.sessions_included,m.sessions_used,m.status,p.credit_eligibility FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE m.business_id=$1 AND m.id=$2 FOR UPDATE OF m',[business.id,id])).rows[0];
+    const member=(await client.query('SELECT m.id,m.business_id,m.credit_period_start,m.credit_period_end,m.member_number,m.sessions_included,m.sessions_used,m.status,p.credit_eligibility FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE m.business_id=$1 AND m.id=$2 FOR UPDATE OF m',[business.id,id])).rows[0];
     if(!member||member.status!=='active'||!member.member_number)throw Error('An active member is required.');
-    if(member.sessions_used>=member.sessions_included)throw Error('No sessions remaining.');
     const visits=(await client.query("SELECT a.id,a.date,a.data FROM appointments a JOIN businesses b ON b.owner_id=a.owner WHERE b.id=$1 AND a.status IN ('Completed','Attended') AND ($2='' OR a.id=$2) ORDER BY a.date ASC",[business.id,appointmentId])).rows;
     const unrecorded=[] as typeof visits;
     for(const v of visits){try{const d=typeof v.data==='string'?JSON.parse(v.data):v.data||{};if(d.membershipCreditAllowed!==false&&membershipAllows(member.credit_eligibility,{serviceIds:d.serviceIds||[],sessionId:d.sessionId})&&String(d.memberNumber||'').toUpperCase()===String(member.member_number).toUpperCase()){const found=await client.query("SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='session_used'",[business.id,id,v.id]);if(!found.rowCount)unrecorded.push(v);}}catch{}}
     const selected=unrecorded[0];
     if(!selected)throw Error('No unrecorded completed visits found for this member.');
-    await assertWeeklyMembershipBooking(client,{owner,memberNumber:member.member_number,date:selected.date,excludeIds:[selected.id]});
+    const allowance=await assertWeeklyMembershipBooking(client,{owner,memberNumber:member.member_number,date:selected.date,excludeIds:[selected.id],existingAppointmentId:selected.id});
+    const archivedOverride=allowance?.monthlyAllocation&&member.credit_period_start&&selected.date<new Date(member.credit_period_start).toISOString().slice(0,10);
+    if(!archivedOverride&&member.sessions_used>=member.sessions_included)throw Error('No sessions remaining.');
     const info=typeof selected.data==='string'?JSON.parse(selected.data):selected.data||{};
     if(info.memberNumber!==member.member_number)throw Error('Appointment member number does not match.');
     await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta) VALUES($1,$2,$3,$4,'session_used',-1)",[randomUUID(),business.id,id,selected.id]);
-    await client.query('UPDATE customer_memberships SET sessions_used=sessions_used+1,updated_at=now() WHERE id=$1 AND business_id=$2',[id,business.id]);
+    if(!await recordHistoricalOverrideUsage(client,{member,date:selected.date,allocation:allowance?.monthlyAllocation}))await client.query('UPDATE customer_memberships SET sessions_used=sessions_used+1,updated_at=now() WHERE id=$1 AND business_id=$2',[id,business.id]);
     await client.query('COMMIT');return Response.json({ok:true},{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
   }

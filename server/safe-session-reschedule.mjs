@@ -1,5 +1,5 @@
 import {isBlocked} from './booking-blockouts.mjs';
-import {assertWeeklyMembershipBooking} from './membership-weekly.mjs';
+import {assertWeeklyMembershipBooking,recordWeeklyOverrideBooking} from './membership-weekly.mjs';
 import {randomUUID} from 'node:crypto';
 import {getPool} from './database.mjs';
 import {
@@ -183,7 +183,10 @@ export async function rescheduleSessionForOwner({owner,input,pool=getPool()}){
   }
   for(const row of [...impacted,...pending]){
    const details=row.details?JSON.parse(row.details):getData(row);
-   if(details.membershipCovered===true)await assertWeeklyMembershipBooking(client,{owner,memberNumber:details.memberNumber,date:move.date,excludeIds:[row.id]});
+   if(details.membershipCovered===true){
+    const member=await assertWeeklyMembershipBooking(client,{owner,memberNumber:details.memberNumber,date:move.date,excludeIds:[row.id],existingAppointmentId:!row.details&&row.date===move.date?row.id:undefined});
+    if(!row.details)await recordWeeklyOverrideBooking(client,{member,appointmentId:row.id,date:move.date});
+   }
   }
   // Historical group bookings created by earlier versions could retain
   // individual minute locks. A shared-seat group session must not leave those

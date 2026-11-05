@@ -35,9 +35,9 @@ async function fixture(){
  const url=new URL('../app/api/studio/memberships/route.ts',import.meta.url),exports={},nativeRequire=createRequire(url);
  new Function('require','exports',ts.transpileModule(await readFile(url,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)(p=>p.endsWith('/server/database.mjs')?{getPool:()=>pool}:p.endsWith('/lib/auth')?{requireOwner:async req=>{const id=req.headers.get('x-test-owner');if(!id)throw Error('AUTH_REQUIRED');return id;}}:nativeRequire(p),exports);
  const origin=process.env.APP_URL||process.env.RENDER_EXTERNAL_URL||'https://example.test';
- const post=(body,owner='owner')=>exports.POST(new Request(origin+'/api/studio/memberships',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','x-test-owner':owner},body:JSON.stringify(body)}));
+ const post=(body,owner='owner',requestOrigin=origin)=>exports.POST(new Request(origin+'/api/studio/memberships',{method:'POST',headers:{Origin:requestOrigin,'Content-Type':'application/json','x-test-owner':owner},body:JSON.stringify(body)}));
  const book=(id,date='2030-01-02',start=600)=>confirmBooking({pool,owner:'owner',services:config.services,staff:'coach',date,start,duration:30,buffer:0,id,data:{memberNumber:'MM010190',serviceIds:['training'],membershipCovered:true,membershipCreditAllowed:true,price:0}});
- return {pg,db,pool,post,book};
+ return {pg,db,pool,post,book,get:(owner='owner')=>exports.GET(new Request(origin+'/api/studio/memberships',{headers:{'x-test-owner':owner}}))};
 }
 test('owner plan settings validate weekly allowances and preserve tenant and legacy records',async()=>{
  const {pg,post}=await fixture();try{
@@ -97,5 +97,124 @@ test('weekly check-in/no-show is deducted once and uses the appointment week',as
  assert.equal((await status('No-show')).alreadyDeducted,true);
  assert.equal((await pg.query("SELECT sessions_used FROM customer_memberships WHERE id='member'")).rows[0].sessions_used,1);
  assert.equal((await pg.query("SELECT count(*)::int n FROM membership_session_ledger WHERE membership_id='member' AND event_type='session_used'")).rows[0].n,1);
+ }finally{await pg.close();}
+});
+
+
+test('owner weekly override is strict, tenant scoped, audited, default off and reversible without payment changes',async()=>{
+ const {pg,post,get}=await fixture();try{
+ const id='00000000-0000-4000-8000-000000000001';await pg.query("UPDATE customer_memberships SET id=$1 WHERE id='member'",[id]);
+ assert.equal((await pg.query('SELECT weekly_limit_override FROM customer_memberships WHERE id=$1',[id])).rows[0].weekly_limit_override,false);
+ const payload={action:'setWeeklyLimitOverride',id,enabled:true};
+ assert.equal((await post(payload,'')).status,401);
+ assert.equal((await post(payload,'owner','https://foreign.example.test')).status,403);
+ assert.equal((await post(payload,'other')).status,400);
+ for(const enabled of ['true',1,null,undefined])assert.equal((await post({...payload,enabled})).status,400);
+ assert.equal((await post({...payload,id:'bad'})).status,400);
+ const saved=await post(payload);assert.equal(saved.status,200,await saved.text());
+ const response=await get();assert.equal(response.status,200,await response.clone().text());
+ const m=(await response.json()).members.find(m=>m.id===id);assert.equal(m.weekly_limit_override,true);assert.equal(m.weekly_sessions,1);
+ assert.equal((await post(payload)).status,200);
+ assert.equal((await pg.query("SELECT count(*)::int n FROM events WHERE kind='membership_weekly_limit_override'")).rows[0].n,1);
+ assert.equal((await post({...payload,enabled:false})).status,200);
+ const audits=(await pg.query("SELECT data FROM events WHERE kind='membership_weekly_limit_override' ORDER BY created")).rows.map(r=>JSON.parse(r.data));
+ assert.deepEqual(audits.map(a=>[a.previous,a.enabled,a.changedBy]),[[false,true,'owner'],[true,false,'owner']]);
+ const row=(await pg.query('SELECT * FROM customer_memberships WHERE id=$1',[id])).rows[0];assert.equal(row.weekly_limit_override,false);assert.equal(row.sessions_included,5);assert.equal(row.sessions_used,0);assert.equal(row.price_cents,10000);assert.equal(row.status,'active');
+ assert.equal((await pg.query("SELECT weekly_limit_override FROM customer_memberships WHERE id='other-member'")).rows[0].weekly_limit_override,false);
+ await pg.query("UPDATE membership_plans SET weekly_sessions=NULL WHERE id='plan'");assert.equal((await post(payload)).status,409);
+ assert.equal((await post({...payload,enabled:false})).status,200);
+ await pg.exec("INSERT INTO membership_plans(id,business_id,name,interval_unit,price_cents,sessions_included,billing_type) VALUES('package','biz','Package','month',10000,5,'package'); INSERT INTO customer_memberships(id,business_id,plan_id,customer_name,customer_email,price_cents,stripe_account_id,status) VALUES('00000000-0000-4000-8000-000000000002','biz','package','Package member','package@example.test',10000,'','pending_payment')");assert.equal((await post({...payload,id:'00000000-0000-4000-8000-000000000002'})).status,409);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM membership_session_ledger')).rows[0].n,0);
+ }finally{await pg.close();}
+});
+
+test('override uses the target month allocation, preserves recorded counters and never rolls unused weekly credits forward',async()=>{
+ const {pg,db}=await fixture();try{
+ await pg.exec("UPDATE customer_memberships SET weekly_limit_override=true,sessions_used=4 WHERE id='member'");
+ const check=(date,excludeIds=[])=>assertWeeklyMembershipBooking(db,{owner:'owner',memberNumber:'MM010190',date,excludeIds});
+ await check('2030-01-03');
+ await pg.query("INSERT INTO booking_requests(id,business_id,owner_id,date,staff_id,start_minute,duration,details,reviewer) VALUES('last-reservation','biz','owner','2030-01-04','coach',600,30,$1,'owner')",[JSON.stringify({memberNumber:'MM010190',membershipCovered:true})]);
+ await assert.rejects(check('2030-01-05'),/No membership sessions remaining/);
+ await check('2030-01-04',['last-reservation']);
+ await pg.exec("UPDATE booking_requests SET status='declined' WHERE id='last-reservation'; UPDATE customer_memberships SET sessions_used=5 WHERE id='member'");
+ await assert.rejects(check('2030-01-06'),/No membership sessions remaining/);
+ // A later prepaid four-week month has four slots even when January is exhausted.
+ await check('2030-02-03');
+ for(let i=0;i<4;i++)await pg.query("INSERT INTO booking_requests(id,business_id,owner_id,date,staff_id,start_minute,duration,details,reviewer) VALUES($1,'biz','owner','2030-02-03','coach',$2,30,$3,'owner')",['feb-'+i,600+i*30,JSON.stringify({memberNumber:'MM010190',membershipCovered:true})]);
+ await assert.rejects(check('2030-02-04'),/No membership sessions remaining/);
+ await pg.exec("UPDATE booking_requests SET status='declined' WHERE id='feb-3'");await check('2030-02-04');
+ await pg.query("INSERT INTO membership_credit_periods(business_id,membership_id,period_start,period_end,sessions_included,sessions_used) VALUES('biz','member','2030-02-01T12:00Z','2030-03-01T12:00Z',4,4)");
+ await assert.rejects(check('2030-02-04'),/No membership sessions remaining/);
+ await assert.rejects(check('2029-12-31'),/before the membership/);
+ await assert.rejects(check('2031-01-01'),/outside the paid/);
+ await pg.exec("UPDATE customer_memberships SET status='pending_payment' WHERE id='member'");await assert.rejects(check('2030-03-04'),/outside the paid/);
+ const current={...member,weekly_limit_override:true,initial_paid_at:'2030-01-01T18:00Z',credit_period_start:'2030-01-01T12:00Z',credit_period_end:'2030-02-01T12:00Z',sessions_included:5,sessions_used:5};
+ assert.equal(membershipBookingActive(current,'2030-01-03'),false);assert.equal(membershipBookingActive(current,'2030-02-03'),true);
+ }finally{await pg.close();}
+});
+
+test('accepted override visits retain attendance after disabling; monthly credit and proof scope remain authoritative',async()=>{
+ const {pg,db,book}=await fixture();try{
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const start=today+'T12:00:00Z',p=weeklyMembershipWindow({...member,initial_paid_at:start},today);
+ await pg.query("UPDATE customer_memberships SET initial_paid_at=$1,credit_period_start=$1,credit_period_end=$2,paid_through=$3,sessions_included=$4,sessions_used=0 WHERE id='member'",[start,p.monthEnd+'T12:00Z',new Date(Date.parse(start)+400*86400000).toISOString(),p.weeks]);
+ await book('ordinary-first',today,600);
+ await pg.exec("UPDATE customer_memberships SET weekly_limit_override=true WHERE id='member'");
+ await book('override-second',today,630);
+ assert.equal((await pg.query("SELECT count(*)::int n FROM membership_weekly_override_bookings WHERE membership_id='member'")).rows[0].n,2);
+ await pg.exec("UPDATE customer_memberships SET weekly_limit_override=false WHERE id='member'");
+ const status=async(id,value)=>{await db.query('BEGIN');try{const r=await changeAppointmentStatus(db,{owner:'owner',appointmentId:id,status:value,eventId:id+'-'+value,ledgerId:'ledger-'+id+'-'+value,createdAt:new Date().toISOString()});await db.query('COMMIT');return r;}catch(e){await db.query('ROLLBACK');throw e;}};
+ assert.equal((await status('ordinary-first','Checked in')).membershipDeducted,true);
+ assert.equal((await status('override-second','No-show')).membershipDeducted,true);
+ assert.equal((await status('override-second','Checked in')).alreadyDeducted,true);
+ assert.equal((await pg.query("SELECT sessions_used FROM customer_memberships WHERE id='member'")).rows[0].sessions_used,2);
+ assert.equal((await pg.query("SELECT count(*)::int n FROM membership_session_ledger WHERE membership_id='member' AND event_type='session_used'")).rows[0].n,2);
+ // An arbitrary new booking cannot use somebody else's prior authorization.
+ await assert.rejects(assertWeeklyMembershipBooking(db,{owner:'owner',memberNumber:'MM010190',date:today,excludeIds:['forged'],existingAppointmentId:'forged'}),/per week/);
+ const nextDay=new Date(Date.parse(start)+86400000).toISOString().slice(0,10);
+ await assert.rejects(assertWeeklyMembershipBooking(db,{owner:'owner',memberNumber:'MM010190',date:nextDay,excludeIds:['override-second'],existingAppointmentId:'override-second'}),/per week/);
+ // Deleting a booking removes its usable proof reference but keeps the month's
+ // cap marker; a reused ID cannot inherit the old permission.
+ await pg.query("DELETE FROM appointments WHERE id='ordinary-first'");
+ assert.equal((await pg.query("SELECT count(*)::int n FROM membership_weekly_override_bookings WHERE membership_id='member' AND appointment_id IS NULL")).rows[0].n,1);
+ await assert.rejects(assertWeeklyMembershipBooking(db,{owner:'owner',memberNumber:'MM010190',date:today,excludeIds:['ordinary-first'],existingAppointmentId:'ordinary-first'}),/per week/);
+ }finally{await pg.close();}
+});
+
+
+test('late override attendance advances the archived allowance without spending current-month credits',async()=>{
+ const {pg,db}=await fixture();try{
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const anchor=new Date(today+'T12:00:00Z');anchor.setUTCMonth(anchor.getUTCMonth()-2);anchor.setUTCDate(1);
+ const current=weeklyMembershipWindow({...member,initial_paid_at:anchor.toISOString()},today),prior=weeklyMembershipWindow({...member,initial_paid_at:anchor.toISOString()},anchor.toISOString().slice(0,10));
+ await pg.query("UPDATE customer_memberships SET weekly_limit_override=true,initial_paid_at=$1,credit_period_start=$2,credit_period_end=$3,paid_through=$4,sessions_included=$5,sessions_used=0 WHERE id='member'",[anchor.toISOString(),current.monthStart+'T12:00Z',current.monthEnd+'T12:00Z',new Date(Date.now()+400*86400000).toISOString(),current.weeks]);
+ // These old credits include deleted/unlinked visits; a joined ledger count alone
+ // cannot replace the archived balance when another old visit is checked in.
+ await pg.query("INSERT INTO membership_credit_periods(business_id,membership_id,period_start,period_end,sessions_included,sessions_used) VALUES('biz','member',$1,$2,$3,$4)",[prior.monthStart+'T18:00Z',prior.monthEnd+'T18:00Z',prior.weeks,prior.weeks-1]);
+ await pg.query("INSERT INTO membership_credit_periods(business_id,membership_id,period_start,period_end,sessions_included,sessions_used) VALUES('biz','member',$1,$2,$3,0)",[prior.monthStart+'T12:00Z',prior.monthEnd+'T12:00Z',prior.weeks]);
+ await pg.query("INSERT INTO appointments(id,owner,date,staff,start,duration,status,data) VALUES('late-visit','owner',$1,'coach',600,30,'Confirmed',$2)",[prior.monthStart,JSON.stringify({memberNumber:'MM010190',serviceIds:['training'],membershipCovered:true})]);
+ await db.query('BEGIN');const result=await changeAppointmentStatus(db,{owner:'owner',appointmentId:'late-visit',status:'Checked in',eventId:'late-event',ledgerId:'late-ledger',createdAt:new Date().toISOString()});await db.query('COMMIT');assert.equal(result.membershipDeducted,true);
+ assert.equal((await pg.query("SELECT sessions_used FROM customer_memberships WHERE id='member'")).rows[0].sessions_used,0);
+ const archived=(await pg.query("SELECT sessions_used,period_start FROM membership_credit_periods WHERE membership_id='member' ORDER BY sessions_used DESC")).rows;assert.equal(archived.length,2);assert.equal(archived[1].sessions_used,0);assert.equal(archived[0].sessions_used,prior.weeks);assert.equal(new Date(archived[0].period_start).getUTCHours(),18);
+ await assert.rejects(assertWeeklyMembershipBooking(db,{owner:'owner',memberNumber:'MM010190',date:prior.monthStart}),/No membership sessions remaining/);
+ }finally{await pg.close();}
+});
+
+
+test('manual session recording debits the original override month even when the current month is exhausted',async()=>{
+ const {pg,post}=await fixture();try{
+ const id='00000000-0000-4000-8000-000000000003';
+ await pg.query("UPDATE customer_memberships SET id=$1 WHERE id='member'",[id]);
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const anchor=new Date(today+'T12:00:00Z');anchor.setUTCMonth(anchor.getUTCMonth()-2);anchor.setUTCDate(1);
+ const current=weeklyMembershipWindow({...member,initial_paid_at:anchor.toISOString()},today),prior=weeklyMembershipWindow({...member,initial_paid_at:anchor.toISOString()},anchor.toISOString().slice(0,10));
+ await pg.query("UPDATE customer_memberships SET weekly_limit_override=true,initial_paid_at=$1,credit_period_start=$2,credit_period_end=$3,paid_through=$4,sessions_included=$5,sessions_used=$5 WHERE id=$6",[anchor.toISOString(),current.monthStart+'T12:00Z',current.monthEnd+'T12:00Z',new Date(Date.now()+400*86400000).toISOString(),current.weeks,id]);
+ await pg.query("INSERT INTO membership_credit_periods(business_id,membership_id,period_start,period_end,sessions_included,sessions_used) VALUES('biz',$1,$2,$3,$4,0)",[id,prior.monthStart+'T18:00Z',prior.monthEnd+'T18:00Z',prior.weeks]);
+ for(const [visit,date] of [['old-completed',prior.monthStart],['current-completed',today]])await pg.query("INSERT INTO appointments(id,owner,date,staff,start,duration,status,data) VALUES($1,'owner',$2,'coach',600,30,'Completed',$3)",[visit,date,JSON.stringify({memberNumber:'MM010190',serviceIds:['training'],membershipCovered:true})]);
+ const response=await post({action:'recordSession',id,appointmentId:'old-completed'});assert.equal(response.status,200,await response.text());
+ assert.equal((await pg.query('SELECT sessions_used FROM customer_memberships WHERE id=$1',[id])).rows[0].sessions_used,current.weeks);
+ const archives=(await pg.query('SELECT sessions_used,period_start FROM membership_credit_periods WHERE membership_id=$1',[id])).rows;assert.equal(archives.length,1);assert.equal(archives[0].sessions_used,1);assert.equal(new Date(archives[0].period_start).getUTCHours(),18);
+ assert.notEqual((await post({action:'recordSession',id,appointmentId:'current-completed'})).status,200);
+ assert.equal((await pg.query("SELECT count(*)::int n FROM membership_session_ledger WHERE membership_id=$1 AND event_type='session_used'",[id])).rows[0].n,1);
  }finally{await pg.close();}
 });
