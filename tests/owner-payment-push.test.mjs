@@ -7,7 +7,7 @@ import {pushBookingRequest} from '../server/push-delivery.mjs';
 
 async function fixture(t,{installPaymentMigration=true}={}){
  const db=new PGlite();t.after(()=>db.close());
- for(const f of(await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')&&(installPaymentMigration||!f.startsWith('090_'))).sort())await db.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8'));
+ for(const f of(await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')&&(installPaymentMigration||(!f.startsWith('090_')&&!f.startsWith('096_')))).sort())await db.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8'));
  await db.exec(`INSERT INTO users(id,email,password_hash) VALUES('owner','owner@example.test','x'),('other','other@example.test','x');
   INSERT INTO businesses(id,owner_id,slug,name,status) VALUES('biz','owner','one','Business One','active'),('otherbiz','other','two','Business Two','active');
   INSERT INTO settings VALUES('owner','{"staff":[{"id":"staff"}],"bookingApprovalEnabled":false,"bookingApprovalReviewer":"staff"}'),('other','{}');
@@ -92,6 +92,7 @@ test('adding payment alerts does not backfill prior payments or fail cash record
  const db=await fixture(t,{installPaymentMigration:false});await booking(db);await confirm(db);
  await db.exec("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES('old-payment','biz','member','old-ref','payment_confirmed',10,10000)");
  await db.exec(await readFile(new URL('../migrations/090_owner_payment_push.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../migrations/096_free_activation_notifications.sql',import.meta.url),'utf8'));
  assert.equal((await db.query('SELECT * FROM owner_payment_push_events')).rows.length,0);
  await confirm(db);assert.equal((await db.query('SELECT * FROM owner_payment_push_events')).rows.length,0,'same paid state does not backfill');
  for(const [i,price] of ['invalid','9999999999999999999999999999999999',0].entries()){

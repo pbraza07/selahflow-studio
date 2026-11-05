@@ -6322,5 +6322,18 @@
  "← Business profile": "← Perfil de negócios",
  "← Discover businesses": "← Descubra empresas",
  "① Service → ② Time & team → ③ Confirm": "① Serviço → ② Horário e equipe → ③ Confirmar",
- "✓ Included within your plan limits. Provider connections, permissions and applicable fees still apply. Expand any benefit to see its setup requirements.": "文 Incluído dentro dos limites do seu plano. As conexões, permissões e taxas aplicáveis ainda se aplicam. Expanda qualquer benefício para ver seus requisitos de configuração."
+ "✓ Included within your plan limits. Provider connections, permissions and applicable fees still apply. Expand any benefit to see its setup requirements.": "文 Incluído dentro dos limites do seu plano. As conexões, permissões e taxas aplicáveis ainda se aplicam. Expanda qualquer benefício para ver seus requisitos de configuração.",
+ "1 session per week": "1 sessão por semana",
+ "2 sessions per week": "2 sessões por semana",
+ "3 sessions per week": "3 sessões por semana",
+ "Choose 1, 2 or 3 sessions per week.": "Escolha 1, 2 ou 3 sessões por semana.",
+ "Coupons for sessions, memberships and packages": "Cupons para sessões, assinaturas e pacotes",
+ "Free lifetime — 100% off": "Grátis vitalício — 100% de desconto",
+ "Free lifetime": "Grátis vitalício",
+ "Custom discount": "Desconto personalizado",
+ "Activate free offer": "Ativar oferta grátis",
+ "I accept the terms of this free offer. Session allowances and booking rules still apply. Complete checkout to activate; no payment is due.": "Aceito os termos desta oferta grátis. Os limites de sessões e regras de agendamento continuam válidos. Conclua a confirmação para ativar; não há pagamento.",
+ "No expiration or redemption limit. Apply the code to each session or package; membership renewals remain free for that subscription. Normal session allowances and booking rules still apply. Disabling the code stops new redemptions; existing subscription discounts remain.": "Sem vencimento ou limite de usos. Aplique o código a cada sessão ou pacote; as renovações da assinatura permanecem gratuitas. Os limites de sessões e regras de agendamento continuam válidos. Desativar o código impede novos usos; os descontos das assinaturas existentes permanecem.",
+ "Customers apply these codes at the end of service booking or membership or package signup. The discounted total is shown before payment. Services receive the discount for that booking; the duration below controls recurring membership invoices.": "Os clientes aplicam estes códigos ao concluir a reserva ou inscrição em uma assinatura ou pacote. O total com desconto aparece antes do pagamento. O desconto nos serviços vale para aquela reserva; a duração abaixo controla as faturas recorrentes.",
+ "Check payment / activation": "Verificar pagamento / ativação"
 }

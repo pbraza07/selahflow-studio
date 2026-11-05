@@ -16,6 +16,11 @@ export async function queueMembershipPaymentEmail(db,{businessId,paymentId,payme
   message.subject=`Service package payment confirmed — ${clean(row.business)}`;
   message.text=`Hello ${clean(row.customer_name)},\n\nYour ${snapshot.planName} service package payment is confirmed.\nClient ID: ${snapshot.memberNumber}\nAmount paid: ${amount} (one-time)\nPayment method: ${clean(paymentMethod)}\nTotal sessions: ${row.sessions_included}\nSessions left: ${snapshot.sessionsLeft}\nSessions used: ${snapshot.sessionsUsed}\nNo automatic renewal, expiration, or monthly reset. Credits remain until used.\n\n${links?'Book a session: '+links.booking+'\nCheck status: '+links.status:'Contact the business to book.'}`;
  }
+ if(snapshot.amountCents===0){
+  const label=row.billing_type==='package'?'Service package':'Membership';
+  message.subject=label+' activation confirmed — '+clean(row.business);
+  message.text=`Hello ${clean(row.customer_name)},\n\nYour ${snapshot.planName} ${label.toLowerCase()} at ${clean(row.business)} is activated.\nClient ID: ${snapshot.memberNumber}\nAmount due: $0.00 — no payment required.\n${snapshot.usageSummary}\nSessions left: ${snapshot.sessionsLeft}\n${row.billing_type==='package'?'No automatic renewal. Package credits remain until used.':'Membership session allowances and renewal dates still apply.'}\n\n${links?'Book a session: '+links.booking+'\nCheck status: '+links.status:'Contact the business to book.'}`;
+ }
  await db.query('INSERT INTO membership_payment_emails(payment_id,business_id,membership_id,destination,destination_masked,snapshot,message) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb) ON CONFLICT DO NOTHING',[paymentId,businessId,row.membership_id,String(row.customer_email||'').trim(),maskDestination(row.customer_email,'email'),JSON.stringify(snapshot),JSON.stringify(message)]);
 }
 export async function processMembershipPaymentEmails(pool,{send=sendNotificationChannel,limit=10}={}){

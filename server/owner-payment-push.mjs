@@ -38,7 +38,7 @@ export async function deliverOwnerPaymentPush(pool,{enabled=configured(),send=se
    const amount=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(r.amount_cents)/100);
    sendStarted=true;
    const result=await send({endpoint:r.endpoint,keys:{p256dh:r.p256dh,auth:r.auth}},
-    {title:businessDeviceName(r.name),body:label+' payment completed · '+amount+'. Tap to view payments.',url:'/studio/'+encodeURIComponent(r.slug)+'#reports',tag:'selah-payment-'+r.id,businessId:r.business_id});
+    {title:businessDeviceName(r.name),body:Number(r.amount_cents)===0?label+' activated · Free ($0.00). Tap to view details.':label+' payment completed · '+amount+'. Tap to view payments.',url:'/studio/'+encodeURIComponent(r.slug)+'#reports',tag:'selah-payment-'+r.id,businessId:r.business_id});
    if(['gone','invalid_subscription'].includes(result.status)){
     await pool.query("DELETE FROM business_push_subscriptions WHERE id=$1 AND business_id=$2 AND reviewer='owner'",[job.subscription_id,r.business_id]);
    }else{

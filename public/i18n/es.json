@@ -6322,5 +6322,18 @@
  "← Business profile": "← Perfil de negocio",
  "← Discover businesses": "← Descubre negocios",
  "① Service → ② Time & team → ③ Confirm": "① Servicio → ② Hora y equipo → ③ Confirmar",
- "✓ Included within your plan limits. Provider connections, permissions and applicable fees still apply. Expand any benefit to see its setup requirements.": "✓ Incluido dentro de los límites de su plan. Se aplican conexiones, permisos y tarifas aplicables del proveedor. Ampliar cualquier beneficio para ver sus requisitos de configuración."
+ "✓ Included within your plan limits. Provider connections, permissions and applicable fees still apply. Expand any benefit to see its setup requirements.": "✓ Incluido dentro de los límites de su plan. Se aplican conexiones, permisos y tarifas aplicables del proveedor. Ampliar cualquier beneficio para ver sus requisitos de configuración.",
+ "1 session per week": "1 sesión por semana",
+ "2 sessions per week": "2 sesiones por semana",
+ "3 sessions per week": "3 sesiones por semana",
+ "Choose 1, 2 or 3 sessions per week.": "Elige 1, 2 o 3 sesiones por semana.",
+ "Coupons for sessions, memberships and packages": "Cupones para sesiones, membresías y paquetes",
+ "Free lifetime — 100% off": "Gratis de por vida — 100% de descuento",
+ "Free lifetime": "Gratis de por vida",
+ "Custom discount": "Descuento personalizado",
+ "Activate free offer": "Activar oferta gratis",
+ "I accept the terms of this free offer. Session allowances and booking rules still apply. Complete checkout to activate; no payment is due.": "Acepto los términos de esta oferta gratis. Los límites de sesiones y las reglas de reserva siguen vigentes. Completa la confirmación para activar; no hay pago pendiente.",
+ "No expiration or redemption limit. Apply the code to each session or package; membership renewals remain free for that subscription. Normal session allowances and booking rules still apply. Disabling the code stops new redemptions; existing subscription discounts remain.": "Sin vencimiento ni límite de usos. Aplica el código a cada sesión o paquete; las renovaciones de esa membresía siguen siendo gratis. Los límites de sesiones y las reglas de reserva siguen vigentes. Desactivar el código impide nuevos usos; los descuentos de las suscripciones existentes se mantienen.",
+ "Customers apply these codes at the end of service booking or membership or package signup. The discounted total is shown before payment. Services receive the discount for that booking; the duration below controls recurring membership invoices.": "Los clientes aplican estos códigos al terminar la reserva o inscripción en una membresía o paquete. El total con descuento se muestra antes del pago. El descuento en servicios corresponde a esa reserva; la duración controla las facturas recurrentes.",
+ "Check payment / activation": "Verificar pago / activación"
 }

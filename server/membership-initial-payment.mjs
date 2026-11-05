@@ -8,6 +8,7 @@ import {anniversary,membershipAnchor,nextBillingAnchor} from './membership-perio
 /** A paid initial period uses a one-off Connect fee. The subsequent subscription has a permanent 0% application fee. */
 export async function completeInitialMembershipCheckout(db,{businessId,account,session},api=stripeApi){
  assertTestPayment(session);
+ if(session.payment_status==='no_payment_required')return completeFreePackageCheckout(db,{businessId,account,session});
  if(session.mode!=='payment'||session.payment_status!=='paid'||session.currency!=='usd'||session.metadata?.membership_initial!=='true'||session.metadata?.selahflow_business_id!==businessId||typeof session.payment_intent!=='string'||typeof session.customer!=='string')return false;
  const member=(await db.query('SELECT * FROM customer_memberships WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 FOR UPDATE',[businessId,account,session.id])).rows[0];
  if(!member||member.stripe_initial_checkout_mode!=='payment'||(member.billing_type!=='package'&&!member.stripe_recurring_authorized_at)||session.client_reference_id!==member.id||session.metadata?.membership_id!==member.id||session.amount_total!==Number(member.first_invoice_cents)||(member.billing_type!=='package'&&!member.stripe_renewal_product_id))return false;
@@ -50,4 +51,21 @@ export async function completeInitialMembershipCheckout(db,{businessId,account,s
  await settleCommission(db,{businessId,account,session},api);
  await db.query('UPDATE customer_memberships SET stripe_initial_paid_at=$1 WHERE id=$2 AND business_id=$3',[paidAt.toISOString(),member.id,businessId]);
  return recordMembershipPaidPeriod(db,{businessId,account,member,reference:pi.id,amountCents:session.amount_total,paidAt,paidThrough:boundary.toISOString(),subscription,customerId:session.customer});
+}
+
+/** Called only with a signed webhook or an account-scoped provider retrieval. */
+async function completeFreePackageCheckout(db,{businessId,account,session}){
+ if(session.mode!=='payment'||session.status!=='complete'||session.amount_total!==0||session.currency!=='usd'||session.payment_intent!=null||session.subscription!=null||typeof session.customer!=='string'||!Number.isSafeInteger(session.created)||!/^cs_[A-Za-z0-9_]+$/.test(session.id||'')||session.metadata?.membership_initial!=='true'||session.metadata?.one_time_package!=='true'||session.metadata?.selahflow_business_id!==businessId||session.metadata?.commission_claim_id)return false;
+ const member=(await db.query('SELECT * FROM customer_memberships WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 FOR UPDATE',[businessId,account,session.id])).rows[0];
+ if(!member||member.billing_type!=='package'||member.stripe_initial_checkout_mode!=='payment'||member.first_invoice_cents!==0||member.stripe_subscription_id||member.stripe_recurring_authorized_at||session.client_reference_id!==member.id||session.metadata?.membership_id!==member.id)return false;
+ const reference=session.id;
+ if((await db.query('SELECT 1 FROM stripe_payment_receipts WHERE stripe_account_id=$1 AND provider_reference=$2 AND business_id=$3 AND membership_id=$4',[account,reference,businessId,member.id])).rows.length)return true;
+ if(member.initial_paid_at||member.status!=='pending_payment')return false;
+ const receipt=await db.query('INSERT INTO stripe_payment_receipts(stripe_account_id,provider_reference,business_id,membership_id,amount_cents) VALUES($1,$2,$3,$4,0) ON CONFLICT DO NOTHING RETURNING provider_reference',[account,reference,businessId,member.id]);
+ if(!receipt.rowCount)return true;
+ const paidAt=new Date(session.created*1000),allocation=await applyManualPeriod(db,{member,credits:Number(member.stripe_sessions_per_period),plan:member,now:paidAt}),paymentId=randomUUID();
+ await db.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,0)",[paymentId,businessId,member.id,'stripe:'+reference,allocation.allocated]);
+ await db.query('UPDATE customer_memberships SET stripe_customer_id=$1,stripe_initial_paid_at=$2 WHERE id=$3 AND business_id=$4',[session.customer,paidAt.toISOString(),member.id,businessId]);
+ await queueMembershipPaymentEmail(db,{businessId,paymentId,paymentMethod:'Free coupon'});
+ return true;
 }
