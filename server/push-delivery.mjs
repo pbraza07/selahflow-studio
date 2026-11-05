@@ -9,15 +9,16 @@ const trim=(x,max=100)=>String(x||'').replace(/[<>\r\n]/g,' ').slice(0,max);
 /** Notify the specific owner's devices plus the currently designated team reviewer.
  * Invalid subscriptions are removed. Each reviewer has their own push/browser permission.
  */
-export async function pushBookingRequest(requestId){
- if(!configured())return {status:'not_configured',delivered:0};
- const pool=getPool();
+export async function pushBookingRequest(requestId,{pool=null,enabled=configured(),send=sendWebPush}={}){
+ if(!enabled)return {status:'not_configured',delivered:0};
+ pool=pool||getPool();
  const r=(await pool.query("SELECT r.id,r.business_id,r.reviewer,r.date,r.start_minute,r.details,r.status,b.slug,b.name,s.data AS settings_data FROM booking_requests r JOIN businesses b ON b.id=r.business_id JOIN settings s ON s.owner=b.owner_id WHERE r.id=$1 AND b.status='active'",[requestId])).rows[0];
  if(!r||r.status!=='pending')return {status:'no_pending_request',delivered:0};
  const settings=JSON.parse(r.settings_data||'{}');
- if(settings.bookingApprovalEnabled!==true)return {status:'disabled',delivered:0};
  const detail=JSON.parse(r.details||'{}');
- const reviewers=r.reviewer==='owner'?['owner']:['owner',r.reviewer];
+ // Owner device opt-in is independent of optional delegated reviewer routing.
+ const delegated=settings.bookingApprovalEnabled===true&&settings.bookingApprovalReviewer===r.reviewer&&settings.staff?.some(x=>x.id===r.reviewer);
+ const reviewers=r.reviewer==='owner'||!delegated?['owner']:['owner',r.reviewer];
  const result=await pool.query("SELECT id,reviewer,endpoint,p256dh,auth FROM business_push_subscriptions WHERE business_id=$1 AND reviewer=ANY($2::text[]) ORDER BY created_at DESC LIMIT 40",[r.business_id,reviewers]);
  let delivered=0,failed=0;
  for(const sub of result.rows){
@@ -29,7 +30,7 @@ export async function pushBookingRequest(requestId){
   }
   const payload={title:businessDeviceName(r.name),body:'New booking request · '+trim(registrationNotificationLines(settings,'booking',{memberNumber:detail.memberNumber,dateOfBirth:detail.dateOfBirth,firstName:detail.firstName,lastName:detail.lastName,email:detail.customerEmail||detail.email,phone:detail.customerPhone||detail.phone},detail.customAnswers||{}).join(' · '),220),
    url,tag:'selah-booking-'+r.business_id+'-'+requestId,businessId:r.business_id};
-  const response=await sendWebPush({endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth}},payload);
+  const response=await send({endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth}},payload);
   if(response.status==='submitted')delivered++;
   else {failed++;if(response.status==='gone'||response.status==='invalid_subscription')await pool.query('DELETE FROM business_push_subscriptions WHERE id=$1',[sub.id]);}
  }
