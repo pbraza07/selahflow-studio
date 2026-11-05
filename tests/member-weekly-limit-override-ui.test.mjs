@@ -93,3 +93,13 @@ test('Stripe-managed pending membership offers provider verification instead of 
   assert.ok(![...document.querySelectorAll('button')].some(b=>b.textContent==='Confirm membership payment'));
  }finally{await f.cleanup();}
 });
+
+test('membership deletion explains immediate billing cancellation and submits only after the typed confirmation',async()=>{
+ const f=await fixture();try{
+  const button=[...document.querySelectorAll('button')].filter(b=>b.textContent==='Delete member')[1];
+  window.prompt=message=>{assert.match(message,/cancels their linked Stripe subscription immediately/);assert.match(message,/Existing bookings and required accounting records are retained/);return null;};
+  await act(async()=>button.click());assert.equal(f.state.posted,null);
+  window.prompt=()=> 'DELETE';
+  await act(async()=>button.click());assert.deepEqual(f.state.posted,{action:'deleteMember',id:'monthly',confirmPhrase:'DELETE'});
+ }finally{await f.cleanup();}
+});
