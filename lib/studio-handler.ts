@@ -125,6 +125,7 @@ if(!c?.name?.trim()||c.name.length>100||!Array.isArray(c.services)||!Array.isArr
  if(c.bookingNotifyOwnerEmail!==undefined&&c.bookingNotifyOwnerEmail!==''&&!validEmail(c.bookingNotifyOwnerEmail))throw Error('Enter a valid owner notification email.');
  if(c.bookingNotifyOwnerPhone!==undefined&&c.bookingNotifyOwnerPhone!==''&&!validE164(c.bookingNotifyOwnerPhone))throw Error('Owner SMS phone must include country code (example: +18135550123).');
  if((c.bookingNotifyEmail!==undefined&&typeof c.bookingNotifyEmail!=='boolean')||(c.bookingNotifySms!==undefined&&typeof c.bookingNotifySms!=='boolean'))throw Error('Invalid notification channels.');
+ if(c.dailyPaymentReminders!==undefined&&typeof c.dailyPaymentReminders!=='boolean')throw Error('Invalid daily payment reminder setting.');
  if(c.bookingApprovalEnabled&&(c.bookingNotifyEmail===true||c.bookingNotifySms===true)){
   const reviewer=c.bookingApprovalReviewer||'owner',member=c.staff.find((m:any)=>m.id===reviewer);
   const recipient=reviewer==='owner'?{email:c.bookingNotifyOwnerEmail||((await db().prepare('SELECT email FROM users WHERE id=?').bind(owner).first<{email:string}>())?.email||''),phone:c.bookingNotifyOwnerPhone||''}:member?{email:member.notificationEmail||'',phone:member.notificationPhone||''}:{email:'',phone:''};

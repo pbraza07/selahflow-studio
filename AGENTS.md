@@ -1,3 +1,13 @@
+# v1.3.221 release handoff — Daily pending-payment email reminders
+
+Release source: v1.3.221
+
+One consolidated email per business/client/Eastern calendar day reminds clients of eligible unpaid sessions, initial memberships/packages and current outstanding Stripe membership invoices. The daily scan runs after 9:00 AM Eastern and waits at least 24 hours after the payment request/known due event. Each business can pause reminders under Settings → Notifications; enabled by default for existing and future businesses. Existing onsite choices, payment eligibility, approval, membership and commission rules remain in force.
+
+Reminder eligibility is refreshed before delivery. Paid, covered, free, cancelled, declined, removed-service and no-show session quotes are excluded; actual recurring invoice balances are verified read-only with Stripe. Private access links refresh without incrementing manual payment-request counters. Daily uniqueness, atomic claims and provider outcome tracking prevent same-day duplicate sends; uncertain outcomes are not retried that day, and expired prior-day queues are not replayed. Additive migrations 092/093 retain existing data. Staging reminders use allowlist-only delivery protection even for copied historical client records.
+
+Implementation is on feature/daily-payment-reminders; validation and deployment verification are pending. No real customer message or charge is used for QA. Record exact final checks, commit and LIVE deploys before reporting completion.
+
 # v1.3.220 release handoff — Booking notifications, mobile bell and Google review emails
 
 Release source: v1.3.220

@@ -2230,5 +2230,17 @@
   ". Confirm the business and address before saving. Automated client emails include a Write a review button for this Google listing.": {
     "es": ". Confirma el negocio y la dirección antes de guardar. Los correos automáticos a los clientes incluyen un botón Escribir una reseña para esta ficha de Google.",
     "pt": ". Confirme a empresa e o endereço antes de salvar. Os e-mails automáticos aos clientes incluem um botão Escrever uma avaliação para este perfil do Google."
+  },
+  "Send daily payment reminder emails": {
+    "es": "Enviar recordatorios diarios de pago por correo electrónico",
+    "pt": "Enviar lembretes diários de pagamento por e-mail"
+  },
+  "One reminder per client each day after 9:00 AM Eastern for eligible unpaid sessions, memberships and packages. Reminders begin at least 24 hours after the payment request and stop when paid. Onsite payment choices are preserved.": {
+    "es": "Un recordatorio por cliente cada día después de las 9:00 a. m., hora del Este, para sesiones, membresías y paquetes con pagos pendientes que cumplan los requisitos. Los recordatorios comienzan al menos 24 horas después de la solicitud de pago y se detienen cuando se registra el pago. Se conservan las opciones de pago en el establecimiento.",
+    "pt": "Um lembrete por cliente a cada dia após as 9h, no horário do leste dos EUA, para sessões, assinaturas e pacotes elegíveis com pagamento pendente. Os lembretes começam pelo menos 24 horas após a solicitação de pagamento e param quando o pagamento é confirmado. As opções de pagamento no local são mantidas."
+  },
+  "Invalid daily payment reminder setting.": {
+    "es": "Configuración de recordatorios diarios de pago no válida.",
+    "pt": "Configuração inválida de lembretes diários de pagamento."
   }
 }
