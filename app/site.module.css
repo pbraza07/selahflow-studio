@@ -163,7 +163,7 @@
 .publicHeader .desktopNav{gap:22px}
 .publicHeader>a{display:block;min-width:0;flex:0 1 260px}.publicHeader>a img{display:block;width:100%;height:auto;object-fit:contain}
 .publicHeader nav a[aria-current="page"]{text-decoration:underline;text-underline-offset:6px}
-.mobileNav{display:none}
+.mobileNav{display:none;flex-shrink:0}.mobileNav summary{white-space:nowrap;word-break:normal}
 .skipLink{position:absolute;left:16px;top:-100px;padding:12px 18px;background:#184e49;color:#fff;z-index:50;border-radius:8px}
 .skipLink:focus{top:10px}
 .site a:focus-visible,.site button:focus-visible,.site summary:focus-visible{outline:3px solid #759787;outline-offset:4px}
