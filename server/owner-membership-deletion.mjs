@@ -1,16 +1,18 @@
 import {expireClientCheckouts} from './client-checkout-expiry.mjs';
 import {retainDeletedClientFinancials} from './client-financial-retention.mjs';
+import {prepareOwnerMembershipDeletion} from './owner-membership-cancellation.mjs';
 
 /** Membership-only removal; existing bookings and their client IDs are retained.
  * The caller owns the transaction and authenticated business context. */
-export async function deleteOwnerMembership(db,{owner,businessId,id,api=undefined}){
+export async function deleteOwnerMembership(db,{owner,businessId,id,cancelRecurringBilling=false,api=undefined}){
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
  const member=(await db.query("SELECT m.* FROM customer_memberships m JOIN businesses b ON b.id=m.business_id WHERE m.business_id=$1 AND m.id=$2 AND b.owner_id=$3 AND b.status='active' FOR UPDATE OF m",[businessId,id,owner])).rows[0];
  if(!member)throw Error('Member not found in this business.');
- if(member.stripe_subscription_id&&!['canceled','expired'].includes(member.status))throw Error('Cancel the active Stripe subscription before deleting this membership.');
+ if(!cancelRecurringBilling&&member.stripe_subscription_id&&!['canceled','expired'].includes(member.status))throw Error('Cancel the active Stripe subscription before deleting this membership.');
  await db.query('LOCK TABLE membership_payment_emails,membership_payment_invitations IN SHARE ROW EXCLUSIVE MODE');
  for(const table of ['membership_payment_emails','membership_payment_invitations'])if((await db.query(`SELECT 1 FROM ${table} WHERE business_id=$1 AND membership_id=$2 AND status='processing'`,[businessId,id])).rows.length)throw Error('A membership email is being sent. Retry deleting after delivery finishes.');
- await expireClientCheckouts(db,{businessId,members:[member]},api);
+ const prepared=cancelRecurringBilling?await prepareOwnerMembershipDeletion(member,businessId,api):{member,completedFreeCheckouts:new Set()};
+ await expireClientCheckouts(db,{businessId,members:[prepared.member],completedFreeCheckouts:prepared.completedFreeCheckouts},api);
  const specs=[];
  for(const table of ['membership_session_ledger','stripe_payment_receipts'])specs.push({table,rows:(await db.query(`SELECT * FROM ${table} WHERE business_id=$1 AND membership_id=$2`,[businessId,id])).rows});
  const retainedFinancialRecords=await retainDeletedClientFinancials(db,{businessId,specs});

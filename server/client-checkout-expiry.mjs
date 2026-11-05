@@ -4,7 +4,7 @@ import {isStaging} from './staging-safety.mjs';
 /** Called within the owner's deletion transaction, after resolving the exact
  * business/client and locking its records. Provider expiry is retry-safe even
  * if a subsequent local operation rolls back. Never cancel paid subscriptions. */
-export async function expireClientCheckouts(db,{businessId,bookingKeys=[],members=[],bookingPayments=[]},api=stripeApi){
+export async function expireClientCheckouts(db,{businessId,bookingKeys=[],members=[],bookingPayments=[],completedFreeCheckouts=new Set()},api=stripeApi){
  for(const member of members)if(member.stripe_subscription_id){
   const subscription=await api('subscriptions/'+member.stripe_subscription_id,{method:'GET',account:member.stripe_account_id});
   if(isStaging()&&subscription?.livemode!==false)throw Error('Staging accepts only Stripe sandbox payments.');
@@ -29,7 +29,8 @@ export async function expireClientCheckouts(db,{businessId,bookingKeys=[],member
   const verify=session=>{
    if(isStaging()&&session?.livemode!==false)throw Error('Staging accepts only Stripe sandbox payments.');
    if(session?.id!==r.session||session.metadata?.selahflow_business_id!==businessId||session.metadata?.[r.kind==='booking'?'booking_id':'membership_id']!==r.source||session.client_reference_id!==r.source)throw Error('Stripe checkout identity does not match this registration. Deletion stopped.');
-   if(session.payment_status==='paid'||!['open','expired'].includes(session.status))throw Error('Stripe reports a completed or processing payment. Verify its payment status before deleting this registration.');
+   const verifiedFree=r.kind==='membership'&&completedFreeCheckouts.has(r.account+'|'+r.session)&&session.status==='complete'&&session.payment_status==='no_payment_required'&&session.amount_total===0;
+   if(!verifiedFree&&(session.payment_status==='paid'||!['open','expired'].includes(session.status)))throw Error('Stripe reports a completed or processing payment. Verify its payment status before deleting this registration.');
   };
   let session=await api(path,{method:'GET',account:r.account});verify(session);
   if(session.status==='open'){

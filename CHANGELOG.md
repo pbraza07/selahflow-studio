@@ -1,3 +1,11 @@
+# v1.3.224 release handoff — Owner membership deletion
+
+Release source: v1.3.224
+
+The owner Delete member confirmation explicitly cancels the linked Stripe subscription immediately, expires unpaid checkout links and removes the enrollment. The server requires the typed DELETE confirmation. Verified completed zero-total checkouts can be deleted even when an earlier webhook failed before saving the subscription ID. Provider account, tenant, checkout, customer and subscription identities are checked before cancellation; pending paid or processing checkouts still require payment reconciliation. Cancellation requests do not create refunds, prorations or final invoices. Existing bookings and required accounting records are retained. Failed provider verification preserves the local enrollment; retries after external cancellation and local rollback are supported. No migration or real member deletion was performed for QA.
+
+Implemented on fix/member-deletion. Validation and deployment pending; production remains v1.3.223 until verified otherwise.
+
 # v1.3.223 release handoff — Free lifetime coupons and activation recovery
 
 Release source: v1.3.223

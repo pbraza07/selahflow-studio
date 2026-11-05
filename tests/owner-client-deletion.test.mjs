@@ -132,3 +132,44 @@ test('membership deletion retains settled financial facts, detaches receipt refe
  assert.equal((await pg.query('SELECT count(*)::int n FROM appointments')).rows[0].n,1,'membership-only deletion retains bookings');
  }finally{await pg.close();}
 });
+
+test('confirmed deletion cancels an unrecorded free subscription and removes the pending enrollment without affecting bookings or other tenants',async()=>{
+ const {pg,db}=await fixture();try{
+ await pg.exec("INSERT INTO membership_plans(id,business_id,name,interval_unit,price_cents) VALUES('plan','biz','Free coupon plan','month',6000); INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,date_of_birth,member_number,status,stripe_account_id,stripe_checkout_session_id) VALUES('member','biz','plan',6000,'Test Person','test@example.test','1990-01-01','TP010190','pending_payment','acct_one','cs_test_member')");
+ let canceled=false;const calls=[];
+ const api=async(path,o)=>{
+  calls.push({path,...o});assert.equal(o.account,'acct_one');
+  if(path.startsWith('checkout/'))return {...checkout('membership','member','cs_test_member','complete'),payment_status:'no_payment_required',amount_total:0,mode:'subscription',subscription:'sub_one',customer:'cus_one'};
+  assert.equal(path,'subscriptions/sub_one');
+  if(o.method==='DELETE'){assert.deepEqual(o.params,{invoice_now:false,prorate:false});canceled=true;}
+  return {id:'sub_one',customer:'cus_one',status:canceled?'canceled':'active',livemode:false,metadata:{selahflow_business_id:'biz',membership_id:'member'}};
+ };
+ // A database rollback after external cancellation must remain retryable.
+ await assert.rejects(transaction(db,async()=>{await deleteOwnerMembership(db,{owner:'owner',businessId:'biz',id:'member',cancelRecurringBilling:true,api});throw Error('simulated rollback');}),/simulated rollback/);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM customer_memberships')).rows[0].n,1);
+ const result=await transaction(db,()=>deleteOwnerMembership(db,{owner:'owner',businessId:'biz',id:'member',cancelRecurringBilling:true,api}));
+ assert.equal(result.ok,true);assert.equal(calls.filter(c=>c.method==='DELETE').length,1);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM customer_memberships')).rows[0].n,0);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM appointments')).rows[0].n,1);
+ assert.equal((await pg.query("SELECT count(*)::int n FROM customer_booking_ids WHERE business_id='other-biz'")).rows[0].n,1);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM membership_payment_emails')).rows[0].n,0,'deletion does not send a false activation email');
+ }finally{await pg.close();}
+});
+
+test('confirmed deletion fails closed for paid pending checkout, foreign identities, cancellation failure and checkout completion races',async()=>{
+ const {pg,db}=await fixture();try{
+ await pg.exec("INSERT INTO membership_plans(id,business_id,name,interval_unit,price_cents) VALUES('plan','biz','Plan','month',6000); INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,stripe_checkout_session_id) VALUES('member','biz','plan',6000,'Test Person','test@example.test','pending_payment','acct_one','cs_test_member')");
+ const free={...checkout('membership','member','cs_test_member','complete'),payment_status:'no_payment_required',amount_total:0,mode:'subscription',subscription:'sub_one',customer:'cus_one'};
+ for(const scenario of ['paid','wrongTenant','wrongCustomer','failure','race']){
+  let gets=0,deletes=0;
+  const api=async(path,o)=>{
+   if(path.startsWith('checkout/')){gets++;return scenario==='paid'||scenario==='race'&&gets>1?{...free,payment_status:'paid',amount_total:6000}:free;}
+   if(o.method==='DELETE'){deletes++;if(scenario==='failure')throw Error('Stripe unavailable');}
+   return {id:'sub_one',customer:scenario==='wrongCustomer'?'cus_other':'cus_one',status:deletes?'canceled':'active',livemode:false,metadata:{selahflow_business_id:scenario==='wrongTenant'?'other-biz':'biz',membership_id:'member'}};
+  };
+  await assert.rejects(transaction(db,()=>deleteOwnerMembership(db,{owner:'owner',businessId:'biz',id:'member',cancelRecurringBilling:true,api})),/Stripe/);
+  if(['paid','wrongTenant','wrongCustomer'].includes(scenario))assert.equal(deletes,0);
+  assert.equal((await pg.query('SELECT count(*)::int n FROM customer_memberships')).rows[0].n,1);
+ }
+ }finally{await pg.close();}
+});

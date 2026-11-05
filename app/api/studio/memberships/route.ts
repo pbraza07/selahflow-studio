@@ -233,12 +233,13 @@ export async function POST(req:Request){
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
   }
   if(input.action==='deleteMember'){
+   if(input.confirmPhrase!=='DELETE')throw Error('Type DELETE to confirm membership deletion and cancellation of recurring billing.');
    const id=String(input.id||'');
    if(!/^[a-f0-9-]{36}$/i.test(id))throw Error('Invalid member.');
    const client=await pool.connect();
    try{
     await client.query('BEGIN');
-    const removed=await deleteOwnerMembership(client,{owner,businessId:business.id,id});
+    const removed=await deleteOwnerMembership(client,{owner,businessId:business.id,id,cancelRecurringBilling:true});
     await client.query('COMMIT');
     return Response.json(removed,{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
