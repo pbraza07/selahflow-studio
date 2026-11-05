@@ -185,5 +185,9 @@ test('public booking creates protected owner records; exposes catalog only; reje
  await pg.query("UPDATE settings SET data=$1 WHERE owner='owner'",[JSON.stringify({...optionalConfig,services:optionalConfig.services.map(s=>({...s,requiresApproval:true}))})]);
  await assert.rejects(helpers.confirmBooking({pool,owner:'owner',services:optionalConfig.services.filter(s=>s.id==='barber'),staff:'privatehost',date:directDate,start:optionalSlots.at(-1),duration:30,buffer:optionalConfig.buffer,id:racedId,data:{...confirmedData},submissionOrigin:'https://studio.example'}),/Approval settings changed/);
  assert.equal((await pg.query('SELECT * FROM appointments WHERE id=$1',[racedId])).rows.length,0,'a concurrent owner approval change cannot be bypassed');
+ const beforeHidden=(await pg.query('SELECT count(*)::int n FROM appointments')).rows[0].n;
+ await pg.query("UPDATE settings SET data=$1 WHERE owner='owner'",[JSON.stringify({...optionalConfig,services:optionalConfig.services.map(s=>({...s,hiddenFromClients:true}))})]);
+ const hiddenServices=(await (await handler.publicGet(new Request('https://studio.example/api/booking'))).json()).config;assert.deepEqual(hiddenServices.services,[]);assert.deepEqual(hiddenServices.bookableSessions,[]);
+ const hiddenAttempt=await handler.studioPost(req({...noDobInput,key:crypto.randomUUID()},'198.51.100.199'),true);assert.equal(hiddenAttempt.status,400);assert.match((await hiddenAttempt.json()).error,/valid services/);assert.equal((await pg.query('SELECT count(*)::int n FROM appointments')).rows[0].n,beforeHidden);
  }finally{delete globalThis.__bookingTest;if(old===undefined)delete process.env.APP_URL;else process.env.APP_URL=old;await pg.close();}
 });

@@ -54,10 +54,11 @@ export async function reviewMembershipRequest(client,{owner,id,approve}){
  * Public membership registration is immediate but has no payment/credits.
  * Reuses the checked owner transaction and keeps historical requests auditable.
  */
-export async function registerMembershipWithoutApproval(pool,{businessId,ownerId,planId,requestId,details}){
+export async function registerMembershipWithoutApproval(pool,{businessId,ownerId,planId,requestId,details,publicRegistration=false}){
  const db=await pool.connect();
  try{
   await db.query('BEGIN');
+  if(publicRegistration&&!(await db.query('SELECT id FROM membership_plans WHERE business_id=$1 AND id=$2 AND active=true AND hidden_from_clients=false FOR SHARE',[businessId,planId])).rows.length)throw Error('Choose an available membership.');
   const prior=(await db.query('SELECT business_id,plan_id,details FROM membership_requests WHERE id=$1 FOR UPDATE',[requestId])).rows[0];
   if(prior){
    const saved=typeof prior.details==='string'?JSON.parse(prior.details):prior.details;

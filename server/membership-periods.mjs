@@ -5,10 +5,10 @@ export function monthlyPeriod(anchor,at=new Date()){
  const a=new Date(anchor),now=new Date(at);let n=Math.max(0,(now.getUTCFullYear()-a.getUTCFullYear())*12+now.getUTCMonth()-a.getUTCMonth());if(anniversary(a,n)>now)n=Math.max(0,n-1);return {start:anniversary(a,n),end:anniversary(a,n+1)};
 }
 export async function refreshMemberPeriod(db,member,at=new Date()){
- if(member.billing_type==='package'||!member.initial_paid_at||!member.credit_period_end)return member;
+ if(!member.initial_paid_at)return member;
  const now=new Date(at);
  if(member.paid_through&&new Date(member.paid_through)<=now){await db.query("UPDATE customer_memberships SET status='expired',updated_at=now() WHERE id=$1 AND business_id=$2 AND status='active'",[member.id,member.business_id]);return {...member,status:member.status==='active'?'expired':member.status};}
- if(member.status!=='active')return member;
+ if(member.billing_type==='package'||!member.credit_period_end||member.status!=='active')return member;
  const weekly=(await db.query('SELECT weekly_sessions FROM membership_plans WHERE id=$1 AND business_id=$2',[member.plan_id,member.business_id])).rows[0]?.weekly_sessions;
  if(new Date(member.credit_period_end)>now){
   if(weekly){const credits=weeklyMonthCredits(member,weekly,now);if(credits!==Number(member.sessions_included)){await db.query('UPDATE customer_memberships SET sessions_included=$1 WHERE id=$2 AND business_id=$3',[Math.max(credits,Number(member.sessions_used)),member.id,member.business_id]);return {...member,sessions_included:Math.max(credits,Number(member.sessions_used))};}}

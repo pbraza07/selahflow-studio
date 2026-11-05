@@ -56,7 +56,7 @@ export async function confirmBooking(options){
   if(options.autoConfirmRequest)throw conflict('Owner approval is required before payment.');
   if(options.submissionOrigin){
    const current=services.map(s=>(config.services||[]).find(v=>v.id===s.id));
-   if(current.some(s=>!s)||requiresBookingApproval(current))throw conflict('Approval settings changed. Refresh and submit this booking for review.');
+   if(current.some(s=>!s||s.hiddenFromClients===true)||requiresBookingApproval(current))throw conflict('Approval settings changed. Refresh and submit this booking for review.');
    if(current.some((s,i)=>Number(s.price)!==Number(services[i].price)||Number(s.duration)!==Number(services[i].duration)))throw conflict('Service details changed. Refresh your booking.');
    const business=(await client.query('SELECT id FROM businesses WHERE owner_id=$1',[owner])).rows[0];
    if(!business)throw conflict('Business not found.');
@@ -77,7 +77,7 @@ export async function confirmBooking(options){
   let weeklyMember=null;
   if(data.membershipCovered===true){
    weeklyMember=await assertWeeklyMembershipBooking(client,{owner,memberNumber:data.memberNumber,date,excludeIds:[id,pendingId].filter(Boolean)});
-   const member=(await client.query('SELECT m.weekly_limit_override,m.credit_period_start,m.credit_period_end,m.status,m.sessions_included,m.sessions_used,m.paid_through,m.initial_paid_at,m.billing_start_override,p.weekly_sessions,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2',[owner,data.memberNumber])).rows[0];
+   const member=(await client.query('SELECT m.billing_type,m.package_valid_days,m.weekly_limit_override,m.credit_period_start,m.credit_period_end,m.status,m.sessions_included,m.sessions_used,m.paid_through,m.initial_paid_at,m.billing_start_override,p.weekly_sessions,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2',[owner,data.memberNumber])).rows[0];
    const current=services.map(s=>(config.services||[]).find(v=>v.id===s.id)||s);
    const allowed=session?session.membershipCreditAllowed!==false:current.every(s=>s.membershipCreditAllowed!==false);
    if(!member||!membershipBookingActive(member,date)||!allowed||!membershipAllows(member.credit_eligibility,{serviceIds:services.map(s=>s.id),sessionId,seriesId:session?.seriesId}))throw conflict('Membership credits do not cover this booking anymore. Refresh and book with the current price.');
