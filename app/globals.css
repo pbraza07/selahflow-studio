@@ -2231,3 +2231,7 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 .sf-member-weekly-override label span{min-width:0;overflow-wrap:break-word;word-break:normal}
 .sf-member-weekly-override small{line-height:1.5}
 .sf-member-weekly-override [role=alert]{color:var(--sf-danger,#a32a29);opacity:1}
+
+/* Keep the next booking action reachable while retaining multi-service selection. */
+.public-booking .sf-client-next-actions{position:sticky;bottom:0;z-index:3;background:var(--sf-surface,#fff);box-shadow:0 -4px 16px #0000000d;padding-bottom:max(18px,env(safe-area-inset-bottom));}
+.public-form-body,.booking-success,.sf-membership-join-panel,[role="alert"]{scroll-margin-top:24px;}

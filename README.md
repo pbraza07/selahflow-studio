@@ -1,3 +1,11 @@
+# v1.3.226 release handoff — Guided client actions
+
+Release source: v1.3.226
+
+Client offer selection advances to details/payment; time selection advances to booking review. Scheduled-session selection waits for verified availability and shows focused recovery feedback on failure. Back restores selections and entered details. Multi-service selection remains available with a sticky next-action bar. Step transitions, results, payment-return feedback and errors receive focus and scroll into view with reduced-motion support. Membership progress reflects its two actual steps, and active offers provide Book a session. No booking, registration or payment is submitted by a selection alone. Existing consent, waiver, availability, approval and payment checks are preserved.
+
+Implemented on feature/guided-client-actions; validation and deployment pending. Production remains v1.3.225 until verified. No database migration or real customer transaction is used for QA.
+
 # v1.3.225 release handoff — Package validity and client visibility
 
 Release source: v1.3.225

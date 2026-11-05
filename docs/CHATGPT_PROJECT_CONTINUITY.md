@@ -1,12 +1,10 @@
-# Next release requirement — Guided client booking and purchase actions
+# v1.3.226 release handoff — Guided client actions
 
-Requested November 5, 2026. Pending implementation; this is not live behavior in v1.3.225.
+Release source: v1.3.226
 
-Apply across all businesses: each client booking or purchase action must reveal and bring focus to the next meaningful action. Selecting a membership/package should advance to details; selecting a confirmed available appointment time or scheduled session should advance to review/details after availability verification. Continue, Back, successful submission, and errors must scroll/focus the relevant step or feedback, with keyboard support and reduced-motion preferences. Preserve entered data when navigating back.
+Client offer selection advances to details/payment; time selection advances to booking review. Scheduled-session selection waits for verified availability and shows focused recovery feedback on failure. Back restores selections and entered details. Multi-service selection remains available with a sticky next-action bar. Step transitions, results, payment-return feedback and errors receive focus and scroll into view with reduced-motion support. Membership progress reflects its two actual steps, and active offers provide Book a session. No booking, registration or payment is submitted by a selection alone. Existing consent, waiver, availability, approval and payment checks are preserved.
 
-Retain multi-service selection: selecting services must make the next action clear and accessible without preventing additional selections. Date/team changes must guide clients to available times; full/unavailable selections must show recovery choices. Coupon application, registration lookup, and consent controls must provide clear feedback without unexpectedly submitting a form or skipping required details, waiver, approval, or explicit payment confirmation. Active membership/package purchase confirmation should offer Book a session; pending payment/approval must explain the actual next action without claiming completion. Review public business/team entry links, booking, membership/package enrollment, private payment invitations and post-checkout screens together.
-
-Observed v1.3.225 gaps: membership plan selection stays on the plan picker and requires a separate Continue; booking time selection stays on the time step; booking focus effect skips return to step 1; membership wizard lacks equivalent step focus handling. Verify behavior with actual React interaction tests, including asynchronous availability failure, back navigation, multi-service selection, validation and duplicate-submit safeguards. Follow normal staging/production verification before marking complete.
+Implemented on feature/guided-client-actions; validation and deployment pending. Production remains v1.3.225 until verified. No database migration or real customer transaction is used for QA.
 
 # v1.3.225 release handoff — Package validity and client visibility
 
