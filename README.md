@@ -1,3 +1,13 @@
+# v1.3.219 release handoff — Device payment alerts and financial layouts
+
+Release source: v1.3.219
+
+Owner dashboard adds a device-notification control beside the bell. Existing device opt-in is reused for session requests and new completed session, membership and service-package payment alerts. Payment alerts are queued from authoritative recorded payment events and isolated by business and opted-in owner device; historical payments are not replayed. Client booking alerts open the private booking status page, which offers the existing payment action after acceptance and rechecks payment eligibility. Booking device subscriptions support separate opt-in/out per device.
+
+Financial stage summaries and revenue summaries use aligned tables, with readable amounts, scrollable transaction details and separate activity cards. Shared metric styles prevent numbers and words from being compressed into narrow columns. Existing booking, payment, membership, commission and access rules remain in effect. Additive migrations 090/091 support payment delivery and multiple booking devices.
+
+Local verification passed: all 695 final regression tests, TypeScript and production build. Financial layout checks passed with actual rendered components and synthetic records at desktop, tablet and phone widths, including long Portuguese text and large amounts. Publication and staging/production rollout are blocked pending explicit approval to publish to the existing public GitHub repository. Nothing from this release has been pushed or deployed. See docs/v1.3.219-verification.md. No real customer payment or outgoing message was used for QA; physical-device receipt remains untested.
+
 # v1.3.218 release handoff — Responsive owner workspace and shared layouts
 
 Release source: v1.3.218

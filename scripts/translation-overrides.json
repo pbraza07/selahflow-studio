@@ -1894,5 +1894,301 @@
   "The next {0}-minute booking mark is {1}, but that earlier time is unavailable.": {
     "es": "El próximo intervalo de {0} minutos es a las {1}, pero ese horario no está disponible.",
     "pt": "O próximo intervalo de {0} minutos é às {1}, mas esse horário não está disponível."
+  },
+  "Notifications on": {
+    "es": "Notificaciones activadas",
+    "pt": "Notificações ativadas"
+  },
+  "Enable notifications": {
+    "es": "Activar notificaciones",
+    "pt": "Ativar notificações"
+  },
+  "Notifications on this device": {
+    "es": "Notificaciones en este dispositivo",
+    "pt": "Notificações neste dispositivo"
+  },
+  "Close device notifications": {
+    "es": "Cerrar notificaciones del dispositivo",
+    "pt": "Fechar notificações do dispositivo"
+  },
+  "Stay up to date with new session requests and completed payments.": {
+    "es": "Recibe avisos de nuevas solicitudes de sesiones y pagos completados.",
+    "pt": "Receba avisos de novas solicitações de sessões e pagamentos concluídos."
+  },
+  "Alerts apply to this business. Allow notifications in your browser when prompted. Device and Focus settings can affect delivery.": {
+    "es": "Los avisos corresponden a este negocio. Permite las notificaciones en el navegador cuando se solicite. Los ajustes del dispositivo y del modo de concentración pueden afectar a la recepción.",
+    "pt": "Os avisos são deste negócio. Permita as notificações no navegador quando solicitado. As configurações do dispositivo e do modo Foco podem afetar o recebimento."
+  },
+  "Could not update notifications.": {
+    "es": "No se pudieron actualizar las notificaciones.",
+    "pt": "Não foi possível atualizar as notificações."
+  },
+  "Unable to check device notifications. Try again.": {
+    "es": "No se pudieron comprobar las notificaciones del dispositivo. Inténtalo de nuevo.",
+    "pt": "Não foi possível verificar as notificações do dispositivo. Tente novamente."
+  },
+  "On iPhone or iPad, add SelahFlow to your Home Screen, open it there, then enable notifications.": {
+    "es": "En iPhone o iPad, añade SelahFlow a la pantalla de inicio, ábrelo desde allí y activa las notificaciones.",
+    "pt": "No iPhone ou iPad, adicione o SelahFlow à Tela de Início, abra por esse ícone e ative as notificações."
+  },
+  "Allow browser storage on this device so the notification can securely open your booking.": {
+    "es": "Permite el almacenamiento del navegador en este dispositivo para que la notificación pueda abrir tu reserva de forma segura.",
+    "pt": "Permita o armazenamento do navegador neste dispositivo para que a notificação possa abrir seu agendamento com segurança."
+  },
+  "Notifications enabled for this booking. An acceptance alert opens your booking and payment options.": {
+    "es": "Notificaciones activadas para esta reserva. El aviso de aceptación abre la reserva y las opciones de pago.",
+    "pt": "Notificações ativadas para este agendamento. O aviso de aprovação abre o agendamento e as opções de pagamento."
+  },
+  "Notifications disabled for this booking on this device.": {
+    "es": "Notificaciones desactivadas para esta reserva en este dispositivo.",
+    "pt": "Notificações desativadas para este agendamento neste dispositivo."
+  },
+  "Booking device notifications": {
+    "es": "Notificaciones de la reserva en el dispositivo",
+    "pt": "Notificações de agendamento no dispositivo"
+  },
+  "Booking updates on this device": {
+    "es": "Actualizaciones de la reserva en este dispositivo",
+    "pt": "Atualizações do agendamento neste dispositivo"
+  },
+  "Get notified when the owner accepts or declines your request. Tap the acceptance alert to view your booking and pay securely when payment is due.": {
+    "es": "Recibe un aviso cuando el propietario acepte o rechace tu solicitud. Toca el aviso de aceptación para ver tu reserva y pagar de forma segura si hay un importe pendiente.",
+    "pt": "Receba um aviso quando o proprietário aprovar ou recusar sua solicitação. Toque no aviso de aprovação para ver o agendamento e pagar com segurança quando houver um valor devido."
+  },
+  "iPhone or iPad: tap": {
+    "es": "iPhone o iPad: toca",
+    "pt": "iPhone ou iPad: toque em"
+  },
+  ", then open SelahFlow from its Home Screen icon to book and enable notifications. Requires iOS 16.4 or later.": {
+    "es": ", después abre SelahFlow desde su icono en la pantalla de inicio para reservar y activar las notificaciones. Requiere iOS 16.4 o posterior.",
+    "pt": ", depois abra o SelahFlow pelo ícone na Tela de Início para agendar e ativar notificações. Requer iOS 16.4 ou posterior."
+  },
+  "Web Push is unavailable in this browser. You can still check your booking status below.": {
+    "es": "Las notificaciones web no están disponibles en este navegador. Puedes consultar el estado de tu reserva más abajo.",
+    "pt": "As notificações web não estão disponíveis neste navegador. Você ainda pode consultar o status do agendamento abaixo."
+  },
+  "Device notifications are unavailable at the moment. Your booking status and payment options remain available.": {
+    "es": "Las notificaciones del dispositivo no están disponibles en este momento. El estado de tu reserva y las opciones de pago siguen disponibles.",
+    "pt": "As notificações do dispositivo estão indisponíveis no momento. O status do agendamento e as opções de pagamento continuam disponíveis."
+  },
+  "Notifications are blocked. Allow them in your browser or device settings, then return here.": {
+    "es": "Las notificaciones están bloqueadas. Permítelas en los ajustes del navegador o del dispositivo y vuelve aquí.",
+    "pt": "As notificações estão bloqueadas. Permita-as nas configurações do navegador ou do dispositivo e volte aqui."
+  },
+  "View booking & payment": {
+    "es": "Ver reserva y pago",
+    "pt": "Ver agendamento e pagamento"
+  },
+  "Optional. Each device must opt in separately. Your browser and device settings control notification delivery.": {
+    "es": "Opcional. Activa las notificaciones en cada dispositivo por separado. Los ajustes del navegador y del dispositivo controlan la recepción.",
+    "pt": "Opcional. Cada dispositivo deve ativar as notificações separadamente. As configurações do navegador e do dispositivo controlam o recebimento."
+  },
+  ". Scheduled appointments will notify this device. Time-off blocks do not send notifications.": {
+    "es": ". Este dispositivo recibirá avisos de las citas programadas. Los bloqueos por ausencia no envían notificaciones.",
+    "pt": ". Este dispositivo receberá avisos de agendamentos marcados. Bloqueios por ausência não enviam notificações."
+  },
+  ". Session requests and completed session, membership and package payments will notify this device.": {
+    "es": ". Este dispositivo recibirá avisos de solicitudes de sesiones y pagos completados de sesiones, membresías y paquetes.",
+    "pt": ". Este dispositivo receberá avisos de solicitações de sessões e pagamentos concluídos de sessões, assinaturas e pacotes."
+  },
+  ". New booking requests will identify this business.": {
+    "es": ". Las nuevas solicitudes de reserva identificarán este negocio.",
+    "pt": ". As novas solicitações de agendamento identificarão este negócio."
+  },
+  "Notifications enabled for {0}. Session requests and completed session, membership and package payments will notify this device.": {
+    "es": "Notificaciones activadas para {0}. Este dispositivo recibirá avisos de solicitudes de sesiones y pagos completados de sesiones, membresías y paquetes.",
+    "pt": "Notificações ativadas para {0}. Este dispositivo receberá avisos de solicitações de sessões e pagamentos concluídos de sessões, assinaturas e pacotes."
+  },
+  "Notifications enabled for {0}. Scheduled appointments will notify this device. Time-off blocks do not send notifications.": {
+    "es": "Notificaciones activadas para {0}. Este dispositivo recibirá avisos de las citas programadas. Los bloqueos por ausencia no envían notificaciones.",
+    "pt": "Notificações ativadas para {0}. Este dispositivo receberá avisos de agendamentos marcados. Bloqueios por ausência não enviam notificações."
+  },
+  "Notifications enabled for {0}. New booking requests will identify this business.": {
+    "es": "Notificaciones activadas para {0}. Las nuevas solicitudes de reserva identificarán este negocio.",
+    "pt": "Notificações ativadas para {0}. As novas solicitações de agendamento identificarão este negócio."
+  },
+  "Receive session requests and completed session, membership and package payment alerts on this phone or computer, even when SelahFlow is closed.": {
+    "es": "Recibe avisos de solicitudes de sesiones y pagos completados de sesiones, membresías y paquetes en este teléfono u ordenador, incluso con SelahFlow cerrado.",
+    "pt": "Receba avisos de solicitações de sessões e pagamentos concluídos de sessões, assinaturas e pacotes neste celular ou computador, mesmo com o SelahFlow fechado."
+  },
+  "Get booking alerts on this phone or computer even when SelahFlow is closed.": {
+    "es": "Recibe avisos de reservas en este teléfono u ordenador, incluso con SelahFlow cerrado.",
+    "pt": "Receba avisos de agendamentos neste celular ou computador, mesmo com o SelahFlow fechado."
+  },
+  "Each device must opt in separately.": {
+    "es": "Activa las notificaciones en cada dispositivo por separado.",
+    "pt": "Cada dispositivo deve ativar as notificações separadamente."
+  },
+  "iPhone / iPad: While viewing this business's SelahFlow page in Safari, tap": {
+    "es": "iPhone / iPad: en la página de SelahFlow de este negocio, abierta en Safari, toca",
+    "pt": "iPhone / iPad: ao abrir a página deste negócio no SelahFlow pelo Safari, toque em"
+  },
+  "Web Push is not available in this browser. Use a supported current browser; iPhone and iPad require an installed Home Screen web app (iOS / iPadOS 16.4+).": {
+    "es": "Las notificaciones web no están disponibles en este navegador. Usa un navegador actual compatible; en iPhone y iPad se requiere la aplicación web instalada en la pantalla de inicio (iOS / iPadOS 16.4 o posterior).",
+    "pt": "As notificações web não estão disponíveis neste navegador. Use um navegador atualizado e compatível; no iPhone e iPad é necessário instalar o aplicativo web na Tela de Início (iOS / iPadOS 16.4 ou posterior)."
+  },
+  "Booking details and payment": {
+    "es": "Detalles de la reserva y pago",
+    "pt": "Detalhes do agendamento e pagamento"
+  },
+  "This request is not confirmed until accepted. Payment becomes available after approval.": {
+    "es": "Esta solicitud no está confirmada hasta que se acepte. El pago estará disponible después de la aprobación.",
+    "pt": "Esta solicitação só será confirmada após ser aceita. O pagamento ficará disponível após a aprovação."
+  },
+  "Reset paid revenue to $0?": {
+    "es": "¿Restablecer los ingresos cobrados a $0?",
+    "pt": "Redefinir a receita recebida para $0?"
+  },
+  "Revenue summary": {
+    "es": "Resumen de ingresos",
+    "pt": "Resumo da receita"
+  },
+  "Collected payments and unpaid estimates for the selected period.": {
+    "es": "Pagos cobrados y estimaciones pendientes de pago del período seleccionado.",
+    "pt": "Pagamentos recebidos e valores estimados ainda não pagos no período selecionado."
+  },
+  "Measure": {
+    "es": "Indicador",
+    "pt": "Indicador"
+  },
+  "What it includes": {
+    "es": "Qué incluye",
+    "pt": "O que inclui"
+  },
+  "Verified Stripe bookings, recorded sales and memberships": {
+    "es": "Reservas verificadas por Stripe, ventas y membresías registradas",
+    "pt": "Agendamentos verificados pelo Stripe, vendas e assinaturas registradas"
+  },
+  "{0} verified or owner-recorded purchases and renewals · included in paid revenue": {
+    "es": "{0} compras y renovaciones verificadas o registradas por el propietario · incluidas en los ingresos cobrados",
+    "pt": "{0} compras e renovações verificadas ou registradas pelo proprietário · incluídas na receita recebida"
+  },
+  "Unpaid quotes only · excludes membership-covered visits": {
+    "es": "Solo presupuestos pendientes de pago · excluye visitas cubiertas por una membresía",
+    "pt": "Somente valores estimados ainda não pagos · exclui sessões cobertas pela assinatura"
+  },
+  "Future unpaid confirmed bookings · included in projected unpaid revenue": {
+    "es": "Reservas futuras confirmadas y pendientes de pago · incluidas en la previsión de ingresos no cobrados",
+    "pt": "Agendamentos futuros confirmados e ainda não pagos · incluídos na previsão de receita a receber"
+  },
+  "Appointment activity": {
+    "es": "Actividad de citas",
+    "pt": "Atividade dos agendamentos"
+  },
+  "Payments received during the selected period.": {
+    "es": "Pagos recibidos durante el período seleccionado.",
+    "pt": "Pagamentos recebidos durante o período selecionado."
+  },
+  "Method / type": {
+    "es": "Método / tipo",
+    "pt": "Forma / tipo"
+  },
+  "View payment details for": {
+    "es": "Ver detalles del pago de",
+    "pt": "Ver detalhes do pagamento de"
+  },
+  "View payment details for {0}": {
+    "es": "Ver detalles del pago de {0}",
+    "pt": "Ver detalhes do pagamento de {0}"
+  },
+  "Reset paid revenue to $0": {
+    "es": "Restablecer los ingresos cobrados a $0",
+    "pt": "Redefinir a receita recebida para $0"
+  },
+  "Quoted amounts do not confirm payment. Membership-covered visits may have a $0 quote.": {
+    "es": "Los importes presupuestados no confirman el pago. Las visitas cubiertas por una membresía pueden tener un presupuesto de $0.",
+    "pt": "Os valores estimados não confirmam o pagamento. Sessões cobertas pela assinatura podem ter valor estimado de $0."
+  },
+  "Payment overview": {
+    "es": "Resumen de pagos",
+    "pt": "Visão geral dos pagamentos"
+  },
+  "Payment stages": {
+    "es": "Etapas del pago",
+    "pt": "Etapas do pagamento"
+  },
+  "Records": {
+    "es": "Registros",
+    "pt": "Registros"
+  },
+  "unpriced · excluded from amount": {
+    "es": "sin precio · excluidos del importe",
+    "pt": "sem preço · excluídos do valor"
+  },
+  "How amounts and dates are calculated": {
+    "es": "Cómo se calculan los importes y las fechas",
+    "pt": "Como os valores e as datas são calculados"
+  },
+  "Financial transactions": {
+    "es": "Transacciones financieras",
+    "pt": "Transações financeiras"
+  },
+  "Maximum 10 notification devices per booking.": {
+    "es": "Máximo de 10 dispositivos con notificaciones por reserva.",
+    "pt": "Máximo de 10 dispositivos com notificações por agendamento."
+  },
+  "Export paid revenue": {
+    "es": "Exportar ingresos cobrados",
+    "pt": "Exportar receitas recebidas"
+  },
+  "Export appointments": {
+    "es": "Exportar citas",
+    "pt": "Exportar agendamentos"
+  },
+  "Export financial statuses": {
+    "es": "Exportar estados de pago",
+    "pt": "Exportar status dos pagamentos"
+  },
+  "Delete paid revenue history": {
+    "es": "Eliminar el historial de ingresos cobrados",
+    "pt": "Apagar histórico de receitas recebidas"
+  },
+  "Membership purchases and renewals": {
+    "es": "Compras y renovaciones de membresías",
+    "pt": "Compras e renovações de assinaturas"
+  },
+  "Projected unpaid appointment revenue": {
+    "es": "Previsión de ingresos por citas pendientes de pago",
+    "pt": "Previsão de receita de agendamentos ainda não pagos"
+  },
+  "Upcoming unpaid booked revenue": {
+    "es": "Ingresos pendientes de próximas reservas",
+    "pt": "Receita a receber de próximos agendamentos"
+  },
+  "Projected unpaid value:": {
+    "es": "Valor pendiente de pago estimado:",
+    "pt": "Valor estimado a receber:"
+  },
+  "Amount basis": {
+    "es": "Base del importe",
+    "pt": "Base do valor"
+  },
+  "Retail cost of goods sold": {
+    "es": "Coste de los productos vendidos",
+    "pt": "Custo dos produtos vendidos"
+  },
+  "Retail revenue": {
+    "es": "Ingresos por venta de productos",
+    "pt": "Receita com venda de produtos"
+  },
+  "Revenue breakdown": {
+    "es": "Desglose de ingresos",
+    "pt": "Detalhamento da receita"
+  },
+  "Recorded transactions": {
+    "es": "Transacciones registradas",
+    "pt": "Transações registradas"
+  },
+  "View details ↗": {
+    "es": "Ver detalles ↗",
+    "pt": "Ver detalhes ↗"
+  },
+  "Submitted = awaiting approval. Approved = accepted, before a payment request. Pending payment = a payment has been requested or a membership is awaiting payment. Paid = verified provider payments or money recorded as received by the owner.": {
+    "es": "Enviada = pendiente de aprobación. Aprobada = aceptada, antes de solicitar el pago. Pago pendiente = se ha solicitado el pago o una membresía está pendiente de pago. Pagado = pagos verificados por el proveedor o importes registrados como recibidos por el propietario.",
+    "pt": "Enviado = aguardando aprovação. Aprovado = aceito, antes da solicitação de pagamento. Pagamento pendente = o pagamento foi solicitado ou uma assinatura aguarda pagamento. Pago = pagamentos verificados pelo provedor ou valores registrados como recebidos pelo proprietário."
+  },
+  "Bookings use the scheduled date; membership submissions use the registration date; paid entries use the payment date. Date filters use Eastern time. Amounts exclude tax and tips; refunds and operating expenses are not deducted. Each unpaid obligation appears in one stage; paid receipts are separate transactions. A membership-covered visit has a $0 quote. Canceled, declined, no-show quotes and removed services are excluded. Past-due membership amounts estimate one package period, not a provider invoice balance. Unlinked manual sales remain separate from bookings; link a cash sale at Checkout to settle its booking. Revenue resets continue to hide previously cleared paid entries.": {
+    "es": "Las reservas usan la fecha programada; las solicitudes de membresía, la fecha de inscripción; y los pagos, la fecha de cobro. Los filtros de fecha usan la hora del Este. Los importes no incluyen impuestos ni propinas; no se descuentan reembolsos ni gastos operativos. Cada importe pendiente figura en una sola etapa; los cobros son transacciones separadas. Las visitas cubiertas por una membresía tienen un importe estimado de $0. Se excluyen los presupuestos de citas canceladas, rechazadas o con inasistencia, y los servicios eliminados. Los importes de membresías vencidas estiman un período del paquete, no el saldo de una factura del proveedor. Las ventas manuales sin vincular permanecen separadas de las reservas; vincula la venta en efectivo en Caja para liquidar su reserva. Al restablecer los ingresos, los pagos anteriores retirados del informe siguen ocultos.",
+    "pt": "Os agendamentos usam a data marcada; as solicitações de assinatura, a data de cadastro; e os pagamentos, a data de recebimento. Os filtros de data usam o horário do leste dos EUA. Os valores não incluem impostos nem gorjetas; reembolsos e despesas operacionais não são descontados. Cada valor pendente aparece em uma única etapa; os recebimentos são transações separadas. Uma sessão coberta pela assinatura tem valor estimado de $0. Estimativas de agendamentos cancelados, recusados ou com falta e serviços removidos são excluídos. Valores de assinaturas em atraso estimam um período do pacote, não o saldo de uma fatura do provedor. Vendas manuais sem vínculo continuam separadas dos agendamentos; vincule a venda em dinheiro no Caixa para quitar o agendamento. Ao redefinir a receita, os pagamentos anteriores retirados do relatório continuam ocultos."
   }
 }

@@ -84,9 +84,16 @@ test('real owner React interactions open settings aliases, actionable metrics an
   assert.equal(posts.at(-1).action,'settings');assert.equal(posts.at(-1).config.bookableSessions.length,1);
   assert.match(document.querySelector('[role=alert]').textContent,/Service is required/);assert.match(document.querySelector('[role=alert]').textContent,/still here/);
   await click(button('Dashboard'));assert.equal(document.querySelector('form').dataset.settingsTab,'sessions','Cancel navigation keeps the draft');
+  await act(async()=>{window.history.replaceState(null,'','#reports');window.dispatchEvent(new window.HashChangeEvent('hashchange'));});
+  assert.equal(document.querySelector('form').dataset.settingsTab,'sessions','Payment notification navigation also preserves an unsaved draft when cancelled');
   window.confirm=()=>true;await click(button('Dashboard'));
   const revenue=document.querySelectorAll('.sf-stat-action')[1];await click(revenue);
   const report=JSON.parse(document.querySelector('[data-report]').textContent);assert.equal(report.range,'Custom date range');assert.equal(report.dates.from,report.dates.to);
+  await click(button('Dashboard'));
+  await act(async()=>{window.dispatchEvent(new window.HashChangeEvent('hashchange'));});
+  assert.ok(document.querySelector('[data-report]'),'Payment notification hash opens Reports');
+  await act(async()=>{window.history.replaceState(null,'','#booking-notifications');window.dispatchEvent(new window.HashChangeEvent('hashchange'));});
+  assert.equal(document.querySelector('[aria-current=page]').textContent,'Dashboard','Request notification hash opens the dashboard inbox');
  }finally{await act(async()=>root.unmount());dom.window.close();Object.assign(globalThis,old);}
 });
 

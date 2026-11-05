@@ -162,3 +162,17 @@ body :is(button,.primary,.outline){white-space:normal;max-width:100%;line-height
 .booking-modal .booking-service>b{white-space:nowrap;flex-shrink:0}
 .booking-modal .booking-service>.select-check{flex-shrink:0;margin-top:2px}
 @media(max-width:500px){.booking-modal .booking-service{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px}.booking-modal .booking-service>b{grid-column:2;grid-row:2}.booking-modal .booking-service>div{grid-column:2;grid-row:1}}
+
+/* A metric is a vertical stack even when its whole surface is a button. */
+.app-shell .stat,.sf-team-shell .stat,.public-page .stat{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;min-width:0;text-align:left}
+.stat>div{gap:12px;align-items:flex-start}
+.stat>div>span:first-child{min-width:0;line-height:1.5}
+.stat>p{flex:1}
+.app-shell .stat strong,.sf-team-shell .stat strong,.public-page .stat strong{white-space:nowrap;overflow-wrap:normal;word-break:normal;font-variant-numeric:tabular-nums;max-width:100%;font-size:clamp(22px,2.3vw,30px)}
+/* Keep currency and counts intact throughout reports, checkout and client summaries. */
+body .sf-money{display:inline-block;white-space:nowrap;overflow-wrap:normal;word-break:normal;font-variant-numeric:tabular-nums;letter-spacing:normal}
+.report-row,.receipt-line,.receipt-total,.service-bottom{min-width:0;flex-wrap:wrap}
+.report-row>:first-child,.receipt-line>div,.service-bottom>:first-child{min-width:0;flex:1 1 160px}
+.report-row>b,.receipt-line>b,.receipt-line>span:last-child,.receipt-total>b,.service-bottom>b,.modal-footer>div>b{flex-shrink:0;white-space:nowrap;overflow-wrap:normal;word-break:normal;font-variant-numeric:tabular-nums}
+.report-row>b,.receipt-line>b,.receipt-line>span:last-child{margin-left:auto;text-align:right}
+:where(.sf-client-metrics,.sf-client-summary-metrics,.sf-roster-metrics) :is(b,strong){white-space:nowrap;overflow-wrap:normal;font-variant-numeric:tabular-nums}
