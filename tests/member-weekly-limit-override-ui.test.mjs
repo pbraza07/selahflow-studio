@@ -11,6 +11,7 @@ const exported={};
 new Function('require','exports',source)(id=>{
  if(id==='../../server/registration-questions.mjs')return {customRegistrationFields:()=>[]};
  if(id==='./sortable-table')return {__esModule:true,default:({children})=>React.createElement('table',null,children)};
+ if(id==='./membership-modal')return {__esModule:true,default:({children})=>React.createElement('section',null,children)};
  if(id.startsWith('./'))return {__esModule:true,default:()=>null};
  return require(id);
 },exported);
@@ -101,5 +102,19 @@ test('membership deletion explains immediate billing cancellation and submits on
   await act(async()=>button.click());assert.equal(f.state.posted,null);
   window.prompt=()=> 'DELETE';
   await act(async()=>button.click());assert.deepEqual(f.state.posted,{action:'deleteMember',id:'monthly',confirmPhrase:'DELETE'});
+ }finally{await f.cleanup();}
+});
+
+ test('package editor exposes total sessions, optional validity and client visibility while preserving membership schedules',async()=>{
+ const f=await fixture();try{
+  await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Create membership or package').click());
+  const field=text=>[...document.querySelectorAll('label')].find(l=>l.textContent.trim().startsWith(text));
+  assert.ok(field('Usage schedule'));
+  await act(async()=>{const select=field('Offer type').querySelector('select');select.value='package';select.dispatchEvent(new Event('change',{bubbles:true}));});
+  assert.ok(field('Total sessions in package'));assert.equal(field('Usage schedule'),undefined);
+  await act(async()=>field('Limit time to use sessions').querySelector('input').click());assert.equal(field('Valid for days after confirmed payment').querySelector('input').value,'90');
+  await act(async()=>field('Hide from clients').querySelector('input').click());
+  await act(async()=>document.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  assert.equal(f.state.posted.billingType,'package');assert.equal(f.state.posted.packageValidDays,90);assert.equal(f.state.posted.hiddenFromClients,true);assert.equal(f.state.posted.weeklySessions,null);
  }finally{await f.cleanup();}
 });

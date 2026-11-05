@@ -8,14 +8,14 @@ import {membershipRequestDetails} from './membership-requests.mjs';
 import {stripeApi} from './membership-payments.mjs';
 import {readyMerchant,assertTestPayment,checkoutUrl} from './stripe-checkout.mjs';
 
-export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
+export async function startMembershipCheckout(pool,body,origin,api=stripeApi,{invitedMembershipId=null}={}){
  if(!/^[a-f0-9-]{36}$/i.test(body.requestId||''))throw Error('Invalid request identifier. Refresh and try again.');
  const db=await pool.connect();
  try{
   await db.query('BEGIN');
   const business=(await db.query("SELECT b.id,b.owner_id,b.name,b.slug,s.data FROM businesses b LEFT JOIN settings s ON s.owner=b.owner_id WHERE b.slug=$1 AND b.status='active'",[body.slug])).rows[0];
   if(!business)throw Error('Business unavailable.');
-  const plan=(await db.query('SELECT * FROM membership_plans WHERE id=$1 AND business_id=$2 AND active=true FOR SHARE',[body.planId,business.id])).rows[0];
+  const plan=(await db.query('SELECT * FROM membership_plans WHERE id=$1 AND business_id=$2 AND active=true AND (hidden_from_clients=false OR EXISTS(SELECT 1 FROM customer_memberships m WHERE m.id=$3 AND m.plan_id=membership_plans.id AND m.business_id=membership_plans.business_id)) FOR SHARE',[body.planId,business.id,invitedMembershipId])).rows[0];
   if(!plan)throw Error('Choose an available membership.');
   const oneTime=plan.billing_type==='package';
   if(body.termsAccepted!==true||!oneTime&&body.recurringAccepted!==true)throw Error('Please accept recurring billing and membership terms.');
@@ -88,11 +88,11 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi){
   if(oneTime){
    delete params['payment_intent_data[setup_future_usage]'];
    params['metadata[one_time_package]']='true';
-   params['custom_text[submit][message]']='One-time service package payment. No subscription or automatic renewal. Session credits remain until used.';
+   params['custom_text[submit][message]']='One-time service package payment. No automatic renewal. '+(member.package_valid_days?'Use sessions within '+member.package_valid_days+' days after payment.':'Session credits remain until used.');
   }
   if(oneTime&&coupon?.total===0){
    for(const key of Object.keys(params))if(key.startsWith('payment_intent_data['))delete params[key];
-   params['custom_text[submit][message]']='Free service package. No payment or subscription. Session credits remain until used.';
+   params['custom_text[submit][message]']='Free service package. No payment or subscription. '+(member.package_valid_days?'Use sessions within '+member.package_valid_days+' days after activation.':'Session credits remain until used.');
   }
   const session=await api('checkout/sessions',{account,idempotencyKey:'membership-'+member.id+'-'+(member.stripe_checkout_session_id||'initial'),params});
   assertTestPayment(session);const url=checkoutUrl(session);

@@ -1,3 +1,13 @@
+# v1.3.225 release handoff — Package validity and client visibility
+
+Release source: v1.3.225
+
+Owners can create one-time packages with a fixed total session count, no weekly cap, and optional validity of 1–3650 days from verified payment; no-expiry packages and existing recurring/weekly memberships remain available. Validity is snapshotted at enrollment; existing paid packages retain their terms when an offer changes. Expiry blocks new covered bookings and credit use without resetting the balance. Additive migration 097 preserves current plans and enrollments.
+
+Hide from clients checkboxes are available for membership/package offers and services. Hidden offers are excluded from public discovery and new public enrollment; hidden services and their sessions are excluded from public booking, business and team catalogs. Server checks reject forged selections. Owner management, existing bookings, members, and verified private membership invitations remain available. Existing visibility defaults are unchanged.
+
+Implemented on feature/package-validity-visibility. Focused checks passed; full validation and deployment pending. Production remains v1.3.224 until verified otherwise. No real customer purchase, hiding, or enrollment change was used for QA.
+
 # v1.3.224 release handoff — Owner membership deletion
 
 Release source: v1.3.224

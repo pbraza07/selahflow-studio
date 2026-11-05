@@ -6,8 +6,8 @@ export function validateWeeklySessions(value){
  if(!Number.isInteger(value)||value<1||value>3)throw Error('Choose 1, 2 or 3 sessions per week.');
  return value;
 }
-export function membershipUsageSummary(weekly,monthly,billingType='membership'){
- if(billingType==='package')return `${monthly??0} total sessions. One-time payment; no automatic renewal or monthly reset. Credits remain until used.`;
+export function membershipUsageSummary(weekly,monthly,billingType='membership',validDays=null){
+ if(billingType==='package')return `${monthly??0} total sessions. One-time payment; no automatic renewal or monthly reset. ${validDays?'Use within '+validDays+' days after payment.':'Credits remain until used.'}`;
  return weekly?`${weekly} session${weekly===1?'':'s'} per week. Seven-day weeks start on the membership initial date and restart at each monthly anniversary; a partial fifth week is included. Unused weekly sessions do not roll over.`:`${monthly??0} sessions each membership month. Unused sessions do not roll over.`;
 }
 // Work in business date labels, avoiding DST shifts and fixed 28/30-day months.
@@ -22,6 +22,7 @@ export function weeklyMembershipWindow(member,date){
  return {start:start.toISOString().slice(0,10),end:end.toISOString().slice(0,10),monthStart:month.start.toISOString().slice(0,10),monthEnd:month.end.toISOString().slice(0,10),weeks:Math.ceil(days/7)};
 }
 export function membershipBookingActive(member,date){
+ if(member?.billing_type==='package'&&member.paid_through&&date>=businessDate(member.paid_through))return false;
  if(!member?.weekly_sessions)return hasUsableMembership(member);
  const active=member.status==='active'&&!!member.initial_paid_at&&!!member.paid_through&&date>=membershipAnchor(member).slice(0,10)&&date<businessDate(member.paid_through);
  if(!active)return false;

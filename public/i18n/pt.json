@@ -6335,5 +6335,12 @@
  "I accept the terms of this free offer. Session allowances and booking rules still apply. Complete checkout to activate; no payment is due.": "Aceito os termos desta oferta grátis. Os limites de sessões e regras de agendamento continuam válidos. Conclua a confirmação para ativar; não há pagamento.",
  "No expiration or redemption limit. Apply the code to each session or package; membership renewals remain free for that subscription. Normal session allowances and booking rules still apply. Disabling the code stops new redemptions; existing subscription discounts remain.": "Sem vencimento ou limite de usos. Aplique o código a cada sessão ou pacote; as renovações da assinatura permanecem gratuitas. Os limites de sessões e regras de agendamento continuam válidos. Desativar o código impede novos usos; os descontos das assinaturas existentes permanecem.",
  "Customers apply these codes at the end of service booking or membership or package signup. The discounted total is shown before payment. Services receive the discount for that booking; the duration below controls recurring membership invoices.": "Os clientes aplicam estes códigos ao concluir a reserva ou inscrição em uma assinatura ou pacote. O total com desconto aparece antes do pagamento. O desconto nos serviços vale para aquela reserva; a duração abaixo controla as faturas recorrentes.",
- "Check payment / activation": "Verificar pagamento / ativação"
+ "Check payment / activation": "Verificar pagamento / ativação",
+ "Hide from clients": "Ocultar dos clientes",
+ "Hidden from clients": "Oculto dos clientes",
+ "Package validity": "Validade do pacote",
+ "Limit time to use sessions": "Limitar o prazo para usar as sessões",
+ "Valid for days after confirmed payment": "Dias de validade após o pagamento confirmado",
+ "No expiry. Sessions remain available until used.": "Sem vencimento. As sessões ficam disponíveis até serem usadas.",
+ "Changes apply to new enrollments. Existing package validity stays unchanged.": "As alterações se aplicam a novas inscrições. A validade dos pacotes existentes permanece igual."
 }

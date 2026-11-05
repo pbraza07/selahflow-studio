@@ -24,7 +24,7 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
  const row=(await getPool().query("SELECT name,slug,industry,description,city,region FROM businesses WHERE slug=$1 AND status='active' LIMIT 1",[slug])).rows[0];
  return row?businessPageMetadata(row):{robots:{index:false,follow:false}};
 }
-type Service={id:string;name:string;duration:number;durationUnit?:string;durationValue?:number;price:number;description?:string};
+type Service={hiddenFromClients?:boolean;id:string;name:string;duration:number;durationUnit?:string;durationValue?:number;price:number;description?:string};
 type Row={id:string;name:string;slug:string;industry:string;description:string;city:string;region:string;data:string|null;brand_primary:string;brand_background:string;business_model:string;has_logo:boolean};
 export default async function BusinessPage({params}:{params:Promise<{slug:string}>}){
  const {slug}=await params;
@@ -32,7 +32,7 @@ export default async function BusinessPage({params}:{params:Promise<{slug:string
  const row=(await getPool().query("SELECT b.id,b.name,b.slug,b.industry,b.description,b.city,b.region,b.brand_primary,b.brand_background,b.business_model,EXISTS(SELECT 1 FROM business_logos l WHERE l.business_id=b.id) AS has_logo,s.data FROM businesses b LEFT JOIN settings s ON s.owner=b.owner_id WHERE b.slug=$1 AND b.status='active' LIMIT 1",[slug])).rows[0] as Row|undefined;
  if(!row)notFound();
  let config:{staff?:any[];tagline?:string;services?:Service[];theme?:any;address?:string;socialLinks?:Record<string,string>;homeHeaderAction?:string;homeCta?:string;homeServicesTitle?:string;homeServicesIntro?:string}={};try{config=row.data?JSON.parse(row.data):{};}catch{}
- const services=(Array.isArray(config.services)?config.services:[]).filter(s=>s&&typeof s.name==='string'&&Number.isFinite(s.price)&&Number.isFinite(s.duration)).slice(0,30);
+ const services=(Array.isArray(config.services)?config.services:[]).filter(s=>s&&s.hiddenFromClients!==true&&typeof s.name==='string'&&Number.isFinite(s.price)&&Number.isFinite(s.duration)).slice(0,30);
  const team=await businessTeamShowcase(getPool(),row.id,config);
  const price=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n);
  const theme={...themeStyles(config.theme,row.brand_primary,row.brand_background),'--forest':row.brand_primary,'--forest-deep':row.brand_primary,'--cream':row.brand_background} as CSSProperties;
