@@ -91,3 +91,27 @@ test('past-credit endpoints require owner authentication and same-origin request
   const applied=await exported.POST(request());assert.equal(applied.status,200,await applied.clone().text());
  }finally{if(previous===undefined)delete process.env.APP_URL;else process.env.APP_URL=previous;await f.close();}
 });
+
+
+test('past owner save and membership debit commit atomically and retries or attendance corrections cannot double debit',async()=>{
+ const f=await fixture();try{
+ const service={id:'s',name:'Session',duration:60,price:50};
+ await f.db.query('UPDATE settings SET data=$1 WHERE owner=$2',[JSON.stringify({open:8,close:20,buffer:0,services:[service],staff:[{id:'coach',services:['s']}],bookableSessions:[]}),'owner']);
+ const booking={pool:{...f.db,connect:async()=>f.db},owner:'owner',services:[service],staff:'coach',date:'2020-01-02',start:600,duration:60,buffer:0,id:'deducted-booking',applyPastMembership:true,data:{...f.data,pastSessionOverride:{reason:'Owner recorded a past booking',owner:'owner'}}};
+ const result=await confirmBooking(booking);assert.equal(result.membershipUsage.remaining,4);
+ const saved=(await f.db.query('SELECT * FROM appointments WHERE id=$1',[booking.id])).rows[0];assert.equal(saved.status,'Checked in');assert.equal(JSON.parse(saved.data).membershipCovered,true);assert.equal(JSON.parse(saved.data).price,0);assert.equal(JSON.parse(saved.data).originalPrice,50);
+ assert.equal((await confirmBooking(booking)).duplicate,true);
+ const {changeAppointmentStatus}=await import('../server/appointment-membership-usage.mjs');
+ await transaction(f.db,()=>changeAppointmentStatus(f.db,{owner:'owner',appointmentId:booking.id,status:'No-show',eventId:'status-event',ledgerId:'unused-ledger',createdAt:new Date().toISOString()}));
+ assert.equal((await f.db.query('SELECT sessions_used FROM customer_memberships')).rows[0].sessions_used,1);
+ assert.equal((await f.db.query("SELECT count(*)::int n FROM membership_session_ledger WHERE appointment_id=$1",[booking.id])).rows[0].n,1);
+ // Failure after inserting the appointment and slot locks must roll back both.
+ await f.db.query('UPDATE customer_memberships SET sessions_used=sessions_included');
+ const failed={...booking,id:'exhausted-booking',date:'2020-01-03',data:{...f.data,pastSessionOverride:booking.data.pastSessionOverride}};
+ await assert.rejects(()=>confirmBooking(failed),/remaining/);
+ assert.equal((await f.db.query('SELECT id FROM appointments WHERE id=$1',[failed.id])).rows.length,0);
+ assert.equal((await f.db.query('SELECT appointment FROM slots WHERE appointment=$1',[failed.id])).rows.length,0);
+ await assert.rejects(()=>confirmBooking({...failed,id:'public-attempt',submissionOrigin:'https://example.test'}),/Only an owner/);
+ await assert.rejects(()=>confirmBooking({...failed,id:'future-attempt',date:'2099-01-01'}),/Only an owner/);
+ }finally{await f.close();}
+});

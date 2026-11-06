@@ -212,6 +212,15 @@ test('public booking creates protected owner records; exposes catalog only; reje
  for(const bad of [{memberNumber:'ZZ9999'},{email:'different@example.test'},{name:'Another Client'}]){
   const rejected=await handler.studioPost(pastOwnerRequest({...identifiedInput,...bad,key:crypto.randomUUID(),date:'2020-01-05'}));assert.equal(rejected.status,400,await rejected.clone().text());
  }
+ const debitInput={...identifiedInput,key:crypto.randomUUID(),date:'2020-01-06',applyPastMembership:true};
+ const missingMembership=await handler.studioPost(pastOwnerRequest(debitInput));assert.equal(missingMembership.status,409);assert.match((await missingMembership.json()).error,/No unique membership/);
+ assert.equal((await pg.query('SELECT id FROM appointments WHERE id=$1',[debitInput.key])).rows.length,0);
+ await pg.query("INSERT INTO membership_plans(id,business_id,name,price_cents,interval_unit,sessions_included) VALUES('past-plan','crawford-biz','Past plan',5000,'month',5)");
+ await pg.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,stripe_account_id,customer_name,customer_email,member_number,status,sessions_included,sessions_used,initial_paid_at,paid_through,registration_identity) VALUES('past-member','crawford-biz','past-plan',5000,'manual','Taylor Doe','no-dob@example.test','TD1001','active',5,0,now(),now()+interval '1 month',(SELECT registration_identity FROM customer_booking_ids WHERE business_id='crawford-biz' AND member_number='TD1001'))");
+ const deducted=await handler.studioPost(pastOwnerRequest(debitInput));assert.equal(deducted.status,200,await deducted.clone().text());const debitResult=await deducted.json();assert.equal(debitResult.membershipCovered,true);assert.equal(debitResult.status,'Checked in');assert.equal(debitResult.chargedPrice,0);assert.equal(debitResult.membershipUsage.remaining,4);
+ assert.equal((await pg.query("SELECT sessions_used FROM customer_memberships WHERE id='past-member'")).rows[0].sessions_used,1);
+ const debitReplay=await handler.studioPost(pastOwnerRequest(debitInput));assert.equal(debitReplay.status,200);const replayBody=await debitReplay.json();assert.equal(replayBody.membershipUsage.alreadyDeducted,true);assert.equal(replayBody.membershipUsage.remaining,4);
+ const publicDebit=await handler.studioPost(req({...debitInput,key:crypto.randomUUID(),pastSessionOverride:false},'198.51.100.213'),true);assert.equal(publicDebit.status,400);
  const noOwnerOverride=await handler.studioPost(req({action:'availability',pastSessionOverride:true,services:['barber'],staff:'james',date:'2020-01-03'},'198.51.100.212'),true);assert.equal(noOwnerOverride.status,400);
  }finally{delete globalThis.__bookingTest;if(old===undefined)delete process.env.APP_URL;else process.env.APP_URL=old;await pg.close();}
 });
