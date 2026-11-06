@@ -173,3 +173,21 @@ test('confirmed deletion fails closed for paid pending checkout, foreign identit
  }
  }finally{await pg.close();}
 });
+
+test('confirmed deletion removes a canceled free membership with used credits and retains its bookings',async()=>{
+ const {pg,db}=await fixture();try{
+ await pg.exec("INSERT INTO membership_plans(id,business_id,name,interval_unit,price_cents) VALUES('plan','biz','Plan','month',6000); INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,date_of_birth,member_number,status,sessions_included,sessions_used,initial_paid_at,stripe_account_id,stripe_subscription_id,stripe_checkout_session_id,stripe_customer_id) VALUES('member','biz','plan',6000,'Test Person','test@example.test','1990-01-01','TP010190','canceled',10,1,now(),'acct_one','sub_one','cs_test_member','cus_one'); INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta) VALUES('used','biz','member','visit','session_used',-1)");
+ const calls=[];
+ const api=async(path,o)=>{
+  calls.push({path,...o});assert.equal(o.method,'GET','Already canceled billing must not be canceled or charged again');assert.equal(o.account,'acct_one');
+  if(path.startsWith('checkout/'))return {...checkout('membership','member','cs_test_member','complete'),payment_status:'no_payment_required',amount_total:0,mode:'subscription',subscription:'sub_one',customer:'cus_one'};
+  return {id:'sub_one',customer:'cus_one',status:'canceled',livemode:false,metadata:{selahflow_business_id:'biz',membership_id:'member'}};
+ };
+ const result=await transaction(db,()=>deleteOwnerMembership(db,{owner:'owner',businessId:'biz',id:'member',cancelRecurringBilling:true,api}));
+ assert.equal(result.ok,true);assert.ok(calls.length);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM customer_memberships')).rows[0].n,0);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM membership_session_ledger')).rows[0].n,0);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM appointments')).rows[0].n,1);
+ assert.equal((await pg.query("SELECT count(*)::int n FROM customer_booking_ids WHERE business_id='other-biz'")).rows[0].n,1);
+ }finally{await pg.close();}
+});
