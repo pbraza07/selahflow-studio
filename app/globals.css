@@ -2235,3 +2235,17 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 /* Keep the next booking action reachable while retaining multi-service selection. */
 .public-booking .sf-client-next-actions{position:sticky;bottom:0;z-index:3;background:var(--sf-surface,#fff);box-shadow:0 -4px 16px #0000000d;padding-bottom:max(18px,env(safe-area-inset-bottom));}
 .public-form-body,.booking-success,.sf-membership-join-panel,[role="alert"]{scroll-margin-top:24px;}
+
+/* Readable enrollment identities: keep IDs whole and scroll the table instead of crushing badges. */
+.sf-owner-membership-scroll table{min-width:1020px}
+.sf-owner-membership-scroll th:first-child,.sf-owner-membership-scroll td:first-child{min-width:260px;width:28%}
+.sf-owner-membership-scroll th:nth-child(2),.sf-owner-membership-scroll td:nth-child(2){min-width:220px}
+.sf-owner-membership-scroll th:nth-child(4),.sf-owner-membership-scroll td:nth-child(4){min-width:230px}
+.sf-member-enrollment-dates{display:grid;gap:6px;margin:12px 0;font-size:11px;line-height:1.5}
+.sf-member-enrollment-dates>div{display:grid;grid-template-columns:78px minmax(0,1fr);gap:8px}
+.sf-member-enrollment-dates dt{opacity:.75}
+.sf-member-enrollment-dates dd{margin:0;min-width:0}
+.sf-member-enrollment-dates dd>span{display:inline-block;white-space:nowrap}
+.sf-member-enrollment-history{margin-top:12px;border-top:1px solid var(--sf-border,#ddd);padding-top:10px}
+.sf-member-enrollment-history>summary{cursor:pointer;font-size:12px;font-weight:600;line-height:1.5;overflow-wrap:normal;word-break:normal}
+.sf-membership-level-badge .sf-membership-badge-id{overflow-wrap:normal;word-break:normal}

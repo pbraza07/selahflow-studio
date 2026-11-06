@@ -47,14 +47,18 @@ export default function MembershipBadge({memberNumber,membershipName,membershipS
  const label=level?(design?.label||level):'';
  const Icon=theme.Icon;
  const style:CSSProperties={
-  display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,
+  display:'inline-flex',alignItems:'center',justifyContent:'flex-start',gap:8,
   background:theme.background,color:accessibleText(theme.background,'#171717'),border:'1.5px solid #171717',
-  borderRadius:999,...(design?.shape==='rounded'?{borderRadius:8}:{}),padding:'4px 10px',fontSize:12,fontWeight:750,lineHeight:1.25,
+  borderRadius:999,...(design?.shape==='rounded'?{borderRadius:8}:{}),padding:'6px 12px',fontSize:12,fontWeight:750,lineHeight:1.25,
   width:'fit-content',maxWidth:'100%',verticalAlign:'middle',
-  whiteSpace:'normal',overflowWrap:'anywhere',
+  whiteSpace:'normal',overflowWrap:'normal',wordBreak:'normal',textAlign:'left',flexShrink:0,
  };
  return <span className="sf-membership-level-badge" style={style} aria-label={level?level+' membership'+(id?' ID '+id:'')+(statusLabel?' · '+statusLabel:''):'Membership ID '+id}>
   <Icon aria-hidden="true" size={14} strokeWidth={2.5} style={{flexShrink:0}}/>
-  <span>{level?label+(id?' · '+id:''):'ID '+id}{level&&statusLabel&&<small style={{fontSize:'inherit',fontWeight:600}}> · {statusLabel}</small>}</span>
+  <span className="sf-membership-badge-copy" style={{display:'flex',flexDirection:'column',gap:2,minWidth:0}}>
+   {level&&<span className="sf-membership-badge-label" style={{display:'block',overflowWrap:'break-word'}}>{label}</span>}
+   {id&&<span className="sf-membership-badge-id" translate="no" style={{display:'block',whiteSpace:'nowrap',fontSize:11,fontWeight:650,letterSpacing:'.02em'}}>{'ID '+id}</span>}
+   {level&&statusLabel&&<span className="sf-membership-badge-status" style={{display:'block',fontSize:11,fontWeight:600}}>{statusLabel}</span>}
+  </span>
  </span>;
 }
