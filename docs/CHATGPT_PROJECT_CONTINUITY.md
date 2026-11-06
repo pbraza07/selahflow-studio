@@ -1,3 +1,9 @@
+# v1.3.230 release handoff — Past booking creation and free membership deletion
+
+Owners can explicitly create past session templates and record ordinary past appointments with an audit reason. Owner availability includes ended time slots; public/team overrides remain rejected. Existing capacity, conflicts, service and waiver validation remains.
+
+Migration 098 fixes deletion of memberships and clients with retained $0 Stripe receipts. The old constraint required a membership link even after deletion detached that link, rolling back removal. Zero-total detached receipts are now retained without losing provider replay protection; negative receipts and zero-total booking receipts remain rejected. Both deletion APIs explain the legacy constraint failure clearly. Synthetic tests reproduce the failure before migration and successful deletion afterward. No real client was deleted for QA. Deployment verification pending.
+
 # v1.3.229 release handoff — Owner past-session overrides
 
 Release source: v1.3.229

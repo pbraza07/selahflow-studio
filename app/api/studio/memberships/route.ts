@@ -1,3 +1,4 @@
+import {deletionErrorMessage} from '../../../../server/deletion-error.mjs';
 import {reconcileMembershipPayment} from '../../../../server/membership-reconciliation.mjs';
 import {membershipInvitationSummary} from '../../../../server/membership-invitations.mjs';
 import {accrueCashCommission} from '../../../../server/cash-commission-billing.mjs';
@@ -33,6 +34,7 @@ async function ctx(req:Request){
  return {owner,pool,business:row};
 }
 function error(err:unknown){
+ const deletionMessage=deletionErrorMessage(err);if(deletionMessage)return Response.json({error:deletionMessage},{status:409,headers});
  const msg=(err as Error).message||'Memberships unavailable.';
  return Response.json({error:msg==='AUTH_REQUIRED'?'Please sign in to manage memberships.':msg},
   {status:msg==='AUTH_REQUIRED'?401:/limit|allows up to|only |exceed/i.test(msg)?409:/invalid|enter |choose |required/i.test(msg)?400:503,headers});

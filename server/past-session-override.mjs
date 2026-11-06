@@ -12,6 +12,10 @@ export function sessionHasEnded(visit,clock=easternClock()){
 export function pastSessionOverride(input,{isPublic=false,isTeam=false,clock=easternClock()}={}){
  if(input.pastSessionOverride!==true)return null;
  if(isPublic||isTeam)throw Error('Only the business owner can override a past session.');
+ if(input.action==='availability'){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(input.date||'')||input.date>clock.date)throw Error('Choose today or an earlier date for a past booking.');
+  return {reason:'',ownerOverride:true};
+ }
  const reason=String(input.overrideReason||'').trim();
  if(reason.length<5||reason.length>500)throw Error('Enter an override reason of 5–500 characters.');
  if(!sessionHasEnded(input,clock))throw Error('Choose a session that has already ended.');
