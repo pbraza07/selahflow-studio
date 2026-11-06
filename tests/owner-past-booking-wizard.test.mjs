@@ -14,8 +14,9 @@ const js=ts.transpileModule('const element=('+expression.slice(0,-1)+');',{compi
 const render=new Function('require','ctx','const exports={};with(ctx){'+js+';return element;}');
 function nodes(root){if(!root||typeof root!=='object')return [];return [root,...React.Children.toArray(root.props?.children).flatMap(nodes)];}
 const icon=()=>null;
+const fieldsExports={};new Function('require','exports',ts.transpileModule(readFileSync(new URL('../app/components/owner-booking-client-fields.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText)(require,fieldsExports);
 function fixture(overrides={}){
- const ctx={modal:true,portal:false,booked:'',step:2,config:{name:'Test Business',staff:[{id:'coach',name:'Coach'}],buffer:0,policy:'Test policy'},error:'',eligible:[{id:'coach',name:'Coach'}],provider:'coach',date:'2020-01-03',slots:[600,660],slot:null,selected:['training'],selections:[{id:'training',name:'Training'}],pastBooking:true,pastBookingReason:'',busy:false,ownerFirstAvailable:600,ownerEarliestStart:null,ownerAnswers:{},price:90,duration:60,slotRequest:{current:0},X:icon,Check:icon,Clock:icon,RegistrationFields:()=>null,timeLabel:t=>t===600?'10:00 AM':'11:00 AM',cash:n=>'$'+n,today:()=> '2026-11-05',easternClock:()=>({date:'2026-11-05'}),findBookingSession:()=>null,refresh:async()=>{},getSlots:async()=>{},...overrides};
+ const ctx={OwnerBookingClientFields:fieldsExports.default,ownerClient:{...fieldsExports.emptyOwnerBookingClient},ownerClientLookup:'',publicSlug:'test-business',setOwnerClient:()=>{},setOwnerClientLookup:()=>{},setOwnerAnswers:()=>{},modal:true,portal:false,booked:'',step:2,config:{name:'Test Business',staff:[{id:'coach',name:'Coach'}],buffer:0,policy:'Test policy'},error:'',eligible:[{id:'coach',name:'Coach'}],provider:'coach',date:'2020-01-03',slots:[600,660],slot:null,selected:['training'],selections:[{id:'training',name:'Training'}],pastBooking:true,pastBookingReason:'',busy:false,ownerFirstAvailable:600,ownerEarliestStart:null,ownerAnswers:{},price:90,duration:60,slotRequest:{current:0},X:icon,Check:icon,Clock:icon,RegistrationFields:()=>null,timeLabel:t=>t===600?'10:00 AM':'11:00 AM',cash:n=>'$'+n,today:()=> '2026-11-05',easternClock:()=>({date:'2026-11-05'}),findBookingSession:()=>null,refresh:async()=>{},getSlots:async()=>{},...overrides};
  for(const [setter,key] of [['setStep','step'],['setSlot','slot'],['setError','error'],['setBooked','booked'],['setSlots','slots'],['setOwnerEarliestStart','ownerEarliestStart'],['setOwnerFirstAvailable','ownerFirstAvailable']])ctx[setter]=value=>{ctx[key]=typeof value==='function'?value(ctx[key]):value;};
  return {ctx,tree:()=>render(require,ctx)};
 }
@@ -45,4 +46,16 @@ test('availability refresh retains valid selection and ignores a late response a
  await getSlots();assert.equal(f.ctx.slot,600);
  f.ctx.action=async()=>({slots:[660]});await getSlots();assert.equal(f.ctx.slot,null);
  let resolve;f.ctx.action=()=>new Promise(r=>resolve=r);const pending=getSlots();f.ctx.slotRequest.current++;f.ctx.slot=660;f.ctx.step=3;resolve({slots:[]});await pending;assert.equal(f.ctx.slot,660);assert.equal(f.ctx.step,3);
+});
+
+test('past booking submits the loaded ID, birth date, contact and restored answers',async()=>{
+ const client={memberNumber:'TD1001',name:'Taylor Doe',email:'parent@example.test',phone:'+14045550123',dateOfBirth:'2013-01-02'};
+ const f=fixture({step:3,slot:600,ownerClient:client,ownerClientLookup:'loaded',ownerAnswers:{parent:'Parent Doe',level:'Advanced'}});let submitted;
+ f.ctx.action=async body=>{submitted=body;return {id:'identified-booking'};};
+ const tree=f.tree(),dom=new JSDOM(renderToStaticMarkup(tree)),form=dom.window.document.querySelector('form');
+ assert.equal(nodes(tree).find(n=>n.props?.form==='booking-form').props.disabled,false);
+ const previous=globalThis.FormData;globalThis.FormData=dom.window.FormData;
+ try{await nodes(tree).find(n=>n.type==='form').props.onSubmit({preventDefault(){},currentTarget:form});}finally{globalThis.FormData=previous;dom.window.close();}
+ assert.equal(submitted.memberNumber,client.memberNumber);assert.equal(submitted.dateOfBirth,client.dateOfBirth);assert.equal(submitted.email,client.email);assert.equal(submitted.name,client.name);assert.deepEqual(submitted.customAnswers,f.ctx.ownerAnswers);assert.equal(f.ctx.booked,'identified-booking');
+ f.ctx.booked='';f.ctx.ownerClientLookup='error';assert.equal(nodes(f.tree()).find(n=>n.props?.form==='booking-form').props.disabled,true);
 });

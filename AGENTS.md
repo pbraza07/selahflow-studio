@@ -1,3 +1,11 @@
+# v1.3.232 release handoff — Owner booking client ID prefill
+
+Release source: v1.3.232
+
+Owner booking details now accept an optional Membership / Client ID, including past bookings. The existing tenant-scoped lookup restores saved contact information, birth date and valid registration answers. Lookup changes clear previous details; cancellation guards prevent stale responses from populating another client. Confirmation waits for a successful lookup when an ID is supplied; Clear ID restores manual entry. Name/email stay tied to the loaded identity. The server validates explicit IDs against the owner's roster and matching client identity, then retains the ID on the booking; matching names alone cannot override an explicit selection. Existing capacity, waiver, attendance and credit rules remain. No migration. Save errors use the dialog's error callback.
+
+Validation and deployment pending. No actual customer booking created for QA.
+
 # v1.3.231 release handoff — Past booking continuation
 
 Release source: v1.3.231

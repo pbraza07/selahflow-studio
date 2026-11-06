@@ -70,3 +70,14 @@ export function decorateOwnerAppointments(appointments,roster=[]){
   };
  });
 }
+
+/** Resolve an explicitly selected owner-booking client within this owner's roster. */
+export function resolveOwnerBookingMember(input,roster=[]){
+ const id=normalId(input.memberNumber);
+ if(!id)return ownerAppointmentMember(input,roster).memberNumber;
+ if(!/^[A-Z]{2}([0-9]{4}|[0-9]{6})$/.test(id))throw Error('Enter a valid Membership / Client ID.');
+ const candidates=roster.filter(row=>normalId(row.member_number)===id);
+ if(!candidates.length)throw Error('Membership / Client ID was not found in this business. Reload saved details or clear the ID.');
+ if(!candidates.some(row=>normalName(row.name)===normalName(input.name)&&normalEmail(row.email)===normalEmail(input.email)))throw Error('Client details do not match this ID. Reload saved details or clear the ID to book another client.');
+ return id;
+}
