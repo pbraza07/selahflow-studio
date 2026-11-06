@@ -1,3 +1,4 @@
+import {deletionErrorMessage} from '../../../../server/deletion-error.mjs';
 import {updateClientProfile,clientProfileEditToken} from '../../../../server/update-client-profile.mjs';
 import {allBookingStatusRows} from '../../../../server/booking-status.mjs';
 import {decorateBookingTimeline} from '../../../../server/booking-timeline.mjs';
@@ -75,6 +76,7 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
  return {derived,bookings:allBookingStatusRows(derived),profiles:profiles.rows,clients,formFields:fields.map((f:any)=>({id:f.id,label:f.label,type:f.type,options:Array.isArray(f.options)?f.options:[]})),registrationConfig:{bookingStandardFields:settings.bookingStandardFields,bookingQuestionOrder:settings.bookingQuestionOrder,bookingCustomFields:settings.bookingCustomFields},archived:combined.archived.filter((c:{id:string})=>!profiles.rows.some((p:any)=>p.id===c.id&&p.deleted_at))};
 }
 function failure(error:unknown){
+ const deletionMessage=deletionErrorMessage(error);if(deletionMessage)return Response.json({error:deletionMessage},{status:409,headers:noStore});
  const message=(error as Error).message||'Client operation could not be completed.';
  const status=message==='AUTH_REQUIRED'?401:message==='BUSINESS_UNAVAILABLE'?403:
   /already exists|another client|restore this client|changed|no longer|not found|cancel .*subscription|expire .*checkout|currently being sent|confirm permanent|removed list/i.test(message)?409:
