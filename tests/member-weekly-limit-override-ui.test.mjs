@@ -19,18 +19,19 @@ const member=(id,plan_id,extra={})=>({id,plan_id,customer_name:id==='weekly'?'Al
 async function fixture(){
  const dom=new JSDOM('<div id="app"></div>',{url:'https://example.test/studio/example',pretendToBeVisual:true}),globals=['window','document','navigator','Event','fetch','IS_REACT_ACT_ENVIRONMENT'],old=Object.fromEntries(globals.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
  for(const [k,v] of Object.entries({window:dom.window,document:dom.window.document,navigator:dom.window.navigator,Event:dom.window.Event,IS_REACT_ACT_ENVIRONMENT:true}))Object.defineProperty(globalThis,k,{value:v,configurable:true,writable:true});
- const state={enabled:false,fail:false,hold:false,posted:null,resolvePost:null,deferGet:false,resolveGet:null},calls=[];
- const payload=()=>({plans:[{id:'weekly-plan',name:'Weekly',weeklySessions:1,active:true,priceCents:10000,interval:'month',sessionsIncluded:5},{id:'monthly-plan',name:'Monthly',weeklySessions:null,active:true,priceCents:10000,interval:'month',sessionsIncluded:5}],members:[member('weekly','weekly-plan',{weekly_sessions:1,weekly_limit_override:state.enabled}),member('monthly','monthly-plan',{weekly_sessions:null,status:'pending_payment',stripe_account_id:'acct_fixture',stripe_subscription_id:'sub_fixture'})],groups:[],planBenefits:{name:'Business',limits:{membershipPlans:10}},payments:{configured:true,connected:true,ready:true},creditOptions:{services:[],sessions:[]},memberIdPolicy:'initials_birthdate',businessName:'Example'});
+ const state={enabled:false,fail:false,hold:false,deleted:false,posted:null,resolvePost:null,deferGet:false,resolveGet:null},calls=[];
+ const payload=()=>({plans:[{id:'weekly-plan',name:'Weekly',weeklySessions:1,active:true,priceCents:10000,interval:'month',sessionsIncluded:5},{id:'monthly-plan',name:'Monthly',weeklySessions:null,active:true,priceCents:10000,interval:'month',sessionsIncluded:5}],members:[member('weekly','weekly-plan',{weekly_sessions:1,weekly_limit_override:state.enabled}),member('monthly','monthly-plan',{weekly_sessions:null,status:'canceled',stripe_account_id:'acct_fixture',stripe_subscription_id:'sub_fixture'})],groups:[],planBenefits:{name:'Business',limits:{membershipPlans:10}},payments:{configured:true,connected:true,ready:true},creditOptions:{services:[],sessions:[]},memberIdPolicy:'initials_birthdate',businessName:'Example'});
  globalThis.fetch=async(url,options={})=>{
   calls.push({url,options});
   if(options.method==='POST'){
    state.posted=JSON.parse(options.body);
    if(state.hold)await new Promise(resolve=>{state.resolvePost=resolve;});
+   if(state.posted.action==='deleteMember'&&!state.fail)state.deleted=true;
    if(state.fail)return Response.json({error:'Weekly limit could not be saved.'},{status:400});
    state.enabled=state.posted.enabled;return Response.json({ok:true,weeklyLimitOverride:state.enabled});
   }
   if(url.startsWith('/api/booking'))return Response.json({config:{}});
-  const body=payload();
+  const body=payload();if(state.deleted)body.members=body.members.filter(m=>m.id!=='monthly');
   if(state.deferGet){state.deferGet=false;await new Promise(resolve=>{state.resolveGet=resolve;});}
   return Response.json(body);
  };
@@ -95,13 +96,32 @@ test('Stripe-managed pending membership offers provider verification instead of 
  }finally{await f.cleanup();}
 });
 
-test('membership deletion explains immediate billing cancellation and submits only after the typed confirmation',async()=>{
+test('canceled member deletion uses in-app confirmation, retains visible errors and blocks duplicate submissions',async()=>{
  const f=await fixture();try{
+  window.prompt=()=>{throw Error('Browser prompts must not be used');};
   const button=[...document.querySelectorAll('button')].filter(b=>b.textContent==='Delete member')[1];
-  window.prompt=message=>{assert.match(message,/cancels their linked Stripe subscription immediately/);assert.match(message,/Existing bookings and required accounting records are retained/);return null;};
   await act(async()=>button.click());assert.equal(f.state.posted,null);
-  window.prompt=()=> 'DELETE';
-  await act(async()=>button.click());assert.deepEqual(f.state.posted,{action:'deleteMember',id:'monthly',confirmPhrase:'DELETE'});
+  const form=document.querySelector('form'),input=form.querySelector('input'),submit=()=>form.querySelector('button[type=submit]');
+  assert.match(form.textContent,/canceled memberships with used sessions/);
+  assert.match(form.textContent,/Existing bookings and required accounting records are retained/);
+  assert.equal(submit().disabled,true);
+  await act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  assert.equal(f.state.posted,null);
+  await act(async()=>{Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,' delete ');input.dispatchEvent(new Event('input',{bubbles:true}));});
+  assert.equal(submit().disabled,false);
+  f.state.fail=true;
+  await act(async()=>submit().click());
+  assert.deepEqual(f.state.posted,{action:'deleteMember',id:'monthly',confirmPhrase:'DELETE'});
+  assert.equal(form.querySelector('[role=alert]').textContent,'Weekly limit could not be saved.');
+  await f.refresh();assert.ok(form.querySelector('[role=alert]'),'Polling does not erase deletion errors');
+  f.state.fail=false;f.state.hold=true;
+  await act(async()=>submit().click());assert.equal(submit().disabled,true);
+  await act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  assert.equal(f.calls.filter(c=>c.options.method==='POST').length,2);
+  await act(async()=>f.state.resolvePost());
+  assert.equal(document.querySelector('form'),null);
+  assert.equal(document.querySelectorAll('tbody tr').length,1);
+  assert.match(document.body.textContent,/Membership deleted for Jamie Example/);
  }finally{await f.cleanup();}
 });
 

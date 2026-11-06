@@ -28,6 +28,8 @@ export default function OwnerMemberships({slug,prefill,onOpenPayments}:{slug:str
  const [weeklyOverrideSaving,setWeeklyOverrideSaving]=useState<string|null>(null);
  const [weeklyOverrideFeedback,setWeeklyOverrideFeedback]=useState<{id:string;text:string;error?:boolean}|null>(null);
  const paymentRequests=useRef<Record<string,string>>({});
+ const [deletingMember,setDeletingMember]=useState<Member|null>(null),[deletePhrase,setDeletePhrase]=useState(''),[deleteError,setDeleteError]=useState('');
+ const deletionSaving=useRef(false);
  const [membershipTab,setMembershipTab]=useState<'memberships'|'coupons'>('memberships'),[intervalCount,setIntervalCount]=useState(1),[attendanceMonth,setAttendanceMonth]=useState(new Date().toISOString().slice(0,7));
  const [creditEligibility,setCreditEligibility]=useState<CreditEligibility>({mode:'all',serviceIds:[],sessionIds:[]});
  function toggleCredit(kind:'serviceIds'|'sessionIds',id:string){setCreditEligibility(old=>({...old,[kind]:old[kind].includes(id)?old[kind].filter(v=>v!==id):[...old[kind],id]}));}
@@ -109,13 +111,23 @@ export default function OwnerMemberships({slug,prefill,onOpenPayments}:{slug:str
    setMessage(stripeManaged?'Stripe verification complete. Membership status: '+d.status+'. Sessions left: '+d.sessionsLeft+'.':(renew?'Membership renewed: ':'Payment confirmed: ')+d.credited+' credits added.');setRenewing(null);setRenewNumber('');setRenewPlan('');await load();
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
- async function deleteMember(m:Member){
-  if(busy)return;
-  const confirmation=window.prompt('Delete '+m.customer_name+' ('+(m.member_number||'no number')+') and their membership history? This cancels their linked Stripe subscription immediately and expires unpaid checkout links. No refund or new charge is created. Existing bookings and required accounting records are retained. This cannot be undone. Type DELETE to confirm:');
-  if(confirmation!=='DELETE')return;
-  setBusy(true);setError('');setMessage('');
-  try{await post('deleteMember',{id:m.id,confirmPhrase:confirmation});setMessage('Member deleted.');await load();}
-  catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ function deleteMember(m:Member){
+  if(busy||deletionSaving.current)return;
+  setDeletePhrase('');setDeleteError('');setDeletingMember(m);
+ }
+ async function confirmDeleteMember(e:React.FormEvent){
+  e.preventDefault();
+  if(!deletingMember||deletePhrase.trim().toUpperCase()!=='DELETE'||busy||deletionSaving.current)return;
+  const m=deletingMember;
+  deletionSaving.current=true;++loadSequence.current;setBusy(true);setDeleteError('');setError('');setMessage('');
+  try{
+   await post('deleteMember',{id:m.id,confirmPhrase:'DELETE'});
+   ++loadSequence.current;
+   setData(current=>current?{...current,members:current.members.filter(member=>member.id!==m.id)}:current);
+   setDeletingMember(null);setMessage('Membership deleted for '+m.customer_name+'. Existing bookings and required accounting records were retained.');
+   await load(true);
+  }catch(e){setDeleteError((e as Error).message);}
+  finally{deletionSaving.current=false;setBusy(false);}
  }
  async function editMember(m:Member){
   const selected=window.prompt('Membership plan ID (choose from current package IDs):',m.plan_id);
@@ -136,6 +148,14 @@ export default function OwnerMemberships({slug,prefill,onOpenPayments}:{slug:str
    <p>Sell one-time service packages or recurring memberships. Credits activate only after payment is verified.</p></div>
    <div className="sf-membership-toolbar">{data&&<MemberIdSettings policy={data.memberIdPolicy} onSaved={()=>void load(true)}/>}<button type="button" className="outline" disabled={busy||!data} onClick={()=>{setError('');setMessage('');setModal('groups');}}>Membership types</button><button type="button" className="primary" disabled={busy||!data||data.plans.filter(p=>p.active).length>=data.planBenefits.limits.membershipPlans} onClick={()=>{clear();setError('');setMessage('');setModal('plan');}}><Plus size={16}/> Create membership or package</button><button type="button" className="outline" disabled={busy||!data?.plans.length} onClick={()=>{setError('');setMessage('');setModal('assign');}}>Assign a member</button><a className="outline sf-membership-owner-link" href={'/membership/'+encodeURIComponent(slug)} target="_blank" rel="noopener noreferrer">Customer signup <ExternalLink size={15}/></a></div>
   </header>
+  {deletingMember&&<MembershipModal title="Delete membership" busy={busy} onClose={()=>{if(!deletionSaving.current)setDeletingMember(null);}}><form onSubmit={confirmDeleteMember}>
+   <p><strong translate="no">{deletingMember.customer_name}</strong><br/><span translate="no">{deletingMember.plan_name} · {deletingMember.member_number||'No member ID'}</span></p>
+   <p>This removes this enrollment and its membership history, including canceled memberships with used sessions. It cancels any linked Stripe subscription immediately and expires unpaid checkout links. No refund or new charge is created.</p>
+   <p>Existing bookings and required accounting records are retained. This cannot be undone.</p>
+   <label>Type DELETE to confirm<input autoFocus autoComplete="off" autoCapitalize="characters" spellCheck={false} value={deletePhrase} disabled={busy} onChange={e=>setDeletePhrase(e.target.value)}/></label>
+   {deleteError&&<p className="sf-membership-error" role="alert">{deleteError}</p>}
+   <div className="button-row"><button type="button" className="outline" disabled={busy} onClick={()=>setDeletingMember(null)}>Keep member</button><button type="submit" className="primary" disabled={busy||deletePhrase.trim().toUpperCase()!=='DELETE'}>{busy?'Deleting…':'Confirm deletion'}</button></div>
+  </form></MembershipModal>}
   {error&&!modal&&<p className="sf-membership-error" role="alert">{error}</p>}
   {message&&<p className="sf-membership-success" role="status">{message}</p>}
   {loading?<p>Loading membership management…</p>:<>
