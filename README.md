@@ -1,3 +1,11 @@
+# v1.3.233 release handoff — Past booking membership deduction
+
+Release source: v1.3.233
+
+Owner past booking details default to Use 1 membership session when a Membership / Client ID is entered. The owner can uncheck it for a record-only visit. Saving applies the existing audited current-balance override and records Checked in in the same transaction as the appointment and slot locks. Invalid, exhausted, reserved or ineligible credits roll back the booking. Public/team overrides are rejected; existing attendance and ledger guards prevent duplicate debits. The success view shows the deduction and remaining balance with no separate payment due. Existing visits can use Membership/Packages → Apply to past visit. No migration or bulk historical rewrite.
+
+Validation and deployment pending. No real client record changed. Hosted owner record correction requires sign-in.
+
 # v1.3.232 release handoff — Owner booking client ID prefill
 
 Release source: v1.3.232

@@ -1,3 +1,4 @@
+import {applyPastMemberCredit,sessionHasEnded} from './past-session-override.mjs';
 import {sharedService,sharesServiceTime,serviceRemaining} from './shared-service-capacity.mjs';
 import {assertWorkspace} from './team-workspace-state.mjs';
 import {assertWeeklyMembershipBooking,membershipBookingActive,recordWeeklyOverrideBooking} from './membership-weekly.mjs';
@@ -46,6 +47,7 @@ export async function confirmBooking(options){
    if(saved&&(pendingRequest.details!==saved.details||pendingRequest.staff_id!==saved.staff||pendingRequest.date!==saved.date||Number(pendingRequest.start_minute)!==Number(saved.start)||Number(pendingRequest.duration)!==Number(saved.duration)))throw conflict('Booking details changed. Refresh the request before approving.');
   }
   if(options.teamAccountId){const team=await client.query("SELECT a.* FROM team_accounts a JOIN businesses b ON b.id=a.business_id WHERE a.id=$1 AND a.active=true AND a.must_change_password=false AND a.staff_id=$2 AND b.owner_id=$3 AND b.status='active' FOR SHARE OF a",[options.teamAccountId,staff,owner]);if(!team.rows.length)throw conflict('Team access changed. Sign in again.');assertWorkspace(team.rows[0]);}
+  if(options.applyPastMembership===true&&(!data.pastSessionOverride||options.teamAccountId||options.submissionOrigin||pendingId||!data.memberNumber||!sessionHasEnded({date,start,duration})))throw conflict('Only an owner recording a past booking with a Membership / Client ID can apply a past membership session.');
   const prior=await client.query('SELECT id FROM appointments WHERE id=$1 AND owner=$2',[id,owner]);
   if(prior.rowCount){await client.query('COMMIT');return {id,duplicate:true};}
   const settingRow=await client.query('SELECT data FROM settings WHERE owner=$1',[owner]);
@@ -124,6 +126,16 @@ export async function confirmBooking(options){
    await client.query('INSERT INTO slots(owner,date,staff,minute,appointment) VALUES($1,$2,$3,$4,$5)',
     [owner,date,staff,minute,id]);
   }
+  let membershipUsage=null;
+  if(options.applyPastMembership===true){
+   const members=(await client.query('SELECT m.id,m.business_id FROM customer_memberships m JOIN businesses b ON b.id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2',[owner,data.memberNumber])).rows;
+   if(members.length!==1)throw conflict('No unique membership was found for this client ID. Choose the membership in Membership/Packages, or uncheck Use 1 membership session to record the visit without a deduction.');
+   const allowed=session?session.membershipCreditAllowed!==false:currentServices.every(s=>s.membershipCreditAllowed!==false);
+   if(!allowed)throw conflict('This service or session does not accept membership credits.');
+   membershipUsage=await applyPastMemberCredit(client,{owner,businessId:members[0].business_id,id:members[0].id,appointmentId:id,reason:data.pastSessionOverride.reason,attendance:'Checked in'});
+   const saved=(await client.query('SELECT data FROM appointments WHERE owner=$1 AND id=$2',[owner,id])).rows[0];
+   Object.assign(data,appointmentData(saved));
+  }
   if(pendingId)await client.query(
    "UPDATE booking_requests SET status='accepted',appointment_id=$1,reviewed_by=$2,reviewed_at=now() WHERE id=$3",
    [id,data.reviewedBy||'owner',pendingId]);
@@ -133,7 +145,7 @@ export async function confirmBooking(options){
   const bookingReceipt=receiptOrigin?await queueBookingReceipt(client,{owner,bookingId:id,date,start,duration,staff,data,origin:receiptOrigin,pending:false}):null;
   if(options.submissionOrigin&&Number(data.price)>0&&!data.membershipCovered)await queueApprovedBooking(client,{bookingId:id,requestId:null,origin:options.submissionOrigin});
   await client.query('COMMIT');
-  return {id,duplicate:false,sessionId:session?.id||null,bookingReceipt};
+  return {id,duplicate:false,sessionId:session?.id||null,bookingReceipt,membershipUsage};
  }catch(e){
   await client.query('ROLLBACK');
   if(e.code==='23505')throw conflict('That time was booked by another customer. Choose another time.');

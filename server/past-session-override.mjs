@@ -62,7 +62,7 @@ export async function applyPastMemberCredit(db,{owner,businessId,id,appointmentI
  const previousStatus=visit.status,newStatus=['Confirmed','Scheduled'].includes(visit.status)?attendance:visit.status;
  await db.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta) VALUES($1,$2,$3,$4,'session_used',-1)",[randomUUID(),businessId,id,appointmentId]);
  await db.query('UPDATE customer_memberships SET sessions_used=sessions_used+1,updated_at=now() WHERE business_id=$1 AND id=$2',[businessId,id]);
- const override={owner,reason,recordedAt:new Date().toISOString(),visitDate:visit.date,creditPeriodStart:member.credit_period_start,creditPeriodEnd:member.credit_period_end,previousStatus};
+ const override={remaining:Number(member.sessions_included)-Number(member.sessions_used)-1,owner,reason,recordedAt:new Date().toISOString(),visitDate:visit.date,creditPeriodStart:member.credit_period_start,creditPeriodEnd:member.credit_period_end,previousStatus};
  await db.query('UPDATE appointments SET status=$1,data=$2 WHERE owner=$3 AND id=$4',[newStatus,JSON.stringify({...data,memberNumber:member.member_number,membershipCovered:true,price:0,originalPrice:data.originalPrice??data.price,pastMembershipOverride:override}),owner,appointmentId]);
  if(newStatus==='No-show')await db.query('DELETE FROM slots WHERE owner=$1 AND appointment=$2',[owner,appointmentId]);
  await db.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'past_membership_override',$4)",[randomUUID(),owner,override.recordedAt,JSON.stringify({...override,appointment:appointmentId,membershipId:id,sessionDelta:-1})]);
