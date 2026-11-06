@@ -4,7 +4,7 @@ Release source: v1.3.228
 
 Delete member now opens an in-app confirmation identifying the selected enrollment. Canceled memberships with used credits can use the same flow. Typed confirmation is normalized, repeated submissions are blocked, errors stay inside the dialog through background refresh, and successful deletion removes the row before refresh. Existing provider identity checks, cancellation, booking retention and accounting retention are unchanged. Regression coverage exercises canceled free membership deletion with used sessions without a new provider mutation.
 
-Implemented on fix/member-delete-dialog. Validation and deployment pending; production remains v1.3.227 until verified. No real member was deleted for testing.
+Verified live on staging and production as v1.3.228 on 2026-11-06 UTC via PR #163. Local and staging suites passed 743/743 tests; GitHub application and native checks, TypeScript, build and live route checks passed. No real member was deleted for testing. See docs/v1.3.228-verification.md.
 
 # v1.3.227 release handoff — Readable membership badges
 
