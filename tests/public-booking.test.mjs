@@ -205,7 +205,7 @@ test('public booking creates protected owner records; exposes catalog only; reje
  await pg.query("UPDATE settings SET data=$1 WHERE owner='owner'",[JSON.stringify({...defaults.defaultSettings,bookableSessions:[]})]);
  const pastAvailability=await handler.studioPost(pastOwnerRequest({action:'availability',pastSessionOverride:true,services:['barber'],staff:'james',date:'2020-01-03'}));assert.equal(pastAvailability.status,200,await pastAvailability.clone().text());
  const historicalTimes=await pastAvailability.json();assert.ok(historicalTimes.slots.length);
- const ordinaryPast=await handler.studioPost(pastOwnerRequest({...pastInput,key:crypto.randomUUID(),date:'2020-01-03',start:historicalTimes.slots[0]}));assert.equal(ordinaryPast.status,200,await ordinaryPast.clone().text());
+ const ordinaryPast=await handler.studioPost(pastOwnerRequest({...pastInput,key:crypto.randomUUID(),date:'2020-01-03',start:historicalTimes.slots[0],overrideReason:'Owner recorded a past booking'}));assert.equal(ordinaryPast.status,200,await ordinaryPast.clone().text());
  const noOwnerOverride=await handler.studioPost(req({action:'availability',pastSessionOverride:true,services:['barber'],staff:'james',date:'2020-01-03'},'198.51.100.212'),true);assert.equal(noOwnerOverride.status,400);
  }finally{delete globalThis.__bookingTest;if(old===undefined)delete process.env.APP_URL;else process.env.APP_URL=old;await pg.close();}
 });
