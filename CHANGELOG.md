@@ -4,7 +4,7 @@ Release source: v1.3.227
 
 Shared membership badges separate the plan name, unbroken client ID and status into compact lines while preserving business colors, icons and shapes. Enrollment identity columns retain a readable width and scroll horizontally instead of squeezing names and IDs into vertical text. Enrollment dates use labeled rows; history is a single disclosure without a duplicate client name or badge. No business rules or member records change.
 
-Implemented on fix/membership-badge-layout. Validation and deployment pending; production remains v1.3.226 until verified.
+Verified live on staging and production as v1.3.227 on 2026-11-06 UTC via PR #162. All 742 tests passed; TypeScript, production build, GitHub validation/native checks and read-only live route checks passed. Staging and production database preflights passed. See docs/v1.3.227-verification.md for deployment evidence and visual QA limits.
 
 # v1.3.226 release handoff — Guided client actions
 
