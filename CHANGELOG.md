@@ -4,7 +4,7 @@ Release source: v1.3.229
 
 Owners can add a client to a published session that already ended using an explicit past-session checkbox and reason in the calendar roster. Public and team booking cannot use this override; capacity, conflicts, service and waiver rules remain enforced. Membership/Packages now offers Apply to past visit, debiting one current unreserved session for a matching past visit, including before activation or outside the weekly schedule. Existing attendance is retained; unrecorded confirmed/scheduled visits become Checked in or No-show as selected. Audit records include the owner, reason, visit date and current credit period. Duplicate deductions, other tenants, mismatched identities, paid/open-checkout bookings, exhausted credits and ineligible services are rejected. No migration or historical data rewrite.
 
-Implemented on feat/past-session-owner-override. Validation and deployment pending; production remains v1.3.228 until verified. No real booking or credit change was used for QA.
+Verified live on staging and production as v1.3.229 on 2026-11-06 UTC via PR #164. Local and staging suites passed 749/749 tests. GitHub application/native checks, TypeScript, production build and live read-only route checks passed. No real booking or credit change was used for QA. See docs/v1.3.229-verification.md.
 
 # v1.3.228 release handoff — In-app member deletion
 
