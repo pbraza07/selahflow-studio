@@ -2,6 +2,7 @@ import {reconcileMembershipPayment} from '../../../../server/membership-reconcil
 import {membershipInvitationSummary} from '../../../../server/membership-invitations.mjs';
 import {accrueCashCommission} from '../../../../server/cash-commission-billing.mjs';
 import {deleteOwnerMembership} from '../../../../server/owner-membership-deletion.mjs';
+import {pastMemberVisits,applyPastMemberCredit} from '../../../../server/past-session-override.mjs';
 import {validateWeeklySessions,membershipUsageSummary,assertWeeklyMembershipBooking,recordHistoricalOverrideUsage} from '../../../../server/membership-weekly.mjs';
 import {applyManualPeriod} from '../../../../server/manual-membership-period.mjs';
 import {membershipBillingAction} from '../../../../server/membership-billing-actions.mjs';
@@ -209,6 +210,15 @@ export async function POST(req:Request){
     await queueMembershipPaymentEmail(client,{businessId:business.id,paymentId,origin:trustedOrigin(req),renewal:input.action==='renewMembership'});
     await client.query('COMMIT');
     return Response.json({ok:true,credited:credits,confirmationEmail:'queued'},{headers});
+   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
+  }
+  if(input.action==='pastMemberVisits'||input.action==='applyPastMemberCredit'){
+   const client=await pool.connect();
+   try{
+    await client.query('BEGIN');
+    const options={owner,businessId:business.id,id:String(input.id||''),appointmentId:String(input.appointmentId||''),reason:input.reason,attendance:input.attendance};
+    const result=input.action==='pastMemberVisits'?{visits:await pastMemberVisits(client,options)}:await applyPastMemberCredit(client,options);
+    await client.query('COMMIT');return Response.json(result,{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
   }
   if(input.action==='recordSession'){

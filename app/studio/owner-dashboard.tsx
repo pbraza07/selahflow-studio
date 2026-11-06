@@ -10,7 +10,7 @@ import OwnerTeamTracking from '../components/owner-team-tracking';
 import {unpaidAppointmentForecast} from '../../server/report-activity.mjs';
 import RegistrationFields from '../components/registration-fields';
 import {APP_VERSION} from '../../lib/app-version';
-import {selectedSession as findBookingSession} from '../../server/session-scheduling.mjs';
+import {easternClock,selectedSession as findBookingSession} from '../../server/session-scheduling.mjs';
 import OwnerMembershipRequests from '../components/owner-membership-requests';
 import OwnerOnsitePayment from '../components/owner-onsite-payment';
 import AttendanceActions from '../components/attendance-actions';
@@ -84,6 +84,7 @@ const [rosterSelection,setRosterSelection]=useState<{id:string;date:string}|null
 const [ownerAnswers,setOwnerAnswers]=useState<Record<string,string|boolean>>({}),[rosterAnswers,setRosterAnswers]=useState<Record<string,string|boolean>>({});
 const [overviewAll,setOverviewAll]=useState(false);
 const [appointmentDetail,setAppointmentDetail]=useState<Any|null>(null);
+const [rosterPastOverride,setRosterPastOverride]=useState(false),[rosterOverrideReason,setRosterOverrideReason]=useState('');
 const [rosterAddOpen,setRosterAddOpen]=useState(false),[rosterName,setRosterName]=useState(''),[rosterEmail,setRosterEmail]=useState(''),[rosterPhone,setRosterPhone]=useState('');
 const [appointmentListOpen,setAppointmentListOpen]=useState(false),[deleteSelection,setDeleteSelection]=useState<string[]>([]),[deleteAllConfirm,setDeleteAllConfirm]=useState(false),[deleteBusinessName,setDeleteBusinessName]=useState(''),[deletePhrase,setDeletePhrase]=useState('');
 const [membershipPrefill,setMembershipPrefill]=useState<{name:string;email:string;phone:string}|null>(null);
@@ -196,7 +197,7 @@ async function addRosterCustomer(){
  if(!selectedRosterSession||!selectedSessionRoster||selectedSessionRoster.remaining<=0){setToast('No seats are available.');return;}
  const service=config.services.find((v:Any)=>v.id===selectedRosterSession.service);
  if(!service){setToast('Session service not found.');return;}
- const result=await action({action:'book',date:selectedRosterSession.date,staff:selectedRosterSession.staff,start:selectedRosterSession.start,services:[service.id],expectedPrice:service.price,expectedDuration:service.duration,name:rosterName.trim(),email:rosterEmail.trim(),phone:rosterPhone.trim(),customAnswers:rosterAnswers,channel:'Front desk'});
+ const result=await action({action:'book',pastSessionOverride:rosterPastOverride,overrideReason:rosterOverrideReason,date:selectedRosterSession.date,staff:selectedRosterSession.staff,start:selectedRosterSession.start,services:[service.id],expectedPrice:service.price,expectedDuration:service.duration,name:rosterName.trim(),email:rosterEmail.trim(),phone:rosterPhone.trim(),customAnswers:rosterAnswers,channel:'Front desk'});
  if(result?.ok){setRosterAddOpen(false);setRosterName('');setRosterEmail('');setRosterPhone('');await refresh();setToast('Customer added to this session.');}
 }
 async function removeRosterCustomer(client:Any){
@@ -204,10 +205,12 @@ async function removeRosterCustomer(client:Any){
  const result=await action({action:'status',id:client.bookingId,status:'Cancelled'});
  if(result?.ok){await refresh();setToast('Customer removed and seat released.');}
 }
-function openSessionRoster(session:Any){setRosterAnswers({});setRosterAddOpen(false);setRosterSelection({id:session.id,date:session.date});}
+function openSessionRoster(session:Any){setRosterPastOverride(false);setRosterOverrideReason('');setRosterAnswers({});setRosterAddOpen(false);setRosterSelection({id:session.id,date:session.date});}
 const selectedRosterSession=rosterSelection?sessionInstances(config,rosterSelection.date)
  .find((session:Any)=>session.id===rosterSelection.id):null;
 const selectedSessionRoster=selectedRosterSession?sessionRosterForOwner(selectedRosterSession,appointments):null;
+const rosterClock=easternClock();
+const rosterIsPast=!!selectedRosterSession&&(selectedRosterSession.date<rosterClock.date||selectedRosterSession.date===rosterClock.date&&selectedRosterSession.start+Number(config.services.find((s:Any)=>s.id===selectedRosterSession.service)?.duration||0)<=rosterClock.minutes);
 useEffect(()=>{
  if(!rosterSelection)return;
  const dismiss=(e:KeyboardEvent)=>{if(e.key==='Escape')setRosterSelection(null);};
@@ -607,7 +610,7 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
  <small style={{alignSelf:'center'}}>{selectedSessionRoster.remaining<=0?'Session is full':'Add a customer directly to this session'}</small>
  </div>
  {rosterAddOpen&&<form onSubmit={e=>{e.preventDefault();void addRosterCustomer();}} style={{display:'grid',gap:10,marginBottom:18}}>
- <label>Customer name<input required maxLength={100} value={rosterName} onChange={e=>setRosterName(e.target.value)}/></label>
+ <>{rosterIsPast&&<fieldset><legend>Past-session override</legend><label className="sf-toggle-row"><input type="checkbox" required checked={rosterPastOverride} onChange={e=>setRosterPastOverride(e.target.checked)}/> Record this client in a session that already ended</label><label>Reason<input required minLength={5} maxLength={500} value={rosterOverrideReason} onChange={e=>setRosterOverrideReason(e.target.value)}/></label><p>Use the client’s existing full name and email to link their ID and signed waiver. Records the booking without charging or sending a new booking email. Record attendance afterward, or use Apply to past visit under Membership/Packages.</p></fieldset>}</><label>Customer name<input required maxLength={100} value={rosterName} onChange={e=>setRosterName(e.target.value)}/></label>
  <label>Email<input required type="email" maxLength={200} value={rosterEmail} onChange={e=>setRosterEmail(e.target.value)}/></label>
  <label>Phone<input type="tel" maxLength={40} value={rosterPhone} onChange={e=>setRosterPhone(e.target.value)}/></label>
  <RegistrationFields config={config} form="booking" customOnly sessionId={selectedRosterSession.id} serviceIds={[selectedRosterSession.service]} values={{}} answers={rosterAnswers} onValue={()=>{}} onAnswer={(id,value)=>setRosterAnswers(a=>({...a,[id]:value}))}/><button type="submit" className="primary" disabled={busy||!rosterName.trim()||!rosterEmail.trim()}>Confirm and add customer</button>
