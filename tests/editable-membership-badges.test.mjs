@@ -5,6 +5,7 @@ import {createRequire} from 'node:module';
 import {pathToFileURL} from 'node:url';
 import ts from 'typescript';
 import React from 'react';
+import {JSDOM} from 'jsdom';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {PGlite} from '@electric-sql/pglite';
 import {validateMembershipBadge,resolveMembershipBadge,MEMBERSHIP_BADGE_ICONS} from '../server/membership-badges.mjs';
@@ -30,13 +31,14 @@ test('actual rendered badge uses saved styles, pure white on black, explicit pay
  for(const pkg of ['react/jsx-runtime','lucide-react'])compiled=compiled.replace(JSON.stringify(pkg),JSON.stringify(pathToFileURL(require.resolve(pkg)).href)).replace("'"+pkg+"'",JSON.stringify(pathToFileURL(require.resolve(pkg)).href));
  const {default:Badge}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
  const render=props=>renderToStaticMarkup(React.createElement(Badge,{memberNumber:'AB0101',membershipName:'Gold plan',membershipStatus:'active',sessionsIncluded:2,sessionsUsed:1,badge:planBadge,...props}));
- const active=render({});assert.match(active,/VIP · AB0101/);assert.match(active,/background:#000000/);assert.match(active,/color:#FFFFFF/);assert.match(active,/border-radius:8px/);assert.match(active,/lucide-crown/);
- for(const [props,status] of [[{sessionsUsed:2},'Sessions exhausted'],[{membershipStatus:'pending_payment'},'Payment pending'],[{membershipStatus:'expired'},'Expired']]){const html=render(props);assert.match(html,/VIP · AB0101/);assert.match(html,/background:#000000/);assert.match(html,new RegExp(status));}
- const pending=render({membershipName:'Group Academy',membershipStatus:'pending_payment',sessionsIncluded:0,sessionsUsed:0,badge:null});assert.match(pending,/Group Academy · AB0101/);assert.match(pending,/Payment pending/);assert.match(pending,/background:#44aff5/);
- const changed=render({membershipName:'Private Elite',membershipStatus:'pending_payment',sessionsIncluded:0,sessionsUsed:0,badge:null});assert.match(changed,/Private Elite · AB0101/);assert.match(changed,/background:#ef4335/);assert.match(changed,/Payment pending/);
+ const identity=(html,label)=>{const dom=new JSDOM(html),doc=dom.window.document;assert.equal(doc.querySelector('.sf-membership-badge-label')?.textContent,label);const id=doc.querySelector('.sf-membership-badge-id');assert.equal(id.textContent,'ID AB0101');assert.equal(id.style.whiteSpace,'nowrap');assert.equal(id.getAttribute('translate'),'no');dom.window.close();};
+ const active=render({});identity(active,'VIP');assert.match(active,/background:#000000/);assert.match(active,/color:#FFFFFF/);assert.match(active,/border-radius:8px/);assert.match(active,/lucide-crown/);
+ for(const [props,status] of [[{sessionsUsed:2},'Sessions exhausted'],[{membershipStatus:'pending_payment'},'Payment pending'],[{membershipStatus:'expired'},'Expired']]){const html=render(props);identity(html,'VIP');assert.match(html,/background:#000000/);assert.match(html,new RegExp(status));}
+ const pending=render({membershipName:'Group Academy',membershipStatus:'pending_payment',sessionsIncluded:0,sessionsUsed:0,badge:null});identity(pending,'Group Academy');assert.match(pending,/Payment pending/);assert.match(pending,/background:#44aff5/);
+ const changed=render({membershipName:'Private Elite',membershipStatus:'pending_payment',sessionsIncluded:0,sessionsUsed:0,badge:null});identity(changed,'Private Elite');assert.match(changed,/background:#ef4335/);assert.match(changed,/Payment pending/);
  const regular=render({membershipName:null,badge:null});assert.match(regular,/ID AB0101/);assert.match(regular,/background:#f1f2f4/);
- assert.match(render({sessionsIncluded:4,sessionsUsed:2}),/VIP · AB0101/);
- assert.match(render({badge:null}),/Gold plan · AB0101/);
+ identity(render({sessionsIncluded:4,sessionsUsed:2}),'VIP');
+ identity(render({badge:null}),'Gold plan');
 });
 test('type badge edits propagate to owner roster while plan overrides, tenant isolation and membership records remain intact',async()=>{
  const db=new PGlite();try{
