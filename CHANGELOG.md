@@ -4,7 +4,7 @@ Release source: v1.3.233
 
 Owner past booking details default to Use 1 membership session when a Membership / Client ID is entered. The owner can uncheck it for a record-only visit. Saving applies the existing audited current-balance override and records Checked in in the same transaction as the appointment and slot locks. Invalid, exhausted, reserved or ineligible credits roll back the booking. Public/team overrides are rejected; existing attendance and ledger guards prevent duplicate debits. The success view shows the deduction and remaining balance with no separate payment due. Existing visits can use Membership/Packages → Apply to past visit. No migration or bulk historical rewrite.
 
-Validation and deployment pending. No real client record changed. Hosted owner record correction requires sign-in.
+Verified LIVE in staging and production as v1.3.233 via PR #168. Local and staging suites passed 759/759 tests; TypeScript, production build, GitHub application/native checks and live read-only endpoint checks passed. No real client record changed. The owner browser session did not persist, so the reported existing visit still requires Apply to past visit from a signed-in owner session. See docs/v1.3.233-verification.md.
 
 # v1.3.232 release handoff — Owner booking client ID prefill
 
