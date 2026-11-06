@@ -1,3 +1,11 @@
+# v1.3.231 release handoff — Past booking continuation
+
+Release source: v1.3.231
+
+The owner booking wizard no longer silently requires a five-character reason above the time list. Past booking notes are optional on the details step; submission records an automatic owner audit reason with any supplied note. Choosing a time advances to client details. Continue explains when a time still needs selection, valid selections survive availability refresh, past-mode changes refresh availability and late responses cannot clear an advancing selection. Save errors appear inside the dialog, and steps scroll/focus into view. Existing server owner-only, ended-time, capacity, service and waiver checks remain. No migration.
+
+Validation and deployment pending. No real booking submitted for QA.
+
 # v1.3.230 release handoff — Past booking creation and free membership deletion
 
 Release source: v1.3.230
