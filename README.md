@@ -6,7 +6,7 @@ Daily schedules show every non-canceled booking at its actual start time, includ
 
 Updated legacy and category waiver previews begin with numbered recurring-membership billing/cancellation and 24-hour notice/no-show deduction clauses. Participation version 3 requires fresh consent after a new completed legal review is recorded. Previously reviewed versions 1/2 and unmodified category documents retain their exact text, hashes and signatures until explicit activation. No legal review was fabricated or carried forward. No automatic cancellation-notice engine, provider billing change, migration or real client modification.
 
-Implemented on the feature branch; release validation and deployment verification are pending. See docs/v1.3.234-verification.md.
+Verified LIVE in staging and production as v1.3.234 via PR #169 on November 10, 2026 UTC. Local and staging regression passed 764/764 tests; TypeScript, production builds, GitHub web/native validation and live read-only endpoint checks passed. Revised waiver terms require a new completed legal review before activation. Browser restrictions prevented visual/signed-in owner acceptance. See docs/v1.3.234-verification.md and docs/v1.3.234-waiver-amendments.md.
 
 # v1.3.233 release handoff — Past booking membership deduction
 
