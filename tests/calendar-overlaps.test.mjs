@@ -50,12 +50,13 @@ test('actual calendar keeps each published-session attendee, filters canceled/ot
  const filtered=renderToStaticMarkup(React.createElement(Calendar,{...props,staffFilter:'coach'}));
  assert.doesNotMatch(filtered,/Former staff client/);
  const dom=new JSDOM('<div id="root"></div>',{url:'https://example.test'});
- const old={window:globalThis.window,document:globalThis.document};
- globalThis.window=dom.window;globalThis.document=dom.window.document;
+ const old={window:globalThis.window,document:globalThis.document,IS_REACT_ACT_ENVIRONMENT:globalThis.IS_REACT_ACT_ENVIRONMENT};
+ globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.IS_REACT_ACT_ENVIRONMENT=typeof React.act==='function';
+ const perform=async fn=>{if(typeof React.act==='function')await React.act(fn);else flushSync(fn);};
  const root=createRoot(document.getElementById('root'));let selected=null;
  try{
-  flushSync(()=>root.render(React.createElement(Calendar,{...props,onAppointment:a=>selected=a.id,onSession:s=>selected=s.id})));
-  for(let i=0;i<6;i++){document.querySelector(`[data-calendar-event="booking-${i}"]`).click();assert.equal(selected,String(i));}
-  document.querySelector('[data-calendar-event="session-published"]').click();assert.equal(selected,'published');
- }finally{flushSync(()=>root.unmount());Object.assign(globalThis,old);dom.window.close();}
+  await perform(()=>root.render(React.createElement(Calendar,{...props,onAppointment:a=>selected=a.id,onSession:s=>selected=s.id})));
+  for(let i=0;i<6;i++){await perform(()=>document.querySelector(`[data-calendar-event="booking-${i}"]`).click());assert.equal(selected,String(i));}
+  await perform(()=>document.querySelector('[data-calendar-event="session-published"]').click());assert.equal(selected,'published');
+ }finally{await perform(()=>root.unmount());Object.assign(globalThis,old);dom.window.close();}
 });
