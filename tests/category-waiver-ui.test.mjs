@@ -7,6 +7,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import ts from 'typescript';
 import * as templates from '../server/waiver-category-templates.mjs';
 import * as content from '../server/waiver-content.mjs';
+import * as policyTerms from '../server/waiver-policy-terms.mjs';
 import * as themes from '../server/themes.mjs';
 const require=createRequire(import.meta.url);
 async function component(path,dependencies={}){
@@ -15,16 +16,18 @@ async function component(path,dependencies={}){
  new Function('require','module','exports',source)(id=>dependencies[id]||require(id),module,module.exports);return module.exports;
 }
 test('owner preview and client signature form render the same category terms with optional media unchecked',async()=>{
- const deps={'../../server/waiver-content.mjs':content,'../../server/themes.mjs':themes,'../../server/waiver-category-templates.mjs':templates};
+ const deps={'../../server/waiver-content.mjs':content,'../../server/themes.mjs':themes,'../../server/waiver-category-templates.mjs':templates,'../../server/waiver-policy-terms.mjs':policyTerms};
  const waiver=await component('../app/components/participation-waiver.tsx',deps);
  const editor=await component('../app/components/category-waiver-editor.tsx',{...deps,'./participation-waiver':waiver});
  const config={name:'Example Landscaping',industry:'landscaping',services:[{id:'paving',name:'Paving',description:'Install agreed paving',requiresWaiver:true}],categoryWaiver:{enabled:false,category:'professional_services',additionalTerms:'Keep pets away from work area.',serviceTerms:{paving:'Mark utility locations.'}}};
  const html=renderToStaticMarkup(React.createElement(editor.default,{config,setConfig:()=>{}}));
  assert.match(html,/Home &amp; Professional Services/);assert.match(html,/Mark utility locations/);assert.match(html,/Record review and select category waiver/);
  assert.doesNotMatch(html,/indoor soccer|birthday parties/);
- const document=content.waiverDocument({...config,categoryWaiver:{...config.categoryWaiver,enabled:true}});
+ assert.match(html,/Recurring membership payments and cancellation/);assert.match(html,/24-hour notice and missed-session deduction/);
+ const document=content.waiverDocument({...config,categoryWaiver:{...config.categoryWaiver,enabled:true,policyTermsVersion:policyTerms.WAIVER_POLICY_TERMS_VERSION}});
  const client=renderToStaticMarkup(React.createElement(waiver.default,{document,dob:'1990-01-01',participantName:'Jane Doe',value:{signature:'',role:'',date:content.waiverToday(),accepted:false},onChange:()=>{},signed:false,checking:false,error:'',onRetry:()=>{}}));
  assert.match(client,/Mark utility locations/);assert.match(client,/optional media permission/);assert.doesNotMatch(client,/checked=""/);
+ for(const [heading] of document.sections.slice(0,2)){assert.ok(html.includes(heading));assert.ok(client.includes(heading));}
  assert.equal(templates.suggestedWaiverCategory('landscaping'),'professional_services');
  assert.equal(templates.suggestedWaiverCategory('medical'),'general');
 });

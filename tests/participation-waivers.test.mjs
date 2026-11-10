@@ -146,8 +146,8 @@ test('owner permanent waiver deletion is private, removes all evidence and requi
 });
 
 test('numbered media release is versioned; old reviewed wording and prior media choices are preserved',async()=>{
- const latest=waiverDocument(config);assert.equal(latest.version,WAIVER_VERSION);assert.equal(latest.sections.length,7);
- assert.deepEqual(latest.sections[5],['Media release',latest.mediaRelease]);assert.equal(latest.mediaReleaseIncluded,true);
+ const latest=waiverDocument(config);assert.equal(latest.version,WAIVER_VERSION);assert.equal(latest.sections.length,9);
+ assert.deepEqual(latest.sections[7],['Media release',latest.mediaRelease]);assert.equal(latest.mediaReleaseIncluded,true);
  const oldConfig={...config,waiverLegalReview:{version:'participation-1',reference:'old review',reviewedAt:'2026-10-20'}};
  const legacy=publicWaiverDocument(oldConfig);assert.equal(legacy.version,'participation-1');assert.equal(legacy.sections.length,6);assert.equal(legacy.mediaReleaseIncluded,undefined);
  const reviewed={...config,waiverLegalReview:{version:WAIVER_VERSION,reference:'new review',reviewedAt:'2026-10-23'}};
@@ -157,7 +157,11 @@ test('numbered media release is versioned; old reviewed wording and prior media 
  const id=await ensureParticipationWaiver(pg,args);
  const before=(await pg.query('SELECT * FROM participation_waivers WHERE id=$1',[id])).rows[0];
  assert.equal(before.media_consent,false);
- assert.equal(await ensureParticipationWaiver(pg,{...args,config:reviewed,input:null}),id);
+ await assert.rejects(ensureParticipationWaiver(pg,{...args,config:reviewed,input:null}),/sign/);
+ await assert.rejects(assertBookingWaiver(pg,{owner:'owner-a',config:reviewed,serviceIds:['training'],memberNumber:'JD010190'}),/required/);
+ const revised=publicWaiverDocument(reviewed);
+ const next=await ensureParticipationWaiver(pg,{...args,config:reviewed,input:signature({version:revised.version,documentHash:revised.hash})});
+ assert.notEqual(next,id);
  await assertBookingWaiver(pg,{owner:'owner-a',config:reviewed,serviceIds:['training'],memberNumber:'JD010190'});
  assert.deepEqual((await pg.query('SELECT * FROM participation_waivers WHERE id=$1',[id])).rows[0],before);
  }finally{await pg.close();}
@@ -171,7 +175,7 @@ test('waiver form places media release in numbered text with only the signature 
  new Function('require','exports',compiled)(createRequire(url),exports);
  const document=publicWaiverDocument(config);
  const html=renderToStaticMarkup(createElement(exports.default,{document,dob:'1990-01-01',participantName:'Jane Doe',value:signature(),onChange(){},signed:false,checking:false,error:'',onRetry(){}}));
- assert.match(html,/6\. Media release/);assert.equal((html.match(/type="checkbox"/g)||[]).length,1);
+ assert.match(html,/8\. Media release/);assert.equal((html.match(/type="checkbox"/g)||[]).length,1);
  assert.doesNotMatch(html,/I give the optional media permission/);
 });
 

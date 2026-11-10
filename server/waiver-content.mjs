@@ -1,13 +1,16 @@
+import {waiverPolicySections} from './waiver-policy-terms.mjs';
 import {categoryWaiverContent} from './waiver-category-templates.mjs';
 import {resolveTheme} from './themes.mjs';
-export const WAIVER_VERSION='participation-2';
+export const WAIVER_VERSION='participation-3';
+export const PREVIOUS_WAIVER_VERSION='participation-2';
 export function requiresWaiver(services=[]){return services.some(service=>service.requiresWaiver===true);}
 export const LEGACY_WAIVER_VERSION='participation-1';
-export function acceptedWaiverVersions(config={}){if(config.categoryWaiver?.enabled===true)return ['category-1'];return waiverDocument(config).version===LEGACY_WAIVER_VERSION?[LEGACY_WAIVER_VERSION]:[WAIVER_VERSION,LEGACY_WAIVER_VERSION];}
+export function acceptedWaiverVersions(config={}){if(config.categoryWaiver?.enabled===true)return ['category-1'];const version=waiverDocument(config).version;return version===PREVIOUS_WAIVER_VERSION?[PREVIOUS_WAIVER_VERSION,LEGACY_WAIVER_VERSION]:[version];}
 export function waiverDocument(config={},primary,background){
  if(config.categoryWaiver?.enabled===true)return {...categoryWaiverContent(config),colors:resolveTheme(config.theme,primary,background).colors};
- // Keep the already reviewed wording active until the owner records review of v2.
- const version=config.waiverLegalReview?.version===LEGACY_WAIVER_VERSION?LEGACY_WAIVER_VERSION:WAIVER_VERSION;
+ // Preserve reviewed historical wording until an administrator records review of v3.
+ const reviewedVersion=config.waiverLegalReview?.version;
+ const version=[LEGACY_WAIVER_VERSION,PREVIOUS_WAIVER_VERSION].includes(reviewedVersion)?reviewedVersion:WAIVER_VERSION;
  const name=String(config.name||'Business').trim();
  const activities=`${name} training sessions, coaching and camps at the facility or outdoors, birthday parties and celebrations, indoor soccer and pick-up games, and other activities hosted or organized by ${name}`;
  const document={mediaRelease:"Optional media release: I authorize this business to photograph or record the participant during activities and use their image, voice and likeness in business publicity, websites and social media without compensation. I may withdraw permission for future use by contacting the business. Declining does not affect participation. A parent or guardian provides permission for a minor.",version,businessName:name,colors:resolveTheme(config.theme,primary,background).colors,title:'Participation Waiver',sections:[
@@ -18,12 +21,13 @@ export function waiverDocument(config={},primary,background){
  ['Parent or guardian (if participant is a minor)',"I confirm that I am the participant's parent or legal guardian and consent to participation. I acknowledge the risks described above. Any release of a minor's claims applies only to the extent permitted by law."],
  ['Read and agree',`I have read and understand this waiver, had the opportunity to ask questions, and sign voluntarily. My typed name is intended as my electronic signature. This waiver covers ${activities}. It is retained for my unique client ID within this business.`]
  ]};
- if(version===WAIVER_VERSION){
+ if(version!==LEGACY_WAIVER_VERSION){
   const statement="I authorize the business to photograph or record the participant during activities and use their image, voice and likeness in business publicity, websites and social media without compensation. I may withdraw permission for future use by contacting the business. For a minor, I confirm that I am the parent or legal guardian providing this permission.";
   document.sections.splice(5,0,['Media release',statement]);
   document.mediaRelease=statement;
   document.mediaReleaseIncluded=true;
  }
+ if(version===WAIVER_VERSION)document.sections.unshift(...waiverPolicySections(name));
  return document;
 }
 export function waiverToday(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}

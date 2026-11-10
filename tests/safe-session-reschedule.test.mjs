@@ -7,6 +7,9 @@ import {sessionInstances,seriesOccurrences} from '../server/session-recurrence.m
 import {sessionsForDate,validateExistingSessionReservations,computeDayAvailability,selectedSession} from '../server/session-scheduling.mjs';
 import {confirmBooking,serviceCapacityOpen} from '../server/booking-approvals.mjs';
 
+// Keep the future-session fixtures future-dated as the real calendar advances.
+test.beforeEach(t=>t.mock.timers.enable({apis:['Date'],now:new Date('2026-11-01T12:00:00Z')}));
+
 const training={id:'training',name:'Small Group Training',duration:60,durationUnit:'minutes',price:40,maxSlots:1};
 const evaluation={id:'evaluation',name:'Evaluation',duration:90,durationUnit:'minutes',price:65,maxSlots:1};
 const staff=[{id:'coach-a',name:'Coach A',services:['training','evaluation']},

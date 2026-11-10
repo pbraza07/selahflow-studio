@@ -1,3 +1,4 @@
+import {waiverPolicySections,WAIVER_POLICY_TERMS_VERSION} from './waiver-policy-terms.mjs';
 // Industry-aware waiver template definitions. These are drafting aids, not legal advice.
 // Activation must require business-specific legal review and a new document version.
 export const WAIVER_CATEGORIES=Object.freeze({
@@ -41,7 +42,7 @@ export function categoryWaiverContent(config={}){
  const services=(config.services||[]).filter(s=>s.requiresWaiver===true).slice().sort((a,b)=>String(a.id)<String(b.id)?-1:String(a.id)>String(b.id)?1:0);
  const template=waiverTemplateForCategory(options.category,{businessName:config.name,serviceName:services.map(s=>s.name).join(', ')||'the services listed below'});
  return {version:CATEGORY_WAIVER_VERSION,category:template.category,businessName:String(config.name||'Business').trim(),title:template.title,
-  serviceIds:services.map(s=>s.id),sections:[...template.sections.map(s=>[s.heading,s.text]),
+  serviceIds:services.map(s=>s.id),sections:[...(options.policyTermsVersion===WAIVER_POLICY_TERMS_VERSION?waiverPolicySections(config.name):[]),...template.sections.map(s=>[s.heading,s.text]),
    ...services.map(s=>['Service: '+s.name,[s.description,options.serviceTerms?.[s.id]].filter(Boolean).join('\n')||'Scope: '+s.name]),
    ...(options.additionalTerms?.trim()?[['Business-specific terms',options.additionalTerms.trim()]]:[]),
    ['Electronic signature','My typed full name is my electronic signature. This consent applies only to the listed services at this business. A parent or legal guardian must sign for a participant under 18. Changes to this document require new consent.']],
