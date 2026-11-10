@@ -5,6 +5,7 @@ import {createRequire} from 'node:module';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {createRoot} from 'react-dom/client';
+import {flushSync} from 'react-dom';
 import {JSDOM} from 'jsdom';
 import ts from 'typescript';
 import * as layout from '../server/calendar-layout.mjs';
@@ -49,12 +50,12 @@ test('actual calendar keeps each published-session attendee, filters canceled/ot
  const filtered=renderToStaticMarkup(React.createElement(Calendar,{...props,staffFilter:'coach'}));
  assert.doesNotMatch(filtered,/Former staff client/);
  const dom=new JSDOM('<div id="root"></div>',{url:'https://example.test'});
- const old={window:globalThis.window,document:globalThis.document,IS_REACT_ACT_ENVIRONMENT:globalThis.IS_REACT_ACT_ENVIRONMENT};
- globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+ const old={window:globalThis.window,document:globalThis.document};
+ globalThis.window=dom.window;globalThis.document=dom.window.document;
  const root=createRoot(document.getElementById('root'));let selected=null;
  try{
-  await React.act(async()=>root.render(React.createElement(Calendar,{...props,onAppointment:a=>selected=a.id,onSession:s=>selected=s.id})));
-  for(let i=0;i<6;i++){await React.act(async()=>document.querySelector(`[data-calendar-event="booking-${i}"]`).click());assert.equal(selected,String(i));}
-  await React.act(async()=>document.querySelector('[data-calendar-event="session-published"]').click());assert.equal(selected,'published');
- }finally{await React.act(async()=>root.unmount());Object.assign(globalThis,old);dom.window.close();}
+  flushSync(()=>root.render(React.createElement(Calendar,{...props,onAppointment:a=>selected=a.id,onSession:s=>selected=s.id})));
+  for(let i=0;i<6;i++){document.querySelector(`[data-calendar-event="booking-${i}"]`).click();assert.equal(selected,String(i));}
+  document.querySelector('[data-calendar-event="session-published"]').click();assert.equal(selected,'published');
+ }finally{flushSync(()=>root.unmount());Object.assign(globalThis,old);dom.window.close();}
 });
