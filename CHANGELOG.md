@@ -1,3 +1,13 @@
+# v1.3.234 release handoff — Calendar overlaps and waiver policy terms
+
+Release source: v1.3.234
+
+Daily schedules show every non-canceled booking at its actual start time, including published-session attendees, simultaneous bookings and appointments outside normal hours. Overlaps use separate readable columns with horizontal scrolling; rosters and booking details remain independently selectable. Week/month lists also include all attendees, and bookings for removed team members remain visible.
+
+Updated legacy and category waiver previews begin with numbered recurring-membership billing/cancellation and 24-hour notice/no-show deduction clauses. Participation version 3 requires fresh consent after a new completed legal review is recorded. Previously reviewed versions 1/2 and unmodified category documents retain their exact text, hashes and signatures until explicit activation. No legal review was fabricated or carried forward. No automatic cancellation-notice engine, provider billing change, migration or real client modification.
+
+Implemented on the feature branch; release validation and deployment verification are pending. See docs/v1.3.234-verification.md.
+
 # v1.3.233 release handoff — Past booking membership deduction
 
 Release source: v1.3.233

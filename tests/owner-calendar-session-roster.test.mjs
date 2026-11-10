@@ -77,7 +77,7 @@ test('owner calendar daily weekly monthly session click opens roster dialog; pub
  assert.match(ui,/calendarMode!=='day'/);
  assert.match(ui,/calendarMode==='day'/);
  assert.match(ui,/onClick=\{\(\)=>openSessionRoster\(session\)\}/);
- assert.match(ui,/View registered customers for /);
+ assert.match(await read('app/components/owner-day-calendar.tsx'),/View registered customers for /);
  assert.match(ui,/sf-roster-dialog/);
  assert.match(ui,/role="dialog" aria-modal="true" aria-labelledby="sf-roster-title"/);
  assert.match(ui,/PRIVATE BUSINESS SESSION ROSTER/);

@@ -100,7 +100,7 @@ if(b.action==='session_full'){
 if(b.action==='settings'){const c=cleanRemovedBookableSessions(config,b.config);
  validateCategoryWaiverSettings(c);
  if(c?.waiverLegalReview!=null){const review=c.waiverLegalReview;
-  if(typeof review!=='object'||![WAIVER_VERSION,LEGACY_WAIVER_VERSION].includes(review.version)||typeof review.reference!=='string'||review.reference.length>200||typeof review.reviewedAt!=='string'||review.reviewedAt&&!/^\d{4}-\d{2}-\d{2}$/.test(review.reviewedAt)||review.reviewedAt>new Date().toISOString().slice(0,10))throw Error('Enter a valid current waiver legal-review reference and date.');
+  if(typeof review!=='object'||![WAIVER_VERSION,LEGACY_WAIVER_VERSION,'participation-2'].includes(review.version)||typeof review.reference!=='string'||review.reference.length>200||typeof review.reviewedAt!=='string'||review.reviewedAt&&!/^\d{4}-\d{2}-\d{2}$/.test(review.reviewedAt)||review.reviewedAt>new Date().toISOString().slice(0,10))throw Error('Enter a valid current waiver legal-review reference and date.');
  }
 
  if(c?.theme!==undefined&&c.theme!==null){if(!themeIsValid(c.theme))throw Error('Choose valid theme colors and fonts.');c.theme=resolveTheme(c.theme);}

@@ -1,3 +1,4 @@
+import {WAIVER_POLICY_TERMS_VERSION} from './waiver-policy-terms.mjs';
 import {CATEGORY_WAIVER_VERSION,WAIVER_CATEGORIES,waiverContentPayload} from './waiver-category-templates.mjs';
 import {createHash} from 'node:crypto';
 import {isIP} from 'node:net';
@@ -47,6 +48,7 @@ export function assertWaiverLegalReview(config,version,env=process.env){
 function validReviewDate(value){return typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value&&value<=new Date().toISOString().slice(0,10);}
 export function validateCategoryWaiverSettings(config){
  const options=config.categoryWaiver;if(options==null)return;
+ if(options.policyTermsVersion!==undefined&&options.policyTermsVersion!==WAIVER_POLICY_TERMS_VERSION)throw Error('Choose a valid waiver policy version.');
  if(typeof options!=='object'||Array.isArray(options)||typeof options.enabled!=='boolean'||!Object.hasOwn(WAIVER_CATEGORIES,options.category))throw Error('Choose a valid waiver category.');
  if(options.additionalTerms!==undefined&&typeof options.additionalTerms!=='string')throw Error('Business waiver terms must be text.');
  for(const value of [options.additionalTerms||'',...Object.values(options.serviceTerms||{})])if(typeof value!=='string'||value.length>4000)throw Error('Waiver terms must contain at most 4,000 characters per field.');
