@@ -6,7 +6,7 @@ The shared Gmail sender now verifies authorization in the background every five 
 
 Migration 099 adds private connection-health fields and incident IDs. Workers serialize refresh/reconnect/disconnect with the existing transaction advisory lock. Privacy-safe health heartbeats support an independent conditional notification channel; deployment alone does not create ChatGPT automations or grant device notification permission. Authorization health is not proof of message delivery. Existing ambiguous-send protections and staging recipient restrictions remain.
 
-Implementation and focused regression checks completed; full validation and staging/production deployment pending. See docs/v1.3.235-verification.md.
+Verified LIVE in staging and production via PR #170 on November 11, 2026 UTC. Both local and staging suites passed 771/771 tests; TypeScript, production builds, GitHub application/native checks, live endpoint checks and protected Gmail API checks passed. Production authorization heartbeats are healthy with automatic refresh verified. Staging separately reports needs_reconnect and requires Google approval. An independent hourly ChatGPT condition watch was enabled for production. See docs/v1.3.235-verification.md.
 
 # v1.3.234 release handoff — Calendar overlaps and waiver policy terms
 
