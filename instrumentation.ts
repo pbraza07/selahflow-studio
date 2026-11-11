@@ -12,5 +12,7 @@ export async function register(){
   startOwnerPaymentPushWorker();
   const {startCashCommissionWorker}=await import('./server/cash-commission-billing.mjs');
   startCashCommissionWorker();
+  const {startGmailConnectionMonitor}=await import('./server/gmail-connection-monitor.mjs');
+  startGmailConnectionMonitor();
  }
 }
