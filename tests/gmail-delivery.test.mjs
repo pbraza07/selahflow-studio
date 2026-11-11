@@ -28,7 +28,7 @@ test('Gmail authorization is encrypted, one-time, session-bound and requests sen
   assert.equal(exchanges,0);assert.equal((await completeGmailConnection(db,input,env,connectFetch)).connected,true);
   await assert.rejects(completeGmailConnection(db,input,env,connectFetch),/invalid/);assert.equal(exchanges,1);
   const connection=(await db.query('SELECT * FROM platform_gmail_connection')).rows[0];assert.notEqual(connection.encrypted_refresh_token,'private-refresh');
-  assert.deepEqual(await gmailStatus(db,env),{setupComplete:true,connected:true,sender:'sender@gmail.com',needsReconnect:false,missingConfiguration:[]});
+  const {monitor,...connectionStatus}=await gmailStatus(db,env);assert.equal(monitor.state,'healthy');assert.ok(monitor.lastCheckedAt);assert.deepEqual(connectionStatus,{setupComplete:true,connected:true,sender:'sender@gmail.com',needsReconnect:false,missingConfiguration:[]});
   assert.equal((await deliveryProviderStatusWithConnection(db,env)).emailConfigured,true);
   assert.equal((await deliveryProviderStatusWithConnection(db,{...env,APP_ENV:'staging'})).emailConfigured,false);
   const message={subject:'SelahFlow — Payment confirmation',text:'Business One: $25 paid.\nThank you!',trackAmbiguous:true};let delivered=0;
@@ -41,7 +41,7 @@ test('Gmail authorization is encrypted, one-time, session-bound and requests sen
   const receipt=await sendGmail('client@example.com',message,env,sendFetch,db);assert.equal(receipt.status,'submitted');assert.equal(receipt.providerMessageId,'gmail-fixture-message');assert.equal(delivered,1);
   assert.equal((await sendGmail('client@example.com',message,env,async p=>p.includes('/token')?{ok:true,json:async()=>({access_token:'a'})}:{ok:true,json:async()=>({})},db)).status,'unknown','HTTP acceptance without an ID must not claim verified submission');
   assert.equal((await sendGmail('client@example.com',message,env,async p=>{if(p.includes('/token'))return {ok:true,json:async()=>({access_token:'a'})};throw Error('timeout');},db)).status,'unknown');
-  assert.equal((await sendGmail('client@example.com',message,env,async()=>({ok:false,status:400}),db)).status,'not_configured');assert.equal((await gmailStatus(db,env)).needsReconnect,true);
+  assert.equal((await sendGmail('client@example.com',message,env,async()=>({ok:false,status:400,json:async()=>({error:'invalid_grant'})}),db)).status,'not_configured');assert.equal((await gmailStatus(db,env)).needsReconnect,true);
   assert.equal((await sendGmail('client@example.com',message,env,sendFetch,db)).status,'not_configured');assert.equal(delivered,1);
   await disconnectGmail(db,'admin',env,async()=>({ok:true}));assert.equal((await gmailStatus(db,env)).connected,false);assert.equal((await db.query('SELECT * FROM platform_gmail_connection')).rows.length,0);
   // Expired consent cannot connect a mailbox.

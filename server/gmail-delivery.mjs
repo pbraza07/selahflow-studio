@@ -21,8 +21,9 @@ export function openGmail(value,purpose,env=process.env){
  return Buffer.concat([cipher.update(data),cipher.final()]).toString('utf8');
 }
 export async function gmailStatus(db=getPool(),env=process.env){
- const row=(await db.query("SELECT email,status FROM platform_gmail_connection WHERE id='shared'")).rows[0];
- return {setupComplete:gmailConfigured(env),connected:!!(gmailConfigured(env)&&row?.status==='connected'),sender:row?.email||'',needsReconnect:row?.status==='needs_reconnect',missingConfiguration:[!env.GMAIL_CLIENT_ID&&'GMAIL_CLIENT_ID',!env.GMAIL_CLIENT_SECRET&&'GMAIL_CLIENT_SECRET',!/^[a-f0-9]{64}$/i.test(env.GMAIL_TOKEN_ENCRYPTION_KEY||'')&&'GMAIL_TOKEN_ENCRYPTION_KEY'].filter(Boolean)};
+ const row=(await db.query("SELECT email,status,health_status,last_checked_at,last_success_at,next_check_at,failure_count,incident_id,incident_started_at FROM platform_gmail_connection WHERE id='shared'")).rows[0];
+ return {setupComplete:gmailConfigured(env),connected:!!(gmailConfigured(env)&&row?.status==='connected'&&['healthy','unchecked'].includes(row.health_status)),sender:row?.email||'',needsReconnect:row?.status==='needs_reconnect',missingConfiguration:[!env.GMAIL_CLIENT_ID&&'GMAIL_CLIENT_ID',!env.GMAIL_CLIENT_SECRET&&'GMAIL_CLIENT_SECRET',!/^[a-f0-9]{64}$/i.test(env.GMAIL_TOKEN_ENCRYPTION_KEY||'')&&'GMAIL_TOKEN_ENCRYPTION_KEY'].filter(Boolean),
+  monitor:{enabled:env.SELAHFLOW_MESSAGE_WORKER==='true'&&selectedEmailProvider(env)==='gmail'&&!!row,state:row?.health_status||'inactive',lastCheckedAt:row?.last_checked_at||null,lastSuccessAt:row?.last_success_at||null,nextCheckAt:row?.health_status==='needs_reconnect'?null:row?.next_check_at||null,failures:row?.failure_count||0,incidentId:row?.incident_id||null,incidentStartedAt:row?.incident_started_at||null}};
 }
 export async function beginGmailConnection(db,{actor,session,origin},env=process.env){
  if(!gmailConfigured(env))throw Error('Configure the Google OAuth client on the staging server first.');
@@ -56,7 +57,7 @@ async function finishGmailConnection(db,{actor,session,state,code},env,fetcher){
  if(!profile.ok)throw Error('Google account verification failed.');
  const account=await profile.json();
  if(account.email_verified!==true||!emailValid(account.email))throw Error('A verified Google email account is required.');
- await db.query("INSERT INTO platform_gmail_connection(id,email,encrypted_refresh_token,status,connected_by) VALUES('shared',$1,$2,'connected',$3) ON CONFLICT(id) DO UPDATE SET email=excluded.email,encrypted_refresh_token=excluded.encrypted_refresh_token,status='connected',connected_by=excluded.connected_by,updated_at=now()",[account.email,sealGmail(token.refresh_token,'refresh',env),actor]);
+ await db.query("INSERT INTO platform_gmail_connection(id,email,encrypted_refresh_token,status,connected_by,health_status,last_checked_at,last_success_at,next_check_at) VALUES('shared',$1,$2,'connected',$3,'healthy',now(),now(),now()+interval '5 minutes') ON CONFLICT(id) DO UPDATE SET email=excluded.email,encrypted_refresh_token=excluded.encrypted_refresh_token,status='connected',connected_by=excluded.connected_by,updated_at=now(),health_status='healthy',last_checked_at=now(),last_success_at=now(),next_check_at=now()+interval '5 minutes',failure_count=0",[account.email,sealGmail(token.refresh_token,'refresh',env),actor]);
  return {connected:true};
 }
 export function gmailMime(sender,destination,message){
@@ -70,26 +71,50 @@ export function gmailMime(sender,destination,message){
  const mime=[`From: SelahFlow <${sender}>`,`To: <${destination}>`,`Subject: ${subjectWords}`,'MIME-Version: 1.0',`Content-Type: multipart/related; boundary="${related}"`,'',`--${related}`,`Content-Type: multipart/alternative; boundary="${alternative}"`,'',`--${alternative}`,'Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',encode(brandedEmailText(message)),`--${alternative}`,'Content-Type: text/html; charset=UTF-8','Content-Transfer-Encoding: base64','',encode(brandedEmailHtml(message)),`--${alternative}--`,...(inline?[`--${related}`,`Content-Type: image/png; name="${inline.filename}"`,'Content-Transfer-Encoding: base64',`Content-ID: <${inline.cid}>`,`Content-Disposition: inline; filename="${inline.filename}"`,'',encode(inline.bytes)]:[]),`--${related}--`,''].join('\r\n');
  return Buffer.from(mime).toString('base64url');
 }
+/** Serialize refresh, reconnect and disconnect across workers and instances.
+ * Healthy sends refresh on demand. Background checks and transient failures use
+ * a durable schedule; rejected grants wait for new user consent, not a retry loop.
+ */
+export async function refreshGmailAuthorization(db,env=process.env,fetcher=fetch,{force=false,forSend=false,now=new Date()}={}){
+ return gmailMutation(db,async client=>{
+  const row=(await client.query("SELECT * FROM platform_gmail_connection WHERE id='shared'")).rows[0];
+  if(!row)return {state:'inactive'};
+  if(row.health_status==='needs_reconnect')return {state:'needs_reconnect'};
+  const due=new Date(row.next_check_at)<=now;
+  // A manual check may skip the healthy interval, but never the failure backoff.
+  if(!due&&!(forSend&&row.health_status==='healthy')&&!(force&&['healthy','unchecked'].includes(row.health_status)&&(!row.last_checked_at||now-new Date(row.last_checked_at)>=10000)))return {state:row.health_status};
+  let state='retrying',access,rotated;
+  if(!gmailConfigured(env))state='configuration_error';
+  else{
+   let refresh;
+   try{refresh=openGmail(row.encrypted_refresh_token,'refresh',env);}catch{state='configuration_error';}
+   if(refresh)try{
+    const response=await fetcher('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:env.GMAIL_CLIENT_ID,client_secret:env.GMAIL_CLIENT_SECRET,refresh_token:refresh,grant_type:'refresh_token'}).toString(),signal:AbortSignal.timeout(7500)});
+    const body=await response.json().catch(()=>({}));
+    if(response.ok&&typeof body.access_token==='string'&&body.access_token){
+     if(body.scope&&!String(body.scope).split(' ').includes(GMAIL_SCOPE))state='needs_reconnect';
+     else{state='healthy';access=body.access_token;if(typeof body.refresh_token==='string'&&body.refresh_token)rotated=sealGmail(body.refresh_token,'refresh',env);}
+    }else if([400,401].includes(response.status)&&body.error==='invalid_grant')state='needs_reconnect';
+    else if([400,401,403].includes(response.status)&&['invalid_client','unauthorized_client','invalid_request','invalid_scope','access_denied'].includes(body.error))state='configuration_error';
+   }catch{/* Network, timeout and malformed provider responses are retryable. */}
+  }
+  const failures=state==='healthy'?0:Math.min(Number(row.failure_count||0)+1,30);
+  const incident=state==='healthy'?row.incident_id:(!row.incident_id||['healthy','unchecked'].includes(row.health_status)?randomUUID():row.incident_id);
+  const incidentStarted=incident===row.incident_id?row.incident_started_at:now;
+  const delay=state==='healthy'?300000:state==='needs_reconnect'?3600000:Math.min(60000*2**(failures-1),900000);
+  await client.query("UPDATE platform_gmail_connection SET status=$1,health_status=$2,last_checked_at=$3,last_success_at=CASE WHEN $2='healthy' THEN $3 ELSE last_success_at END,next_check_at=$4,failure_count=$5,incident_id=$6,incident_started_at=$7,encrypted_refresh_token=COALESCE($8,encrypted_refresh_token),updated_at=$3 WHERE id='shared'",[state==='needs_reconnect'?'needs_reconnect':'connected',state,now,new Date(now.getTime()+delay),failures,incident,incidentStarted,rotated||null]);
+  return {state,access,sender:row.email};
+ });
+}
 export async function sendGmail(destination,message,env=process.env,fetcher=fetch,db=null){
  if(!gmailConfigured(env))return {status:'not_configured',detail:'Gmail OAuth client is not configured'};
  if(!emailValid(destination))return {status:'invalid_destination',detail:'Invalid email destination'};
  db??=getPool();
- const row=(await db.query("SELECT email,encrypted_refresh_token,status FROM platform_gmail_connection WHERE id='shared'")).rows[0];
- if(!row||row.status!=='connected')return {status:'not_configured',detail:'The platform administrator must connect Gmail'};
- let access;
+ const authorization=await refreshGmailAuthorization(db,env,fetcher,{forSend:true});
+ if(!authorization.access)return {status:'not_configured',detail:authorization.state==='needs_reconnect'?'Gmail authorization needs reconnection by the platform administrator':authorization.state==='inactive'?'The platform administrator must connect Gmail':'Gmail authorization is temporarily unavailable'};
+ const access=authorization.access;
  try{
-  const response=await fetcher('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:env.GMAIL_CLIENT_ID,client_secret:env.GMAIL_CLIENT_SECRET,refresh_token:openGmail(row.encrypted_refresh_token,'refresh',env),grant_type:'refresh_token'}).toString(),signal:AbortSignal.timeout(7500)});
-  if(!response.ok){
-   if([400,401].includes(response.status)){
-    await db.query("UPDATE platform_gmail_connection SET status='needs_reconnect',updated_at=now() WHERE id='shared' AND encrypted_refresh_token=$1",[row.encrypted_refresh_token]);
-    return {status:'not_configured',detail:'Gmail authorization needs reconnection by the platform administrator'};
-   }
-   return {status:'failed',detail:'Gmail authorization is temporarily unavailable'};
-  }
-  access=(await response.json()).access_token;if(!access)throw Error();
- }catch{return {status:'failed',detail:'Gmail authorization is temporarily unavailable'};}
- try{
-  const result=await fetcher('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{method:'POST',headers:{Authorization:'Bearer '+access,'Content-Type':'application/json'},body:JSON.stringify({raw:gmailMime(row.email,destination,message)}),signal:AbortSignal.timeout(7500)});
+  const result=await fetcher('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{method:'POST',headers:{Authorization:'Bearer '+access,'Content-Type':'application/json'},body:JSON.stringify({raw:gmailMime(authorization.sender,destination,message)}),signal:AbortSignal.timeout(7500)});
   if(!result.ok)return {status:message.trackAmbiguous&&result.status>=500?'unknown':'failed',detail:'Gmail rejected email (HTTP '+result.status+')'};
   const receipt=await result.json();
   if(typeof receipt.id!=='string'||!/^[A-Za-z0-9_-]{1,200}$/.test(receipt.id))return {status:'unknown',detail:'Gmail accepted the request but returned no verifiable message ID; check the sender mailbox before retrying'};

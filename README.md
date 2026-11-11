@@ -1,3 +1,13 @@
+# v1.3.235 release handoff — Gmail connection monitoring and recovery
+
+Release source: v1.3.235
+
+The shared Gmail sender now verifies authorization in the background every five minutes. Temporary token-service failures use persisted exponential backoff (one to 15 minutes), recover automatically and pause outgoing messages without consuming delivery attempts. Refresh-token rotation is encrypted. Invalid grants or missing sending permission require fresh Google consent; client configuration errors remain distinct and recover after repair. Existing legacy reconnect flags receive one verification. Primary administrator settings show live check/retry timestamps and persistent outage alerts, refresh every minute and offer a protected Check connection now action. Explicit disconnect stops recovery. No inbox access, fallback sender, test message or customer-data changes.
+
+Migration 099 adds private connection-health fields and incident IDs. Workers serialize refresh/reconnect/disconnect with the existing transaction advisory lock. Privacy-safe health heartbeats support an independent conditional notification channel; deployment alone does not create ChatGPT automations or grant device notification permission. Authorization health is not proof of message delivery. Existing ambiguous-send protections and staging recipient restrictions remain.
+
+Implementation and focused regression checks completed; full validation and staging/production deployment pending. See docs/v1.3.235-verification.md.
+
 # v1.3.234 release handoff — Calendar overlaps and waiver policy terms
 
 Release source: v1.3.234
