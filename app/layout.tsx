@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./usability.css";
 import "./page-shortcuts.css";
+import KioskReturnGuard from './components/kiosk-return-guard';
 import PageShortcuts from "./components/page-shortcuts";
 import LanguageSelector from './components/language-selector';
 import './languages.css';
@@ -31,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased"><div className="sf-global-tools"><PageShortcuts/><LanguageSelector/></div>{isStaging()&&<div role="status" style={{background:'#8a4b00',color:'#fff',padding:'10px 16px',textAlign:'center',fontWeight:700}}>SelahFlow STAGING · Test data only · Sandbox payments</div>}{children}</body>
+      <body className="antialiased"><div className="sf-global-tools"><PageShortcuts/><LanguageSelector/></div>{isStaging()&&<div role="status" style={{background:'#8a4b00',color:'#fff',padding:'10px 16px',textAlign:'center',fontWeight:700}}>SelahFlow STAGING · Test data only · Sandbox payments</div>}{children}<KioskReturnGuard/></body>
     </html>
   );
 }

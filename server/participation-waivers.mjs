@@ -7,19 +7,20 @@ import {requiresWaiver,waiverDocument,validateWaiverSignature,acceptedWaiverVers
 export function waiverDocumentHash(document){return createHash('sha256').update(document.version===CATEGORY_WAIVER_VERSION?waiverContentPayload(document):JSON.stringify(document)).digest('hex');}
 export function publicWaiverDocument(config,primary,background){const document=waiverDocument(config,primary,background);let acceptingSignatures=true;if(document.version===CATEGORY_WAIVER_VERSION){try{assertWaiverLegalReview(config,document.version);}catch{acceptingSignatures=false;}}return {...document,hash:waiverDocumentHash(document),...(document.version===CATEGORY_WAIVER_VERSION?{acceptingSignatures}:{})};}
 /** Run inside the business/customer identity transaction. Never trust a client signed flag. */
-export async function ensureParticipationWaiver(db,{businessId,memberNumber,config,services,input,primary,background,audit={}}){
+export async function ensureParticipationWaiver(db,{businessId,memberNumber,config,services,input,primary,background,audit={},replaceExisting=false}){
  if(!requiresWaiver(services))return null;
  const identity=(await db.query('SELECT id,first_name,last_name,date_of_birth::text AS dob FROM customer_booking_ids WHERE business_id=$1 AND member_number=$2 FOR UPDATE',[businessId,memberNumber])).rows[0];
  if(!identity)throw Error('Verify your client identity before signing the waiver.');
  const document=waiverDocument(config,primary,background);
  assertWaiverLegalReview(config,document.version);
  const prior=(await db.query('SELECT id FROM participation_waivers WHERE business_id=$1 AND customer_id=$2 AND document_version=ANY($3::text[]) AND ($4::text IS NULL OR document_hash=$4 AND document->>\'category\'=$5) AND deleted_at IS NULL ORDER BY signed_at DESC LIMIT 1',[businessId,identity.id,acceptedWaiverVersions(config),document.version===CATEGORY_WAIVER_VERSION?waiverDocumentHash(document):null,document.category||null])).rows[0];
- if(prior)return prior.id;
+ if(prior&&!replaceExisting)return prior.id;
  const participantName=[identity.first_name,identity.last_name].join(' ');
  const signed=validateWaiverSignature(input,{dateOfBirth:identity.dob,participantName,version:document.version});
  // The text/version comes from the server. The exact display palette is retained.
  const hash=waiverDocumentHash(document);
  if(input.documentHash!==hash)throw Error('The waiver has changed. Refresh the booking page and read it before signing.');
+ if(replaceExisting)await db.query('UPDATE participation_waivers SET deleted_at=now(),superseded_at=now() WHERE business_id=$1 AND customer_id=$2 AND deleted_at IS NULL',[businessId,identity.id]);
  const row=(await db.query('INSERT INTO participation_waivers(business_id,customer_id,member_number,participant_name,date_of_birth,signer_name,signer_role,signed_date,document_version,document_hash,document,request_ip,user_agent,media_consent,media_statement) VALUES($1,$2,$3,$4,$5::date,$6,$7,$8::date,$9,$10,$11::jsonb,$12::inet,$13,$14,$15) RETURNING id',[businessId,identity.id,memberNumber,participantName,identity.dob,signed.signerName,signed.signerRole,signed.signedDate,document.version,hash,JSON.stringify(document),isIP(String(audit.ip||''))?audit.ip:null,String(audit.userAgent||'').slice(0,512),document.mediaReleaseIncluded===true||input.mediaConsent===true,document.mediaRelease||null])).rows[0];
  return row.id;
 }

@@ -67,7 +67,7 @@ export async function debitAppointmentMembershipSession(client,{owner,memberNumb
 }
 
 /** Call within an open SQL transaction: status, audit, and membership debit commit together. */
-export async function changeAppointmentStatus(client,{owner,appointmentId,status,eventId,ledgerId,createdAt}){
+export async function changeAppointmentStatus(client,{owner,appointmentId,status,eventId,ledgerId,createdAt,source=undefined}){
  await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
  if(!['Checked in','Completed','Cancelled','No-show'].includes(status))throw Error('Invalid appointment status.');
  const appointment=(await client.query(
@@ -116,7 +116,7 @@ export async function changeAppointmentStatus(client,{owner,appointmentId,status
  await client.query(
   "INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'status',$4) ON CONFLICT DO NOTHING",
   [eventId,owner,createdAt,JSON.stringify({
-   appointment:appointmentId,previousStatus:appointment.status,attendanceCorrection:attendanceCorrection||(appointment.status==='Checked in'&&status==='No-show'),status,memberNumber:memberNumber||null,
+   source,appointment:appointmentId,previousStatus:appointment.status,attendanceCorrection:attendanceCorrection||(appointment.status==='Checked in'&&status==='No-show'),status,memberNumber:memberNumber||null,
    membershipDeducted:usage.deducted,alreadyDeducted:usage.alreadyDeducted,
    membershipSessionsRemaining:usage.remaining,membershipExhausted:usage.exhausted===true
   })]
