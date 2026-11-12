@@ -36,12 +36,18 @@ export async function setPlatformCommissionEnabled(db,{businessId,actor,kind,ena
 }
 /** Caller owns a transaction. Separate once-per-identity claims for booking and membership. */
 export async function reserveCommission(db,{businessId,kind,memberNumber,sourceId,account,grossCents,eligibleCents=grossCents,collectionMethod='stripe'},api=stripeApi){
- if(!['booking','membership'].includes(kind))throw Error('Invalid commission category.');
+ if(!['booking','membership','product'].includes(kind))throw Error('Invalid commission category.');
+ if(kind==='product'){
+  const shop=(await db.query("SELECT 1 FROM product_shop_settings WHERE business_id=$1 AND terms_version='product-first-client-10-percent-v1'",[businessId])).rows[0];
+  if(!shop)throw Error('Complete product payment and commission setup before selling products.');
+  await db.query('INSERT INTO business_commission_policies(business_id) VALUES($1) ON CONFLICT DO NOTHING',[businessId]);
+ }
  const policy=(await db.query('SELECT * FROM business_commission_policies WHERE business_id=$1',[businessId])).rows[0];
- if(!policy?.[kind+'_enabled']||policy.terms_version!==COMMISSION_TERMS||!policy.accepted_at)return null;
- const fee=commissionCents(eligibleCents);if(!fee)return null;
+ if(kind!=='product'&&(!policy?.[kind+'_enabled']||policy.terms_version!==COMMISSION_TERMS||!policy.accepted_at))return null;
+ if(!Number.isSafeInteger(eligibleCents)||eligibleCents<0)throw Error('Invalid commission basis.');
+ const fee=kind==='product'?Math.round(eligibleCents/10):commissionCents(eligibleCents);if(!fee)return null;
  const identity=(await db.query('SELECT identity_key FROM business_member_ids WHERE business_id=$1 AND member_number=$2 AND retired_at IS NULL',[businessId,memberNumber||''])).rows[0];
- if(!identity)return null; // Legacy records without a verified identity are never guessed from email.
+ if(!identity){if(kind==='product')throw Error('The client ID changed. Start a new product checkout so commission eligibility can be verified.');return null;} // Legacy session records are never guessed from email.
  const digest=commissionIdentityDigest(policy.identity_salt,businessId,identity.identity_key);
  const evidence=await commissionContactEvidence(db,{businessId,memberNumber,identityKey:identity.identity_key,policy});
  for(const matchedDigest of evidence.digests)await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[businessId+':commission:'+kind+':'+matchedDigest]);
@@ -67,9 +73,11 @@ export async function reserveCommission(db,{businessId,kind,memberNumber,sourceI
   if(old)return null;
   const paid=(await db.query("SELECT 1 FROM appointments a JOIN businesses b ON b.owner_id=a.owner LEFT JOIN booking_payments p ON p.booking_id=a.id AND p.business_id=b.id WHERE b.id=$1 AND a.id<>$3 AND a.data::jsonb->>'memberNumber'=ANY($2::text[]) AND (p.status='paid' OR a.data::jsonb->>'paymentStatus'='paid' OR a.status='Completed') LIMIT 1",[businessId,evidence.memberNumbers,sourceId])).rows.length;
   if(paid)return null;
- }else{
+ }else if(kind==='membership'){
   const paid=(await db.query("SELECT 1 FROM customer_memberships m WHERE m.business_id=$1 AND m.member_number=ANY($2::text[]) AND (m.initial_paid_at IS NOT NULL OR m.last_paid_at IS NOT NULL OR m.paid_through IS NOT NULL OR m.status='active' OR EXISTS(SELECT 1 FROM membership_session_ledger l WHERE l.membership_id=m.id AND l.business_id=m.business_id AND l.event_type='payment_confirmed' AND l.amount_cents>0)) LIMIT 1",[businessId,evidence.memberNumbers])).rows.length;
   if(paid)return null;
+ }else{
+  if((await db.query("SELECT 1 FROM product_orders WHERE business_id=$1 AND member_number=ANY($2::text[]) AND paid_at IS NOT NULL LIMIT 1",[businessId,evidence.memberNumbers])).rows.length)return null;
  }
  if(evidence.ambiguous)throw Error('Contact information matches multiple clients with this name. Ask the business to verify the existing Client ID or birth date before payment.');
  if(collectionMethod==='cash'){
@@ -80,6 +88,7 @@ export async function reserveCommission(db,{businessId,kind,memberNumber,sourceI
   await db.query("UPDATE first_customer_commissions SET source_id=$1,stripe_account_id=$2,stripe_checkout_session_id=NULL,stripe_payment_intent_id=NULL,gross_cents=$3,eligible_cents=$4,fee_cents=$5,status='reserved',updated_at=now() WHERE id=$6 AND business_id=$7",[sourceId,account,grossCents,eligibleCents,fee,prior.id,businessId]);
   return {...prior,source_id:sourceId,stripe_checkout_session_id:null,fee_cents:fee};
  }
+ if(kind==='product')return (await db.query('INSERT INTO first_customer_commissions(id,business_id,identity_digest,kind,source_id,stripe_account_id,gross_cents,eligible_cents,fee_cents) VALUES($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',[sourceId,businessId,digest,kind,sourceId,account,grossCents,eligibleCents,fee])).rows[0];
  return (await db.query('INSERT INTO first_customer_commissions(business_id,identity_digest,kind,source_id,stripe_account_id,gross_cents,eligible_cents,fee_cents) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',[businessId,digest,kind,sourceId,account,grossCents,eligibleCents,fee])).rows[0];
 }
 export async function attachCommissionSession(db,claim,session){if(claim)await db.query('UPDATE first_customer_commissions SET stripe_checkout_session_id=$1,updated_at=now() WHERE id=$2 AND business_id=$3',[session.id,claim.id,claim.business_id]);}

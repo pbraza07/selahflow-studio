@@ -149,6 +149,7 @@ try{
  await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
  const persisted=(await client.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0];
  const oldConfig=persisted?JSON.parse(persisted.data):config;
+ const productCount=Number((await client.query('SELECT count(*)::int AS count FROM business_products WHERE business_id=(SELECT id FROM businesses WHERE owner_id=$1) AND archived=false',[owner])).rows[0].count);
  if(Number(c.teamSessionRevision||0)!==Number(oldConfig.teamSessionRevision||0))throw Error('Team sessions changed while these settings were open. Refresh the owner dashboard before saving.');
  c.fullSessionIds=cleanRemovedBookableSessions(oldConfig,{...c,fullSessionIds:oldConfig.fullSessionIds||[]}).fullSessionIds||[]; // Only the immediate owner calendar action changes session closure.
  c.teamTimeOff=oldConfig.teamTimeOff||[]; // Calendar-managed time off cannot be overwritten by stale settings drafts.
@@ -168,9 +169,9 @@ try{
    const limit=Number.isInteger(individualLimits[key])?individualLimits[key]:base.limits[key];
    const oldIds=new Set((oldConfig[field]||[]).map((x:any)=>x.id));
    const newRows=c[field]||[];
-   if(newRows.length>limit&&newRows.some((x:any)=>!oldIds.has(x.id)))throw Error('Individual business allowance exceeded for '+key+'.');
+   if(newRows.length+(key==='services'?productCount:0)>limit&&newRows.some((x:any)=>!oldIds.has(x.id)))throw Error('Individual business allowance exceeded for '+key+'. Services and products share the catalog allowance.');
   }
- }else checkSubscriptionLimits(planRow,oldConfig,c);
+ }else checkSubscriptionLimits(planRow,oldConfig,c,productCount);
  const oldTeam=Array.isArray(oldConfig.staff)?oldConfig.staff:[];
  if(c.staff.length>effectiveCap&&c.staff.some((member:any)=>!oldTeam.some((previous:any)=>previous.id===member.id)))
   throw Error('Team member limit reached. Submit an ad hoc extra team member request in Settings → Team members and wait for platform administrator approval.');

@@ -1,6 +1,6 @@
 import {stripeApi,paymentConfigured} from './membership-payments.mjs';
 import {isStaging} from './staging-safety.mjs';
-export const COMMISSION_EVENTS=['checkout.session.completed','checkout.session.expired','invoice.paid','invoice.payment_failed','customer.subscription.updated','customer.subscription.deleted','account.updated','charge.refunded'];
+export const COMMISSION_EVENTS=['checkout.session.completed','checkout.session.async_payment_succeeded','checkout.session.async_payment_failed','checkout.session.expired','invoice.paid','invoice.payment_failed','customer.subscription.updated','customer.subscription.deleted','account.updated','charge.refunded'];
 async function endpointFor(api,origin){
  const url=new URL('/api/stripe/webhook',origin);if(url.protocol!=='https:')throw Error('Secure webhook origin required.');
  const result=await api('webhook_endpoints?limit=100',{method:'GET'});
@@ -22,7 +22,7 @@ export async function configureCommissionStripe(origin,api=stripeApi){
  const e=await endpointFor(api,origin);
  if(!e.enabled_events.includes('*')){
   const types=[...new Set([...e.enabled_events,...COMMISSION_EVENTS])];
-  if(types.length!==e.enabled_events.length){const params=Object.fromEntries(types.map((type,i)=>['enabled_events['+i+']',type]));await api('webhook_endpoints/'+e.id,{params,idempotencyKey:'commission-events-v1-'+e.id});}
+  if(types.length!==e.enabled_events.length){const params=Object.fromEntries(types.map((type,i)=>['enabled_events['+i+']',type]));await api('webhook_endpoints/'+e.id,{params,idempotencyKey:'commission-events-v2-'+e.id});}
  }
  return assertCommissionStripeReady(origin,api);
 }
