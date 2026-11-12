@@ -1,4 +1,5 @@
 import {applyPackageRefund} from '../../../../server/package-refunds.mjs';
+import {applyProductPayment} from '../../../../server/product-orders.mjs';
 import {handleWorkspacePaymentEvent} from '../../../../server/team-workspace-billing.mjs';
 import {applyTerminalPayment} from '../../../../server/terminal-payments.mjs';
 import {completeInitialMembershipCheckout} from '../../../../server/membership-initial-payment.mjs';
@@ -53,7 +54,8 @@ export async function POST(req:Request){
    }else if(event.type==='payment_intent.succeeded'&&object.metadata?.selahflow_channel==='terminal'){
     if(!await applyTerminalPayment(db,merchant.business_id,account,object))throw Error('Onsite payment is awaiting reconciliation.');
    }else if(['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(event.type)&&object.mode==='payment'){
-    if(object.metadata?.membership_initial==='true'&&object.metadata?.selahflow_business_id===merchant.business_id){if(!await completeInitialMembershipCheckout(db,{businessId:merchant.business_id,account,session:object}))throw Error('Initial membership payment is awaiting local checkout reconciliation.');}
+    if(object.metadata?.selahflow_product_order&&object.metadata?.selahflow_business_id===merchant.business_id)await applyProductPayment(db,merchant.business_id,account,object);
+    else if(object.metadata?.membership_initial==='true'&&object.metadata?.selahflow_business_id===merchant.business_id){if(!await completeInitialMembershipCheckout(db,{businessId:merchant.business_id,account,session:object}))throw Error('Initial membership payment is awaiting local checkout reconciliation.');}
     else await applyBookingPayment(db,merchant.business_id,account,object);
    }else if(event.type==='checkout.session.completed'&&object.mode==='subscription'&&object.client_reference_id&&object.subscription){
     const id=object.client_reference_id;
@@ -63,10 +65,15 @@ export async function POST(req:Request){
     // proof that a recurring subscription's first invoice was paid.
    }else if(event.type==='invoice.paid'&&subscription){
     await applyMembershipInvoice(db,merchant.business_id,account,object,subscription);
+   }else if(event.type==='checkout.session.async_payment_failed'&&object.metadata?.selahflow_product_order){
+    await db.query("UPDATE product_orders SET status='expired',updated_at=now() WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 AND status='pending'",[merchant.business_id,account,object.id]);
+    await db.query("UPDATE first_customer_commissions SET status='expired',updated_at=now() WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 AND status='reserved'",[merchant.business_id,account,object.id]);
    }else if(event.type==='checkout.session.expired'&&object.status==='expired'){
+    await db.query("UPDATE product_orders SET status='expired',updated_at=now() WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 AND status='pending'",[merchant.business_id,account,object.id]);
     await db.query("UPDATE first_customer_commissions SET status='expired',updated_at=now() WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 AND status='reserved'",[merchant.business_id,account,object.id]);
     await db.query("UPDATE booking_payments SET status='expired',updated_at=now() WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 AND status='pending'",[merchant.business_id,account,object.id]);
    }else if(event.type==='charge.refunded'){
+    await db.query("UPDATE product_orders SET refunded_cents=GREATEST(refunded_cents,$1),status=CASE WHEN GREATEST(refunded_cents,$1)>=total_cents THEN 'refunded' ELSE 'partially_refunded' END,updated_at=now() WHERE business_id=$2 AND stripe_account_id=$3 AND stripe_payment_intent_id=$4 AND paid_at IS NOT NULL",[Number(object.amount_refunded)||0,merchant.business_id,account,typeof object.payment_intent==='string'?object.payment_intent:object.payment_intent?.id]);
     await refundCommission(db,{businessId:merchant.business_id,account,charge:object});
     await applyPackageRefund(db,{businessId:merchant.business_id,account,charge:object});
    }else if(event.type==='invoice.payment_failed'){

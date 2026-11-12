@@ -71,7 +71,11 @@ export async function deleteClientPermanently(db,{owner,businessId,client,closeO
   const rowsFor=table=>specs.find(s=>s.table===table).rows;
   if(['business_communication_recipients','booking_client_messages','booking_receipt_emails','membership_payment_emails','membership_payment_invitations','owner_form_notifications'].some(table=>rowsFor(table).some(m=>m.status==='processing')))throw Error('A related email is currently being sent. Retry reset after delivery finishes.');
   if(rowsFor('booking_payments').some(p=>p.status==='pending'&&p.terminal_payment_intent_id))throw Error('Check or cancel this appointment onsite card collection before deleting the client.');
-  if(closeOpenCheckouts)await expireClientCheckouts(db,{businessId:business.id,bookingKeys,members,bookingPayments:rowsFor('booking_payments')},api);
+  const productOrders=(await db.query('SELECT * FROM product_orders WHERE business_id=$1 AND member_number=ANY($2::text[]) FOR UPDATE',[business.id,numbers])).rows;
+  if(!closeOpenCheckouts&&productOrders.some(p=>p.status==='pending'&&p.stripe_checkout_session_id))throw Error('Expire this client’s product checkout before reset.');
+  if(closeOpenCheckouts)await expireClientCheckouts(db,{businessId:business.id,bookingKeys,members,bookingPayments:rowsFor('booking_payments'),productOrders},api);
+  // Retain product accounting/refund references, but erase client details on explicit permanent deletion.
+  await db.query("UPDATE product_orders SET customer_name='Deleted client',customer_email='',customer_address='{}'::jsonb,member_number='',status=CASE WHEN status='pending' THEN 'canceled' ELSE status END,updated_at=now() WHERE business_id=$1 AND member_number=ANY($2::text[])",[business.id,numbers]);
   if(!closeOpenCheckouts&&rowsFor('booking_payments').some(p=>p.status==='pending'&&p.stripe_checkout_session_id))throw Error('Expire this registration open Stripe Checkout before reset.');
   if((await db.query("SELECT 1 FROM first_customer_commissions WHERE business_id=$1 AND source_id=ANY($2::text[]) AND kind='membership' AND status='reserved' AND stripe_checkout_session_id IS NOT NULL",[business.id,memberIds])).rows.length)throw Error('Expire this membership open Stripe Checkout before reset.');
   await db.query("UPDATE first_customer_commissions SET source_id=NULL WHERE business_id=$1 AND ((kind='booking' AND source_id=ANY($2::text[])) OR (kind='membership' AND source_id=ANY($3::text[])))",[business.id,bookingKeys,memberIds]);

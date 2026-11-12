@@ -74,12 +74,12 @@ export function planEntitlements(planCode,status='active'){
   subscriptionStatus:status||'inactive'};
 }
 const ids=xs=>new Set((Array.isArray(xs)?xs:[]).map(x=>x?.id).filter(x=>typeof x==='string'));
-export function checkSubscriptionLimits(plan,oldConfig,newConfig){
+export function checkSubscriptionLimits(plan,oldConfig,newConfig,productCount=0){
  const ent=planEntitlements(plan?.plan_code,plan?.status);
  for(const [name,key] of [['services','services'],['bookingCustomFields','bookingFields'],['bookableSessions','sessionSeries']]){
   const before=ids(oldConfig?.[name]),after=ids(newConfig?.[name]);
   const added=[...after].filter(id=>!before.has(id));
-  if(after.size>ent.limits[key]&&added.length)
+  if(after.size+(key==='services'?productCount:0)>ent.limits[key]&&added.length)
    throw Error('The '+ent.name+' plan allows up to '+ent.limits[key]+' '+PLAN_LIMIT_NAMES[key]+
     '. Existing records remain available. Remove unused items or contact the platform administrator about a plan change.');
  }

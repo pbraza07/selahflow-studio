@@ -4,7 +4,7 @@ import {isStaging} from './staging-safety.mjs';
 /** Called within the owner's deletion transaction, after resolving the exact
  * business/client and locking its records. Provider expiry is retry-safe even
  * if a subsequent local operation rolls back. Never cancel paid subscriptions. */
-export async function expireClientCheckouts(db,{businessId,bookingKeys=[],members=[],bookingPayments=[],completedFreeCheckouts=new Set()},api=stripeApi){
+export async function expireClientCheckouts(db,{businessId,bookingKeys=[],members=[],bookingPayments=[],productOrders=[],completedFreeCheckouts=new Set()},api=stripeApi){
  for(const member of members)if(member.stripe_subscription_id){
   const subscription=await api('subscriptions/'+member.stripe_subscription_id,{method:'GET',account:member.stripe_account_id});
   if(isStaging()&&subscription?.livemode!==false)throw Error('Staging accepts only Stripe sandbox payments.');
@@ -22,13 +22,14 @@ export async function expireClientCheckouts(db,{businessId,bookingKeys=[],member
   refs.set(key,{session,account,kind,source});
  };
  for(const p of bookingPayments)if(p.status==='pending')add(p.stripe_checkout_session_id,p.stripe_account_id,'booking',p.booking_id);
+ for(const p of productOrders)if(p.status==='pending')add(p.stripe_checkout_session_id,p.stripe_account_id,'product',p.id);
  for(const m of members)if(m.status==='pending_payment'||!m.initial_paid_at&&!m.last_paid_at&&Number(m.sessions_included)===0)add(m.stripe_checkout_session_id,m.stripe_account_id,'membership',m.id);
  for(const c of claims)add(c.stripe_checkout_session_id,c.stripe_account_id,c.kind,c.source_id);
  for(const r of refs.values()){
   const path='checkout/sessions/'+r.session;
   const verify=session=>{
    if(isStaging()&&session?.livemode!==false)throw Error('Staging accepts only Stripe sandbox payments.');
-   if(session?.id!==r.session||session.metadata?.selahflow_business_id!==businessId||session.metadata?.[r.kind==='booking'?'booking_id':'membership_id']!==r.source||session.client_reference_id!==r.source)throw Error('Stripe checkout identity does not match this registration. Deletion stopped.');
+   if(session?.id!==r.session||session.metadata?.selahflow_business_id!==businessId||session.metadata?.[r.kind==='booking'?'booking_id':r.kind==='product'?'selahflow_product_order':'membership_id']!==r.source||session.client_reference_id!==r.source)throw Error('Stripe checkout identity does not match this registration. Deletion stopped.');
    const verifiedFree=r.kind==='membership'&&completedFreeCheckouts.has(r.account+'|'+r.session)&&session.status==='complete'&&session.payment_status==='no_payment_required'&&session.amount_total===0;
    if(!verifiedFree&&(session.payment_status==='paid'||!['open','expired'].includes(session.status)))throw Error('Stripe reports a completed or processing payment. Verify its payment status before deleting this registration.');
   };
@@ -38,6 +39,7 @@ export async function expireClientCheckouts(db,{businessId,bookingKeys=[],member
    if(session.status!=='expired')throw Error('Stripe did not confirm checkout expiry. Retry deletion.');
   }
   await db.query("UPDATE booking_payments SET status='expired',updated_at=now() WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 AND status='pending'",[businessId,r.account,r.session]);
+  if(r.kind==='product')await db.query("UPDATE product_orders SET status='expired',updated_at=now() WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 AND status='pending'",[businessId,r.account,r.session]);
   await db.query("UPDATE first_customer_commissions SET status='expired',updated_at=now() WHERE business_id=$1 AND stripe_account_id=$2 AND stripe_checkout_session_id=$3 AND status='reserved'",[businessId,r.account,r.session]);
  }
  return refs.size;

@@ -1,3 +1,13 @@
+# v1.3.236 release handoff — Product catalog and client-linked commerce
+
+Release source: v1.3.236
+
+Service catalog now includes products with prices, descriptions, compressed WebP pictures and archive/restore. Services and active products share the package catalog allowance, enforced under the existing owner schedule lock including individual overrides. Public business pages show a product carousel and link to pickup checkout. A client supplies first/last name plus email, phone or Member / Client ID; matching stays business-scoped and ambiguous identities are rejected. Product purchases do not consume membership sessions.
+
+Owners explicitly accept separate product commission/cash collection authorization and confirm business tax responsibility and pickup address. Stripe Tax settings and active local registrations must be verified before checkout opens. Owners choose product tax categories; no tax registrations or legal consent are fabricated. Checkout uses Stripe Tax performance locations and native tax reporting; cash/Zelle tax transactions are recorded only after owner receipt confirmation. First paid product order per client/business carries exactly 10% of product subtotal, excluding tax and with no minimum; subsequent product orders have no commission. Product fees are independent of booking/membership fees. Cash/Zelle fees join existing monthly statements after verified billing authorization. Prices, tax, identities and fees are server-owned; payment notifications are signed and idempotent. Products/order snapshots and client purchase history are retained.
+
+Migration 100 adds product catalog, checkout settings and product orders, and extends the existing commission category. Feature branch feature/product-catalog. Local full regression passed 778/778 tests; final targeted commerce, deletion/retention and webhook setup checks passed 19/19. TypeScript and production build passed. Staging/production deployment remains pending; v1.3.235 is the last verified LIVE release. No real purchases, cash receipts, tax registrations or business authorizations have been submitted for QA. See docs/v1.3.236-verification.md.
+
 # v1.3.235 release handoff — Gmail connection monitoring and recovery
 
 Release source: v1.3.235
