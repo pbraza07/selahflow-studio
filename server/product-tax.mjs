@@ -1,3 +1,4 @@
+import {productCountry,productState} from './product-address.mjs';
 import {createHash} from 'node:crypto';
 import {stripeApi} from './membership-payments.mjs';
 import {readyMerchant,assertTestPayment} from './stripe-checkout.mjs';
@@ -5,8 +6,10 @@ import {PRODUCT_TERMS,PRODUCT_TERMS_TEXT} from './product-catalog.mjs';
 export const productStripeApi=(path,options={})=>stripeApi(path,{...options,apiVersion:'2026-09-30.endive'});
 export function productAddress(input){
  const address={};for(const key of ['line1','line2','city','state','postal_code','country'])address[key]=typeof input?.[key]==='string'?input[key].trim():'';
- address.country=address.country.toUpperCase();address.state=address.state.toUpperCase();
- if(!address.line1||!address.city||!address.state||!address.postal_code||!/^[A-Z]{2}$/.test(address.country)||Object.values(address).some(x=>x.length>150))throw Error('Enter the complete business pickup address, including country and postal code.');
+ address.country=productCountry(address.country);address.state=productState(address.state,address.country);
+ if(!address.country)throw Error('Select a valid country for the address.');
+ if(!address.state)throw Error(address.country==='US'?'Enter a valid U.S. state name or two-letter code, such as Florida or FL.':'Enter the state or region for the address.');
+ if(!address.line1||!address.city||!address.state||!address.postal_code||!/^[A-Z]{2}$/.test(address.country)||Object.values(address).some(x=>x.length>150))throw Error('Complete the street, city, state / region and postal code for the address.');
  return address;
 }
 export async function verifyProductTax(account,address,api=productStripeApi){
