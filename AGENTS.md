@@ -1,3 +1,11 @@
+# v1.3.237 release handoff — Clients inside bookable sessions
+
+Release source: v1.3.237
+
+Owner daily, weekly and monthly calendars place linked clients inside the matching bookable session, with independently clickable client details and session roster actions. Daily attendees scroll within the session instead of occupying separate overlap columns. Matching requires session occurrence ID, date, staff and start time; unmatched appointments remain visible. Existing capacity, payment and attendance rules are unchanged. No migration or customer record changes.
+
+Local TypeScript and production build passed. Full existing suite passed 778/778; the additional recurring/unmatched grouping regression and focused calendar/roster checks passed separately (8/8). Version checks passed (2/2). Browser screenshot validation was blocked by local browser sandbox restrictions. No customer records changed. Deployment is NOT complete: automatic approval review blocked publishing to the public GitHub repository and requires explicit user approval for that destination. No remote feature branch was created. Previous production v1.3.236 verified LIVE at commit d7809a1, deploy dep-dbqsrkgae00c738rkpcg.
+
 # v1.3.236 release handoff — Product catalog and client-linked commerce
 
 Release source: v1.3.236

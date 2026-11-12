@@ -402,19 +402,21 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
  const base=new Date(date+'T12:00:00');if(calendarMode==='week')base.setDate(base.getDate()-base.getDay()+i);else base.setDate(1+i);
  const key=base.getFullYear()+'-'+String(base.getMonth()+1).padStart(2,'0')+'-'+String(base.getDate()).padStart(2,'0');
  const bookings=display.filter((a:Any)=>a.date===key&&a.status!=='Cancelled'&&(staffFilter==='all'||a.staff===staffFilter));
+ const periodSessions=sessionsOn(key,staffFilter==='all'?undefined:staffFilter);
+ const belongs=(a:Any,s:Any)=>a.sessionId===s.id&&a.date===s.date&&a.staff===s.staff&&a.start===s.start;
  return <div key={key} className={'sf-calendar-period-day'+(key===date?' selected':'')}>
   <button type="button" className="sf-calendar-day-open" onClick={()=>{setDate(key);setCalendarAction({date:key,staff:staffFilter==='all'?undefined:staffFilter});}} aria-label={'Plan appointments or time off on '+key}>
    <strong>{base.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</strong>
    <span>{bookings.length} booking{bookings.length===1?'':'s'}</span>
-   {bookings.slice(0,3).map((a:Any)=><small key={a.id}>{timeLabel(a.start)} · <span translate="no">{a.name}</span></small>)}
+
   </button>
-  {bookings.map((a:Any)=><button type="button" className="outline" key={a.id} onClick={()=>setAppointmentDetail(a)}>{timeLabel(a.start)} · <span translate="no">{a.name}</span> · {a.status}</button>)}
-  {sessionsOn(key,staffFilter==='all'?undefined:staffFilter).map((session:Any)=><button
+  {bookings.filter((a:Any)=>!periodSessions.some((s:Any)=>belongs(a,s))).map((a:Any)=><button type="button" className="outline" key={a.id} onClick={()=>setAppointmentDetail(a)}>{timeLabel(a.start)} · <span translate="no">{a.name}</span> · {a.status}</button>)}
+  {periodSessions.map((session:Any)=><section className="sf-period-session" key={session.id}><button
    type="button" className="sf-session-chip sf-session-roster-trigger" key={session.id}
    style={{'--sf-service-accent':serviceAccent(config.services.find((v:Any)=>v.id===session.service)?.name||'')||'#387459'} as CSSProperties}
    onClick={()=>openSessionRoster(session)} aria-label={'View registered customers for '+sessionLabel(session)+' on '+key}>
-   <Users size={13} aria-hidden="true"/> {timeLabel(session.start)} · {sessionLabel(session)} · View clients
-  </button>)}
+   <Users size={13} aria-hidden="true"/> {timeLabel(session.start)} · {sessionLabel(session)} · {sessionLeft(session)}/{session.capacity} slots left · View clients
+  </button><div className="sf-period-session-clients">{bookings.filter((a:Any)=>belongs(a,session)).map((a:Any)=><button type="button" className="sf-session-client" key={a.id} onClick={()=>setAppointmentDetail(a)}><b translate="no">{a.name}</b><span>{a.status}</span></button>)}</div></section>)}
  </div>;
  })}</div></div>:null}
 {view==='Calendar'&&calendarMode==='day'?<OwnerDayCalendar config={config} appointments={appointments} sessions={sessionsOn(date,staffFilter==='all'?undefined:staffFilter)} date={date} staffFilter={staffFilter} serviceAccent={serviceAccent} sessionLeft={sessionLeft} onAppointment={setAppointmentDetail} onSession={openSessionRoster} onPlan={setCalendarAction}/>:<div className="table-wrap"><SortableTable><thead><tr><th>CLIENT</th><th>SERVICE</th><th>TEAM MEMBER</th><th>DATE</th><th>TIME</th><th>STATUS</th><th></th></tr></thead><tbody>{day.map(a=><tr key={a.id}><td><div className="person"><span className="avatar neutral">{a.name.split(' ').map((n:string)=>n[0]).slice(0,2).join('')}</span><div><span className="sf-client-name-membership"><b translate="no">{a.name}</b>{<MembershipBadge memberNumber={a.memberNumber} membershipName={a.membershipName} membershipStatus={a.membershipStatus} sessionsIncluded={a.membershipSessionsIncluded} sessionsUsed={a.membershipSessionsUsed} badge={a.membershipBadge}/>}</span><small translate="no">{a.email}</small></div></div></td><td>{a.services.join(' + ')}<small>{a.duration} min · {cash(a.price)}</small></td><td><span className={'dot '+config.staff.find((s:Any)=>s.id===a.staff)?.color}/>{config.staff.find((s:Any)=>s.id===a.staff)?.name}</td><td>{a.date}</td><td data-sort-value={a.start}>{timeLabel(a.start)}</td><td><span className={'status '+a.status.toLowerCase().replace(' ','-')}>{a.status}</span></td><td><div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}><OwnerOnsitePayment appointment={a} config={config} onChanged={refresh}/><AttendanceActions appointment={a} busy={busy} onStatus={(a,s)=>void status(a,s)}/>{['Confirmed','Checked in'].includes(a.status)&&<button type="button" className="icon-btn" disabled={busy} aria-label={'Cancel '+a.name} onClick={()=>{if(confirm('Cancel this appointment? No payment or membership session will be refunded automatically.'))void status(a,'Cancelled');}}><X size={15}/></button>}</div></td></tr>)}</tbody></SortableTable>{day.length===0&&<div className="empty"><CalendarDays/><h3>A little space for something great.</h3><p>No appointments on this day.</p><button className="primary" onClick={()=>startBooking()}>Add appointment</button></div>}</div>}</section></>}

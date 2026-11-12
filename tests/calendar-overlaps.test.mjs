@@ -56,7 +56,23 @@ test('actual calendar keeps each published-session attendee, filters canceled/ot
  const root=createRoot(document.getElementById('root'));let selected=null;
  try{
   await perform(()=>root.render(React.createElement(Calendar,{...props,onAppointment:a=>selected=a.id,onSession:s=>selected=s.id})));
-  for(let i=0;i<6;i++){await perform(()=>document.querySelector(`[data-calendar-event="booking-${i}"]`).click());assert.equal(selected,String(i));}
+  assert.equal(document.querySelectorAll('.cal-column > [data-calendar-event^="booking-"]').length,1,'Only the unmatched former-staff appointment stays outside');
+  assert.equal(document.querySelectorAll('[data-calendar-session="session-published"] [data-calendar-event^="booking-"]').length,6);
+  assert.equal(document.querySelectorAll('button button').length,0,'Client buttons must not be nested inside a roster button');
+  for(let i=0;i<6;i++){await perform(()=>document.querySelector(`[data-calendar-event="booking-${i}"]`).click());assert.equal(selected,String(i),'Client click must not bubble into the roster action');}
   await perform(()=>document.querySelector('[data-calendar-event="session-published"]').click());assert.equal(selected,'published');
  }finally{await perform(()=>root.unmount());Object.assign(globalThis,old);dom.window.close();}
+});
+
+test('session grouping keeps unlinked and rescheduled bookings visible and separates recurring occurrences',async()=>{
+ const Calendar=await component();
+ const date='2026-11-12';
+ const base={date,start:1020,duration:60,staff:'coach',name:'Test Client',status:'Confirmed',services:['Group']};
+ const props={config:{open:9,close:18,staff:[{id:'coach',name:'Coach'}],services:[{id:'group',name:'Group',duration:60}]},date,staffFilter:'all',serviceAccent:()=>undefined,sessionLeft:()=>4,onAppointment(){},onSession(){},onPlan(){},sessions:[{id:'series__20261112',date,start:1020,staff:'coach',service:'group',capacity:8},{id:'empty',date,start:1080,staff:'coach',service:'group',capacity:8}],appointments:[{...base,id:'linked',sessionId:'series__20261112'},{...base,id:'no-show',status:'No-show',sessionId:'series__20261112'},{...base,id:'unlinked'},{...base,id:'other-occurrence',sessionId:'series__20261119'},{...base,id:'moved',start:1050,sessionId:'series__20261112'}]};
+ const dom=new JSDOM(renderToStaticMarkup(React.createElement(Calendar,props)));
+ const doc=dom.window.document;
+ assert.equal(doc.querySelectorAll('[data-calendar-session="session-series__20261112"] .sf-session-client').length,2);
+ for(const id of ['unlinked','other-occurrence','moved'])assert.ok(doc.querySelector(`.cal-column > [data-calendar-event="booking-${id}"]`));
+ assert.match(doc.querySelector('[data-calendar-session="session-empty"]').textContent,/No clients booked yet/);
+ dom.window.close();
 });
