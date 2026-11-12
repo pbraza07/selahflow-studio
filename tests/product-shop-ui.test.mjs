@@ -4,16 +4,18 @@ import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {JSDOM} from 'jsdom';
 import ts from 'typescript';
+import * as productAddress from '../server/product-address.mjs';
+import * as social from '../server/business-social-links.mjs';
 process.env.NODE_ENV='test';
 const React=await import('react'),{act}=React,require=createRequire(import.meta.url);
-function component(name){const exported={},source=ts.transpileModule(readFileSync(new URL('../app/components/'+name+'.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;new Function('require','exports',source)(id=>id.endsWith('.module.css')?{__esModule:true,default:new Proxy({},{get:(_,key)=>key})}:require(id),exported);return exported.default;}
+function component(name){const exported={},source=ts.transpileModule(readFileSync(new URL('../app/components/'+name+'.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;new Function('require','exports',source)(id=>id.endsWith('product-address.mjs')?productAddress:id.endsWith('business-social-links.mjs')?social:id==='next/navigation'?{usePathname:()=>'/shop/example'}:id==='./share-business-page'||id==='./social-platform-icon'?{__esModule:true,default:()=>null}:id.endsWith('.module.css')?{__esModule:true,default:new Proxy({},{get:(_,key)=>key})}:require(id),exported);return exported.default;}
 const product={id:'11111111-1111-4111-8111-111111111111',name:'Yoga mat',description:'A useful mat',price_cents:2000,tax_code:'txcd_99999999',has_image:true,updated_at:'2030-01-01',archived:false};
 const address={line1:'123 Test St',city:'Test City',state:'FL',postal_code:'33101',country:'US'};
 async function fixture(name,props,payload){const dom=new JSDOM('<div id="app"></div>',{url:'https://example.test/shop/example',pretendToBeVisual:true}),keys=['window','document','navigator','Event','fetch','sessionStorage','IS_REACT_ACT_ENVIRONMENT'],old=Object.fromEntries(keys.map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
  for(const [key,value] of Object.entries({window:dom.window,document:dom.window.document,navigator:dom.window.navigator,Event:dom.window.Event,sessionStorage:dom.window.sessionStorage,IS_REACT_ACT_ENVIRONMENT:true}))Object.defineProperty(globalThis,key,{value,configurable:true,writable:true});
  dom.window.HTMLElement.prototype.scrollIntoView=()=>{};dom.window.HTMLElement.prototype.scrollBy=()=>{};
  const calls=[],order={id:'22222222-2222-4222-8222-222222222222',status:'pending',lines:[{id:product.id,name:product.name,qty:1,priceCents:2000}],subtotalCents:2000,taxCents:140,totalCents:2140,paymentMethod:'cash'};
- globalThis.fetch=async(url,options={})=>{if(options.method==='POST'){const input=JSON.parse(options.body);calls.push(input);return Response.json({...order,submitted:input.action==='submit'});}return Response.json(payload);};
+ globalThis.fetch=async(url,options={})=>{if(options.method==='POST'){const input=JSON.parse(options.body);calls.push(input);if(input.action==='saveShop')return Response.json({error:'Test registration needs review'},{status:400});return Response.json({...order,submitted:input.action==='submit'});}return Response.json(payload);};
  const {createRoot}=await import('react-dom/client'),root=createRoot(document.querySelector('#app'));await act(async()=>root.render(React.createElement(component(name),props)));
  const button=text=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(text));
  const click=async text=>{const b=button(text);assert.ok(b,text);await act(async()=>b.click());};
@@ -30,4 +32,22 @@ test('product checkout requires client contact, reviews tax, and keeps on-site o
 });
 test('owner product catalog shares service allowance, shows compressed-picture controls and distinct product authorization',async()=>{
  let count;const f=await fixture('owner-products',{serviceCount:9,onCount:n=>count=n},{products:[product],allowance:{products:1,limit:10},orders:[],slug:'example',terms:'Separate product commission authorization',shop:null});try{assert.equal(count,1);assert.equal(f.button('Add product').disabled,true);assert.match(document.body.textContent,/10 of 10 slots used/);assert.match(document.body.textContent,/do not use client membership sessions/);await f.click('Edit');assert.match(document.body.textContent,/at most 250 KB/);assert.equal(f.button('Verify & save').disabled,true);assert.ok(document.querySelector('a[href="/shop/example"]'));}finally{await f.cleanup();}
+});
+
+test('owner country dropdown sends US and keeps setup failures beside tax settings, separate from saved products',async()=>{
+ const f=await fixture('owner-products',{serviceCount:0},{products:[product],allowance:{products:1,limit:10},orders:[],slug:'example',terms:'Terms',shop:null});try{
+ const select=document.querySelector('select[autocomplete="country"]');assert.equal(select.value,'US');assert.equal(select.selectedOptions[0].textContent,'United States');
+ await f.change('Business pickup street','123 Test St');await f.change('City','Test City');await f.change('State / region','Florida');await f.change('Postal code','33101');
+ for(const checkbox of document.querySelectorAll('input[type="checkbox"]'))await act(async()=>checkbox.click());
+ await f.click('Verify & save');assert.equal(f.calls[0].address.country,'US');assert.equal(f.calls[0].address.state,'Florida');
+ assert.ok(document.querySelector('details [role="alert"]'));assert.match(document.body.textContent,/Yoga mat/);assert.match(document.body.textContent,/Products can be saved before checkout is configured/);
+ }finally{await f.cleanup();}
+});
+test('Buy products navigation is available on desktop and mobile only for an active catalog',async()=>{
+ for(const products of [[],[{...product,archived:true}],[product]]){
+ const f=await fixture('business-navigation',{slug:'example',name:'Example'},{products});try{
+ const links=[...document.querySelectorAll('a')].filter(a=>a.textContent==='Buy products');assert.equal(links.length,products.some(p=>!p.archived)?2:0);
+ for(const link of links){assert.equal(link.getAttribute('href'),'/shop/example');assert.equal(link.getAttribute('aria-current'),'page');}
+ }finally{await f.cleanup();}
+ }
 });

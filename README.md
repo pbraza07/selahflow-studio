@@ -1,3 +1,11 @@
+# v1.3.238 release handoff — Product address setup and branded shop navigation
+
+Release source: v1.3.238
+
+Product pickup and billing addresses accept country names/codes and U.S. state names/codes, normalizing United States / Florida to US / FL before Stripe registration checks. Country dropdowns prevent invalid free-text country submission. Checkout setup errors appear inside setup, separate from catalog saves. Business navigation shows Buy products on desktop/mobile only after an active product catalog is confirmed for that business. Shop navigation, cards, buttons, inputs and notices inherit business colors/fonts with readable contrast. Existing tax/consent/commission checks remain required; no live business authorization or tax registration is submitted for QA. No migration.
+
+Validation and deployment pending. Previous release v1.3.237 remains the last verified LIVE version. Browser screenshots are unavailable under the current sandbox restrictions.
+
 # v1.3.237 release handoff — Clients inside bookable sessions
 
 Release source: v1.3.237
