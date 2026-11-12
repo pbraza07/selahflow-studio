@@ -1,10 +1,18 @@
+# v1.3.241 release handoff — 24-hour check-in and no-show grace
+
+Release source: v1.3.241
+
+Client check-in now opens 24 elapsed hours before scheduled start and closes 24 hours after start. Lookup includes matching appointments across local calendar-day boundaries and displays their dates. The same server window controls both button availability and check-in authorization. Automatic No-show marking now waits 24 hours from scheduled start, checked every 30 seconds. Existing owner corrections, tenant isolation, idempotent membership deductions and manually recorded attendance remain intact. No migration or retrospective attendance rewrite. The dashboard shortcut, medium business logo and normal tablet sleep changes from v1.3.240 are retained.
+
+Verification and deployment pending. Production v1.3.240 is verified live; refresh older tablet tabs to load current UI. No client records changed for testing.
+
 # v1.3.240 release handoff — Check-in access, logo and normal tablet sleep
 
 Release source: v1.3.240
 
 Owner dashboard header and sidebar now expose an Open check-in page button for the current business. The tablet header displays the business logo at medium size (144 × 104, 112 × 84 on small screens) without cropping, with a name-only fallback when no logo loads. Removed the Keep screen on button, wake-lock requests, fullscreen requests and awake-status message. The tablet follows its normal device screen timeout; existing client privacy reset and attendance rules remain unchanged. No migration.
 
-Verification and deployment pending; v1.3.239 remains the last verified live release. Refresh any already-open tablet page to unload the previous version’s screen-wake behavior.
+Verified LIVE November 12, 2026 via PR #175. Production merge e7a0e93efae7050fdcb68e11702e79e8a383606c, deploy dep-dbquvs2jnfac73ddrtb0 LIVE 11:59:22 AM Eastern. Staging commit aac101267a7db885b473ff4672095dc182a47726, deploy dep-dbquse67bikc738cm980 LIVE 12:04:58 PM Eastern. Application tree e48f36bb92a3bb19c44364ebf0575f604d40a608. Local 793/793 tests, TypeScript and build passed; GitHub workflow 43262941277 passed web/native validation. Production health/version, logo delivery, absence of wake/fullscreen requests and owner authentication passed; browser screenshot confirmed medium business logo and no Keep screen on control. Physical tablet sleep timing follows device settings; signed-in owner visual acceptance was not exercised. Refresh already-open pages to unload previous screen-wake behavior. The subsequent v1.3.241 request changes attendance timing while retaining these UI changes.
 
 # v1.3.239 release handoff — Reception tablet check-in
 

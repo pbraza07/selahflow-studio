@@ -1,3 +1,4 @@
+import {ATTENDANCE_WINDOW_MS,checkInWindow} from './attendance-window.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {tokenHash} from './security.mjs';
 import {changeAppointmentStatus} from './appointment-membership-usage.mjs';
@@ -28,23 +29,23 @@ async function grant(db,ctx,purpose,data){const token=randomBytes(32).toString('
 async function readGrant(db,ctx,token,purpose){if(!/^[a-f0-9]{64}$/.test(token||''))throw Error('Start again to protect your information.');const row=(await db.query('SELECT data FROM kiosk_grants WHERE token_hash=$1 AND device_id=$2 AND purpose=$3 AND expires_at>now() FOR UPDATE',[tokenHash(token),ctx.device_id,purpose])).rows[0];if(!row)throw Error('This screen expired. Tap Start over.');return row.data;}
 const summary=a=>{const d=kioskObject(a.data);return {id:a.id,name:String(d.name||d.customerName||'Client'),date:a.date,start:a.start,duration:a.duration,services:Array.isArray(d.services)?d.services:[],status:a.status};};
 export async function kioskLookup(db,ctx,input,now=new Date()){
- const value=kioskIdentity(input.kind,input.value),zone=kioskTimezone(ctx.config),day=kioskDay(now,zone);
+ const value=kioskIdentity(input.kind,input.value),zone=kioskTimezone(ctx.config),firstDay=kioskDay(new Date(now.getTime()-ATTENDANCE_WINDOW_MS),zone),lastDay=kioskDay(new Date(now.getTime()+ATTENDANCE_WINDOW_MS),zone);
  await kioskLimit(db,ctx.device_id,'lookup',value);
- const appointments=(await db.query("SELECT *,((date::date+start*interval '1 minute') AT TIME ZONE $3) AS starts_at FROM appointments WHERE owner=$1 AND date=$2 AND status NOT IN ('Cancelled','Completed') ORDER BY start,id",[ctx.owner_id,day,zone])).rows;
+ const appointments=(await db.query("SELECT *,((date::date+start*interval '1 minute') AT TIME ZONE $3) AS starts_at FROM appointments WHERE owner=$1 AND date BETWEEN $2 AND $4 AND status NOT IN ('Cancelled','Completed') ORDER BY date,start,id",[ctx.owner_id,firstDay,zone,lastDay])).rows;
  const roster=await loadOwnerMemberRoster(db,ctx.owner_id);
- const matches=appointments.filter(a=>{const d=kioskObject(a.data);if(d.sample)return false;return input.kind==='phone'?kioskPhone(d.phone||d.customerPhone)===value:input.kind==='email'?String(d.email||d.customerEmail||'').trim().toLowerCase()===value:ownerAppointmentMember(d,roster).memberNumber===value;});
- if(!matches.length)return {appointments:[],message:'No sessions found for today. Check your details or ask staff.'};
+ const matches=appointments.filter(a=>{const d=kioskObject(a.data);if(d.sample||Math.abs(now.getTime()-new Date(a.starts_at).getTime())>ATTENDANCE_WINDOW_MS)return false;return input.kind==='phone'?kioskPhone(d.phone||d.customerPhone)===value:input.kind==='email'?String(d.email||d.customerEmail||'').trim().toLowerCase()===value:ownerAppointmentMember(d,roster).memberNumber===value;});
+ if(!matches.length)return {appointments:[],message:'No sessions found within 24 hours of their start. Check your details or ask staff.'};
  const token=await grant(db,ctx,'checkin',{ids:matches.map(a=>a.id)});
- return {grant:token,appointments:matches.map(a=>({...summary(a),canCheckIn:a.status==='Confirmed'&&now>=new Date(new Date(a.starts_at).getTime()-30*60000)&&now<new Date(new Date(a.starts_at).getTime()+5*60000)}))};
+ return {grant:token,appointments:matches.map(a=>{const window=checkInWindow(a.starts_at,now);return {...summary(a),canCheckIn:a.status==='Confirmed'&&window==='open',checkInMessage:a.status==='Checked in'?'Already checked in':window==='early'?'Check-in opens 24 hours before the start':window==='closed'?'Check-in closed — please see our team':'Please see our team'};})};
 }
 export async function kioskCheckIn(db,ctx,input,now=new Date()){
  const allowed=await readGrant(db,ctx,input.grant,'checkin');if(!allowed.ids.includes(input.id))throw Error('Choose a session from your results.');
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[ctx.owner_id+':schedule']);
  const a=(await db.query("SELECT *,((date::date+start*interval '1 minute') AT TIME ZONE $3) AS starts_at FROM appointments WHERE owner=$1 AND id=$2 FOR UPDATE",[ctx.owner_id,input.id,kioskTimezone(ctx.config)])).rows[0];
- if(!a||a.date!==kioskDay(now,kioskTimezone(ctx.config)))throw Error('This session changed. Start again or ask staff.');
+ if(!a)throw Error('This session changed. Start again or ask staff.');
  if(a.status==='Checked in')return {ok:true,alreadyProcessed:true,message:'You are already checked in. No additional membership session was used.'};
- if(a.status!=='Confirmed'||now>=new Date(new Date(a.starts_at).getTime()+5*60000))throw Error('Please ask staff to update attendance for this session.');
- if(now<new Date(new Date(a.starts_at).getTime()-30*60000))throw Error('Check-in opens 30 minutes before your session.');
+ if(a.status!=='Confirmed'||checkInWindow(a.starts_at,now)==='closed')throw Error('Please ask staff to update attendance for this session.');
+ if(checkInWindow(a.starts_at,now)==='early')throw Error('Check-in opens 24 hours before your session.');
  const result=await changeAppointmentStatus(db,{owner:ctx.owner_id,appointmentId:a.id,status:'Checked in',eventId:randomUUID(),ledgerId:randomUUID(),createdAt:now.toISOString(),source:'kiosk'});
  return {...result,message:result.membershipDeducted?'Checked in! One membership session was used.':result.alreadyDeducted?'Checked in! Your membership session was already recorded.':'Checked in! Your attendance is recorded.'};
 }

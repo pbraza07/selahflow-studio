@@ -24,7 +24,7 @@ test('tablet welcome uses business palette, requested destinations and hides pro
  }finally{await f.cleanup();}}
 });
 test('tablet check-in selects appointment, records attendance, and clears client details on return',async()=>{const f=await fixture();try{
- await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes('I’m here for my session')).click());await f.click('Phone number');
+ await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes('I’m here for my session')).click());assert.match(document.body.textContent,/24 hours before until 24 hours after/);await f.click('Phone number');
  const input=document.querySelector('input');await act(async()=>{Object.getOwnPropertyDescriptor(f.dom.window.HTMLInputElement.prototype,'value').set.call(input,'+1 (813) 555-0100');input.dispatchEvent(new f.dom.window.Event('input',{bubbles:true}));});
  await act(async()=>document.querySelector('form').dispatchEvent(new f.dom.window.Event('submit',{bubbles:true,cancelable:true})));assert.equal(f.calls[0].kind,'phone');assert.equal(f.calls[0].value,'+1 (813) 555-0100');assert.match(document.body.textContent,/Jane Doe/);
  await f.click('Check in');assert.equal(f.calls[1].id,'a1');assert.equal(f.calls[1].grant,'test');assert.match(document.body.textContent,/One membership session was used/);assert.doesNotMatch(document.body.textContent,/Jane Doe/);
