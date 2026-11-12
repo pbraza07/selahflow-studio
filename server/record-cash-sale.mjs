@@ -24,6 +24,7 @@ export async function recordCashSale(pool,{owner,eventId,bookingId,memberNumber=
    if(!lines)throw Error('This appointment needs itemized payment lines. Record its exact services from Sales.');
    taxRate=0;
   }
+  if(lines.some(l=>l.type!=='service'))throw Error('Use the product shop for product purchases, then confirm cash or Zelle receipt in Service catalog → Products.');
   const total=lines.reduce((n,l)=>n+Math.round(Number(l.price)*100)*l.qty,0);
   if(!Number.isSafeInteger(total)||total<0)throw Error('Invalid sale total.');
   let cashClient=null;
@@ -51,7 +52,7 @@ export async function recordCashSale(pool,{owner,eventId,bookingId,memberNumber=
    const ids=Array.isArray(data.serviceIds)&&data.serviceIds.length?data.serviceIds:null;
    const keys=ids||data.services||[],actual=services.map(l=>ids?l.id:l.name);
    if(data.membershipCovered||!Number.isSafeInteger(expected)||expected<=0||services.some(l=>l.qty!==1)||keys.length!==actual.length||keys.some(k=>!actual.includes(k))||services.reduce((n,l)=>n+Math.round(l.price*100)*l.qty,0)!==expected)
-    throw Error('To settle this booking, add its exact services and full quoted amount. Retail items may be added separately.');
+    throw Error('To settle this booking, add its exact services and full quoted amount. Purchase products separately through the product shop.');
    if(memberNumber){
     if(data.memberNumber&&data.memberNumber!==memberNumber)throw Error('This booking already belongs to a different client ID.');
     const profile=(await db.query("SELECT member_number,name,email FROM business_client_profiles WHERE owner=$1 AND member_number=$2 AND archived=false AND deleted_at IS NULL",[owner,memberNumber])).rows[0];
