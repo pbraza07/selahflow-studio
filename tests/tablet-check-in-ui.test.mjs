@@ -19,7 +19,7 @@ async function fixture(products=[]){const dom=new JSDOM('<div id="app"></div>',{
 }
 test('tablet welcome uses business palette, requested destinations and hides products for empty catalog',async()=>{
  for(const products of [[],[{id:'p1'}]]){const f=await fixture(products);try{
- assert.equal(document.querySelector('main').style.getPropertyValue('--sf-button'),'#831100');assert.ok(document.querySelector('a[href="/book/test-club"]'));assert.ok(document.querySelector('a[href="/membership/test-club"]'));assert.equal(!!document.querySelector('a[href="/shop/test-club"]'),products.length>0);
+ assert.equal(document.querySelector('main').style.getPropertyValue('--sf-button'),'#831100');const logo=document.querySelector('img[alt="Test Club logo"]');assert.ok(logo);assert.equal(logo.getAttribute('src'),'/api/branding/logo?slug=test-club');assert.equal(logo.width,144);assert.equal(logo.height,104);assert.doesNotMatch(document.body.textContent,/Keep screen on|Screen stays awake/);assert.doesNotMatch(readFileSync(new URL('../app/components/tablet-check-in.tsx',import.meta.url),'utf8'),/wakeLock|requestFullscreen/);assert.ok(document.querySelector('a[href="/book/test-club"]'));assert.ok(document.querySelector('a[href="/membership/test-club"]'));assert.equal(!!document.querySelector('a[href="/shop/test-club"]'),products.length>0);
  assert.match(document.body.textContent,/Review waiver/);assert.match(document.body.textContent,/Check membership status/);
  }finally{await f.cleanup();}}
 });
