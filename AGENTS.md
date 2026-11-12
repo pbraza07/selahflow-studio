@@ -1,3 +1,13 @@
+# v1.3.239 release handoff — Reception tablet check-in
+
+Release source: v1.3.239
+
+Adds /check-in/{businessSlug}, a business-themed large-button reception page. Owners pair the tablet and are signed out; scoped HttpOnly device access can be revoked in Calendar → Tablet check-in & automatic attendance. Clients find today's appointments using normalized email, phone or Member ID. Check-in uses the owner attendance transaction and exactly-once membership ledger, including ordinary nonmembership attendance. Member ID status shows used/remaining credits and upcoming/history with service types. Booking, active products and membership options link to existing branded flows. Current business waiver can be signed again; the new signature replaces current consent while retaining superseded evidence. Existing verified identity/DOB and legal-review requirements apply.
+
+Migration 101 adds scoped devices/grants, automatic attendance audit, waiver supersession and business no-show controls. Automatic no-show is enabled after rollout for sessions starting after activation, with a five-minute grace period from scheduled START and a 30-second worker interval. Owner attendance corrections remain available; eligibility failures require owner review. Midnight/catch-up sessions are handled without marking pre-activation history. Check-in opens 30 minutes before start; late clients see staff. Idle tablet resets at 90 seconds; shared-device booking notifications and remembered identities are disabled. Screen wake/fullscreen uses supported browser capabilities; configure the tablet's own kiosk/display controls for unattended use.
+
+Implementation and deployment verification pending. Last verified LIVE is v1.3.238. No real client attendance, consent or purchases submitted for testing.
+
 # v1.3.238 release handoff — Product address setup and branded shop navigation
 
 Release source: v1.3.238

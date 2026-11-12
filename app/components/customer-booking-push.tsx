@@ -2,10 +2,12 @@
 import {useEffect,useRef,useState} from 'react';
 import {Bell,BellOff} from 'lucide-react';
 import {ensurePushSubscription} from '../../lib/browser-push.mjs';
-import {rememberCustomerBooking,checkCustomerBookingStorage} from '../../lib/browser-customer-booking.mjs';
+import {rememberCustomerBooking,checkCustomerBookingStorage,isSharedTablet} from '../../lib/browser-customer-booking.mjs';
 type Props={token?:string;id?:string;showStatusLink?:boolean;disabled?:boolean;onBusyChange?:(busy:boolean)=>void;onPreparedChange?:(subscription:PushSubscriptionJSON|null)=>void};
 export default function CustomerBookingPush({token='',id='',showStatusLink=true,disabled=false,onPreparedChange,onBusyChange}:Props){
  const draft=!token||!id;
+ const [shared,setShared]=useState(false);
+ useEffect(()=>{setShared(isSharedTablet());},[]);
  const prepared=useRef<PushSubscriptionJSON|null>(null);
  const [status,setStatus]=useState(''),[busy,setBusy]=useState(false),[enabled,setEnabled]=useState(false),[ready,setReady]=useState(false),[supported,setSupported]=useState(false),[installRequired,setInstallRequired]=useState(false),[permission,setPermission]=useState('default'),[configured,setConfigured]=useState(false);
  async function request(body:Record<string,unknown>){
@@ -68,6 +70,7 @@ export default function CustomerBookingPush({token='',id='',showStatusLink=true,
    setEnabled(false);setStatus(draft?'Session notifications are not selected for this booking.':'Notifications disabled for this booking on this device.');
   }catch(e){setStatus((e as Error).message);}finally{setBusy(false);onBusyChange?.(false);}
  }
+ if(shared)return null;
  return <section className={'sf-push-settings'+(draft?' sf-booking-notification-opt-in':'')} aria-label="Booking device notifications">
   <div className="sf-push-settings-head"><div><strong>{draft?'Session confirmations & payment links':'Booking updates on this device'}</strong><p>Get notified when the owner accepts or declines your request. Tap the acceptance alert to view your booking and pay securely when payment is due.</p></div><span className={enabled?'sf-push-on':'sf-push-off'}>{!ready?'Checking…':enabled?(draft?'Ready after booking':'Enabled'):'Not enabled'}</span></div>
   {installRequired&&<p className="sf-push-instructions">iPhone or iPad: tap <b>Share → Add to Home Screen</b>, then open SelahFlow from its Home Screen icon to book and enable notifications. Requires iOS 16.4 or later.</p>}
