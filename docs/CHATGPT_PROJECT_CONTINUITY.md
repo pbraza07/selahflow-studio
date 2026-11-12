@@ -1,3 +1,11 @@
+# v1.3.240 release handoff — Check-in access, logo and normal tablet sleep
+
+Release source: v1.3.240
+
+Owner dashboard header and sidebar now expose an Open check-in page button for the current business. The tablet header displays the business logo at medium size (144 × 104, 112 × 84 on small screens) without cropping, with a name-only fallback when no logo loads. Removed the Keep screen on button, wake-lock requests, fullscreen requests and awake-status message. The tablet follows its normal device screen timeout; existing client privacy reset and attendance rules remain unchanged. No migration.
+
+Verification and deployment pending; v1.3.239 remains the last verified live release. Refresh any already-open tablet page to unload the previous version’s screen-wake behavior.
+
 # v1.3.239 release handoff — Reception tablet check-in
 
 Release source: v1.3.239
