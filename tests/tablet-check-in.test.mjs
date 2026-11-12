@@ -36,7 +36,7 @@ test('paired tablet is scoped to its business, expiry and revocation',async()=>{
  await db.query("UPDATE kiosk_devices SET revoked_at=NULL,expires_at=now()-interval '1 day'");await assert.rejects(()=>kioskContext(db,req,'test-club'),/KIOSK_REQUIRED/);
  }finally{await db.close();}});
 test('tablet lookup, check-in and retries use exactly one membership session, ordinary attendance stays ordinary',async()=>{const {db,ctx,add}=await fixture();try{
- await add('visit');const early=await tx(db,()=>kioskLookup(db,ctx,{kind:'email',value:'jane@example.test'},new Date('2026-11-12T14:29Z')));assert.equal(early.appointments[0].canCheckIn,false);await assert.rejects(()=>tx(db,()=>kioskCheckIn(db,ctx,{grant:early.grant,id:'visit'},new Date('2026-11-12T14:29Z'))),/30 minutes/);await add('foreign',{},600,'Confirmed','2026-11-12','other');await add('sample',{sample:true});
+ await add('visit');const early=await tx(db,()=>kioskLookup(db,ctx,{kind:'email',value:'jane@example.test'},new Date('2026-11-11T14:59:59Z')));assert.equal(early.appointments.length,0);const valid=await tx(db,()=>kioskLookup(db,ctx,{kind:'email',value:'jane@example.test'},now));await assert.rejects(()=>tx(db,()=>kioskCheckIn(db,ctx,{grant:valid.grant,id:'visit'},new Date('2026-11-11T14:59:59Z'))),/24 hours/);await add('foreign',{},600,'Confirmed','2026-11-12','other');await add('sample',{sample:true});
  let result=await tx(db,()=>kioskLookup(db,ctx,{kind:'phone',value:'+1 (813) 555-0100'},now));assert.deepEqual(result.appointments.map(a=>a.id),['visit']);assert.equal(result.appointments[0].canCheckIn,true);assert.equal('email'in result.appointments[0],false);
  await assert.rejects(()=>tx(db,()=>kioskCheckIn(db,ctx,{grant:result.grant,id:'foreign'},now)),/Choose a session/);
  const checked=await tx(db,()=>kioskCheckIn(db,ctx,{grant:result.grant,id:'visit'},now));assert.equal(checked.membershipDeducted,true);assert.equal(await used(db),1);
@@ -45,25 +45,25 @@ test('tablet lookup, check-in and retries use exactly one membership session, or
  await add('regular',{name:'Non Member',email:'regular@example.test',memberNumber:''});result=await tx(db,()=>kioskLookup(db,ctx,{kind:'email',value:'REGULAR@example.test'},now));await tx(db,()=>kioskCheckIn(db,ctx,{grant:result.grant,id:'regular'},now));assert.equal(await used(db),1);assert.equal((await db.query("SELECT status FROM appointments WHERE id='regular'")).rows[0].status,'Checked in');
  await db.query('DELETE FROM kiosk_grants');await assert.rejects(()=>tx(db,()=>kioskCheckIn(db,ctx,{grant:result.grant,id:'regular'},now)),/expired/);
  }finally{await db.close();}});
-test('five-minute grace boundary, automatic marking, owner correction and midnight sessions',async()=>{const {db,ctx,add}=await fixture();try{
+test('24-hour grace boundary, automatic marking, owner correction and midnight sessions',async()=>{const {db,ctx,add}=await fixture();try{
  await add('visit');const business={id:ctx.id,owner_id:ctx.owner_id,config};const options={business,appointmentId:'visit'};
- assert.equal((await tx(db,()=>markAutomaticNoShow(db,{...options,now:new Date('2026-11-12T15:04:59Z')}))).skipped,true);
+ assert.equal((await tx(db,()=>markAutomaticNoShow(db,{...options,now:new Date('2026-11-13T14:59:59Z')}))).skipped,true);
  let found=await tx(db,()=>kioskLookup(db,ctx,{kind:'memberNumber',value:'JD010190'},now));
- await assert.rejects(()=>tx(db,()=>kioskCheckIn(db,ctx,{id:'visit',grant:found.grant},new Date('2026-11-12T15:05:00Z'))),/ask staff/);
- await tx(db,()=>markAutomaticNoShow(db,{...options,now:new Date('2026-11-12T15:05:00Z')}));assert.equal(await used(db),1);
- assert.equal((await tx(db,()=>markAutomaticNoShow(db,{...options,now:new Date('2026-11-12T15:06Z')}))).skipped,true);
+ await assert.rejects(()=>tx(db,()=>kioskCheckIn(db,ctx,{id:'visit',grant:found.grant},new Date('2026-11-13T15:00:00Z'))),/ask staff/);
+ await tx(db,()=>markAutomaticNoShow(db,{...options,now:new Date('2026-11-13T15:00:00Z')}));assert.equal(await used(db),1);
+ assert.equal((await tx(db,()=>markAutomaticNoShow(db,{...options,now:new Date('2026-11-13T15:01Z')}))).skipped,true);
  await tx(db,()=>changeAppointmentStatus(db,{owner:'owner',appointmentId:'visit',status:'Checked in',eventId:'correction',ledgerId:'correction-ledger',createdAt:now.toISOString()}));assert.equal(await used(db),1);
- await add('midnight',{},1438);await tx(db,()=>markAutomaticNoShow(db,{business,appointmentId:'midnight',now:new Date('2026-11-13T05:03Z')}));assert.equal(await used(db),2);
+ await add('midnight',{},1438);await tx(db,()=>markAutomaticNoShow(db,{business,appointmentId:'midnight',now:new Date('2026-11-14T04:58Z')}));assert.equal(await used(db),2);
  await add('old',{},600,'Confirmed','2026-11-11');assert.equal((await tx(db,()=>markAutomaticNoShow(db,{business,appointmentId:'old',now}))).skipped,true);
- await add('disabled');await db.query("UPDATE businesses SET auto_no_show_enabled=false WHERE id='biz'");assert.equal((await tx(db,()=>markAutomaticNoShow(db,{business,appointmentId:'disabled',now:new Date('2026-11-12T15:06Z')}))).skipped,true);
+ await add('disabled');await db.query("UPDATE businesses SET auto_no_show_enabled=false WHERE id='biz'");assert.equal((await tx(db,()=>markAutomaticNoShow(db,{business,appointmentId:'disabled',now:new Date('2026-11-13T15:01Z')}))).skipped,true);
  }finally{await db.close();}});
 test('worker selects only due confirmed bookings after activation, skips samples and records failures for owner review',async()=>{const {db,add}=await fixture();try{
  await add('due');await add('early',{},660);await add('cancelled',{},600,'Cancelled');await add('sample',{sample:true});await add('old',{},600,'Confirmed','2026-11-11');
  const pool={query:(...a)=>db.query(...a),connect:async()=>({query:(...a)=>db.query(...a),release(){}})};
- const result=await processAutomaticAttendance(pool,new Date('2026-11-12T15:05Z'));assert.equal(result.marked,1);assert.equal(result.failed,0);assert.equal(await used(db),1);assert.equal((await processAutomaticAttendance(pool,new Date('2026-11-12T15:05Z'))).marked,0);
+ const result=await processAutomaticAttendance(pool,new Date('2026-11-13T15:00Z'));assert.equal(result.marked,1);assert.equal(result.failed,0);assert.equal(await used(db),1);assert.equal((await processAutomaticAttendance(pool,new Date('2026-11-13T15:00Z'))).marked,0);
  await db.query("UPDATE membership_plans SET credit_eligibility='{\"mode\":\"selected\",\"serviceIds\":[\"other-service\"]}' WHERE id='plan'");await add('needs-review',{membershipCovered:true,serviceIds:['training']});
- for(let i=0;i<5;i++)assert.equal((await processAutomaticAttendance(pool,new Date('2026-11-12T15:06Z'))).failed,1);
- assert.equal((await processAutomaticAttendance(pool,new Date('2026-11-12T15:06Z'))).failed,0);assert.equal((await db.query("SELECT status FROM automatic_attendance WHERE appointment_id='needs-review'")).rows[0].status,'review');assert.equal(await used(db),1);
+ for(let i=0;i<5;i++)assert.equal((await processAutomaticAttendance(pool,new Date('2026-11-13T15:01Z'))).failed,1);
+ assert.equal((await processAutomaticAttendance(pool,new Date('2026-11-13T15:01Z'))).failed,0);assert.equal((await db.query("SELECT status FROM automatic_attendance WHERE appointment_id='needs-review'")).rows[0].status,'review');assert.equal(await used(db),1);
  }finally{await db.close();}});
 test('waiver re-signing validates before replacing current consent and retains superseded evidence',async()=>{const {db,ctx}=await fixture();try{
  const document=publicWaiverDocument(config),signature={signature:'Jane Doe',role:'self',date:waiverToday(),accepted:true,version:document.version,documentHash:document.hash};
@@ -74,4 +74,21 @@ test('waiver re-signing validates before replacing current consent and retains s
  await assert.rejects(()=>sign({...signature,documentHash:'stale'}),/changed/);
  await sign(signature);const rows=(await db.query('SELECT id,deleted_at,superseded_at FROM participation_waivers')).rows;assert.equal(rows.length,2);assert.equal(rows.filter(r=>!r.deleted_at).length,1);assert.ok(rows.find(r=>r.id===first).superseded_at);
  await assert.rejects(()=>sign(signature),/expired/);
+ }finally{await db.close();}});
+
+test('24-hour lookup includes yesterday and tomorrow and permits both early and late confirmed check-ins',async()=>{const {db,ctx,add}=await fixture();try{
+ await add('yesterday',{},601,'Confirmed','2026-11-11');await add('tomorrow',{},600,'Confirmed','2026-11-13');await add('too-old',{},599,'Confirmed','2026-11-11');await add('too-early',{},601,'Confirmed','2026-11-13');
+ const result=await tx(db,()=>kioskLookup(db,ctx,{kind:'memberNumber',value:'JD010190'},now));assert.deepEqual(result.appointments.map(a=>a.id),['yesterday','tomorrow']);assert.ok(result.appointments.every(a=>a.canCheckIn));
+ await tx(db,()=>kioskCheckIn(db,ctx,{grant:result.grant,id:'yesterday'},now));await tx(db,()=>kioskCheckIn(db,ctx,{grant:result.grant,id:'tomorrow'},now));assert.equal(await used(db),2);
+ }finally{await db.close();}});
+test('both a morning appointment and an evening appointment expose Check in at midday',async()=>{const {db,ctx,add}=await fixture();try{
+ await add('morning',{},660);await add('evening',{},1020);const midday=new Date('2026-11-12T17:00Z');const result=await tx(db,()=>kioskLookup(db,ctx,{kind:'email',value:'jane@example.test'},midday));assert.deepEqual(result.appointments.map(a=>a.id),['morning','evening']);assert.ok(result.appointments.every(a=>a.canCheckIn));
+ }finally{await db.close();}});
+test('24 elapsed hours remain consistent across a daylight-saving clock change',async()=>{const {db,ctx,add}=await fixture();try{
+ await add('dst',{},600,'Confirmed','2026-11-01');
+ const lookup=at=>tx(db,()=>kioskLookup(db,ctx,{kind:'email',value:'jane@example.test'},new Date(at)));
+ assert.equal((await lookup('2026-10-31T14:59:59Z')).appointments.length,0);
+ assert.equal((await lookup('2026-10-31T15:00:00Z')).appointments[0].canCheckIn,true);
+ assert.equal((await lookup('2026-11-02T14:59:59Z')).appointments[0].canCheckIn,true);
+ assert.equal((await lookup('2026-11-02T15:00:00Z')).appointments[0].canCheckIn,false);
  }finally{await db.close();}});
