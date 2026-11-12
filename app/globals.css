@@ -2260,3 +2260,15 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 .sf-owner-day-grid .sf-calendar-lane-event:focus-visible{z-index:4;outline:3px solid var(--purple);outline-offset:-3px}
 
 .app-shell[data-selah-theme] .sf-owner-day-grid .sf-calendar-lane-event{overflow:auto;max-width:none}
+
+/* Keep linked clients inside their session without changing its time footprint. */
+.sf-owner-day-grid .sf-session-with-clients{padding:6px;gap:5px}
+.sf-session-heading{display:flex;flex-direction:column;gap:2px;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;flex-shrink:0}
+.sf-session-clients{display:flex;gap:6px;width:100%;min-width:0;flex-shrink:0;overflow-x:auto;padding-bottom:3px}
+.sf-session-client{display:flex;flex-direction:column;align-items:flex-start;gap:2px;flex:0 0 145px;min-width:0;padding:4px 7px;border:1px solid #b4cfc0;border-radius:5px;background:#fff;color:#164533;text-align:left;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+.sf-session-client:focus-visible,.sf-session-heading:focus-visible{outline:2px solid #164533;outline-offset:-2px}
+.sf-session-client:hover{background:#f0f8f4}
+.sf-session-empty{font-size:12px}
+.sf-period-session{border:1px solid #b4cfc0;border-radius:7px;background:#e5f3eb;padding:6px;min-width:0}
+.sf-period-session-clients{display:grid;gap:5px;margin-top:5px}
+.sf-period-session-clients .sf-session-client{width:100%}
