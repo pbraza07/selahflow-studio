@@ -6,7 +6,8 @@ import {bookingDiscount} from './booking-discounts.mjs';
 import {membershipAllows} from './membership-eligibility.mjs';
 import {hasUsableMembership} from './member-badge-state.mjs';
 import {queueOwnerFormNotification} from './owner-form-notifications.mjs';
-import {assertBookingWaiver} from './participation-waivers.mjs';
+import {assertBookingWaiver,bookingWaiverStatus} from './participation-waivers.mjs';
+import {queueBookingWaiver} from './booking-waiver-invitations.mjs';
 import {isBlocked} from './booking-blockouts.mjs';
 import {queueApprovedBooking} from './booking-client-notifications.mjs';
 import {queueBookingReceipt} from './booking-receipts.mjs';
@@ -54,7 +55,12 @@ export async function confirmBooking(options){
   const config=settingRow.rows[0] ? JSON.parse(settingRow.rows[0].data) : {};
   if(options.teamAccountId){const member=config.staff?.find(s=>s.id===staff),current=services.map(s=>config.services?.find(v=>v.id===s.id));if(!member||current.some((s,i)=>!s||!member.services?.includes(s.id)||s.price!==services[i].price||s.duration!==services[i].duration)||Number(config.buffer||0)!==Number(buffer||0))throw conflict('Team or service details changed. Refresh your calendar.');}
 
-  await assertBookingWaiver(client,{owner,config,serviceIds:services.map(s=>s.id),memberNumber:data.memberNumber});
+  const ownerPast=!!options.ownerNotificationOrigin&&!!data.pastSessionOverride&&!options.teamAccountId&&!options.submissionOrigin&&!pendingId&&sessionHasEnded({date,start,duration});
+  const waiverInput={owner,config,serviceIds:services.map(s=>s.id),memberNumber:data.memberNumber};
+  const waiverStatus=ownerPast?await bookingWaiverStatus(client,waiverInput):null;
+  const deferredWaiver=ownerPast&&waiverStatus.required&&!waiverStatus.signed;
+  if(deferredWaiver)data.waiverFollowup={status:'pending',requestedAt:new Date().toISOString(),reason:'Owner recorded a past visit; signature requested afterward'};
+  if(!ownerPast)await assertBookingWaiver(client,waiverInput);
   if(options.autoConfirmRequest)throw conflict('Owner approval is required before payment.');
   if(options.submissionOrigin){
    const current=services.map(s=>(config.services||[]).find(v=>v.id===s.id));
@@ -132,10 +138,11 @@ export async function confirmBooking(options){
    if(members.length!==1)throw conflict('No unique membership was found for this client ID. Choose the membership in Membership/Packages, or uncheck Use 1 membership session to record the visit without a deduction.');
    const allowed=session?session.membershipCreditAllowed!==false:currentServices.every(s=>s.membershipCreditAllowed!==false);
    if(!allowed)throw conflict('This service or session does not accept membership credits.');
-   membershipUsage=await applyPastMemberCredit(client,{owner,businessId:members[0].business_id,id:members[0].id,appointmentId:id,reason:data.pastSessionOverride.reason,attendance:'Checked in'});
+   membershipUsage=await applyPastMemberCredit(client,{owner,businessId:members[0].business_id,id:members[0].id,appointmentId:id,reason:data.pastSessionOverride.reason,attendance:'Checked in',deferWaiver:deferredWaiver});
    const saved=(await client.query('SELECT data FROM appointments WHERE owner=$1 AND id=$2',[owner,id])).rows[0];
    Object.assign(data,appointmentData(saved));
   }
+  if(deferredWaiver)await queueBookingWaiver(client,{owner,appointmentId:id,data,origin:options.ownerNotificationOrigin});
   if(pendingId)await client.query(
    "UPDATE booking_requests SET status='accepted',appointment_id=$1,reviewed_by=$2,reviewed_at=now() WHERE id=$3",
    [id,data.reviewedBy||'owner',pendingId]);
@@ -145,7 +152,7 @@ export async function confirmBooking(options){
   const bookingReceipt=receiptOrigin?await queueBookingReceipt(client,{owner,bookingId:id,date,start,duration,staff,data,origin:receiptOrigin,pending:false}):null;
   if(options.submissionOrigin&&Number(data.price)>0&&!data.membershipCovered)await queueApprovedBooking(client,{bookingId:id,requestId:null,origin:options.submissionOrigin});
   await client.query('COMMIT');
-  return {id,duplicate:false,sessionId:session?.id||null,bookingReceipt,membershipUsage};
+  return {id,duplicate:false,sessionId:session?.id||null,bookingReceipt,membershipUsage,waiverFollowup:data.waiverFollowup||null};
  }catch(e){
   await client.query('ROLLBACK');
   if(e.code==='23505')throw conflict('That time was booked by another customer. Choose another time.');
