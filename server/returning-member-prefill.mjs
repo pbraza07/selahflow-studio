@@ -32,7 +32,7 @@ export function restoreCurrentProfileAnswers(fields,profileAnswers,...history){
   if(value===''){result[field.id]='';continue;}
   Object.assign(result,restoreBookingCustomAnswers([field],profileAnswers));
  }
- return result;
+ return restoreEquivalentRegistrationAnswers(fields,result);
 }
 
 /** Prefer the latest submitted registration, keeping existing client edits as backup. */
@@ -46,4 +46,21 @@ export function restoredContact(identity={},profile={},latest={}){
   email:String(corrected?profile.email||'':profile.email||latest.email||latest.customerEmail||identity.customer_email||'').trim(),
   phone:String(corrected?profile.phone||'':profile.phone||latest.phone||latest.customerPhone||identity.customer_phone||'').trim()
  };
+}
+
+/** Booking and membership forms may ask the same question under separate IDs.
+ * Only transfer an unambiguous, type-compatible answer; explicit clears win.
+ * Consent checkboxes always require their own stable field ID.
+ */
+export function restoreEquivalentRegistrationAnswers(fields,answers={}){
+ const result={...answers};
+ const key=field=>String(field.label||'').trim().toLowerCase().replace(/\s+/g,' ').replace(/^parent name$/,'parent');
+ for(const field of fields||[]){
+  if(Object.hasOwn(answers,field.id)||field.type==='checkbox'||!key(field))continue;
+  const candidates=(fields||[]).filter(other=>other.id!==field.id&&other.type===field.type&&key(other)===key(field)&&Object.hasOwn(answers,other.id));
+  const values=[...new Set(candidates.map(other=>answers[other.id]))];
+  if(values.length!==1)continue;
+  Object.assign(result,restoreBookingCustomAnswers([field],{[field.id]:values[0]}));
+ }
+ return result;
 }

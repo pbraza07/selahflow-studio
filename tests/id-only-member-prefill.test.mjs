@@ -52,3 +52,14 @@ test('service status projection supports named and ID-only services, current can
  assert.deepEqual(publicBookingServiceSummary({sessionId:'group'},{}),{service:'Session',serviceType:'Group session'});
  for(const raw of ['null','[]','{bad'])assert.deepEqual(publicBookingServiceSummary(raw,config),{service:'Session',serviceType:'Individual appointment'});
 });
+
+test('member lookup maps membership-only answers into booking questions for a lifetime member without changing credits',async()=>{
+ const {pg,lookup}=await fixture();try{
+ const fields=[{id:'m-parent',label:'Parent',type:'text',forms:['membership']},{id:'b-parent',label:'Parent Name',type:'text',forms:['booking']},{id:'m-level',label:'Player Level',type:'select',options:['Beginner','Advanced'],forms:['membership']},{id:'b-level',label:'Player Level',type:'select',options:['Beginner','Advanced'],forms:['booking']}];
+ await pg.query('UPDATE settings SET data=$1 WHERE owner=$2',[JSON.stringify({bookingCustomFields:fields}),'owner']);
+ await pg.exec("UPDATE membership_plans SET name='Lifetime Member'; UPDATE customer_memberships SET initial_paid_at=now(),paid_through=NULL,sessions_included=10,sessions_used=0,registration_answers='{\"m-parent\":\"Parent Example\",\"m-level\":\"Advanced\"}' WHERE id='member'");
+ const response=await lookup({slug:'club-one',memberNumber:'AB031513'});assert.equal(response.status,200);const data=await response.json();
+ assert.equal(data.customAnswers['b-parent'],'Parent Example');assert.equal(data.customAnswers['b-level'],'Advanced');assert.equal(data.membership.pastCreditAvailable,true);assert.equal(data.membership.sessionsLeft,10);assert.equal(data.membership.bookingEligibility.paid_through,null);
+ assert.equal((await pg.query("SELECT sessions_used FROM customer_memberships WHERE id='member'")).rows[0].sessions_used,0);
+ }finally{await pg.close();}
+});

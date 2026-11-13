@@ -38,3 +38,18 @@ test('booking surfaces do not show pre-tax wording',async()=>{
  assert.doesNotMatch(publicPage,/before applicable tax|applicable tax|before tax/i);
  assert.doesNotMatch(ownerDashboard,/before applicable tax|applicable tax|before tax/i);
 });
+
+test('owner quote applies lifetime credits only to covered services and honors opt-out and expiry',async()=>{
+ const {ownerBookingQuote}=await import('../server/owner-booking-quote.mjs');
+ const member={name:'Lifetime Member',sessionsLeft:10,pastCreditAvailable:true,creditEligibility:{mode:'selected',serviceIds:['private'],sessionIds:[]},bookingEligibility:{status:'active',sessions_included:10,sessions_used:0,paid_through:null}};
+ const input={services:[{id:'private',price:90}],membership:member,date:'2030-01-02',loaded:true};
+ assert.equal(ownerBookingQuote(input).price,0);
+ assert.equal(ownerBookingQuote({...input,past:true}).price,0);
+ assert.equal(ownerBookingQuote({...input,past:true,applyMembership:false}).price,90);
+ assert.equal(ownerBookingQuote({...input,loaded:false}).price,90);
+ assert.equal(ownerBookingQuote({...input,services:[{id:'group',price:35}]}).price,35);
+ assert.equal(ownerBookingQuote({...input,session:{id:'session',membershipCreditAllowed:false}}).covered,false);
+ assert.equal(ownerBookingQuote({...input,membership:{...member,bookingEligibility:{...member.bookingEligibility,paid_through:'2000-01-01'}}}).covered,false);
+ assert.equal(ownerBookingQuote({...input,membership:{...member,pastCreditAvailable:false},past:true}).covered,false);
+ assert.equal(ownerBookingQuote({...input,membership:{...member,bookingEligibility:{...member.bookingEligibility,sessions_used:10}}}).covered,false);
+});

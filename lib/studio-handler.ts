@@ -386,6 +386,10 @@ const customAnswers=sanitizeBookingAnswers(registrationQuestions(config,'booking
 let issuedMemberNumber=String(b.memberNumber||'').trim().toUpperCase();
 const ownerClientId=!isPublic&&!isTeam&&!!issuedMemberNumber;
 if(pastOverride||ownerClientId)issuedMemberNumber=resolveOwnerBookingMember(b,await loadOwnerMemberRoster(getPool(),owner));
+// Owner-created future bookings use the same membership coverage as client bookings.
+// Past visits use the explicit, atomic owner credit override instead.
+if(ownerClientId&&!pastOverride)verifiedMembership=await db().prepare("SELECT m.billing_type,m.package_valid_days,m.weekly_limit_override,m.credit_period_start,m.credit_period_end,m.status,m.sessions_included,m.sessions_used,m.paid_through,m.initial_paid_at,m.billing_start_override,p.weekly_sessions,p.credit_eligibility FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id JOIN businesses biz ON biz.id=m.business_id WHERE biz.owner_id=? AND m.member_number=?").bind(owner,issuedMemberNumber).first();
+
 if(isPublic&&b.firstName&&b.lastName&&b.dateOfBirth){
  const dob=String(b.dateOfBirth||''),firstName=String(b.firstName||'').trim(),lastName=String(b.lastName||'').trim();
  if(!/^\d{4}-\d{2}-\d{2}$/.test(dob)||Number.isNaN(Date.parse(dob))||new Date(dob).toISOString().slice(0,10)!==dob||!firstName||!lastName)throw Error('First name, last name, and valid date of birth are required.');
