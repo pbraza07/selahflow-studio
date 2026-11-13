@@ -72,3 +72,18 @@ test('owner profile corrections prefill current answers, intentional clears and 
  assert.deepEqual(restoreCurrentProfileAnswers(fields,{level:'Beginner',notes:'',consent:false},{level:'Advanced',notes:'Old',consent:true}),{level:'Beginner',notes:'',consent:false});
  assert.deepEqual(restoredContact({customer_name:'Alicia Mia Doe',customer_email:'old@example.test'},{name:'Alicia Mia Doe',first_name:'Alicia Mia',last_name:'Doe',email:'',phone:''},{email:'stale@example.test',phone:'8135550000'}),{firstName:'Alicia Mia',lastName:'Doe',email:'',phone:''});
 });
+
+test('separate membership and booking questions restore equivalent answers including Parent Name',()=>{
+ const fields=[{id:'parent-member',label:'Parent',type:'text'},{id:'parent-booking',label:'Parent Name',type:'text'},{id:'level-member',label:'Player Level',type:'select',options:['1','2']},{id:'level-booking',label:'Player Level',type:'select',options:['1','2']}];
+ const saved={'parent-member':'Parent Example','level-member':'2'};
+ assert.deepEqual(restoreCurrentProfileAnswers(fields,{},saved),{...saved,'parent-booking':'Parent Example','level-booking':'2'});
+ assert.equal(restoreCurrentProfileAnswers(fields,{'parent-booking':''},saved)['parent-booking'],'');
+ const conflicting=[...fields,{id:'parent-other',label:'Parent',type:'text'}];
+ assert.equal(restoreCurrentProfileAnswers(conflicting,{}, {...saved,'parent-other':'Other Parent'})['parent-booking'],undefined);
+ fields[3].options=['1'];assert.equal(restoreCurrentProfileAnswers(fields,{},saved)['level-booking'],undefined);
+});
+test('equivalent field recovery never guesses absent values or carries new checkbox consent',()=>{
+ assert.deepEqual(restoreCurrentProfileAnswers([{id:'parent',label:'Parent Name',type:'text'}],{}),{});
+ const fields=[{id:'old',label:'Consent',type:'checkbox'},{id:'new',label:'Consent',type:'checkbox'}];
+ assert.deepEqual(restoreCurrentProfileAnswers(fields,{}, {old:true}),{old:true});
+});

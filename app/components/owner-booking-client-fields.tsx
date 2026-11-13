@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useState,type Dispatch,type SetStateAction} from 'react';
-export type OwnerBookingClient={memberNumber:string;name:string;email:string;phone:string;dateOfBirth:string};
+export type OwnerBookingClient={memberNumber:string;name:string;email:string;phone:string;dateOfBirth:string;membership?:any};
 export const emptyOwnerBookingClient:OwnerBookingClient={memberNumber:'',name:'',email:'',phone:'',dateOfBirth:''};
 type Props={slug:string;client:OwnerBookingClient;setClient:Dispatch<SetStateAction<OwnerBookingClient>>;setAnswers:Dispatch<SetStateAction<Record<string,string|boolean>>>;setLookup:Dispatch<SetStateAction<string>>};
 export default function OwnerBookingClientFields({slug,client,setClient,setAnswers,setLookup}:Props){
@@ -16,7 +16,7 @@ export default function OwnerBookingClientFields({slug,client,setClient,setAnswe
     const data=await response.json();if(!active)return;
     if(!response.ok)throw Error(data.error||'Client details could not be loaded. Try again.');
     if(data.memberNumber!==id)throw Error('Client ID changed. Check the ID and try again.');
-    setClient(previous=>previous.memberNumber===id?{memberNumber:id,name:[data.firstName,data.lastName].filter(Boolean).join(' '),email:data.email||'',phone:data.phone||'',dateOfBirth:data.dateOfBirth||''}:previous);
+    setClient(previous=>previous.memberNumber===id?{memberNumber:id,name:[data.firstName,data.lastName].filter(Boolean).join(' '),email:data.email||'',phone:data.phone||'',dateOfBirth:data.dateOfBirth||'',membership:data.membership||null}:previous);
     setAnswers(data.customAnswers||{});setLookup('loaded');setMessage('Saved client details and registration answers loaded. Review the form before confirming.');
    }catch(error){if(!active)return;setLookup('error');setMessage((error as Error).message||'Saved details are unavailable. Try again.');}
   },350);

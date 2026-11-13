@@ -1,3 +1,11 @@
+# v1.3.242 release handoff — Member answer recovery and owner booking credits
+
+Release source: v1.3.242
+
+Returning-client lookup now carries unambiguous matching answers between separately configured booking and membership questions, including Parent / Parent Name. Current field types and select options remain validated; intentional clears and checkbox consent remain separate. Owner booking summaries and footer reflect eligible membership coverage, selected service/session rules and the past-credit checkbox. Future owner bookings now use server-verified membership pricing; past bookings retain the atomic owner override and exactly-once attendance deduction. Lifetime plan names do not bypass credit limits or covered-service settings. No migration or client-record rewrite.
+
+Verification and deployment pending. No real bookings or credits changed for testing.
+
 # v1.3.241 release handoff — 24-hour check-in and no-show grace
 
 Release source: v1.3.241
