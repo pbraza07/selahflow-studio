@@ -234,5 +234,12 @@ test('public booking creates protected owner records; exposes catalog only; reje
  const futureResponse=await handler.studioPost(pastOwnerRequest(futureInput));assert.equal(futureResponse.status,200,await futureResponse.clone().text());const futureBody=await futureResponse.json();assert.equal(futureBody.chargedPrice,0);assert.equal(futureBody.membershipCovered,true);
  assert.equal((await pg.query("SELECT sessions_used FROM customer_memberships WHERE id='past-member'")).rows[0].sessions_used,1);
  const futureSaved=JSON.parse((await pg.query('SELECT data FROM appointments WHERE id=$1',[futureInput.key])).rows[0].data);assert.equal(futureSaved.price,0);assert.equal(futureSaved.membershipCovered,true);
+
+ const waiverPastConfig={...defaults.defaultSettings,bookableSessions:[],services:defaults.defaultSettings.services.map(s=>s.id==='barber'?{...s,requiresWaiver:true}:s)};
+ await pg.query("UPDATE settings SET data=$1 WHERE owner='owner'",[JSON.stringify(waiverPastConfig)]);
+ const missingWaiverPast={...debitInput,key:crypto.randomUUID(),date:'2020-01-07'};
+ const savedWithoutWaiver=await handler.studioPost(pastOwnerRequest(missingWaiverPast));assert.equal(savedWithoutWaiver.status,200,await savedWithoutWaiver.clone().text());const deferredResult=await savedWithoutWaiver.json();assert.equal(deferredResult.waiverFollowup.status,'pending');assert.equal(deferredResult.membershipCovered,true);
+ assert.equal((await pg.query("SELECT count(*)::int n FROM booking_receipt_emails WHERE booking_key=$1 AND event_type='waiver_request'",[missingWaiverPast.key])).rows[0].n,1);
+ const deferredReplay=await handler.studioPost(pastOwnerRequest(missingWaiverPast));assert.equal((await deferredReplay.json()).waiverFollowup.status,'pending');
  }finally{delete globalThis.__bookingTest;if(old===undefined)delete process.env.APP_URL;else process.env.APP_URL=old;await pg.close();}
 });

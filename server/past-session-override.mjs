@@ -35,7 +35,7 @@ export async function pastMemberVisits(db,{owner,businessId,id}){
 }
 /** Owner-only caller holds an open transaction. Override spends today's balance,
  * never rewrites activation dates or old monthly credit snapshots. */
-export async function applyPastMemberCredit(db,{owner,businessId,id,appointmentId,reason,attendance='Checked in'}){
+export async function applyPastMemberCredit(db,{owner,businessId,id,appointmentId,reason,attendance='Checked in',deferWaiver=false}){
  reason=String(reason||'').trim();
  if(reason.length<5||reason.length>500)throw Error('Enter an override reason of 5–500 characters.');
  if(!['Checked in','No-show'].includes(attendance))throw Error('Choose attendance for this past visit.');
@@ -56,7 +56,7 @@ export async function applyPastMemberCredit(db,{owner,businessId,id,appointmentI
  if(payment||cash||data.paymentStatus==='paid'||data.paymentIntentId)throw Error('Resolve this booking’s existing payment or open checkout before applying membership credits.');
  const settings=(await db.query('SELECT data FROM settings WHERE owner=$1',[owner])).rows[0]?.data;
  const config=typeof settings==='string'?JSON.parse(settings):settings||{};
- await assertBookingWaiver(db,{owner,config,serviceIds:data.serviceIds||[],memberNumber:member.member_number});
+ if(!deferWaiver)await assertBookingWaiver(db,{owner,config,serviceIds:data.serviceIds||[],memberNumber:member.member_number});
  const reserved=(await db.query(`SELECT id FROM appointments a WHERE owner=$1 AND status NOT IN ('Cancelled','No-show') AND id<>$2 AND data::jsonb->>'memberNumber'=$3 AND data::jsonb->>'membershipCovered'='true' AND ($4::boolean OR date>=$5 AND date<$6) AND NOT EXISTS(SELECT 1 FROM membership_session_ledger l WHERE l.business_id=$7 AND l.appointment_id=a.id AND l.event_type='session_used') UNION SELECT id FROM booking_requests WHERE owner_id=$1 AND status='pending' AND details::jsonb->>'memberNumber'=$3 AND details::jsonb->>'membershipCovered'='true' AND ($4::boolean OR date>=$5 AND date<$6)`,[owner,appointmentId,member.member_number,member.billing_type==='package'||!member.credit_period_start||!member.credit_period_end,String(member.credit_period_start instanceof Date?member.credit_period_start.toISOString():member.credit_period_start||'').slice(0,10),String(member.credit_period_end instanceof Date?member.credit_period_end.toISOString():member.credit_period_end||'').slice(0,10),businessId])).rows.length;
  if(Number(member.sessions_used)+reserved>=Number(member.sessions_included))throw Error('No unreserved membership sessions remain. Existing bookings retain their credits.');
  const previousStatus=visit.status,newStatus=['Confirmed','Scheduled'].includes(visit.status)?attendance:visit.status;

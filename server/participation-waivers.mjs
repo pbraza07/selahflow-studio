@@ -25,13 +25,19 @@ export async function ensureParticipationWaiver(db,{businessId,memberNumber,conf
  return row.id;
 }
 /** Rechecked under the schedule lock, so enabling a waiver cannot race a booking. */
-export async function assertBookingWaiver(db,{owner,config,serviceIds,memberNumber}){
+export async function bookingWaiverStatus(db,{owner,config,serviceIds,memberNumber}){
  const current=serviceIds.map(id=>(config.services||[]).find(s=>s.id===id)).filter(Boolean);
- if(!requiresWaiver(current))return;
+ if(!requiresWaiver(current))return {required:false,signed:true};
  const document=waiverDocument(config),version=document.version;
- assertWaiverLegalReview(config,version);
  const signed=(await db.query('SELECT w.id FROM participation_waivers w JOIN businesses b ON b.id=w.business_id JOIN customer_booking_ids c ON c.id=w.customer_id AND c.business_id=b.id WHERE b.owner_id=$1 AND c.member_number=$2 AND w.document_version=ANY($3::text[]) AND ($4::text IS NULL OR w.document_hash=$4 AND w.document->>\'category\'=$5) AND w.deleted_at IS NULL',[owner,memberNumber,acceptedWaiverVersions(config),version===CATEGORY_WAIVER_VERSION?waiverDocumentHash(document):null,document.category||null])).rows[0];
- if(!signed)throw Error('A signed participation waiver is required. Refresh and complete the waiver before booking.');
+ return {required:true,signed:!!signed};
+}
+
+export async function assertBookingWaiver(db,input){
+ const status=await bookingWaiverStatus(db,input);
+ if(!status.required)return;
+ assertWaiverLegalReview(input.config,waiverDocument(input.config).version);
+ if(!status.signed)throw Error('A signed participation waiver is required. Refresh and complete the waiver before booking.');
 }
 
 /** Production consent must be backed by a business-specific review, never a default. */

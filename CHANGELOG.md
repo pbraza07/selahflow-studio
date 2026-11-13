@@ -1,3 +1,11 @@
+# v1.3.243 release handoff — Past booking waiver follow-up
+
+Release source: v1.3.243
+
+Owners may record ended visits without a signed waiver, including atomic membership-credit attendance. Such bookings retain Waiver pending and queue a private, expiring email signing link after saving. Clients sign the current business waiver using their actual signing date; birth-date, guardian and current-document checks remain enforced. Public, future and team booking waiver requirements remain unchanged. Migration 102 adds scoped hashed invitations and the durable waiver email event; signing is idempotent and does not alter attendance or credits.
+
+Validation and deployment pending. Synthetic tests cover owner-only deferral, durable email delivery, link isolation/expiry, identity and guardian validation, duplicate signatures and unchanged credits. No real customer booking, email or signature is submitted for testing.
+
 # v1.3.242 release handoff — Member answer recovery and owner booking credits
 
 Release source: v1.3.242
