@@ -4,7 +4,7 @@ Release source: v1.3.244
 
 Public business pages declare a business-specific manifest and Apple home-screen title. Each public shortcut has its own identity and launches the saved business URL rather than the platform homepage. Owner dashboard manifests retain their separate identity and launch route. Public manifest names and colors follow the business. Existing saved shortcuts may need removal and re-adding from the business page. No migration or customer-data change.
 
-Validation and deployment pending. Physical iOS/Android installation remains a manual acceptance check.
+Verified LIVE November 15, 2026 via PR #179. Production merge 316793b7e732874f1d4db0fb4582c01e6ba6a280, deploy dep-dbt34f7f3r2c73f1i500 LIVE 5:31:07 PM Eastern. Staging commit 10e48e692e09a217813f67229b39b96a3e0a0795, deploy dep-dbt30soae00c739h7k9g LIVE 5:37:09 PM Eastern. Identical application tree b5ad6126213a6b564038b72e5dd37fa339b1d797. All 810 local and staging tests passed, as did TypeScript, production builds and GitHub workflow 43768855245 web/native validation. Both live environments passed health/version, booking/payment shells and protected API checks. Safari and Chrome user-agent HTTP checks verified exactly one public business manifest link, Arcila Training Apple title, /arcillatrng launch URL and identity, separate /studio/arcillatrng owner launch, unchanged platform homepage shortcut and unknown-business 404. No error-level entries in checked startup windows. Physical iOS/Android installation remains a manual acceptance check; remove the old home-screen shortcut and re-add from the business page. No customer records changed. Documentation-only commits may follow these application commits.
 
 # v1.3.243 release handoff — Past booking waiver follow-up
 
