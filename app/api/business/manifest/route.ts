@@ -14,7 +14,7 @@ export async function GET(req:Request){
   if(!row)return Response.json({error:'Unknown business.'},{status:404,headers:{'Cache-Control':'no-store'}});
   let raw:{theme?:unknown}={};try{raw=JSON.parse(row.data||'{}')}catch{}
   const theme=resolveTheme(raw.theme,row.brand_primary,row.brand_background);
-  return new Response(JSON.stringify(businessManifest(row.slug,row.name,theme)),{
+  return new Response(JSON.stringify(businessManifest(row.slug,row.name,theme,new URL(req.url).searchParams.get('audience')==='public'?'public':'owner')),{
    headers:{'Content-Type':'application/manifest+json; charset=utf-8',
     'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}
   });
