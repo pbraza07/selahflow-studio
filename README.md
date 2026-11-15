@@ -1,3 +1,11 @@
+# v1.3.244 release handoff — Business home-screen shortcuts
+
+Release source: v1.3.244
+
+Public business pages declare a business-specific manifest and Apple home-screen title. Each public shortcut has its own identity and launches the saved business URL rather than the platform homepage. Owner dashboard manifests retain their separate identity and launch route. Public manifest names and colors follow the business. Existing saved shortcuts may need removal and re-adding from the business page. No migration or customer-data change.
+
+Validation and deployment pending. Physical iOS/Android installation remains a manual acceptance check.
+
 # v1.3.243 release handoff — Past booking waiver follow-up
 
 Release source: v1.3.243
