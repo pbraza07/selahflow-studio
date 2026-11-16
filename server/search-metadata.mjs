@@ -23,9 +23,9 @@ export function publicPageMetadata(path,title,description){
 /** Only public business fields belong in search snippets; never use client or registration data. */
 export function businessPageMetadata(row){
  const location=[row.city,row.region].filter(Boolean).join(', '),category=String(row.industry||'').replaceAll('-',' ');
- const title=row.name+(location?' in '+location:'')+' | Book Online · SelahFlow';
+ const title=row.name+' | SelahFlow'+(location?' · '+location:'')+' · Book Online';
  const intro=String(row.description||'').replace(/\s+/g,' ').trim().slice(0,220);
- const description=(intro?intro+' ':'')+'Explore '+row.name+(category?' '+category+' services':' services')+(location?' in '+location:'')+', view prices and book online.';
+ const description='Book with '+row.name+' on SelahFlow'+(location?' in '+location:'')+'. '+(intro?intro+' ':'')+'Explore '+(category?category+' ':'')+'services, view prices and book online.';
  return publicPageMetadata('/'+encodeURIComponent(row.slug),title,description);
 }
 export function siteSearchGraph(){return {'@context':'https://schema.org','@graph':[
@@ -33,3 +33,18 @@ export function siteSearchGraph(){return {'@context':'https://schema.org','@grap
  {'@type':'WebSite','@id':SEARCH_ORIGIN+'/#website',name:'SelahFlow',alternateName:'Selah Flow',url:SEARCH_ORIGIN,publisher:{'@id':SEARCH_ORIGIN+'/#organization'}},
  {'@type':'WebApplication','@id':SEARCH_ORIGIN+'/#application',name:'SelahFlow',url:SEARCH_ORIGIN,applicationCategory:'BusinessApplication',operatingSystem:'Web',publisher:{'@id':SEARCH_ORIGIN+'/#organization'},description:SEARCH_PAGES[0][2],featureList:['Online appointment scheduling','Class and session booking','Client management','Team scheduling','Membership management']}
  ]};}
+
+/** Describe the public profile, not private owner/customer records or invented ratings. */
+export function businessSearchGraph(row){
+ const metadata=businessPageMetadata(row),url=metadata.alternates.canonical;
+ const organization={'@type':'Organization','@id':url+'#business',name:row.name,url,
+  ...(row.description?{description:String(row.description).replace(/\s+/g,' ').trim().slice(0,500)}:{}),
+  ...(row.has_logo?{logo:SEARCH_ORIGIN+'/api/branding/logo?slug='+encodeURIComponent(row.slug)}:{})};
+ return {'@context':'https://schema.org','@graph':[
+  organization,
+  {'@type':'WebPage','@id':url+'#webpage',url,name:metadata.title,description:metadata.description,
+   mainEntity:{'@id':organization['@id']},about:{'@id':organization['@id']},isPartOf:{'@id':SEARCH_ORIGIN+'/#website'}},
+  {'@type':'WebSite','@id':SEARCH_ORIGIN+'/#website',name:'SelahFlow',url:SEARCH_ORIGIN}
+ ]};
+}
+export const searchGraphJson=graph=>JSON.stringify(graph).replaceAll('<','\\u003c');

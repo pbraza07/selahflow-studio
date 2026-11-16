@@ -1,3 +1,11 @@
+# v1.3.245 release handoff — Business-name search discovery
+
+Release source: v1.3.245
+
+Public business search titles now lead with Business name | SelahFlow, and descriptions explicitly connect the business to booking on SelahFlow. Visible page copy and safely serialized Organization/WebPage/WebSite structured data identify the public business profile and platform relationship without invented ratings or private records. Active business sitemap, canonical URLs, public crawling, staging noindex and home-screen shortcut metadata are retained. No migration. Google controls indexing and ranking; this does not guarantee search placement or submit a Search Console request.
+
+Validation and deployment pending.
+
 # v1.3.244 release handoff — Business home-screen shortcuts
 
 Release source: v1.3.244
