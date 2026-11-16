@@ -1,4 +1,4 @@
-import {businessPageMetadata} from '../server/search-metadata.mjs';
+import {businessPageMetadata,businessSearchGraph,searchGraphJson} from '../server/search-metadata.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -25,7 +25,7 @@ test('actual shared tenant landing page renders repeated introduction once for a
  let row;
  const Empty=()=>null;
  const load=id=>{
-  if(id.endsWith('search-metadata.mjs'))return {businessPageMetadata};
+  if(id.endsWith('search-metadata.mjs'))return {businessPageMetadata,businessSearchGraph,searchGraphJson};
   if(id.endsWith('team-showcase.mjs'))return {businessTeamShowcase};
   if(id.endsWith('business-profile-copy.mjs'))return {businessIntroLines};
   if(id.endsWith('database.mjs'))return {getPool:()=>({query:async()=>({rows:[row]})})};
@@ -44,6 +44,9 @@ test('actual shared tenant landing page renders repeated introduction once for a
   row={name:'Example Business',slug,industry:'landscaping',description:'landscaping',business_model:'landscaping',data:JSON.stringify({tagline:'landscaping'}),brand_primary:'#123F3A',brand_background:'#ffffff',has_logo:false};
   const html=renderToStaticMarkup(await module.exports.default({params:Promise.resolve({slug})}));
   assert.equal((html.match(/<p>landscaping<\/p>/g)||[]).length,1);
+  const graph=JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)[1]);
+  assert.equal(graph['@graph'][0].name,row.name);assert.equal(graph['@graph'][0].url,'https://selahflow.onrender.com/'+slug);
+  assert.match(html,/on SelahFlow/);
   row.data=JSON.stringify({tagline:'A distinct tagline'});
   const distinct=renderToStaticMarkup(await module.exports.default({params:Promise.resolve({slug})}));
   assert.match(distinct,/<p>A distinct tagline<\/p>/);assert.match(distinct,/<p>landscaping<\/p>/);
