@@ -26,7 +26,7 @@ export default function OwnerBookingStatus({bookings}:{bookings:Booking[]}){
    <button type="button" className="outline" onClick={()=>{setSearch('');setStatus('');setPayment('');setFrom('');setTo('');setAttendedOnly(false);}}>Clear booking filters</button>
   </div>
   <p role="status">{rows.length} of {bookings.length} bookings · Payment: Pending (red), Completed (green)</p>
-  {rows.length?<ExpandableDetailsGroup><div className="sf-client-history-scroll"><SortableTable className="sf-client-history-table">
+  {rows.length?<ExpandableDetailsGroup><div className="sf-client-history-scroll"><SortableTable cards className="sf-client-history-table">
    <thead><tr><th>Client</th><th>Activity date / time</th><th>Service used</th><th>Service type</th><th>Session</th><th>Team</th><th>Status / booking timeline</th><th>Payment</th><th>Quote</th></tr></thead>
    <tbody>{rows.map(v=><tr key={v.id}>
     <td><b>{v.clientName||'Client'}</b>{v.clientMemberNumber&&<small>ID {v.clientMemberNumber}</small>}{v.clientEmail&&<small>{v.clientEmail}</small>}{v.clientPhone&&<small>{v.clientPhone}</small>}{v.submittedAt&&<small>Submitted {timestamp(v.submittedAt)}</small>}</td>

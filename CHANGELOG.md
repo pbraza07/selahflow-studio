@@ -1,3 +1,11 @@
+# v1.3.246 release handoff — Compact item cards and modal editors
+
+Release source: v1.3.246
+
+Service catalog and team settings use compact, wrapping summary cards. Creation and editing open native dialogs; existing sessions now open their full editor on demand. Shared modal entry points cover questions, blockouts, products, coupons, service enrollments, team access and percentages, team calendar booking/time off, team profiles/notes/photos and platform business/admin/entitlement forms. Client, booking-status, membership, enrollment and waiver record lists use labeled responsive cards with live View details dialogs. Financial report tables retain their report layout. Existing booking/payment APIs, permissions and tenant isolation are unchanged; no migration or customer-data update.
+
+Settings dialogs explicitly preserve drafts on close; Save business settings commits the existing shared settings draft. Save failures remain in the dialog and busy saves prevent closing. Immediate-save forms retain their existing validation and submission actions. Production and staging deployment verification pending. Local browser visual QA is unavailable because Chromium socket creation is prohibited in this environment; synthetic React interaction tests cover modal opening, draft preservation, focus return, save failure/busy state and refreshed record details. Physical-device and authenticated live UI acceptance remain manual checks.
+
 # v1.3.245 release handoff — Business-name search discovery
 
 Release source: v1.3.245

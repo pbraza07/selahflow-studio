@@ -17,8 +17,8 @@ function nodes(root){if(!root||typeof root!=='object')return [];return [root,...
 const props={open:true,sessionNumber:7,busy:false,onClose:()=>{},onSave:async()=>true,children:React.createElement('label',null,'First session date',React.createElement('input',{type:'date'}))};
 test('new numbered session opens with existing editing fields and clear draft/save actions',()=>{
  const h=harness(),tree=h.render(props),html=renderToStaticMarkup(tree);
- assert.equal(tree.type,'dialog');assert.match(html,/New session 7/);assert.match(html,/First session date/);assert.match(html,/draft until you save/);assert.match(html,/Keep draft &amp; close/);assert.match(html,/Save business settings/);
- const inline=renderToStaticMarkup(h.render({...props,open:false}));assert.doesNotMatch(inline,/<dialog/);assert.match(inline,/First session date/);
+ assert.equal(tree.type,'dialog');assert.match(html,/Session 7/);assert.match(html,/First session date/);assert.match(html,/draft until you save/);assert.match(html,/Keep draft &amp; close/);assert.match(html,/Save business settings/);
+ const inline=renderToStaticMarkup(h.render({...props,open:false}));assert.doesNotMatch(inline,/<dialog/);assert.doesNotMatch(inline,/First session date/);assert.match(inline,/View \/ edit session/);
 });
 test('failed save preserves editor and reports server validation; repeated clicks do not double-save',async()=>{
  const h=harness();let calls=0,reject;const p={...props,onSave:()=>{calls++;return new Promise((_,r)=>{reject=r;});}};

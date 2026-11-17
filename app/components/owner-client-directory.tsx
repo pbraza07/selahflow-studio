@@ -271,7 +271,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
     <div className="sf-client-history-heading"><div><h3>Service & session history</h3><p>Each booking, its services and attendance status.</p></div>
      <label className="sf-client-history-filter"><input type="checkbox" checked={attendedOnly} onChange={e=>setAttendedOnly(e.target.checked)}/> Attended only</label>
     </div>
-    {visited.length?<ExpandableDetailsGroup><div className="sf-client-history-scroll"><SortableTable className="sf-client-history-table">
+    {visited.length?<ExpandableDetailsGroup><div className="sf-client-history-scroll"><SortableTable cards className="sf-client-history-table">
      <thead><tr><th>Activity date / time</th><th>Service used</th><th>Service type</th><th>Session</th><th>Team</th><th>Status / booking timeline</th><th>Payment</th><th>Quote</th></tr></thead>
      <tbody>{visited.map(v=><tr key={v.id}>
       <td><b>{humanDate(v.date)}</b><small>{timeLabel(v.time)} Eastern</small></td>

@@ -1,4 +1,5 @@
 'use client';
+import {ItemFormDialog} from './item-editor';
 import {useEffect,useState} from 'react';
 import {ArrowRight,CheckCircle2,RefreshCw,ShieldCheck} from 'lucide-react';
 import {PLANS} from '../../lib/plans';
@@ -80,8 +81,8 @@ export default function PlatformPlanEntitlements({onChanged}:{onChanged:()=>Prom
      <p>Up to <b>{current.planBenefits.limits.services}</b> catalog services, <b>{current.planBenefits.limits.bookingFields}</b> booking questions, <b>{current.planBenefits.limits.sessionSeries}</b> session templates and <b>{current.planBenefits.limits.membershipPlans}</b> membership offers.</p>
      {current.hasConnectedSubscription&&<p>A Stripe subscription exists for this business; change its tier through billing management, not manual assignment.</p>}
     </div>}
-    {canChange&&current&&<div className={styles.planAdminForm}><h3>Individual benefit allowances</h3><p>Enter an exact number for each benefit. Leave blank to use the subscribed plan's default.</p>{(['bookableStaff','services','bookingFields','sessionSeries','membershipPlans'] as const).map(key=><label key={key} className={styles.planAdminLabel}>{({bookableStaff:'Bookable team members',services:'Services',bookingFields:'Booking form fields',sessionSeries:'Session series',membershipPlans:'Membership packages'})[key]}<input type="number" min="0" max="100000" value={benefitDraft[key]??''} placeholder={String(key==='bookableStaff'?PLANS[current.planCode].bookableStaff:current.planBenefits.limits[key as keyof typeof current.planBenefits.limits])} onChange={e=>setBenefitDraft(d=>({...d,[key]:e.target.value}))}/></label>)}<button type="button" className={styles.button} disabled={busy} onClick={()=>void saveBenefits()}>Save individual benefits</button></div>}
-    {canChange&&current&&current.status==='active'&&!current.hasConnectedSubscription&&<div className={styles.planAdminForm}>
+    {canChange&&current&&<ItemFormDialog title="Edit individual benefit allowances" busy={busy}>{error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}<div className={styles.planAdminForm}><h3>Individual benefit allowances</h3><p>Enter an exact number for each benefit. Leave blank to use the subscribed plan's default.</p>{(['bookableStaff','services','bookingFields','sessionSeries','membershipPlans'] as const).map(key=><label key={key} className={styles.planAdminLabel}>{({bookableStaff:'Bookable team members',services:'Services',bookingFields:'Booking form fields',sessionSeries:'Session series',membershipPlans:'Membership packages'})[key]}<input type="number" min="0" max="100000" value={benefitDraft[key]??''} placeholder={String(key==='bookableStaff'?PLANS[current.planCode].bookableStaff:current.planBenefits.limits[key as keyof typeof current.planBenefits.limits])} onChange={e=>setBenefitDraft(d=>({...d,[key]:e.target.value}))}/></label>)}<button type="button" className={styles.button} disabled={busy} onClick={()=>void saveBenefits()}>Save individual benefits</button></div></ItemFormDialog>}
+    {canChange&&current&&current.status==='active'&&!current.hasConnectedSubscription&&<ItemFormDialog title="Assign business plan" busy={busy}>{error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}<div className={styles.planAdminForm}>
      <label className={styles.planAdminLabel}>Assign benefits for
       <select value={target} onChange={e=>setTarget(e.target.value as PlanCode)}>
        {(Object.entries(PLANS) as [PlanCode,(typeof PLANS)[PlanCode]][]).map(([code,p])=>
@@ -101,7 +102,7 @@ export default function PlatformPlanEntitlements({onChanged}:{onChanged:()=>Prom
      </label>
      <button type="button" className={styles.button} disabled={busy||target===current.planCode||reason.trim().length<10||confirmName!==current.name||!ack}
       onClick={()=>void assign()}><CheckCircle2 size={16}/>{busy?'Applying…':'Apply verified plan benefits'}</button>
-    </div>}
+    </div></ItemFormDialog>}
     {!canChange&&<p className={styles.planAdminNotice}>Only the primary platform administrator may change a plan.</p>}
    </div>
    <div className={styles.planAdminHistory}>

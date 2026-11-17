@@ -79,7 +79,8 @@ test('all-client table renders screenshot columns, expandable answers, timelines
  const require=createRequire(import.meta.url);
  const react=pathToFileURL(require.resolve('react')).href,jsx=pathToFileURL(require.resolve('react/jsx-runtime')).href;
  const transpile=source=>compile(source).replaceAll('"react"',JSON.stringify(react)).replaceAll("'react'",JSON.stringify(react)).replaceAll('"react/jsx-runtime"',JSON.stringify(jsx));
- const sortable=url(transpile(await readFile(new URL('../app/components/sortable-table.tsx',import.meta.url),'utf8')));
+ const modal=url(transpile(await readFile(new URL('../app/components/membership-modal.tsx',import.meta.url),'utf8')).replace("'lucide-react'",JSON.stringify(pathToFileURL(require.resolve('lucide-react')).href)));
+ const sortable=url(transpile(await readFile(new URL('../app/components/sortable-table.tsx',import.meta.url),'utf8')).replace("'./membership-modal'",JSON.stringify(modal)));
  const expandable=url(transpile(await readFile(new URL('../app/components/expandable-details-group.tsx',import.meta.url),'utf8')));
  const defaults=url(compile(await readFile(new URL('../lib/defaults.ts',import.meta.url),'utf8')));
  let source=await readFile(new URL('../app/components/owner-booking-status.tsx',import.meta.url),'utf8');
