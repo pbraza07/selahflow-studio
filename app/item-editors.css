@@ -12,3 +12,50 @@ fieldset.sf-item-fields{border:0;margin:0;padding:0}
 .sf-record-cards{overflow:visible!important;max-width:100%;min-width:0}.sf-record-cards table{display:block;width:100%;min-width:0!important;table-layout:auto}.sf-record-cards thead,.sf-record-cards thead tr{display:flex;flex-wrap:wrap;gap:6px;background:transparent}.sf-record-cards th{display:block;padding:4px;border:0;white-space:normal}.sf-record-cards tbody{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));gap:16px}.sf-record-cards tbody tr{display:flex;flex-direction:column;padding:16px;border:1px solid var(--sf-border,var(--line,#d6e0da));border-radius:14px;min-width:0;background:var(--sf-surface,var(--card,#fff))}.sf-record-cards tbody td{display:block;white-space:normal!important;min-width:0!important;max-width:100%;padding:7px 0;border:0;overflow-wrap:anywhere}.sf-record-cards tbody td:before{content:attr(data-label);display:block;font-size:.75rem;font-weight:700;opacity:.8;margin-bottom:3px}.sf-record-cards .sf-record-view:before{display:none}.sf-record-cards td[colspan]{grid-column:1/-1}.sf-record-detail{display:grid;gap:16px;margin:0}.sf-record-detail dt{font-weight:700}.sf-record-detail dd{margin:5px 0 0;overflow-wrap:anywhere}
 
 .sf-item-grid>.sf-item-card{margin:0}.sf-record-cards table tbody td :is(input,select,textarea){max-width:100%;min-width:0}.sf-record-cards table tbody td .button-row{flex-wrap:wrap}.sf-record-cards tbody tr:has(>td[colspan]){grid-column:1/-1}.sf-record-cards tbody tr:has(>td[colspan]) td:before{display:none}
+
+/* Visible, tenant-colored item surfaces. Do not rely on a border color that may
+   intentionally match the page background in the business's saved palette. */
+.sf-item-grid{gap:20px;align-items:stretch}
+.sf-item-card.sf-item-card{padding:0;border:1px solid var(--sf-item-border,#aebdb8);border-top:4px solid var(--sf-item-accent,var(--sf-button,#315e50));border-radius:16px;background:var(--sf-surface,#fff);box-shadow:0 5px 18px #102b280a,0 1px 3px #102b2808;overflow:hidden;display:flex;flex-direction:column}
+.sf-item-card.sf-item-card>header{margin:0;padding:18px;min-height:80px;border-bottom:1px solid var(--sf-item-divider,#d9e0dd);background:var(--sf-item-header,#f3f6f4);align-items:center;gap:12px}
+.sf-item-card.sf-item-card>header h3{margin:0;line-height:1.4;font-size:1rem;font-weight:750;letter-spacing:-.015em;color:var(--sf-item-on-header,var(--sf-on-surface,#183330))!important}
+.sf-item-card>.sf-item-summary{padding:8px 18px 14px;flex:1}
+.sf-item-card .sf-item-summary dl{gap:0 16px;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}
+.sf-item-card .sf-item-summary :is(dt,dd){padding:11px 0;border-bottom:1px solid var(--sf-item-divider,#d9e0dd);font-size:.83rem;line-height:1.5;align-self:stretch;color:var(--sf-on-surface,#183330)}
+.sf-item-card .sf-item-summary dt{font-weight:600}.sf-item-card .sf-item-summary dd{font-weight:500}
+.sf-item-card .sf-item-summary :is(dt:last-of-type,dd:last-of-type){border-bottom:0}
+.sf-item-card .sf-item-summary>p{padding:11px 0;margin:0;border-bottom:1px solid var(--sf-item-divider,#d9e0dd);font-size:.86rem;line-height:1.6}
+.sf-item-card .sf-item-summary>p:last-child{border:0}
+.sf-item-card>header>button.outline,.app-shell[data-selah-theme] .sf-item-card>header>button.outline{background:var(--sf-button,#315e50)!important;color:var(--sf-on-button,#fff)!important;border:1px solid var(--sf-button,#315e50)!important;border-radius:9px;font-size:.78rem;font-weight:700;min-height:40px;padding:9px 12px;box-shadow:none}
+.sf-item-card>header>button.outline:hover:not(:disabled),.app-shell[data-selah-theme] .sf-item-card>header>button.outline:hover:not(:disabled){background:var(--sf-button-hover,#24483d)!important;color:var(--sf-on-button-hover,#fff)!important}
+.sf-item-card:focus-within{outline:2px solid var(--sf-item-accent,var(--sf-button,#315e50));outline-offset:3px}
+.sf-record-cards tbody tr{border:1px solid var(--sf-item-border,#aebdb8);border-top:4px solid var(--sf-item-accent,var(--sf-button,#315e50));border-radius:16px;box-shadow:0 5px 18px #102b280a;padding:8px 18px 16px;color:var(--sf-on-surface,#183330)}
+.sf-record-cards table tbody td{padding:11px 0;border-bottom:1px solid var(--sf-item-divider,#d9e0dd);color:var(--sf-on-surface,#183330);font-size:.85rem}
+.sf-record-cards table tbody td:last-child{border-bottom:0}.sf-record-cards table tbody td:before{opacity:1;font-size:.72rem;letter-spacing:.02em;margin-bottom:5px;color:inherit}
+.sf-record-cards .sf-record-view{margin-top:auto;padding-top:16px!important}.sf-record-view button{width:100%;min-height:44px}
+.sf-record-detail>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:12px;padding:14px 0;border-bottom:1px solid var(--sf-item-divider,#d9e0dd)}.sf-record-detail>div:last-child{border:0}.sf-record-detail dd{margin:0;min-width:0}
+.sf-membership-modal,.sf-new-session-dialog{border-color:var(--sf-item-border,#aebdb8)!important;border-top:4px solid var(--sf-item-accent,var(--sf-button,#315e50))!important}
+.sf-membership-modal>header{border-bottom-color:var(--sf-item-divider,#d9e0dd);background:var(--sf-item-header,var(--sf-surface,#fff))}.sf-membership-modal>header h2{color:var(--sf-item-on-header,var(--sf-on-surface,#183330))!important}
+.sf-item-fields>div:has(>strong){padding-bottom:16px;border-bottom:1px solid var(--sf-item-divider,#d9e0dd)}.sf-item-fields>div:last-child{border:0}.sf-item-fields>div>strong{display:block;margin-bottom:8px;font-size:.85rem}
+.sf-item-actions{border-top:1px solid var(--sf-item-divider,#d9e0dd);padding-top:18px}
+/* Existing item families share the same boundary treatment while preserving
+   their saved card backgrounds, text contrast and their own content structure. */
+.sf-owner-plan-list>article,.sf-client-summary,.sf-platform-business-row,.sf-team-confirmation-list>article,.sf-approval-card,.sf-catalog-tile{border:1px solid var(--sf-item-border,#aebdb8)!important;border-top:4px solid var(--sf-item-accent,var(--sf-button,#315e50))!important;border-radius:16px!important;box-shadow:0 5px 18px #102b280a;overflow-wrap:anywhere;min-width:0}
+.sf-owner-plan-list>article,.sf-catalog-tile{border-color:var(--sf-item-card-border,#aebdb8)!important;border-top-color:var(--sf-item-accent,var(--sf-button,#315e50))!important}
+.sf-client-summary-top,.sf-approval-title{padding-bottom:14px;border-bottom:1px solid var(--sf-item-divider,#d9e0dd);margin-bottom:14px}
+.sf-owner-plan-list .sf-plan-actions,.sf-platform-business-actions{padding-top:14px;border-top:1px solid var(--sf-item-divider,#d9e0dd)}
+.sf-catalog-tile{padding:18px!important;gap:14px!important}.sf-catalog-tile img{border:1px solid var(--sf-item-card-border,#aebdb8)}.sf-catalog-tile h3{padding-top:12px;border-top:1px solid var(--sf-item-card-border,#aebdb8)}
+@media(max-width:600px){.sf-item-grid{gap:14px}.sf-item-card.sf-item-card>header{padding:15px;min-height:72px}.sf-item-card>.sf-item-summary{padding:5px 15px 12px}.sf-item-card .sf-item-summary dl{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:0 12px}.sf-item-card .sf-item-summary dd{margin:0}.sf-record-detail>div{grid-template-columns:minmax(0,1fr);gap:6px}}
+@media(prefers-reduced-motion:no-preference){.sf-item-card,.sf-client-summary,.sf-catalog-tile{transition:box-shadow .18s ease}.sf-item-card:hover,.sf-client-summary:hover,.sf-catalog-tile:hover{box-shadow:0 8px 24px #102b2812}}
+
+.sf-client-summary-types{border-top-color:var(--sf-item-divider,#d9e0dd)}
+.service-card,.booking-service:not(.picked),.sf-membership-plans>button:not(.selected){border:1px solid var(--sf-item-card-border,#aebdb8)!important;border-top:4px solid var(--sf-item-accent,var(--sf-button,#315e50))!important;border-radius:16px!important;box-shadow:0 5px 18px #102b280a}
+.booking-service.picked,.sf-membership-plans>button.selected{border:2px solid currentColor!important;border-radius:16px!important;box-shadow:0 5px 18px #102b2812}
+.sf-membership-plans>button>span{gap:10px}.sf-membership-plans>button strong{white-space:normal;overflow-wrap:anywhere}
+
+/* Match the existing theme selector specificity so white saved borders cannot
+   override item boundaries in booking, business and approval screens. */
+.app-shell[data-selah-theme] :is(.service-card,.client-card,.product-tile),.public-page[data-selah-theme] .booking-service:not(.picked),.app-shell[data-selah-theme] .booking-service:not(.picked),.app-shell[data-selah-theme] .sf-approval-inbox .sf-approval-card,.sf-visual-service-card,.sf-visual-membership-card{border:1px solid var(--sf-item-card-border,#aebdb8)!important;border-top:4px solid var(--sf-item-card-accent,var(--sf-button,#315e50))!important;border-radius:16px!important;box-shadow:0 5px 18px #102b280a}
+.public-page[data-selah-theme] .booking-service.picked,.app-shell[data-selah-theme] .booking-service.picked{border:2px solid currentColor!important}
+.sf-owner-plan-list>article,.sf-catalog-tile,.sf-membership-plans>button:not(.selected){border-top-color:var(--sf-item-card-accent,var(--sf-button,#315e50))!important}
+.sf-owner-plan-list .sf-plan-actions,.sf-approval-title{border-color:var(--sf-item-card-divider,#d9e0dd)}

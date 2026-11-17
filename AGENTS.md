@@ -1,10 +1,18 @@
+# v1.3.247 release handoff — Visible, themed item cards
+
+Release source: v1.3.247
+
+Item views now have visible rounded borders, branded top accents and action buttons, tinted headers, separated detail rows, consistent spacing and subtle shadows. Shared styling covers service/session/team/question/coupon cards, record cards, client summaries, membership plans, products, booking selections/approvals, administrator business rows and detail dialogs. Derived outline colors stay visible when a business deliberately chooses matching border/background colors; saved palette values remain unchanged. Header text remains readable across light and dark themes. No migration, API, pricing, booking or permission changes.
+
+Visual QA used the actual service catalog JSX and application CSS with synthetic data: light/red and dark/gold palettes display clear borders and section dividers; card scrollWidth equals clientWidth in full-width and 390px-container previews. The narrow check is a constrained container, not physical-phone emulation. Two new regressions cover matching border/background colors, unchanged saved palettes, visible accents and readable headers across all 20 built-in palettes. Full checks and deployment pending. Authenticated live owner and physical-device acceptance remain manual checks.
+
 # v1.3.246 release handoff — Compact item cards and modal editors
 
 Release source: v1.3.246
 
 Service catalog and team settings use compact, wrapping summary cards. Creation and editing open native dialogs; existing sessions now open their full editor on demand. Shared modal entry points cover questions, blockouts, products, coupons, service enrollments, team access and percentages, team calendar booking/time off, team profiles/notes/photos and platform business/admin/entitlement forms. Client, booking-status, membership, enrollment and waiver record lists use labeled responsive cards with live View details dialogs. Financial report tables retain their report layout. Existing booking/payment APIs, permissions and tenant isolation are unchanged; no migration or customer-data update.
 
-Settings dialogs explicitly preserve drafts on close; Save business settings commits the existing shared settings draft. Save failures remain in the dialog and busy saves prevent closing. Immediate-save forms retain their existing validation and submission actions. Production and staging deployment verification pending. Local browser visual QA is unavailable because Chromium socket creation is prohibited in this environment; synthetic React interaction tests cover modal opening, draft preservation, focus return, save failure/busy state and refreshed record details. Physical-device and authenticated live UI acceptance remain manual checks.
+Settings dialogs explicitly preserve drafts on close; Save business settings commits the existing shared settings draft. Save failures remain in the dialog and busy saves prevent closing. Immediate-save forms retain their existing validation and submission actions. Production v1.3.246 verified LIVE November 17, 2026 at 5:35:05 PM Eastern: merge 6a7a2064e8ec2154a1f5d63227f30b9afbf67c86, deploy dep-dbudcb2jnfac73bdgc9g, PR #181. All 814 local tests, TypeScript, production build and GitHub workflow 44189833474 passed. Live health/protected APIs and final card CSS/modal bundle passed. Staging final revision 1a1baa495904d475c2a7b31d51135f97fc3e441f is still being verified in deploy dep-dbud8e9un74c73ep4vd0. Local browser visual QA is unavailable because Chromium socket creation is prohibited in this environment; synthetic React interaction tests cover modal opening, draft preservation, focus return, save failure/busy state and refreshed record details. Physical-device and authenticated live UI acceptance remain manual checks.
 
 # v1.3.245 release handoff — Business-name search discovery
 
