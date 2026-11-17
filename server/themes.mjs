@@ -41,6 +41,9 @@ function automaticTextColors(colors){return {...colors,heading:accessibleText(co
 function lum(h){const a=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255).map(x=>x<=0.04045?x/12.92:((x+.055)/1.055)**2.4);return a[0]*.2126+a[1]*.7152+a[2]*.0722;}
 export function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
 export function accessibleText(bg,pref='#183330'){if(contrast(bg,'#FFFFFF')>contrast(bg,'#000000'))return '#FFFFFF';if(HEX.test(pref)&&contrast(bg,pref)>=4.5)return pref;return '#000000';}
+// Item boundaries remain visible even when the saved border matches its surface.
+function mixColor(a,b,weight){return '#'+[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*weight+parseInt(b.slice(i,i+2),16)*(1-weight)).toString(16).padStart(2,'0')).join('');}
+function itemBorder(border,surface){return contrast(border,surface)>=1.6?border:mixColor(accessibleText(surface),surface,.32);}
 export function themeStyles(raw,primary,background){
  const t=resolveTheme(raw,primary,background),c=t.colors,out={};
  for(const [id] of COLOR_ROLES)out['--sf-'+id.replace(/[A-Z]/g,x=>'-'+x.toLowerCase())]=c[id];
@@ -49,6 +52,14 @@ export function themeStyles(raw,primary,background){
  }
  out['--sf-heading-on-page']=accessibleText(c.page,c.heading);out['--sf-heading-on-hero']=accessibleText(c.hero,c.heading);out['--sf-heading-on-surface']=accessibleText(c.surface,c.heading);out['--sf-link-on-surface']=accessibleText(c.surface,c.link);out['--sf-heading-readable']=accessibleText(c.hero,c.heading);out['--sf-text-readable']=accessibleText(c.page,c.text);
  out['--sf-muted-readable']=accessibleText(c.page,c.muted);out['--sf-link-readable']=accessibleText(c.page,c.link);
+ out['--sf-item-border']=itemBorder(c.border,c.surface);
+ out['--sf-item-card-border']=itemBorder(c.border,c.card);
+ out['--sf-item-card-divider']=mixColor(accessibleText(c.card),c.card,.18);
+ out['--sf-item-card-accent']=contrast(c.button,c.card)>=3?c.button:contrast(c.accent,c.card)>=3?c.accent:accessibleText(c.card);
+ out['--sf-item-divider']=mixColor(accessibleText(c.surface),c.surface,.18);
+ out['--sf-item-header']=mixColor(c.button,c.surface,.06);
+ out['--sf-item-on-header']=accessibleText(out['--sf-item-header']);
+ out['--sf-item-accent']=contrast(c.button,c.surface)>=3?c.button:contrast(c.accent,c.surface)>=3?c.accent:accessibleText(c.surface);
  out['--sf-body-font']=FONTS.find(f=>f[0]===t.bodyFont)?.[2]||FONTS[0][2];
  out['--sf-heading-font']=FONTS.find(f=>f[0]===t.headingFont)?.[2]||FONTS[1][2];
  return out;

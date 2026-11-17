@@ -69,3 +69,24 @@ test('legacy text overrides are ineffective and dark surfaces always use pure wh
  assert.match(css,/\.sf-registration-fields \.sf-member-number-booking :is\(label,\.sf-registration-label[^}]+color:#fff!important;-webkit-text-fill-color:#fff!important/);
  assert.match(css,/\.sf-member-number-booking :is\(input,select,textarea\)\{background:#fff!important;color:#17251d!important/);
 });
+
+test('item outlines stay visible when business borders match light or dark surfaces without changing saved colors',()=>{
+ for(const surface of ['#FFFFFF','#000000','#142339','#777777','#B51A00']){
+  const theme={...DEFAULT_THEME,palette:'custom',colors:{...DEFAULT_THEME.colors,surface,card:surface,border:surface,button:surface,accent:surface}};
+  const before=structuredClone(theme),vars=themeStyles(theme);
+  assert.deepEqual(theme,before);assert.equal(vars['--sf-border'],surface);
+  assert.ok(contrast(vars['--sf-item-border'],surface)>=1.6,surface);
+  assert.ok(contrast(vars['--sf-item-card-border'],surface)>=1.6,surface+' card');
+  assert.ok(contrast(vars['--sf-item-accent'],surface)>=3,surface+' accent');
+  assert.ok(contrast(vars['--sf-item-card-accent'],surface)>=3,surface+' card accent');
+  assert.ok(contrast(vars['--sf-item-on-header'],vars['--sf-item-header'])>=4.5,surface+' header');
+ }
+});
+test('all business palettes provide readable card headers and retain already-visible custom borders',()=>{
+ for(const preset of PALETTES){
+  const vars=themeStyles({...DEFAULT_THEME,palette:preset.id,colors:{...preset.colors}});
+  assert.ok(contrast(vars['--sf-item-on-header'],vars['--sf-item-header'])>=4.5,preset.name);
+  assert.ok(contrast(vars['--sf-item-border'],preset.colors.surface)>=1.6,preset.name);
+  if(contrast(preset.colors.border,preset.colors.surface)>=1.6)assert.equal(vars['--sf-item-border'],preset.colors.border);
+ }
+});
