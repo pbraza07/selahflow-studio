@@ -259,3 +259,8 @@
 @media(max-width:700px){.discoveryBusinessLogo{height:132px;padding:16px;border-radius:18px}}
 
 .discoveryBusinessLogo:focus-visible{outline:3px solid var(--brand-primary,#184e49);outline-offset:3px}
+
+/* Shared catalog boundaries remain visible in every business palette. */
+.site[data-selah-theme] .serviceCards article{border:1px solid var(--sf-item-card-border,#aebdb8);border-top:4px solid var(--sf-item-card-accent,var(--sf-button,#315e50));border-radius:16px;box-shadow:0 5px 18px #102b280a;display:flex;flex-direction:column;gap:12px;min-width:0}
+.site[data-selah-theme] .serviceCards article h3{margin:0;line-height:1.45}.site[data-selah-theme] .serviceCards article p{margin:0;line-height:1.65}
+.site[data-selah-theme] .serviceDetails{border-top-color:var(--sf-item-card-divider,#d9e0dd);margin-top:auto;padding-top:16px;gap:12px;flex-wrap:wrap}.site[data-selah-theme] .serviceDetails>span{min-width:0;flex-wrap:wrap}
