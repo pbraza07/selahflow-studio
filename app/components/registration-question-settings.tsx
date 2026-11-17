@@ -1,4 +1,5 @@
 'use client';
+import ItemEditor from './item-editor';
 import {useState} from 'react';
 import {registrationQuestions,questionNotificationEnabled} from '../../server/registration-questions.mjs';
 
@@ -9,6 +10,7 @@ type Props={config:any;setConfig:(updater:any)=>void;limit:number};
 export default function RegistrationQuestionSettings({config,setConfig,limit}:Props){
  const [form,setForm]=useState<FormType>('booking');
  const [target,setTarget]=useState('all');
+ const [newQuestion,setNewQuestion]=useState<string|null>(null);
  const serviceId=form==='booking'&&target.startsWith('service:')?target.slice(8):undefined;
  const sessionId=form==='booking'&&target.startsWith('session:')?target.slice(8):undefined;
  const editorForm:FormType=sessionId||serviceId?'booking':form;
@@ -57,11 +59,11 @@ export default function RegistrationQuestionSettings({config,setConfig,limit}:Pr
     services:(c.services||[]).map((s:any)=>({...s,...(s.questionRequired?{questionRequired:Object.fromEntries(Object.entries(s.questionRequired).filter(([id])=>id!==f.id))}:{})}))}));
   }else remove(f.id);
  };
- const add=()=>setConfig((c:any)=>({...c,bookingCustomFields:[...(c.bookingCustomFields||[]),{
-  id:'field_'+crypto.randomUUID().replace(/-/g,'').slice(0,12),label:'New question',type:'text',
+ const add=()=>{const id='field_'+crypto.randomUUID().replace(/-/g,'').slice(0,12);setNewQuestion(id);setConfig((c:any)=>({...c,bookingCustomFields:[...(c.bookingCustomFields||[]),{
+  id,label:'New question',type:'text',
   required:false,showInNotification:false,options:[],forms:[editorForm],
   ...(sessionId?{sessionIds:[sessionId]}:{}),...(serviceId?{serviceIds:[serviceId]}:{})
- }]}));
+ }]}));};
  const visibleReviewFields=config.bookingApprovalVisibleFields??[...REVIEW_FIELDS.map(([id])=>id),...fields.map((f:any)=>f.id)];
  const setReviewField=(id:string,enabled:boolean)=>setConfig((c:any)=>{const current=c.bookingApprovalVisibleFields??[...REVIEW_FIELDS.map(([key])=>key),...(c.bookingCustomFields||[]).map((f:any)=>f.id)];return {...c,bookingApprovalVisibleFields:enabled?[...new Set([...current,id])]:current.filter((key:string)=>key!==id)};});
  return <div className="sf-question-center" aria-label="Question manager">
@@ -72,7 +74,7 @@ export default function RegistrationQuestionSettings({config,setConfig,limit}:Pr
  {form==='booking'&&<label>Question scope<select value={target} onChange={e=>setTarget(e.target.value)}><option value="all">All booking questions</option><optgroup label="Services">{(config.services||[]).map((s:any)=><option translate="no" key={s.id} value={'service:'+s.id}>{s.name}</option>)}</optgroup><optgroup label="Sessions">{(config.bookableSessions||[]).map((s:any)=><option key={s.id} value={'session:'+s.id}>{s.name||config.services?.find((v:any)=>v.id===s.service)?.name||'Session'} · {s.date}</option>)}</optgroup></select></label>}</div>
  {(serviceId||sessionId)&&<p className="muted">Viewing questions for {service?.name||relatedSession?.name||'this session'}. Labels and notification choices belong to the registration form. Required overrides below apply to this {serviceId?'service':'session'}; an explicit unchecked override makes this question optional for the selected scope.</p>}
  <button type="button" className="outline" disabled={fields.length>=limit} onClick={add}>+ Add {serviceId?'service':sessionId?'session':form} question</button>
- {questions.map((f:any,i:number)=><section className="sf-settings-custom-field" key={f.id}>
+ {questions.map((f:any,i:number)=><ItemEditor key={f.id} title={f.label||"Question"} initialOpen={newQuestion===f.id} draft summary={<><p>{f.standard?"Standard field":f.type} · {f.required?"Required":"Optional"}</p><p>{f.help||""}</p>{f.options?.length>0&&<p>{f.options.join(", ")}</p>}</>}>
   <div className="button-row"><strong>{i+1}. {f.standard?'Standard field':f.serviceIds?.length?'Service question':f.sessionIds?.length?'Session question':'Shared question'}</strong>
    <button type="button" className="outline" disabled={i===0} onClick={()=>move(f.id,-1)} aria-label={'Move '+f.label+' up'}>Move up</button>
    <button type="button" className="outline" disabled={i===questions.length-1} onClick={()=>move(f.id,1)} aria-label={'Move '+f.label+' down'}>Move down</button>
@@ -101,7 +103,7 @@ export default function RegistrationQuestionSettings({config,setConfig,limit}:Pr
   {!f.standard&&<>
    {serviceId?(f.serviceIds?.includes(serviceId)?<button type="button" className="outline" onClick={()=>removeFromService(f)}>Remove question from this service</button>:<small>Shared question. Edit its visibility in Business settings → Questions.</small>):<button type="button" className="outline" onClick={()=>remove(f.id)}>Remove question</button>}
   </>}
- </section>)}
+ </ItemEditor>)}
  <details className="sf-question-delivery-details"><summary>Appointment details in push notifications</summary><p className="muted">These are appointment facts, not registration questions. Question answers use the Show in notifications checkbox above.</p>{APPOINTMENT_FIELDS.map(([id,label])=><label key={id}><input type="checkbox" checked={(config.bookingPushFields||['customerName','services','date']).includes(id)} onChange={e=>setConfig((c:any)=>{const current=c.bookingPushFields||['customerName','services','date'];return {...c,bookingPushFields:e.target.checked?[...new Set([...current,id])]:current.filter((key:string)=>key!==id)};})}/> {label}</label>)}</details>
  <details className="sf-question-delivery-details"><summary>Details displayed on approval review cards</summary><p className="muted">These controls affect the private review card, independently of push and email alerts. Activity date, time, duration and seat counts always appear.</p>{[...REVIEW_FIELDS,...fields.map((f:any)=>[f.id,f.label])].map(([id,label])=><label key={id}><input type="checkbox" checked={visibleReviewFields.includes(id)} onChange={e=>setReviewField(id,e.target.checked)}/> {label}</label>)}</details>
  <button type="submit" className="primary">Save questions</button>

@@ -8,6 +8,7 @@ import PageShortcuts from "./components/page-shortcuts";
 import LanguageSelector from './components/language-selector';
 import './languages.css';
 import './responsive.css';
+import './item-editors.css';
 import {isStaging} from '../server/staging-safety.mjs';
 
 const {alternates: _homeCanonical,...siteMetadata}=publicPageMetadata('/');

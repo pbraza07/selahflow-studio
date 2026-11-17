@@ -1,4 +1,5 @@
 'use client';
+import MembershipModal from './membership-modal';
 import {useMemo,useState} from 'react';
 import {Building2,Check,Copy,Eye,EyeOff,KeyRound,Mail,Pencil,Plus,RotateCcw,Search,ShieldAlert,Trash2,X} from 'lucide-react';
 import {BUSINESS_INDUSTRIES,US_STATES} from '../../lib/business-options';
@@ -149,7 +150,7 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
    <button className="outline" type="button" onClick={()=>{void copyCredentials('SelahFlow\nOwner: '+credentials.email+'\nTemporary password: '+credentials.temporaryPassword+'\nSign in: '+window.location.origin+'/login',false)}}><Copy size={16}/> Copy full sign-in message</button>
    <button type="button" className="outline" onClick={()=>{setCredentials(null);setRevealCredential(false)}}>Dismiss credentials</button>
   </section>}
-  {mode&&<section id="sf-admin-business-form" className="sf-platform-business-editor">
+  {mode&&<MembershipModal title={mode==='create'?'Add business':'Edit business'} busy={working} onClose={()=>setMode(null)}><section id="sf-admin-business-form" className="sf-platform-business-editor">{error&&<p role="alert" className="alert">{error}</p>}
    <header><h3>{mode==='create'?'Add a new business':'Edit business profile'}</h3><button className="outline" type="button" onClick={()=>{setMode(null);setError('')}} disabled={working}><X size={17}/> Close</button></header>
    <p>{mode==='create'?'Create a separate owner account and business workspace. Existing business accounts and data will remain untouched.':
      'Business profile edits update the existing workspace; services, members, appointments and client data are preserved. To change the owner sign-in address, use Update login email in the business list.'}</p>
@@ -174,7 +175,7 @@ export default function PlatformBusinessManager({businesses,primary,onChanged}:{
     <div className="sf-platform-form-actions"><button className="primary" type="submit" disabled={working}><Check size={16}/>{working?'Saving…':mode==='create'?'Create business account':'Save business changes'}</button>
      <button type="button" className="outline" onClick={()=>setMode(null)} disabled={working}>Cancel</button></div>
    </form>
-  </section>}
+  </section></MembershipModal>}
   <div className="sf-platform-manage-search"><Search size={18}/><input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find business to edit, remove or restore" aria-label="Search businesses to manage"/>
    <span>{items.length} businesses</span></div>
   <div className="sf-platform-business-rows">{items.map(b=><article key={b.id} className="sf-platform-business-row">

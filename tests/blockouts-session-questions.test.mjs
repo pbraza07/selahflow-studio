@@ -11,11 +11,12 @@ test('blockouts apply by date, staff and intersecting interval including full da
  assert.throws(()=>validateBlockouts({...config,bookingBlockouts:[{...config.bookingBlockouts[0],start:700,end:600}]}),/Check blockout/);
 });
 
-test('owner blockout schedules are collapsed until expanded',async()=>{
+test('owner blockout schedules use summary cards with modal draft editors',async()=>{
  const source=await readFile(new URL('../app/components/booking-blockout-settings.tsx',import.meta.url),'utf8');
- assert.match(source,/<details key=\{b\.id\} className="sf-booking-blockout"/);
- assert.match(source,/<summary>/);
- assert.doesNotMatch(source,/<details[^>]+open/);
+ assert.match(source,/<ItemEditor key=\{b.id\}/);
+ assert.match(source,/initialOpen=\{newId===b.id\}/);
+ assert.match(source,/draft summary=/);
+ assert.doesNotMatch(source,/<details/);
 });
 test('existing sessions and recurring occurrences receive only their selected questions; regular appointments retain global fields',()=>{
  const q=(id,sessionIds)=>({id,label:id,type:'text',required:true,showInNotification:false,forms:['booking'],sessionIds});

@@ -9,7 +9,7 @@ async function manager(initial){
  const source=await readFile(new URL('app/components/registration-question-settings.tsx',root),'utf8');
  const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText;
  const exports={},state=[];let index=0,config=structuredClone(initial);
- new Function('require','exports',compiled)(path=>path==='react'?{useState:initial=>{const i=index++;if(!(i in state))state[i]=initial;return [state[i],next=>{state[i]=typeof next==='function'?next(state[i]):next;}];}}:path.endsWith('registration-questions.mjs')?{registrationQuestions,questionNotificationEnabled}:require(path),exports);
+ new Function('require','exports',compiled)(path=>path==='./item-editor'?{default:'item-editor'}:path==='react'?{useState:initial=>{const i=index++;if(!(i in state))state[i]=initial;return [state[i],next=>{state[i]=typeof next==='function'?next(state[i]):next;}];}}:path.endsWith('registration-questions.mjs')?{registrationQuestions,questionNotificationEnabled}:require(path),exports);
  const render=()=>{index=0;return exports.default({config,setConfig:update=>{config=typeof update==='function'?update(config):update;},limit:25});};
  const nodes=(node,found=[])=>{if(!node||typeof node!=='object')return found;if(Array.isArray(node)){for(const child of node)nodes(child,found);}else if(node.props){found.push(node);nodes(node.props.children,found);}return found;};
  return {render,nodes,get config(){return config;},find:predicate=>nodes(render()).find(predicate)};
