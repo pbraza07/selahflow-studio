@@ -10,5 +10,5 @@ export async function deleteOwnerClient(db,{owner,businessId,client,clientId,con
   throw Error('Client not found in this business. Refresh your directory.');
  }
  if(!clientId||client.id!==clientId)throw Error('This client changed. Refresh before deleting.');
- return deleteClientPermanently(db,{owner,businessId,client,closeOpenCheckouts:true,cancelRecurringBilling:true,api});
+ return deleteClientPermanently(db,{owner,businessId,client,preserveCalendar:true,closeOpenCheckouts:true,cancelRecurringBilling:true,api});
 }
