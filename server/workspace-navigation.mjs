@@ -6,7 +6,7 @@ export const workspaceGroups = [
  {title:'History & account',items:['Guide','History','Security']}
 ];
 /** @type {Record<string,string>} */
-export const workspaceLabels={Sessions:'Bookable sessions',Team:'Team management',Payments:'Payment setup',Overview:'Dashboard',Calendar:'Schedule',Clients:'Clients',Services:'Services & pricing',Memberships:'Membership/Packages',Checkout:'Sales & payments',Reports:'Financial reports',History:'Activity history',Receptionist:'Client assistant',Branding:'Website & branding',Settings:'Business settings',Guide:'Owner guide',Security:'Account security'};
+export const workspaceLabels={Sessions:'Bookable sessions',Team:'Team management',Payments:'Payment setup',Overview:'Dashboard',Calendar:'Schedule',Clients:'Clients',Services:'Services & pricing',Memberships:'Membership / Packages',Checkout:'Sales & payments',Reports:'Financial reports',History:'Activity history',Receptionist:'Client assistant',Branding:'Website & branding',Settings:'Business settings',Guide:'Owner guide',Security:'Account security'};
 /** @type {Record<string,string>} */
 export const workspaceDescriptions = {
  Sessions:'Create and manage one-time or recurring sessions, times and capacity.',
