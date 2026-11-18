@@ -60,6 +60,11 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi,{in
    if(previous.status!=='expired'){await db.query('COMMIT');return {returnUrl:origin+'/membership/'+business.slug+'?checkout=success&session_id='+encodeURIComponent(previous.id)};}
   }
   const coupon=member.owner_coupon?await checkoutOwnerCoupon(member.owner_coupon,member,account,api):await checkoutCoupon(db,business.id,couponCode,Number(member.price_cents),account,api);
+  {
+   const originalCents=Number(member.price_cents);
+   const snapshot=coupon?{code:coupon.code,originalCents,discountCents:originalCents-coupon.total,totalCents:coupon.total,duration:coupon.duration}:null;
+   await db.query('UPDATE customer_memberships SET applied_coupon=$1::jsonb WHERE business_id=$2 AND id=$3',[snapshot?JSON.stringify(snapshot):null,business.id,member.id]);
+  }
   const count=Number(plan.interval_count)||1;
   let anchor=null;if(member.billing_start_override){const start=new Date((member.billing_start_override instanceof Date?member.billing_start_override.toISOString():String(member.billing_start_override)).slice(0,10)+'T12:00:00Z');let n=1;while(anniversary(start,n)<=new Date())n++;anchor=Math.floor(anniversary(start,n).getTime()/1000);}
   const commission=await reserveCommission(db,{businessId:business.id,kind:'membership',memberNumber:number,sourceId:member.id,account,grossCents:coupon?coupon.total:Number(member.price_cents)},api);

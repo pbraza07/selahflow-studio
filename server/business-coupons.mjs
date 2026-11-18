@@ -13,7 +13,7 @@ export async function quoteCoupon(db,businessId,code,cents){const c=(await db.qu
 export async function assignOwnerCoupon(db,businessId,memberId,code){
  const coupon=(await db.query('SELECT id,code,kind,value,duration,description FROM business_coupons WHERE business_id=$1 AND code=$2 AND active AND (expires_at IS NULL OR expires_at>now()) FOR SHARE',[businessId,String(code).trim().toUpperCase()])).rows[0];
  if(!coupon)throw Error('Choose an active coupon for this business.');
- const saved=await db.query("UPDATE customer_memberships SET owner_coupon=$3::jsonb WHERE business_id=$1 AND id=$2 AND status='pending_payment' AND stripe_checkout_session_id IS NULL AND stripe_signup_fingerprint IS NULL RETURNING id",[businessId,memberId,JSON.stringify(coupon)]);
+ const saved=await db.query("UPDATE customer_memberships SET applied_coupon=NULL,owner_coupon=$3::jsonb || jsonb_build_object('originalCents',price_cents,'discountCents',CASE WHEN $4='percent' THEN ROUND(price_cents::numeric*$5/100)::int ELSE LEAST(price_cents,$5) END) WHERE business_id=$1 AND id=$2 AND status='pending_payment' AND stripe_checkout_session_id IS NULL AND stripe_signup_fingerprint IS NULL RETURNING id",[businessId,memberId,JSON.stringify(coupon),coupon.kind,coupon.value]);
  if(!saved.rows.length)throw Error('This membership already started checkout. Its payment terms cannot be changed.');
  return coupon;
 }
