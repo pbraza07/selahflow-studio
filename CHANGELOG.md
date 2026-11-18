@@ -1,4 +1,6 @@
-# v1.3.248 — Complete, readable Excel exports
+# v1.3.248 release handoff — Complete, readable Excel exports
+
+Release source: v1.3.248
 
 Client exports now include profile, membership, imported and custom-answer fields as columns. Dark business themes no longer create white text on white worksheets; the writer corrects OOXML element ordering and ZIP dates. Membership-only clients can export individually. Existing appointment, paid-revenue and financial-status downloads use actual XLSX with nested record columns. A shared owner dashboard action exports business clients, histories, memberships/plans/credits, services/sessions/team/questions/time off, products/orders, bookings, reconciled payments, commissions, waivers and enrollments without UI pagination limits. Owner/business isolation and report reset rules remain intact; credentials and binary images are excluded. Download failures are shown inline. No migration or customer-data changes.
 
