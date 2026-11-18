@@ -1,5 +1,5 @@
 import {reserveCommission,attachCommissionSession} from './first-customer-commissions.mjs';
-import {checkoutCoupon} from './business-coupons.mjs';
+import {checkoutCoupon,checkoutOwnerCoupon} from './business-coupons.mjs';
 import {anniversary} from './membership-periods.mjs';
 import {createHash} from 'node:crypto';
 import {issueMemberId,memberRegistrationIdentity} from './member-id-policy.mjs';
@@ -59,7 +59,7 @@ export async function startMembershipCheckout(pool,body,origin,api=stripeApi,{in
    if(previous.status==='open'){await db.query('COMMIT');return {checkoutUrl:checkoutUrl(previous)};}
    if(previous.status!=='expired'){await db.query('COMMIT');return {returnUrl:origin+'/membership/'+business.slug+'?checkout=success&session_id='+encodeURIComponent(previous.id)};}
   }
-  const coupon=await checkoutCoupon(db,business.id,couponCode,Number(member.price_cents),account,api);
+  const coupon=member.owner_coupon?await checkoutOwnerCoupon(member.owner_coupon,member,account,api):await checkoutCoupon(db,business.id,couponCode,Number(member.price_cents),account,api);
   const count=Number(plan.interval_count)||1;
   let anchor=null;if(member.billing_start_override){const start=new Date((member.billing_start_override instanceof Date?member.billing_start_override.toISOString():String(member.billing_start_override)).slice(0,10)+'T12:00:00Z');let n=1;while(anniversary(start,n)<=new Date())n++;anchor=Math.floor(anniversary(start,n).getTime()/1000);}
   const commission=await reserveCommission(db,{businessId:business.id,kind:'membership',memberNumber:number,sourceId:member.id,account,grossCents:coupon?coupon.total:Number(member.price_cents)},api);

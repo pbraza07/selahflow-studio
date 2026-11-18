@@ -4,7 +4,7 @@ import {assertTestPayment} from './stripe-checkout.mjs';
 import {monthlyPeriod,anniversary,nextBillingAnchor} from './membership-periods.mjs';
 import {queueMembershipInvitation} from './membership-invitations.mjs';
 export async function membershipBillingAction(db,{business,owner,input,origin,api=stripeApi}){
- if(input.action==='sendPayment')return queueMembershipInvitation(db,{businessId:business.id,membershipId:String(input.id||''),origin,requestId:input.requestId});
+ if(input.action==='sendPayment')return queueMembershipInvitation(db,{businessId:business.id,membershipId:String(input.id||''),origin,couponCode:input.couponCode,requestId:input.requestId});
  if(input.action==='saveCoupon'){
   if(input.freeLifetime===true)input={...input,kind:'percent',value:100,duration:'forever',expiresAt:null};
   const code=String(input.code||'').trim().toUpperCase(),description=String(input.description||'').trim(),value=Number(input.value);

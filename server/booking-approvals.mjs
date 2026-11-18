@@ -70,6 +70,10 @@ export async function confirmBooking(options){
    if(!business)throw conflict('Business not found.');
    Object.assign(data,await bookingDiscount(client,{businessId:business.id,services:current,code:options.couponCode,membershipCovered:data.membershipCovered}));
   }
+  if(options.ownerNotificationOrigin&&options.couponCode&&!pendingId){
+   const business=(await client.query('SELECT id FROM businesses WHERE owner_id=$1',[owner])).rows[0];
+   Object.assign(data,await bookingDiscount(client,{businessId:business.id,services,code:options.couponCode,membershipCovered:data.membershipCovered}));
+  }
   if(options.autoConfirmRequest){
    const saved=options.autoConfirmRequest;
    if(!pendingRequest||pendingRequest.details!==saved.details||pendingRequest.date!==date||pendingRequest.staff_id!==staff||Number(pendingRequest.start_minute)!==start||Number(pendingRequest.duration)!==duration)throw conflict('Booking details changed. Check your registration before paying.');
