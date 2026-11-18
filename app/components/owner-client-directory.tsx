@@ -1,4 +1,5 @@
 'use client';
+import ExcelDownload from './excel-download';
 import ExpandableDetailsGroup from './expandable-details-group';
 import OwnerHistory from './owner-history';
 import OwnerBookingStatus from './owner-booking-status';
@@ -141,7 +142,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
     <button type="button" className="outline" disabled={importing} onClick={()=>importInput.current?.click()}><Upload size={17}/> {importing?'Importing…':'Import clients from Excel'}</button>
     <button type="button" className="primary" onClick={()=>beginEdit('new')}><UserPlus size={17}/> Add client</button>
     <button type="button" className="outline" onClick={()=>void reload()} disabled={busy}><RefreshCw size={16}/> Refresh</button>
-    <a className="primary sf-clients-export" href={exported()}><Download size={16}/> Export all to Excel</a>
+    <ExcelDownload className="primary sf-clients-export" href={exported()}><Download size={16}/> Export all to Excel</ExcelDownload>
    </div>
   </header>
   <div className="sf-clients-stats" aria-label="Client directory totals">
@@ -159,7 +160,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
     <button type="button" className="outline" onClick={()=>{setSelectedId(null);setAttendedOnly(false);}}><ArrowLeft size={17}/> Back to clients</button>
     <div className="sf-client-management-buttons">
      <button type="button" className="outline" onClick={()=>beginEdit(selected)}><Pencil size={16}/> Edit client</button><button type="button" className="outline" onClick={()=>onAddMembership({name:selected.name,email:selected.email,phone:selected.phone})}>Add membership</button>
-     <a className="primary sf-clients-export" href={exported(selected.id)}><Download size={16}/> Export this client to Excel</a>
+     <ExcelDownload className="primary sf-clients-export" href={exported(selected.id)}><Download size={16}/> Export this client to Excel</ExcelDownload>
      <button type="button" className="outline sf-client-remove" disabled={!!actionBusy} onClick={()=>void removeClient(selected)}><Trash2 size={16}/> Delete permanently</button>
      {selected.memberNumber&&!selected.idUsesSequence&&!/^[A-Z]{2}[0-9]{6}$/.test(selected.memberNumber)&&<button type="button" className="outline" disabled={!!actionBusy} onClick={()=>void replaceLegacyId(selected)}>Replace legacy ID with eight characters</button>}
     </div>
@@ -321,7 +322,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
     <p className="sf-client-last-visit"><CalendarDays size={14}/> Latest appointment: {humanDate(c.latestDate)}</p>
     <div className="sf-client-summary-actions"><button type="button" className="primary" onClick={()=>{setSelectedId(c.id);setProfileTab('History');setAttendedOnly(false);}}><ChevronRight size={16}/> View history</button>
      <button type="button" className="outline" aria-label={'Edit '+c.name} onClick={()=>beginEdit(c)}><Pencil size={15}/> Edit</button>
-     <a className="outline sf-clients-export" href={exported(c.id)} aria-label={'Export '+c.name+' to Excel'}><Download size={15}/> Excel</a>
+     <ExcelDownload className="outline sf-clients-export" href={exported(c.id)}><Download size={15}/> Excel</ExcelDownload>
      <button type="button" className="outline sf-client-remove" aria-label={'Delete '+c.name} disabled={!!actionBusy} onClick={()=>void removeClient(c)}><Trash2 size={15}/> Delete</button></div>
    </article>)}</div>:<div className="sf-client-empty"><Users size={26}/><h3>{clients.length?'No matching clients':'No client bookings yet'}</h3><p>{clients.length?'Try searching for another name or service.':'Client profiles and attendance will appear here as customers book and appointments are marked attended.'}</p><button type="button" className="primary" onClick={onBook}>Create appointment</button></div>}
   </>}

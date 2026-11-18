@@ -12,6 +12,7 @@ import {validOrigin} from '../../../../server/security.mjs';
 import {buildClientDirectory,clientWorkbookSheets,pendingBookingAsAppointment} from '../../../../server/client-history.mjs';
 import {applyClientProfiles,findClientForEdit,sameClientContact,validateClientInput} from '../../../../server/client-profile-logic.mjs';
 import {createClientXlsx} from '../../../../server/client-xlsx.mjs';
+import {businessExportSheets} from '../../../../server/business-export.mjs';
 import {resolveTheme} from '../../../../server/themes.mjs';
 import {registrationAnswerRows,dateOnly} from '../../../../server/client-registration-fields.mjs';
 import {customRegistrationFields,validateStandardRegistration} from '../../../../server/registration-questions.mjs';
@@ -93,13 +94,16 @@ export async function GET(req:Request){
   if(url.searchParams.get('export')!=='xlsx')
    return Response.json({clients,bookings,archived,formFields,registrationConfig,total:clients.length},{headers:noStore});
   const id=url.searchParams.get('clientId');
-  if(id&&!validId(id))return Response.json({error:'Invalid client.'},{status:400,headers:noStore});
+  if(id&&!validClientId(id))return Response.json({error:'Invalid client.'},{status:400,headers:noStore});
   const selected=id?clients.filter(c=>c.id===id):clients;
   if(id&&!selected.length)return Response.json({error:'This client is not in the current business.'},{status:404,headers:noStore});
   const theme=resolveTheme(settings.theme,business.brand_primary,business.brand_background);
-  const xlsx=createClientXlsx(clientWorkbookSheets(selected),theme.colors);
+  const fullBusiness=url.searchParams.get('scope')==='business'&&!id;
+  const sheets=clientWorkbookSheets(selected);
+  if(fullBusiness)sheets.push(...await businessExportSheets(pool,owner,business,settings));
+  const xlsx=createClientXlsx(sheets,theme.colors);
   const slug=String(business.slug||'business').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,48);
-  const suffix=id?'client-'+id.slice(0,10):'all-clients';
+  const suffix=id?'client-'+id.slice(0,10):fullBusiness?'business':'all-clients';
   const date=new Date().toISOString().slice(0,10);
   return new Response(new Uint8Array(xlsx),{headers:{
    ...noStore,'Content-Type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
