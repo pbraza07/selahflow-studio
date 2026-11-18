@@ -1,3 +1,4 @@
+import {couponTotal} from './business-coupons.mjs';
 import {randomBytes} from 'node:crypto';
 import {tokenHash} from './security.mjs';
 import {validEmail} from './notification-delivery.mjs';
@@ -27,7 +28,7 @@ function eligible(m,now,destination){
 }
 const base=m=>({kind:m.billing_type==='package'?'package':'membership',sourceId:m.id,businessId:m.business_id,
  destination:email(m.customer_email),businessName:m.business_name,clientName:m.customer_name,label:m.plan_name,
- amountCents:Number(m.price_cents),sourceAmountCents:Number(m.price_cents),eligibleSince:m.created_at,lastNoticeAt:m.stripe_subscription_id?null:m.last_notice_at||null});
+ amountCents:couponTotal(m.owner_coupon,Number(m.price_cents)),sourceAmountCents:Number(m.price_cents),eligibleSince:m.created_at,lastNoticeAt:m.stripe_subscription_id?null:m.last_notice_at||null});
 async function readMember(pool,businessId,sourceId){return (await pool.query(memberSelect+' WHERE m.business_id=$1 AND m.id=$2',[businessId,sourceId])).rows[0];}
 
 export async function listMembershipReminderCandidates(pool,{businessId,destination,now=new Date()}){
@@ -95,9 +96,9 @@ export async function prepareMembershipReminder(pool,{businessId,sourceId,origin
   if(session.id!==m.stripe_checkout_session_id||session.client_reference_id!==m.id||session.metadata?.membership_id!==m.id||session.metadata?.selahflow_business_id!==m.business_id||session.currency!=='usd'||session.payment_status!=='unpaid'||!['open','expired'].includes(session.status))return null;
   if(session.status==='open'){
    const recipient=email(session.customer_details?.email||session.customer_email);
-   if(recipient!==email(m.customer_email)||m.stripe_customer_id&&id(session.customer)!==m.stripe_customer_id||!Number.isSafeInteger(session.amount_total)||session.amount_total!==Number(m.first_invoice_cents??m.price_cents)||!membershipCheckoutPaymentUrl(session.url)||session.expires_at&&(!epoch(session.expires_at)||epoch(session.expires_at)<=now))return null;
+   if(recipient!==email(m.customer_email)||m.stripe_customer_id&&id(session.customer)!==m.stripe_customer_id||!Number.isSafeInteger(session.amount_total)||session.amount_total!==Number(m.first_invoice_cents??couponTotal(m.owner_coupon,Number(m.price_cents)))||!membershipCheckoutPaymentUrl(session.url)||session.expires_at&&(!epoch(session.expires_at)||epoch(session.expires_at)<=now))return null;
    item.amountCents=session.amount_total;item.url=membershipCheckoutPaymentUrl(session.url);item.actionLabel=m.billing_type==='package'?'Pay for package':'Pay for membership';
-  }else item.amountCents=Number(m.first_invoice_cents??m.price_cents);
+  }else item.amountCents=Number(m.first_invoice_cents??couponTotal(m.owner_coupon,Number(m.price_cents)));
   if(!amount(item.amountCents))return null;
   if(session.payment_intent){const reference=id(session.payment_intent);if(!/^pi_[A-Za-z0-9]+$/.test(reference||''))return null;const intent=typeof session.payment_intent==='object'?session.payment_intent:await api('payment_intents/'+reference,{method:'GET',account:m.stripe_account_id});assertTestPayment(intent);if(intent.id!==reference||id(intent.customer)&&id(session.customer)&&id(intent.customer)!==id(session.customer)||m.stripe_customer_id&&id(intent.customer)!==m.stripe_customer_id||['processing','succeeded','requires_capture'].includes(intent.status))return null;}
  }

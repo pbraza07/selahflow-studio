@@ -51,6 +51,19 @@ test('owner payment invitation has exact member and plan details, an expiring pr
  assert.equal((await pg.query('SELECT status FROM customer_memberships')).rows[0].status,'pending_payment');
  }finally{await pg.close();}
 });
+test('owner discount survives the emailed link and later coupon deletion',async()=>{
+ const {pg,db}=await fixture();try{
+  await membershipBillingAction(db,{business:{id:'biz'},input:{action:'saveCoupon',code:'SAVE25',kind:'percent',value:25,duration:'once'}});
+  await queueMembershipInvitation(db,{businessId:'biz',membershipId:'11111111-1111-4111-8111-111111111111',origin:'https://example.test',couponCode:'save25'});
+  const {message}=(await pg.query('SELECT message FROM membership_payment_invitations')).rows[0];
+  assert.ok(message.text.includes('Amount due now: $22.50'));
+  await pg.query('DELETE FROM business_coupons');
+  const member=await invitationDetails(db,message.actions[0].url.split('/').at(-1));
+  const {checkoutOwnerCoupon}=await import('../server/business-coupons.mjs');
+  const discount=await checkoutOwnerCoupon(member.owner_coupon,member,'acct_test',async(path,o)=>{assert.equal(o.params.percent_off,25);assert.equal(o.params.duration,'once');return {id:'coupon_test'};});
+  assert.equal(discount.total,2250);
+ }finally{await pg.close();}
+});
 test('paid renewal resets allowance once, preserves prior usage and accepts only the stored discounted invoice amount',async()=>{
  const {pg,db}=await fixture();try{
  await pg.exec("UPDATE customer_memberships SET stripe_account_id='acct_test',stripe_sessions_per_period=8,first_invoice_cents=2250,renewal_invoice_cents=3000");
