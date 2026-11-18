@@ -1,3 +1,4 @@
+import {assignOwnerCoupon} from '../../../../server/business-coupons.mjs';
 import {deletionErrorMessage} from '../../../../server/deletion-error.mjs';
 import {reconcileMembershipPayment} from '../../../../server/membership-reconciliation.mjs';
 import {membershipInvitationSummary} from '../../../../server/membership-invitations.mjs';
@@ -293,6 +294,7 @@ export async function POST(req:Request){
     await identityLock.query('SELECT pg_advisory_xact_lock(hashtext($1),hashtext($2))',[business.id,identityKey]);
     const prior=await identityLock.query("SELECT id,member_number,status,customer_name,customer_email,date_of_birth FROM customer_memberships WHERE business_id=$1 AND ((lower(trim(regexp_replace(customer_name,'\\s+',' ','g')))=$2 AND date_of_birth=$3::date) OR (lower(trim(regexp_replace(customer_name,'\\s+',' ','g')))=$2 AND lower(trim(customer_email))=$4)) ORDER BY created_at ASC NULLS LAST,id ASC LIMIT 1",[business.id,normalizedName,dob,email]);
     if(prior.rows[0]){
+     if(input.couponCode)throw Error("This member already exists. Apply the coupon using Send for Payment on their enrollment.");
      if(prior.rows[0].date_of_birth&&new Date(prior.rows[0].date_of_birth).toISOString().slice(0,10)!==dob)throw Error('A member with this name and email already exists with a different birth date. Review the existing profile.');
      await identityLock.query("UPDATE customer_memberships SET customer_phone=CASE WHEN $1<>'' THEN $1 ELSE customer_phone END,registration_answers=CASE WHEN registration_answers='{}'::jsonb THEN $2::jsonb ELSE registration_answers END,registration_field_labels=CASE WHEN registration_field_labels='{}'::jsonb THEN $3::jsonb ELSE registration_field_labels END,updated_at=now() WHERE id=$4 AND business_id=$5",[phone,JSON.stringify(customAnswers),JSON.stringify(fieldLabels),prior.rows[0].id,business.id]);
      await identityLock.query('COMMIT');
@@ -303,6 +305,7 @@ export async function POST(req:Request){
     const number=await issueMemberId(identityLock,{businessId:business.id,name,firstName:input.firstName,lastName:input.lastName,dateOfBirth:dob,requested});
     const result=await identityLock.query("INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,status,stripe_account_id,member_number,sessions_included,sessions_used,date_of_birth,customer_phone,registration_answers,registration_field_labels) VALUES($1,$2,$3,$4,$5,$6,'pending_payment','',$7,$8,0,$9,$10,$11::jsonb,$12::jsonb) ON CONFLICT DO NOTHING RETURNING id,member_number",[randomUUID(),business.id,plan.id,plan.price_cents,name,email,number,0,dob,phone,JSON.stringify(customAnswers),JSON.stringify(fieldLabels)]);
     if(result.rows[0]){
+     if(input.couponCode)await assignOwnerCoupon(identityLock,business.id,result.rows[0].id,input.couponCode);
      const matchingProfile=(await identityLock.query(
       "SELECT id FROM business_client_profiles WHERE owner=(SELECT owner_id FROM businesses WHERE id=$1) AND deleted_at IS NULL AND (member_number=$2 OR (member_number IS NULL AND lower(trim(name))=$3 AND lower(trim(email))=$4)) ORDER BY CASE WHEN member_number=$2 THEN 0 ELSE 1 END,created_at ASC LIMIT 1 FOR UPDATE",
       [business.id,number,normalizedName,email]

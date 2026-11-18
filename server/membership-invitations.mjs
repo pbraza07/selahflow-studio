@@ -1,13 +1,15 @@
+import {assignOwnerCoupon,couponTotal} from './business-coupons.mjs';
 import {membershipUsageSummary} from './membership-weekly.mjs';
 import {membershipAnchor,nextBillingAnchor} from './membership-periods.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {tokenHash} from './security.mjs';
 import {sendNotificationChannel,validEmail} from './notification-delivery.mjs';
-export async function queueMembershipInvitation(db,{businessId,membershipId,origin,requestId}){
+export async function queueMembershipInvitation(db,{businessId,membershipId,origin,requestId,couponCode=null}){
  const r=(await db.query("SELECT m.*,p.name AS plan_name,p.description,p.weekly_sessions,p.sessions_included AS plan_sessions,p.interval_unit,p.interval_count,b.name AS business_name FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id JOIN businesses b ON b.id=m.business_id WHERE m.id=$1 AND m.business_id=$2 AND b.status='active' FOR UPDATE OF m",[membershipId,businessId])).rows[0];
  if(!r||r.stripe_subscription_id||r.status==='active')throw Error('Choose a member awaiting an initial membership payment.');
  const id=requestId??randomUUID();if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id))throw Error('Invalid payment invitation request.');
  const previous=(await db.query('SELECT business_id,membership_id FROM membership_payment_invitations WHERE id=$1',[id])).rows[0];if(previous){if(previous.business_id!==businessId||previous.membership_id!==membershipId)throw Error('Invalid payment invitation request.');return {queued:true,alreadyQueued:true};}
+ if(couponCode)r.owner_coupon=await assignOwnerCoupon(db,businessId,membershipId,couponCode);
  const ready=(await db.query('SELECT 1 FROM merchant_accounts WHERE business_id=$1 AND charges_enabled=true AND onboarding_complete=true',[businessId])).rows.length>0;if(!ready)throw Error('Connect and verify Stripe before sending a membership payment invitation.');
  if(!validEmail(r.customer_email))throw Error('Enter the member’s valid payment email first.');
  const host=new URL(origin);if(host.protocol!=='https:'&&host.hostname!=='localhost')throw Error('A secure application URL is required.');
@@ -17,6 +19,7 @@ export async function queueMembershipInvitation(db,{businessId,membershipId,orig
   message.subject='Your service package payment invitation — '+r.business_name;
   message.text=`Hello ${r.customer_name},\n\n${r.business_name} has prepared your service package: ${r.plan_name}.\n${r.description}\nClient ID: ${r.member_number}\nTotal sessions: ${r.plan_sessions}\nOne-time price: $${(r.price_cents/100).toFixed(2)}.\nNo automatic renewal or monthly reset. ${r.package_valid_days?'Use sessions within '+r.package_valid_days+' days after verified payment.':'Credits remain until used and activate after verified payment.'}\n\nPay securely: ${url}\nThis private link expires in 30 days; please do not forward it.`;
  }
+ if(r.owner_coupon){message.text=message.text.replace('Price: ','Regular price: ').replace('One-time price:','Regular one-time price:');message.text+=`\nCoupon ${r.owner_coupon.code} applied. Amount due now: $${(couponTotal(r.owner_coupon,r.price_cents)/100).toFixed(2)}. ${r.owner_coupon.duration==='forever'?'Applies to every payment.':'Applies to the first payment only.'}`;}
  await db.query("INSERT INTO membership_payment_invitations(business_id,membership_id,token_hash,expires_at,destination,message,id) VALUES($1,$2,$3,now()+interval '30 days',$4,$5::jsonb,$6)",[businessId,membershipId,tokenHash(token),r.customer_email,JSON.stringify(message),id]);return {queued:true};
 }
 export async function invitationDetails(db,token){if(!/^[a-f0-9]{64}$/.test(token||''))throw Error('Payment invitation unavailable.');const r=(await db.query("SELECT i.id AS invitation_id,m.*,b.slug,b.name AS business_name,p.name AS plan_name,p.description,p.weekly_sessions,p.sessions_included AS plan_sessions,p.interval_unit,p.interval_count FROM (SELECT id::text,membership_id,business_id,token_hash,expires_at,NULL::text AS reminder_destination FROM membership_payment_invitations UNION ALL SELECT membership_id,membership_id,business_id,token_hash,expires_at,destination FROM membership_payment_reminder_links) i JOIN customer_memberships m ON m.id=i.membership_id AND m.business_id=i.business_id JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE i.token_hash=$1 AND i.expires_at>now() AND b.status='active' AND (i.reminder_destination IS NULL OR i.reminder_destination=lower(trim(m.customer_email)))",[tokenHash(token)])).rows[0];if(!r||r.stripe_subscription_id)throw Error('Payment invitation expired or membership already enrolled.');return r;}
