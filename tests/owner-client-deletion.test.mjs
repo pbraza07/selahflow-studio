@@ -228,7 +228,11 @@ test('confirmed directory deletion cancels the verified subscription for the sel
   assert.equal(retained.status,'Confirmed');
   assert.equal(JSON.parse(retained.data).name,'Test Person');
   assert.equal(JSON.parse(retained.data).clientProfileDeleted,true);
-  assert.equal(JSON.parse(retained.data).email,undefined);
+  const details=JSON.parse(retained.data).calendarClientDetails;
+  assert.equal(details.email,'test@example.test');
+  assert.equal(details.memberNumber,'TP010190');
+  assert.equal(details.dateOfBirth,'1990-01-01');
+  assert.equal(JSON.parse(retained.data).memberNumber,undefined,'retired member ID is historical only');
   assert.equal((await pg.query("SELECT appointment FROM slots WHERE minute=600")).rows[0].appointment,'visit');
  }finally{await pg.close();}
 });

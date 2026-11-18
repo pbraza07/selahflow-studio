@@ -161,7 +161,7 @@ useEffect(()=>{
  document.addEventListener('keydown',keyboard);
  return()=>{document.body.style.overflow=previous;document.removeEventListener('keydown',keyboard);desktop.removeEventListener('change',close);menuButton.current?.focus();};
 },[mobile]);
-async function refresh(forceConfig=false){try{const r=await fetch('/api/studio');const d=await r.json() as Any;if(r.status===401){window.location.assign('/login');return;}if(!r.ok)throw Error(d.error);if(forceConfig||!draftGuard.current){setConfig(d.config);setSavedConfig(JSON.stringify(d.config));}setReportBusinessName(d.reportBusinessName||d.config.name);setAppointments(d.appointments);setEvents(d.events);setError('');}catch(e){setError((e as Error).message);}finally{setLoading(false);}}
+async function refresh(forceConfig=false){try{const r=await fetch('/api/studio');const d=await r.json() as Any;if(r.status===401){window.location.assign('/login');return;}if(!r.ok)throw Error(d.error);if(forceConfig||!draftGuard.current){setConfig(d.config);setSavedConfig(JSON.stringify(d.config));}setReportBusinessName(d.reportBusinessName||d.config.name);setAppointments(d.appointments.map((booking:Any)=>booking.clientProfileDeleted?{...booking,...booking.calendarClientDetails}:booking));setEvents(d.events);setError('');}catch(e){setError((e as Error).message);}finally{setLoading(false);}}
 const refreshTeamAllowance=useCallback(async()=>{try{
  const r=await fetch('/api/business',{cache:'no-store'}),d=await r.json();
  if(r.ok&&d.business){setTeamLimit(d.business.teamLimit??1);setCurrentPlan(d.business.planBenefits?.code||'free');setPlanBenefits(d.business.planBenefits||null);}
@@ -557,6 +557,8 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
  <div style={{padding:24,display:'grid',gap:16}}>
  <h3><span translate="no">{appointmentDetail.name}</span> <span className={'status '+String(appointmentDetail.status).toLowerCase().replace(' ','-')}>{appointmentDetail.status}</span></h3>
  {view==='Calendar'&&<button type="button" className="outline" disabled={busy} onClick={()=>void deleteCalendarAppointment(appointmentDetail)}>Delete appointment</button>}
+ {appointmentDetail.memberNumber&&<p><strong>Member ID:</strong> <span translate="no">{appointmentDetail.memberNumber}</span></p>}
+ {appointmentDetail.dateOfBirth&&<p><strong>Date of birth:</strong> {appointmentDetail.dateOfBirth}</p>}
  <p><strong>Booking reference:</strong> {appointmentDetail.id}</p>
  <p><strong>Email:</strong> {appointmentDetail.email?<a translate="no" href={'mailto:'+appointmentDetail.email}>{appointmentDetail.email}</a>:'Not provided'}</p>
  <p><strong>Phone:</strong> {appointmentDetail.phone?<a translate="no" href={'tel:'+appointmentDetail.phone}>{appointmentDetail.phone}</a>:'Not provided'}</p>
@@ -564,7 +566,7 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
  <p><strong>Quoted price:</strong> {cash(appointmentDetail.price||0)}</p>
  <p><strong>Duration:</strong> {appointmentDetail.duration} minutes</p>
  {appointmentDetail.waiverFollowup&&<p role="status">{appointmentDetail.waiverFollowup.status==='signed'?'Waiver signed after booking.':'Waiver pending · Signing link requested by email.'}</p>}
- <OwnerOnsitePayment appointment={appointmentDetail} config={config} onChanged={async()=>{await refresh();setAppointmentDetail(null);}}/><AttendanceActions appointment={appointmentDetail} busy={busy} onStatus={(a,s)=>void status(a,s)}/>{appointmentDetail.customAnswers&&Object.keys(appointmentDetail.customAnswers).length>0&&<div><h3>Booking questions</h3>{Object.entries(appointmentDetail.customAnswers).map(([question,answer])=><p key={question}><strong>{config.bookingCustomFields?.find((field:Any)=>field.id===question)?.label||question}:</strong> {String(answer)}</p>)}</div>}
+ <OwnerOnsitePayment appointment={appointmentDetail} config={config} onChanged={async()=>{await refresh();setAppointmentDetail(null);}}/><AttendanceActions appointment={appointmentDetail} busy={busy} onStatus={(a,s)=>void status(a,s)}/>{appointmentDetail.customAnswers&&Object.keys(appointmentDetail.customAnswers).length>0&&<div><h3>Booking questions</h3>{Object.entries(appointmentDetail.customAnswers).map(([question,answer])=><p key={question}><strong>{appointmentDetail.customFieldLabels?.[question]||config.bookingCustomFields?.find((field:Any)=>field.id===question)?.label||question}:</strong> {String(answer)}</p>)}</div>}
  </div></section></div>}
   {rescheduling&&<div className="sf-roster-overlay" onMouseDown={e=>{if(e.target===e.currentTarget&&!rescheduleBusy)setRescheduling(null);}}><section id="sf-reschedule-dialog" className="sf-roster-dialog sf-session-reschedule-panel" role="dialog" aria-modal="true" aria-labelledby="sf-reschedule-title" tabIndex={-1}>
    <div className="sf-session-reschedule-heading">

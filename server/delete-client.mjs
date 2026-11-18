@@ -90,7 +90,12 @@ export async function deleteClientPermanently(db,{owner,businessId,client,preser
   if(preserveCalendar){
    for(const row of appointments){
     const source=object(row.data);
-    const snapshot={clientProfileDeleted:true};
+    if(source.clientProfileDeleted)continue;
+    const calendarClientDetails={};
+    for(const key of ['name','firstName','lastName','email','phone','memberNumber','dateOfBirth','customAnswers','customFieldLabels','customFieldTypes']){
+     if(source[key]!=null)calendarClientDetails[key]=source[key];
+    }
+    const snapshot={clientProfileDeleted:true,calendarClientDetails};
     for(const key of ['name','services','serviceIds','sessionId','price','paymentStatus','membershipCovered','created']){
      if(source[key]!==undefined)snapshot[key]=source[key];
     }
