@@ -1,3 +1,4 @@
+import {appendRecordColumns} from './export-records.mjs';
 import {createHash} from 'node:crypto';
 
 /** Appointment-backed customer directory. Only explicitly checked-in or completed
@@ -181,10 +182,20 @@ export function clientWorkbookSheets(clients){
     [...new Set(visitsOnDay.flatMap(v=>v.serviceNames))].join(', '),visitsOnDay.length]);
   }
  }
- return [
+ const sheets=[
   {name:'Clients',title:'Client directory',rows:summary,widths:[29,35,21,19,19,17,34,22]},
   {name:'Service History',title:'Client service history',rows:visits,widths:[27,33,19,22,34,27,26,23,25,18,15]},
   {name:'Attendance Days',title:'Verified attendance days',rows:attendance,widths:[27,33,21,42,21]},
   {name:'Booking Answers',title:'Customer submitted booking details',rows:responses,widths:[27,33,23,19,20,32,38,38]}
  ];
+ const answerColumns=rows=>Object.fromEntries((rows||[]).map(a=>[a.label+' ['+a.id+']',a.value]));
+ appendRecordColumns(sheets[0],selected.map(c=>{
+  const {history,firstBooking,latestBookingAnswers,membershipAnswers,registrationAnswers,registrationFieldLabels,editToken,...details}=c;
+  return {...details,registrationAnswers:Object.fromEntries(Object.entries(registrationAnswers||{}).map(([k,v])=>[(registrationFieldLabels?.[k]||k)+' ['+k+']',v])),membershipAnswers:answerColumns(membershipAnswers),latestBookingAnswers:answerColumns(latestBookingAnswers)};
+ }));
+ appendRecordColumns(sheets[1],selected.flatMap(c=>(c.history||[]).map(v=>{
+  const {answers,originalAnswers,...details}=v;
+  return {clientId:c.id,memberNumber:c.memberNumber,...details,answers:answerColumns(answers),originalAnswers:answerColumns(originalAnswers)};
+ })));
+ return sheets;
 }
