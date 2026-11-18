@@ -10,7 +10,17 @@ export async function membershipBillingAction(db,{business,owner,input,origin,ap
   const code=String(input.code||'').trim().toUpperCase(),description=String(input.description||'').trim(),value=Number(input.value);
   if(!/^[A-Z0-9_-]{3,40}$/.test(code)||description.length>500||!['percent','fixed'].includes(input.kind)||!Number.isInteger(value)||value<1||input.kind==='percent'&&value>100||value>100000000||!['once','forever'].includes(input.duration))throw Error('Enter a valid coupon code, discount and duration.');
   const expiry=input.expiresAt?new Date(input.expiresAt):null;if(expiry&&!Number.isFinite(expiry.getTime()))throw Error('Enter a valid coupon expiry.');
+  if(input.id){
+   const updated=await db.query('UPDATE business_coupons SET code=$3,description=$4,kind=$5,value=$6,duration=$7,expires_at=$8,stripe_coupon_id=NULL,stripe_account_id=NULL WHERE business_id=$1 AND id=$2 RETURNING id',[business.id,input.id,code,description,input.kind,value,input.duration,expiry]);
+   if(!updated.rows.length)throw Error('Coupon no longer exists in this business.');
+   return {ok:true};
+  }
   await db.query('INSERT INTO business_coupons(business_id,code,description,kind,value,duration,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7)',[business.id,code,description,input.kind,value,input.duration,expiry?.toISOString()||null]);return {ok:true};
+ }
+ if(input.action==='deleteCoupon'){
+  const removed=await db.query('DELETE FROM business_coupons WHERE business_id=$1 AND id=$2 RETURNING id',[business.id,input.id]);
+  if(!removed.rows.length)throw Error('Coupon no longer exists in this business.');
+  return {ok:true};
  }
  if(input.action==='toggleCoupon'){await db.query('UPDATE business_coupons SET active=$1 WHERE business_id=$2 AND id=$3',[input.active===true,business.id,input.id]);return {ok:true};}
  const member=(await db.query('SELECT m.*,p.interval_unit,p.interval_count,p.name AS plan_name FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE m.id=$1 AND m.business_id=$2 FOR UPDATE OF m',[input.id,business.id])).rows[0];
