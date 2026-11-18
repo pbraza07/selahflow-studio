@@ -119,7 +119,7 @@ test('client-management endpoints enforce owner scope and require explicit perma
  assert.match(screen,/Edit client/);
  assert.match(screen,/Delete permanently/);
  assert.match(screen,/aria-modal="true"/);
- assert.match(screen,/Removed clients/);
+ assert.match(screen,/Deleted clients/);
  assert.match(screen,/Restore/);
  assert.match(css,/\.sf-client-editor-backdrop/);
  assert.match(css,/var\(--sf-surface/);

@@ -226,3 +226,14 @@ test('confirmed directory deletion cancels the verified subscription for the sel
   assert.equal((await pg.query('SELECT id FROM appointments')).rows.length,0);
  }finally{await pg.close();}
 });
+
+test('owner can move a client to Deleted clients and restore the same bookings',async()=>{
+ const {pg,post}=await fixture();try{
+  for(const [action,archived] of [['archive',true],['restore',false]]){
+   const response=await post({action,clientId:profile});
+   assert.equal(response.status,200,await response.text());
+   assert.equal((await pg.query('SELECT archived FROM business_client_profiles WHERE id=$1',[profile])).rows[0].archived,archived);
+   assert.equal((await pg.query("SELECT id FROM appointments WHERE owner='owner'")).rows[0].id,'visit');
+  }
+ }finally{await pg.close();}
+});

@@ -70,7 +70,7 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
  });
  for(const m of members){
   const virtualId='membership-'+m.id;
-  const profile=profiles.rows.find((p:any)=>p.source_key===virtualId);
+  const profile=profiles.rows.find((p:any)=>p.source_key===virtualId||(m.member_number&&p.member_number===m.member_number));
   // A membership without appointments is still a client card. Its persisted
   // profile is the source of truth when the owner archives/restores it.
   if(profile?.archived&&!profile.deleted_at)continue;
@@ -99,8 +99,10 @@ export async function GET(req:Request){
   const settings=JSON.parse(business.settings_data||'{}');
   const {clients,bookings,archived,formFields,registrationConfig}=await directory(owner,pool,settings);
   const url=new URL(req.url);
-  if(url.searchParams.get('export')!=='xlsx')
-   return Response.json({clients,bookings,archived,formFields,registrationConfig,total:clients.length},{headers:noStore});
+  if(url.searchParams.get('export')!=='xlsx'){
+   const permanentDeletions=(await pool.query('SELECT id,deleted_at FROM client_deletion_audit WHERE business_id=$1 ORDER BY deleted_at DESC',[business.id])).rows;
+   return Response.json({clients,bookings,archived,permanentDeletions,formFields,registrationConfig,total:clients.length},{headers:noStore});
+  }
   const id=url.searchParams.get('clientId');
   if(id&&!validClientId(id))return Response.json({error:'Invalid client.'},{status:400,headers:noStore});
   const selected=id?clients.filter(c=>c.id===id):clients;
@@ -165,7 +167,14 @@ export async function POST(req:Request){
     responseId=randomUUID();
     await db.query('INSERT INTO business_client_profiles(id,owner,name,email,phone,notes,member_number,date_of_birth,registration_answers,registration_field_labels,first_name,last_name,registration_identity) VALUES($1,$2,$3,$4,$5,$6,$7,$8::date,$9::jsonb,$10::jsonb,$11,$12,$13::uuid)',
      [responseId,owner,input.name,input.email,input.phone,input.notes,memberNumber||null,dateOfBirth||null,JSON.stringify(registrationAnswers),JSON.stringify(registrationFieldLabels),String(body.firstName).trim(),String(body.lastName).trim(),await memberRegistrationIdentity(db,business.id,memberNumber)]);
-   }else if(body.action==='archive'||body.action==='delete'){
+   }else if(body.action==='archive'){
+    if(!selected||profile?.deleted_at)throw Error('Select an active client to move to Deleted clients.');
+    if(profile)await db.query('UPDATE business_client_profiles SET archived=TRUE,updated_at=now() WHERE owner=$1 AND id=$2',[owner,id]);
+    else{
+     responseId=randomUUID();
+     await db.query('INSERT INTO business_client_profiles(id,owner,source_key,anchor_appointment_id,name,email,phone,date_of_birth,member_number,registration_identity,archived) VALUES($1,$2,$3,$4,$5,$6,$7,$8::date,$9,$10::uuid,TRUE)',[responseId,owner,id,selected.history?.[0]?.id||null,selected.name,selected.email||'',selected.phone||'',selected.dateOfBirth||null,selected.memberNumber||null,selected.memberNumber?await memberRegistrationIdentity(db,business.id,selected.memberNumber):null]);
+    }
+   }else if(body.action==='delete'){
     await deleteOwnerClient(db,{owner,businessId:business.id,client,clientId:id,confirmPhrase:body.confirmPhrase});
    }else if(body.action==='deleteArchived'){
     const ids=body.clientIds;

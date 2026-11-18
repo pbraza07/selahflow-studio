@@ -44,6 +44,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
  const [membershipLevel,setMembershipLevel]=useState(''),[filterField,setFilterField]=useState(''),[filterValue,setFilterValue]=useState('');
  const [attendedOnly,setAttendedOnly]=useState(false);
  const [profileTab,setProfileTab]=useState('History');
+ const [permanentDeletions,setPermanentDeletions]=useState<{id:string;deleted_at:string}[]>([]);
  const [archived,setArchived]=useState<{id:string;name:string;email:string;phone:string}[]>([]);
  const [editing,setEditing]=useState<Client|'new'|null>(null),[saving,setSaving]=useState(false),[editError,setEditError]=useState('');
  const [removedSelection,setRemovedSelection]=useState<string[]>([]);
@@ -55,7 +56,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    const r=await fetch('/api/studio/clients',{cache:'no-store'});
    const result=await r.json();
    if(!r.ok)throw Error(result.error||'Client records are unavailable.');
-   setBookingRows(result.bookings||[]);setClients(result.clients||[]);setArchived(result.archived||[]);setFormFields(result.formFields||[]);setRegistrationConfig(result.registrationConfig||{});setError('');
+   setBookingRows(result.bookings||[]);setClients(result.clients||[]);setArchived(result.archived||[]);setPermanentDeletions(result.permanentDeletions||[]);setFormFields(result.formFields||[]);setRegistrationConfig(result.registrationConfig||{});setError('');
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  },[]);
  useEffect(()=>{const timer=window.setInterval(()=>{if(!document.hidden)void reload(true);},15000);const focus=()=>void reload(true);window.addEventListener('focus',focus);return()=>{clearInterval(timer);window.removeEventListener('focus',focus);};},[reload]);
@@ -99,12 +100,13 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
   try{await postClient('replaceLegacyId',{clientId:client.id,oldMemberNumber:client.memberNumber});await reload();}
   catch(error){setActionError((error as Error).message);}finally{setActionBusy('');}
  }
- async function confirmRemoveClient(){
+ async function confirmRemoveClient(recoverable=false){
   const client=removing;
   if(!client)return;
   setActionBusy(client.id);setActionError('');
   try{
-   await postClient('delete',{clientId:client.id,confirmPhrase:'DELETE CLIENT'});
+   await postClient(recoverable?'archive':'delete',{clientId:client.id,confirmPhrase:'DELETE CLIENT'});
+   if(recoverable)setShowRemoved(true);
    setSelectedId(null);setRemoving(null);await reload();
   }catch(error){setActionError((error as Error).message);}finally{setActionBusy('');}
  }
@@ -139,6 +141,9 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    <div><div className="sf-clients-eyebrow">CUSTOMER RELATIONSHIPS</div><h2>Client directory & attendance</h2>
     <p>Explore session and service history for customers who have booked with this business. Attendance is counted only after check-in or completion.</p></div>
    <div className="sf-clients-actions">
+   <button type="button" className="outline sf-client-removed-toggle" aria-expanded={showRemoved} onClick={()=>setShowRemoved(v=>!v)}>
+    <ArchiveRestore size={16}/>{showRemoved?'Hide deleted clients':'Deleted clients ('+(archived.length+permanentDeletions.length)+')'}
+   </button>
     <input ref={importInput} type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style={{display:'none'}} aria-label="Choose Excel or CSV client spreadsheet" onChange={e=>{const file=e.target.files?.[0];if(file)void importSpreadsheet(file);}}/>
     <button type="button" className="outline" disabled={importing} onClick={()=>importInput.current?.click()}><Upload size={17}/> {importing?'Importing…':'Import clients from Excel'}</button>
     <button type="button" className="primary" onClick={()=>beginEdit('new')}><UserPlus size={17}/> Add client</button>
@@ -146,6 +151,16 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
     <ExcelDownload className="primary sf-clients-export" href={exported()}><Download size={16}/> Export all to Excel</ExcelDownload>
    </div>
   </header>
+  <div className="sf-client-removed-section">
+   {showRemoved&&<div className="sf-client-removed-list">
+    <p className="muted">Select Restore to return a client to the active directory.</p>
+    {archived.length?<div className="sf-client-removed-toolbar"><label><input type="checkbox" checked={archived.every(c=>removedSelection.includes(c.id))} onChange={e=>setRemovedSelection(e.target.checked?archived.map(c=>c.id):[])}/> Select all</label><button type="button" className="outline sf-client-remove" disabled={!removedSelection.length||!!actionBusy} onClick={()=>void deleteRemoved()}><Trash2 size={16}/> Delete selected ({removedSelection.length})</button></div>:null}
+    {archived.length?archived.map(c=><div key={c.id} className="sf-client-removed-row"><label><input type="checkbox" aria-label={'Select '+c.name} checked={removedSelection.includes(c.id)} onChange={e=>setRemovedSelection(prev=>e.target.checked?[...prev,c.id]:prev.filter(id=>id!==c.id))}/></label><div><b translate="no">{c.name}</b><small>{c.email||c.phone||'No contact details'}</small></div>
+     <button type="button" className="outline" disabled={!!actionBusy} onClick={()=>void restoreClient(c.id)}><RotateCcw size={15}/> Restore</button>
+    </div>):<p className="muted">No clients available to restore.</p>}
+    {permanentDeletions.length>0&&<div><h3>Permanent deletions</h3><p>Only the deletion date is retained here. These profiles cannot be restored from the directory.</p>{permanentDeletions.map(d=><p key={d.id}>Client permanently deleted · {new Date(d.deleted_at).toLocaleString()}</p>)}</div>}
+   </div>}
+  </div>
   <div className="sf-clients-stats" aria-label="Client directory totals">
    <div><Users size={19}/><small>Clients in directory</small><strong>{clients.length}</strong></div>
    <div><CheckCircle2 size={19}/><small>Sessions attended</small><strong>{totalAttended}</strong></div>
@@ -332,20 +347,8 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
      <button type="button" className="outline sf-client-remove" aria-label={'Delete '+c.name} disabled={!!actionBusy} onClick={()=>void removeClient(c)}><Trash2 size={15}/> Delete</button></div>
    </article>)}</div>:<div className="sf-client-empty"><Users size={26}/><h3>{clients.length?'No matching clients':'No client bookings yet'}</h3><p>{clients.length?'Try searching for another name or service.':'Client profiles and attendance will appear here as customers book and appointments are marked attended.'}</p><button type="button" className="primary" onClick={onBook}>Create appointment</button></div>}
   </>}
-  <div className="sf-client-removed-section">
-   <button type="button" className="outline sf-client-removed-toggle" aria-expanded={showRemoved} onClick={()=>setShowRemoved(v=>!v)}>
-    <ArchiveRestore size={16}/>{showRemoved?'Hide removed clients':'Removed clients ('+archived.length+')'}
-   </button>
-   {showRemoved&&<div className="sf-client-removed-list">
-    <p className="muted">Previously archived clients can be restored or permanently deleted along with their linked records.</p>
-    {archived.length?<div className="sf-client-removed-toolbar"><label><input type="checkbox" checked={archived.every(c=>removedSelection.includes(c.id))} onChange={e=>setRemovedSelection(e.target.checked?archived.map(c=>c.id):[])}/> Select all</label><button type="button" className="outline sf-client-remove" disabled={!removedSelection.length||!!actionBusy} onClick={()=>void deleteRemoved()}><Trash2 size={16}/> Delete selected ({removedSelection.length})</button></div>:null}
-    {archived.length?archived.map(c=><div key={c.id} className="sf-client-removed-row"><label><input type="checkbox" aria-label={'Select '+c.name} checked={removedSelection.includes(c.id)} onChange={e=>setRemovedSelection(prev=>e.target.checked?[...prev,c.id]:prev.filter(id=>id!==c.id))}/></label><div><b translate="no">{c.name}</b><small>{c.email||c.phone||'No contact details'}</small></div>
-     <button type="button" className="outline" disabled={!!actionBusy} onClick={()=>void restoreClient(c.id)}><RotateCcw size={15}/> Restore</button>
-    </div>):<p className="muted">No removed clients.</p>}
-   </div>}
-  </div>
   {editing&&<ClientEditor config={registrationConfig} client={editing==='new'?null:editing}
    onClose={()=>{if(!saving)setEditing(null);}} onSave={saveClient} busy={saving} error={editError}/>}
-  {removing&&<div className="sf-client-editor-backdrop" role="presentation"><section className="sf-client-editor" role="dialog" aria-modal="true" aria-labelledby="remove-client-title"><header><div className="sf-client-editor-heading"><Trash2 size={20}/><div><small>CLIENT DIRECTORY</small><h2 id="remove-client-title">Remove <span translate="no">{removing.name}</span>?</h2></div></div></header><p className="sf-client-editor-note">Permanently delete this client’s registration, membership, bookings, attendance, and saved payment and email records from this business. This cannot be undone. Provider records at Stripe and emails already delivered are not erased. Unpaid Stripe checkout links are expired before deletion; deletion also cancels linked Stripe subscriptions immediately. Required accounting records and signed waivers are retained separately. Their ID is released immediately and can be reused when they or another client register again.</p>{actionError&&<p role="alert" className="alert">{actionError}</p>}<footer><button type="button" className="outline" disabled={!!actionBusy} onClick={()=>setRemoving(null)}>Keep client</button><button type="button" className="primary" disabled={!!actionBusy} onClick={()=>void confirmRemoveClient()}><Trash2 size={16}/>{actionBusy?'Removing…':'Delete permanently'}</button></footer></section></div>}
+  {removing&&<div className="sf-client-editor-backdrop" role="presentation"><section className="sf-client-editor" role="dialog" aria-modal="true" aria-labelledby="remove-client-title"><header><div className="sf-client-editor-heading"><Trash2 size={20}/><div><small>CLIENT DIRECTORY</small><h2 id="remove-client-title">Remove <span translate="no">{removing.name}</span>?</h2></div></div></header><p className="sf-client-editor-note">Move to Deleted clients to hide the profile and keep it available to restore. Membership billing and scheduled bookings continue with this option.</p><p className="sf-client-editor-note">Delete permanently removes this client’s registration, membership, bookings, attendance, and saved payment and email records from this business. This cannot be undone. Provider records at Stripe and emails already delivered are not erased. Unpaid Stripe checkout links are expired before deletion; deletion also cancels linked Stripe subscriptions immediately. Required accounting records and signed waivers are retained separately. Their ID is released immediately and can be reused when they or another client register again.</p>{actionError&&<p role="alert" className="alert">{actionError}</p>}<footer><button type="button" className="outline" disabled={!!actionBusy} onClick={()=>setRemoving(null)}>Keep client</button><button type="button" className="primary" disabled={!!actionBusy} onClick={()=>void confirmRemoveClient(true)}>Move to Deleted clients</button><button type="button" className="primary" disabled={!!actionBusy} onClick={()=>void confirmRemoveClient()}><Trash2 size={16}/>{actionBusy?'Removing…':'Delete permanently'}</button></footer></section></div>}
  </section>;
 }
