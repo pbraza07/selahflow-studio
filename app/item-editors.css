@@ -59,3 +59,37 @@ fieldset.sf-item-fields{border:0;margin:0;padding:0}
 .public-page[data-selah-theme] .booking-service.picked,.app-shell[data-selah-theme] .booking-service.picked{border:2px solid currentColor!important}
 .sf-owner-plan-list>article,.sf-catalog-tile,.sf-membership-plans>button:not(.selected){border-top-color:var(--sf-item-card-accent,var(--sf-button,#315e50))!important}
 .sf-owner-plan-list .sf-plan-actions,.sf-approval-title{border-color:var(--sf-item-card-divider,#d9e0dd)}
+
+/* Card fields take the full row even when their table column had a percentage width. */
+.sf-record-cards table tbody tr > td {
+  width: 100% !important;
+  align-self: stretch;
+  box-sizing: border-box;
+  word-break: normal;
+}
+.sf-record-cards table thead tr > th {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 100%;
+}
+.sf-member-enrollment-dates > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .25rem .75rem;
+}
+.sf-member-enrollment-dates dt { flex: 0 1 7rem; }
+.sf-member-enrollment-dates dd {
+  flex: 1 0 min(100%, 11ch);
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.sf-record-cards .sf-client-name-membership {
+  width: 100%;
+  min-width: 0;
+  align-items: flex-start;
+}
+.sf-record-cards :is(.button-row, .toolbar) { flex-wrap: wrap; }
+.sf-record-detail > div > *, .sf-item-summary dl > * { min-width: 0; }
+.sidebar .nav-item { white-space: normal; word-break: normal; overflow-wrap: normal; }
+.sidebar .nav-item svg { flex-shrink: 0; }
