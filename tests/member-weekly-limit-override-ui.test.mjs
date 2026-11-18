@@ -103,7 +103,7 @@ test('canceled member deletion uses in-app confirmation, retains visible errors 
   await act(async()=>button.click());assert.equal(f.state.posted,null);
   const form=document.querySelector('form'),input=form.querySelector('input'),submit=()=>form.querySelector('button[type=submit]');
   assert.match(form.textContent,/canceled memberships with used sessions/);
-  assert.match(form.textContent,/Existing bookings and required accounting records are retained/);
+  assert.match(form.textContent,/Linked client bookings and attendance are removed. Required accounting records are retained/);
   assert.equal(submit().disabled,true);
   await act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
   assert.equal(f.state.posted,null);

@@ -1,10 +1,11 @@
+import {prepareOwnerMembershipDeletion} from './owner-membership-cancellation.mjs';
 import {expireClientCheckouts} from './client-checkout-expiry.mjs';
 import {retainDeletedClientFinancials} from './client-financial-retention.mjs';
 const object=x=>{try{return typeof x==='string'?JSON.parse(x):x||{};}catch{return {};}};
 const day=x=>x instanceof Date?x.toISOString().slice(0,10):String(x||'').slice(0,10);
 const identity=(name,dob)=>String(name||'').trim().replace(/\s+/g,' ').toLowerCase()+'|'+day(dob);
 /** Caller owns transaction. Match the member identity, never a shared family email alone. */
-export async function deleteClientPermanently(db,{owner,businessId,client,closeOpenCheckouts=false,api=undefined}){
+export async function deleteClientPermanently(db,{owner,businessId,client,closeOpenCheckouts=false,cancelRecurringBilling=false,api=undefined}){
  const business=(await db.query("SELECT id,owner_id FROM businesses WHERE id=$1 AND owner_id=$2 AND status='active'",[businessId,owner])).rows[0];
  if(!business||!client?.id)throw Error('Client not found in this business.');
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[business.id+':member-id-allocation']);
@@ -25,8 +26,8 @@ export async function deleteClientPermanently(db,{owner,businessId,client,closeO
  const matches=d=>numberSet.has(d.memberNumber||d.member_number)||(identity(d.name||d.client||d.customerName||d.customer_name||[d.first_name,d.last_name].filter(Boolean).join(' '),d.dateOfBirth||d.date_of_birth)===original.identity_key&&(!original.identity_key.endsWith('|')||sameContact(d)));
 
  const read=async(table,where,args)=>(await db.query(`SELECT * FROM ${table} WHERE ${where}`,args)).rows;
-  const members=(await read('customer_memberships','business_id=$1',[business.id])).filter(matches);
-  if(members.some(m=>m.stripe_subscription_id&&!['canceled','expired'].includes(m.status)))throw Error('Cancel this registration active Stripe subscription before reset.');
+  const members=(await read('customer_memberships','business_id=$1',[business.id])).filter(m=>m.member_number&&numbers.length?numberSet.has(m.member_number):matches(m));
+  if(!cancelRecurringBilling&&members.some(m=>m.stripe_subscription_id&&!['canceled','expired'].includes(m.status)))throw Error('Cancel this registration active Stripe subscription before reset.');
   const memberIds=members.map(m=>m.id);
   let appointments=(await read('appointments','owner=$1',[business.owner_id])).filter(a=>historyIds.has(a.id)||matches(object(a.data)));
   let appointmentIds=appointments.map(a=>a.id);
@@ -73,7 +74,13 @@ export async function deleteClientPermanently(db,{owner,businessId,client,closeO
   if(rowsFor('booking_payments').some(p=>p.status==='pending'&&p.terminal_payment_intent_id))throw Error('Check or cancel this appointment onsite card collection before deleting the client.');
   const productOrders=(await db.query('SELECT * FROM product_orders WHERE business_id=$1 AND member_number=ANY($2::text[]) FOR UPDATE',[business.id,numbers])).rows;
   if(!closeOpenCheckouts&&productOrders.some(p=>p.status==='pending'&&p.stripe_checkout_session_id))throw Error('Expire this client’s product checkout before reset.');
-  if(closeOpenCheckouts)await expireClientCheckouts(db,{businessId:business.id,bookingKeys,members,bookingPayments:rowsFor('booking_payments'),productOrders},api);
+  const completedFreeCheckouts=new Set();
+  if(cancelRecurringBilling)for(const m of members){
+   const prepared=await prepareOwnerMembershipDeletion(m,business.id,api);
+   Object.assign(m,prepared.member);
+   for(const key of prepared.completedFreeCheckouts)completedFreeCheckouts.add(key);
+  }
+  if(closeOpenCheckouts)await expireClientCheckouts(db,{businessId:business.id,bookingKeys,members,completedFreeCheckouts,bookingPayments:rowsFor('booking_payments'),productOrders},api);
   // Retain product accounting/refund references, but erase client details on explicit permanent deletion.
   await db.query("UPDATE product_orders SET customer_name='Deleted client',customer_email='',customer_address='{}'::jsonb,member_number='',status=CASE WHEN status='pending' THEN 'canceled' ELSE status END,updated_at=now() WHERE business_id=$1 AND member_number=ANY($2::text[])",[business.id,numbers]);
   if(!closeOpenCheckouts&&rowsFor('booking_payments').some(p=>p.status==='pending'&&p.stripe_checkout_session_id))throw Error('Expire this registration open Stripe Checkout before reset.');
