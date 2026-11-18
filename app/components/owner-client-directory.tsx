@@ -17,13 +17,14 @@ import {displayAnswer,dateOnly} from '../../server/client-registration-fields.mj
 type Answer={id:string;label:string;value:string|boolean;type?:string};
 type MembershipDetails={registeredAt?:string|null;paidThrough?:string|null;lastPaidAt?:string|null;interval?:string;priceCents?:number;sessionsIncluded?:number;sessionsUsed?:number};
 type FormField={id:string;label:string;type:string;options?:string[]};
-export type Visit={
+type ClientCoupon={code:string;discountAmountUSD:number;duration?:string};
+export type Visit={coupon?:ClientCoupon|null;
  paymentTracking?:string;bookingTimeline?:{status:string;at:string|null}[];id:string;date:string;time:number;duration:number;serviceNames:string[];serviceTypes:string[];
  staff:string;status:string;attended:boolean;sessionType:string;quotedPrice:number;
  answers?:Answer[];originalAnswers?:Answer[];customerName?:string;customerEmail?:string;customerPhone?:string;customerMemberNumber?:string;dateOfBirth?:string;firstName?:string;lastName?:string;
  originalSubmission?:{customerName:string;customerEmail:string;customerPhone:string;customAnswers?:Record<string,string|boolean>}|null;submittedAt?:string|null;policyAccepted?:boolean;policyAcceptedAt?:string|null;
 };
-type Client={idUsesSequence?:boolean;
+type Client={membershipCoupons?:(ClientCoupon&{membershipId:string;planName:string})[];idUsesSequence?:boolean;
  membershipBadge?:MembershipBadgeDesign|null;memberNumber?:string;membershipName?:string;membershipStatus?:string;membershipAnswers?:Answer[];membershipDetails?:MembershipDetails;membershipRegistration?:{name:string;firstName:string;lastName:string;email:string;phone:string;dateOfBirth:string;memberNumber:string};dateOfBirth?:string;
  id:string;firstName?:string;lastName?:string;editToken?:string;previousMemberNumbers?:string[];profileUpdatedAt?:string;name:string;email:string;phone:string;bookedSessions:number;attendedSessions:number;
  attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;importColumns?:Record<string,string|boolean>;registrationAnswers?:Record<string,string|boolean>;registrationFieldLabels?:Record<string,string>;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:Answer[];
@@ -185,6 +186,11 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
       <div><small>Membership status</small><b>{membershipDisplayStatus({status:selected.membershipStatus,sessionsIncluded:selected.membershipDetails?.sessionsIncluded,sessionsUsed:selected.membershipDetails?.sessionsUsed}).replaceAll('_',' ')}</b></div>
      </div>
     </section>
+    {(profileTab==='Details'||profileTab==='History')&&<section className="sf-client-first-booking"><h3>Coupons applied</h3>
+     {selected.membershipCoupons?.map(coupon=><p key={coupon.membershipId}><strong>{coupon.code}</strong> · {money(coupon.discountAmountUSD)} off · {coupon.planName} ({coupon.duration==='forever'?'each payment':'first payment'})</p>)}
+     {selected.history.filter(v=>v.coupon).map(v=><p key={v.id}><strong>{v.coupon!.code}</strong> · {money(v.coupon!.discountAmountUSD)} off · {v.serviceNames.join(', ')} · {v.date}</p>)}
+     {!selected.membershipCoupons?.length&&!selected.history.some(v=>v.coupon)&&<p>No recorded coupon applications.</p>}
+    </section>}
     {profileTab==='Details'&&<section className="sf-client-current-fields"><h3>Current profile answers</h3><div className="sf-client-original-answers">{Object.entries(clientProfileAnswers(selected)).map(([id,value])=><div key={id}><small>{selected.registrationFieldLabels?.[id]||formFields.find(f=>f.id===id)?.label||selected.membershipAnswers?.find(f=>f.id===id)?.label||id}</small><b>{displayAnswer(value)}</b></div>)}</div><button type="button" className="outline" onClick={()=>beginEdit(selected)}>Edit all profile fields</button></section>}
     {selected.membershipName&&<section hidden={profileTab!=='Membership'} className="sf-client-first-booking sf-client-membership-registration">
      <div className="sf-client-history-heading"><h3>Membership registration</h3><small>Membership enrollment and the answers submitted when registering</small></div>

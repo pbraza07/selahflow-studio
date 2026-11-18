@@ -44,7 +44,7 @@ export function pendingBookingAsAppointment(row){
    membershipCovered:info.membershipCovered===true,
    bookingTimeline:[{status:'Submitted',at:row.created_at||info.created||null},{status:row.status==='pending'?'Pending approval':'Declined',at:row.reviewed_at||null}],
    customAnswers:info.customAnswers||{},customFieldLabels:info.customFieldLabels||{},customFieldTypes:info.customFieldTypes||{},
-   originalSubmission:info.originalSubmission||null,
+   coupon:info.coupon||null,originalSubmission:info.originalSubmission||null,
    source:'Customer booking request',policyAccepted:info.policyAccepted===true,policyAcceptedAt:info.policyAcceptedAt||null,
    created:info.created||row.created_at||null
   })
@@ -135,7 +135,7 @@ export function buildClientDirectory(appointments,settings={},owner=''){
    sessionType:data.sessionId?'Group session':'Individual appointment',
    quotedPrice:Number(data.price)||0,paymentTracking:data.paymentTracking||(data.membershipCovered||data.paymentStatus==='paid'||Number(data.price)===0?'completed':'pending'),bookingTimeline:data.bookingTimeline||[{status:'Submitted',at:data.created||null},{status:status,at:null}],
    customerEmail:email,customerPhone:phone,customerName:name,customerMemberNumber:data.memberNumber||null,dateOfBirth:clean(data.dateOfBirth,10),firstName:clean(data.firstName,50),lastName:clean(data.lastName,50),
-   answers,originalAnswers,originalSubmission:data.originalSubmission||null,
+   coupon:data.coupon?.code&&Number.isSafeInteger(data.coupon.discountCents)?{code:data.coupon.code,discountAmountUSD:data.coupon.discountCents/100}:null,answers,originalAnswers,originalSubmission:data.originalSubmission||null,
    submittedAt:data.created||null,policyAccepted:data.policyAccepted===true,policyAcceptedAt:data.policyAcceptedAt||null
   };
   client.history.push(visit);

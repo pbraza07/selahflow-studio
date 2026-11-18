@@ -43,12 +43,16 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
  const derived=buildClientDirectory([...decorateBookingTimeline(appointments.rows,requests.rows,payments.rows,clientEvents.rows),...requests.rows.filter((r:any)=>['pending','declined'].includes(r.status)).map(pendingBookingAsAppointment)],settings,owner);
  const combined=applyClientProfiles(derived,profiles.rows);
  const fields=Array.isArray(settings.bookingCustomFields)?settings.bookingCustomFields:[];
- const members=(await db.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.last_paid_at,m.paid_through,m.price_cents,m.sessions_included,m.sessions_used,m.member_number,m.status,p.name AS membership_name,p.interval_unit,COALESCE(p.badge,g.badge) AS membership_badge FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id LEFT JOIN membership_groups g ON g.id=p.group_id AND g.business_id=m.business_id WHERE b.owner_id=$1 ORDER BY m.created_at DESC",[owner])).rows;
+ const members=(await db.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.last_paid_at,m.paid_through,m.owner_coupon,m.applied_coupon,m.first_invoice_cents,m.price_cents,m.sessions_included,m.sessions_used,m.member_number,m.status,p.name AS membership_name,p.interval_unit,COALESCE(p.badge,g.badge) AS membership_badge FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id LEFT JOIN membership_groups g ON g.id=p.group_id AND g.business_id=m.business_id WHERE b.owner_id=$1 ORDER BY m.created_at DESC",[owner])).rows;
  const memberData=(m:any,client:any={})=>{
   const legacy=client.notes==='Membership registration'&&m.registration_answers&&Object.keys(m.registration_answers).length===0?client.importColumns||{}:{};
   const submitted=Object.keys(m.registration_answers||{}).length?m.registration_answers:legacy;
   return {
    memberNumber:m.member_number||client.memberNumber,
+   membershipCoupon:(()=>{const coupon=m.applied_coupon||m.owner_coupon;if(!coupon?.code)return null;
+    const base=Number(m.price_cents);
+    const amount=coupon.discountCents??(m.first_invoice_cents!=null?base-Number(m.first_invoice_cents):Math.min(base,coupon.kind==='percent'?Math.round(base*Number(coupon.value)/100):Number(coupon.value)));
+    return {code:coupon.code,discountAmountUSD:amount/100,duration:coupon.duration};})(),
    membershipName:m.membership_name,membershipStatus:m.status,membershipBadge:m.membership_badge||null,
    membershipRegistration:{name:m.customer_name,firstName:String(m.customer_name||'').trim().split(/\s+/)[0]||'',lastName:String(m.customer_name||'').trim().split(/\s+/).slice(1).join(' '),email:m.customer_email,phone:m.customer_phone||'',dateOfBirth:dateOnly(m.date_of_birth),memberNumber:m.member_number||''},
    membershipAnswers:registrationAnswerRows(submitted,m.registration_field_labels,fields),
@@ -73,7 +77,11 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
   if(!clients.some((c:any)=>c.memberNumber===m.member_number||(c.name?.trim().toLowerCase()===m.customer_name?.trim().toLowerCase()&&c.email?.toLowerCase()===m.customer_email?.toLowerCase())))
    clients.push({id:profile?.id||virtualId,name:m.customer_name,email:m.customer_email,bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],latestDate:'',history:[],firstBooking:null,latestBookingAnswers:[],...memberData(m)});
  }
- for(const c of clients)(c as any).editToken=clientProfileEditToken(c);
+ for(const c of clients){
+  (c as any).membershipCoupons=members.filter((m:any)=>(m.member_number&&m.member_number===c.memberNumber)||(m.customer_email?.toLowerCase()===c.email?.toLowerCase()&&m.customer_name?.trim().toLowerCase()===c.name?.trim().toLowerCase()))
+   .flatMap((m:any)=>{const coupon=memberData(m).membershipCoupon;return coupon?[{...coupon,membershipId:m.id,planName:m.membership_name}]:[];});
+  (c as any).editToken=clientProfileEditToken(c);
+ }
  return {derived,bookings:allBookingStatusRows(derived),profiles:profiles.rows,clients,formFields:fields.map((f:any)=>({id:f.id,label:f.label,type:f.type,options:Array.isArray(f.options)?f.options:[]})),registrationConfig:{bookingStandardFields:settings.bookingStandardFields,bookingQuestionOrder:settings.bookingQuestionOrder,bookingCustomFields:settings.bookingCustomFields},archived:combined.archived.filter((c:{id:string})=>!profiles.rows.some((p:any)=>p.id===c.id&&p.deleted_at))};
 }
 function failure(error:unknown){
