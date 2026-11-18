@@ -57,7 +57,7 @@ export function buildClientDirectory(appointments,settings={},owner=''){
  for(const row of appointments||[]){
   let data;
   try{data=typeof row.data==='string'?JSON.parse(row.data||'{}'):(row.data||{});}catch{continue;}
-  if(!data || typeof data!=='object')continue;
+  if(!data || typeof data!=='object'||data.clientProfileDeleted===true)continue;
   const name=clean(data.name,100),email=clean(data.email,254),phone=clean(data.phone,40);
   if(!name&&!email&&!phone)continue;
   entries.push({row,data,name,email,phone,normalizedName:normalizeClientName(name),

@@ -480,19 +480,16 @@ const id=typeof b.key==='string'&&/^[0-9a-f-]{36}$/.test(b.key)?b.key:crypto.ran
  await db().batch([audit('booking',{appointment:id,...(pastOverride?{pastSessionOverride:pastOverride,sessionDate:b.date,recordedBy:owner}:{})})]);
  return reply({ok:true,id,memberNumber:issuedMemberNumber,customerToken:await customerAccess(id),pending:false,status:membershipUsage?'Checked in':'confirmed',chargedPrice:data.price,membershipCovered:data.membershipCovered,membershipUsage,waiverFollowup:data.waiverFollowup||null,bookingReceipt,clientReceiptEmail:bookingReceipt?'queued':null});}
 if(b.action==='deleteAppointments'){
- if(isPublic)return reply({error:'Not permitted.'},403);
+ if(isPublic||isTeam)return reply({error:'Owner access required.'},403);
  const ids=Array.isArray(b.ids)?b.ids:[];
- if(!ids.length||ids.length>2000||!ids.every((id:any)=>typeof id==='string'&&id.length>0&&id.length<120)||new Set(ids).size!==ids.length)return reply({error:'Select valid appointments to delete.'},400);
- const all=b.all===true;
- if(all&&(b.confirmPhrase!=='DELETE ALL APPOINTMENTS'||b.confirmBusiness!==config.name))return reply({error:'For all appointments, enter the exact business name and DELETE ALL APPOINTMENTS.'},400);
+ if(b.all||ids.length!==1||typeof ids[0]!=='string'||!ids[0]||ids[0].length>=120)return reply({error:'Select one calendar appointment to delete.'},400);
  const {getPool}=await import('../server/database.mjs');
  const client=await getPool().connect();
  try{
   await client.query('BEGIN');
-  const existing=await client.query('SELECT id FROM appointments WHERE owner=$1 FOR UPDATE',[owner]);
-  const available=new Set(existing.rows.map((row:any)=>row.id));
-  if(all&&(ids.length!==available.size||ids.some((id:string)=>!available.has(id))))throw Error('Appointment list changed. Refresh and confirm again.');
-  if(ids.some((id:string)=>!available.has(id)))throw Error('One or more appointments no longer exist. Refresh the list.');
+  await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
+  const existing=await client.query('SELECT id FROM appointments WHERE owner=$1 AND id=$2 FOR UPDATE',[owner,ids[0]]);
+  if(!existing.rows.length)throw Error('Appointment no longer exists. Refresh the calendar.');
   if((await client.query("SELECT 1 FROM booking_payments p JOIN businesses b ON b.id=p.business_id WHERE b.owner_id=$1 AND p.booking_id=ANY($2::text[]) AND p.status='pending' AND p.terminal_payment_intent_id IS NOT NULL",[owner,ids])).rows.length)throw Error('Check or cancel onsite card collection before deleting this appointment.');
   await client.query('DELETE FROM slots WHERE owner=$1 AND appointment=ANY($2::text[])',[owner,ids]);
   await client.query('DELETE FROM booking_requests WHERE owner_id=$1 AND appointment_id=ANY($2::text[])',[owner,ids]);

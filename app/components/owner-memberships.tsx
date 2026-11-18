@@ -127,7 +127,7 @@ export default function OwnerMemberships({slug,prefill,onOpenPayments}:{slug:str
    await post('deleteMember',{id:m.id,confirmPhrase:'DELETE'});
    ++loadSequence.current;
    setData(current=>current?{...current,members:current.members.filter(member=>member.id!==m.id)}:current);
-   setDeletingMember(null);setMessage('Membership deleted for '+m.customer_name+'. Linked client bookings and attendance were removed.');
+   setDeletingMember(null);setMessage('Membership deleted for '+m.customer_name+'. Calendar bookings and attendance were preserved.');
    await load(true);
   }catch(e){setDeleteError((e as Error).message);}
   finally{deletionSaving.current=false;setBusy(false);}
@@ -155,7 +155,7 @@ export default function OwnerMemberships({slug,prefill,onOpenPayments}:{slug:str
   {deletingMember&&<MembershipModal title="Delete membership" busy={busy} onClose={()=>{if(!deletionSaving.current)setDeletingMember(null);}}><form onSubmit={confirmDeleteMember}>
    <p><strong translate="no">{deletingMember.customer_name}</strong><br/><span translate="no">{deletingMember.plan_name} · {deletingMember.member_number||'No member ID'}</span></p>
    <p>This removes this enrollment and its membership history, including canceled memberships with used sessions. It cancels any linked Stripe subscription immediately and expires unpaid checkout links. No refund or new charge is created.</p>
-   <p>Linked client bookings and attendance are removed. Required accounting records are retained. This cannot be undone.</p>
+   <p>Calendar bookings and attendance are preserved. Required accounting records are retained. This cannot be undone.</p>
    <label>Type DELETE to confirm<input autoFocus autoComplete="off" autoCapitalize="characters" spellCheck={false} value={deletePhrase} disabled={busy} onChange={e=>setDeletePhrase(e.target.value)}/></label>
    {deleteError&&<p className="sf-membership-error" role="alert">{deleteError}</p>}
    <div className="button-row"><button type="button" className="outline" disabled={busy} onClick={()=>setDeletingMember(null)}>Keep member</button><button type="submit" className="primary" disabled={busy||deletePhrase.trim().toUpperCase()!=='DELETE'}>{busy?'Deleting…':'Confirm deletion'}</button></div>

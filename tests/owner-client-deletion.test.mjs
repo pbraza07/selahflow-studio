@@ -129,11 +129,11 @@ test('membership deletion retains settled financial facts, detaches receipt refe
  assert.equal((await pg.query('SELECT membership_id FROM stripe_payment_receipts')).rows[0].membership_id,null);
  assert.equal((await pg.query('SELECT amount_cents FROM client_financial_retention')).rows[0].amount_cents,6000);
  assert.equal((await pg.query('SELECT count(*)::int n FROM customer_memberships')).rows[0].n,0);
- assert.equal((await pg.query('SELECT count(*)::int n FROM appointments')).rows[0].n,0,'membership deletion clears client bookings');
+ assert.equal((await pg.query('SELECT count(*)::int n FROM appointments')).rows[0].n,1,'membership deletion preserves client bookings');
  }finally{await pg.close();}
 });
 
-test('confirmed deletion cancels an unrecorded free subscription and removes the pending enrollment and its bookings without affecting other tenants',async()=>{
+test('confirmed deletion cancels an unrecorded free subscription and removes the pending enrollment while preserving bookings and other tenants',async()=>{
  const {pg,db}=await fixture();try{
  await pg.exec("INSERT INTO membership_plans(id,business_id,name,interval_unit,price_cents) VALUES('plan','biz','Free coupon plan','month',6000); INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,date_of_birth,member_number,status,stripe_account_id,stripe_checkout_session_id) VALUES('member','biz','plan',6000,'Test Person','test@example.test','1990-01-01','TP010190','pending_payment','acct_one','cs_test_member')");
  let canceled=false;const calls=[];
@@ -150,7 +150,7 @@ test('confirmed deletion cancels an unrecorded free subscription and removes the
  const result=await transaction(db,()=>deleteOwnerMembership(db,{owner:'owner',businessId:'biz',id:'member',cancelRecurringBilling:true,api}));
  assert.equal(result.ok,true);assert.equal(calls.filter(c=>c.method==='DELETE').length,1);
  assert.equal((await pg.query('SELECT count(*)::int n FROM customer_memberships')).rows[0].n,0);
- assert.equal((await pg.query('SELECT count(*)::int n FROM appointments')).rows[0].n,0);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM appointments')).rows[0].n,1);
  assert.equal((await pg.query("SELECT count(*)::int n FROM customer_booking_ids WHERE business_id='other-biz'")).rows[0].n,1);
  assert.equal((await pg.query('SELECT count(*)::int n FROM membership_payment_emails')).rows[0].n,0,'deletion does not send a false activation email');
  }finally{await pg.close();}
@@ -174,7 +174,7 @@ test('confirmed deletion fails closed for paid pending checkout, foreign identit
  }finally{await pg.close();}
 });
 
-test('confirmed deletion removes a canceled free membership with used credits and removes its bookings',async()=>{
+test('confirmed deletion removes a canceled free membership with used credits and preserves its bookings',async()=>{
  const {pg,db}=await fixture();try{
  await pg.exec("INSERT INTO membership_plans(id,business_id,name,interval_unit,price_cents) VALUES('plan','biz','Plan','month',6000); INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,date_of_birth,member_number,status,sessions_included,sessions_used,initial_paid_at,stripe_account_id,stripe_subscription_id,stripe_checkout_session_id,stripe_customer_id) VALUES('member','biz','plan',6000,'Test Person','test@example.test','1990-01-01','TP010190','canceled',10,1,now(),'acct_one','sub_one','cs_test_member','cus_one'); INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta) VALUES('used','biz','member','visit','session_used',-1)");
  await pg.exec("INSERT INTO stripe_payment_receipts(stripe_account_id,provider_reference,business_id,membership_id,amount_cents) VALUES('acct_one','in_free','biz','member',0)");
@@ -189,7 +189,7 @@ test('confirmed deletion removes a canceled free membership with used credits an
  const receipt=(await pg.query("SELECT * FROM stripe_payment_receipts WHERE provider_reference='in_free'")).rows[0];assert.equal(receipt.amount_cents,0);assert.equal(receipt.membership_id,null);
  assert.equal((await pg.query('SELECT count(*)::int n FROM customer_memberships')).rows[0].n,0);
  assert.equal((await pg.query('SELECT count(*)::int n FROM membership_session_ledger')).rows[0].n,0);
- assert.equal((await pg.query('SELECT count(*)::int n FROM appointments')).rows[0].n,0);
+ assert.equal((await pg.query('SELECT count(*)::int n FROM appointments')).rows[0].n,1);
  assert.equal((await pg.query("SELECT count(*)::int n FROM customer_booking_ids WHERE business_id='other-biz'")).rows[0].n,1);
  }finally{await pg.close();}
 });
@@ -215,6 +215,7 @@ test('client-directory deletion explains the legacy zero-receipt failure and suc
 test('confirmed directory deletion cancels the verified subscription for the selected member ID',async()=>{
  const {pg,db}=await fixture();try{
   await pg.exec("INSERT INTO membership_plans(id,business_id,name,interval_unit,price_cents) VALUES('plan','biz','Plan','month',6000); INSERT INTO customer_memberships(id,business_id,plan_id,price_cents,customer_name,customer_email,date_of_birth,member_number,status,stripe_account_id,stripe_subscription_id,initial_paid_at) VALUES('member','biz','plan',6000,'Test Person','test@example.test','1990-01-01','TP010190','active','acct_one','sub_one',now())");
+  await pg.exec("INSERT INTO slots(owner,date,staff,minute,appointment) VALUES('owner','2030-01-01','coach',600,'visit')");
   let canceled=false;
   const api=async(path,opts)=>{
    assert.equal(path,'subscriptions/sub_one');assert.equal(opts.account,'acct_one');
@@ -223,7 +224,12 @@ test('confirmed directory deletion cancels the verified subscription for the sel
   };
   await transaction(db,()=>deleteOwnerClient(db,{owner:'owner',businessId:'biz',clientId:profile,client:{id:profile,name:'Deleted client',memberNumber:'TP010190'},confirmPhrase:'DELETE CLIENT',api}));
   assert.equal(canceled,true);
-  assert.equal((await pg.query('SELECT id FROM appointments')).rows.length,0);
+  const retained=(await pg.query("SELECT id,status,data FROM appointments WHERE id='visit'")).rows[0];
+  assert.equal(retained.status,'Confirmed');
+  assert.equal(JSON.parse(retained.data).name,'Test Person');
+  assert.equal(JSON.parse(retained.data).clientProfileDeleted,true);
+  assert.equal(JSON.parse(retained.data).email,undefined);
+  assert.equal((await pg.query("SELECT appointment FROM slots WHERE minute=600")).rows[0].appointment,'visit');
  }finally{await pg.close();}
 });
 

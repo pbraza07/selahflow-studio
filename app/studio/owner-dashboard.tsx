@@ -99,7 +99,7 @@ const [appointmentDetail,setAppointmentDetail]=useState<Any|null>(null);
 const [rosterPastOverride,setRosterPastOverride]=useState(false),[rosterOverrideReason,setRosterOverrideReason]=useState('');
 const [rosterCoupon,setRosterCoupon]=useState('');
 const [rosterAddOpen,setRosterAddOpen]=useState(false),[rosterName,setRosterName]=useState(''),[rosterEmail,setRosterEmail]=useState(''),[rosterPhone,setRosterPhone]=useState('');
-const [appointmentListOpen,setAppointmentListOpen]=useState(false),[deleteSelection,setDeleteSelection]=useState<string[]>([]),[deleteAllConfirm,setDeleteAllConfirm]=useState(false),[deleteBusinessName,setDeleteBusinessName]=useState(''),[deletePhrase,setDeletePhrase]=useState('');
+const [appointmentListOpen,setAppointmentListOpen]=useState(false);
 const [membershipPrefill,setMembershipPrefill]=useState<{name:string;email:string;phone:string}|null>(null);
 const [view,setViewState]=useState('Overview'),[config,setConfig]=useState<Any>(defaultSettings),[appointments,setAppointments]=useState<Any[]>([]),[events,setEvents]=useState<Any[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[toast,setToast]=useState(''),[date,setDate]=useState(today()),[staffFilter,setStaffFilter]=useState('all'),[search,setSearch]=useState(''),[modal,setModal]=useState(false),[portal,setPortal]=useState(false),[step,setStep]=useState(1),[selected,setSelected]=useState<string[]>([]),[provider,setProvider]=useState(''),[slots,setSlots]=useState<number[]>([]),[ownerEarliestStart,setOwnerEarliestStart]=useState<number|null>(null),[ownerFirstAvailable,setOwnerFirstAvailable]=useState<number|null>(null),[slot,setSlot]=useState<number|null>(null),[busy,setBusy]=useState(false),[booked,setBooked]=useState(''),[bookedMembershipUsage,setBookedMembershipUsage]=useState<Any>(null),[cart,setCart]=useState<Any[]>([]),[category,setCategory]=useState('All'),[chat,setChat]=useState(false),[mobile,setMobile]=useState(false),[range,setRange]=useState('Today'),[settingsTab,setSettingsTab]=useState<(typeof SETTINGS_AREAS)[number]['id']>('business'),[calendarMode,setCalendarMode]=useState<'day'|'week'|'month'>('day');
 const [workspaceSearch,setWorkspaceSearch]=useState('');
@@ -358,14 +358,10 @@ async function status(a:Any,s:string){
   setToast(base+(result.membershipDeducted?' · 1 membership session deducted · '+result.membershipSessionsRemaining+' remaining':result.membershipExhausted?' · Package exhausted: treated as a regular booking (no deduction)':result.alreadyDeducted?' · Membership session already deducted; no extra charge':''));
  }
 }
-async function deleteSelectedAppointments(){
- const all=deleteAllConfirm;
- const ids=all?appointments.map((a:Any)=>a.id):deleteSelection;
- if(!ids.length)return;
- if(all&&(deleteBusinessName!==config.name||deletePhrase!=='DELETE ALL APPOINTMENTS')){setToast('Enter the exact business name and DELETE ALL APPOINTMENTS.');return;}
- if(!all&&!window.confirm('Permanently delete '+ids.length+' selected appointment(s)? This cannot be undone.'))return;
- const result=await action({action:'deleteAppointments',ids,all,confirmBusiness:deleteBusinessName,confirmPhrase:deletePhrase});
- if(result){setDeleteSelection([]);setDeleteAllConfirm(false);setDeleteBusinessName('');setDeletePhrase('');await refresh();setToast(result.deleted+' appointment(s) deleted.');}
+async function deleteCalendarAppointment(appointment:Any){
+ if(view!=='Calendar'||!window.confirm('Delete the appointment for '+appointment.name+' on '+appointment.date+' at '+timeLabel(appointment.start)+'?'))return;
+ const result=await action({action:'deleteAppointments',ids:[appointment.id]});
+ if(result){setAppointmentDetail(null);await refresh();setToast('Appointment deleted.');}
 }
 function download(){downloadExcel('Appointments',reportAppointments.map(a=>({...a,teamMember:config.staff.find((s:Any)=>s.id===a.staff)?.name||a.staff})),['Date','Name','Email','Phone','Member Number','Services','Status','Price']);}
 function add(item:Any){setCart(old=>old.some(x=>x.id===item.id)?old.map(x=>x.id===item.id?{...x,qty:x.qty+1}:x):[...old,{...item,qty:1}]);}
@@ -400,18 +396,8 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
 {view==='Calendar'&&<OwnerTeamTracking selectedDate={date} onDateChange={setDate} onChanged={()=>void refresh()}/>}
 {view==='Calendar'&&<div className="sf-calendar-modes" role="group" aria-label="Calendar view">{(['day','week','month'] as const).map(mode=><button type="button" key={mode} className={calendarMode===mode?'primary':'outline'} aria-pressed={calendarMode===mode} onClick={()=>setCalendarMode(mode)}>{mode==='day'?'Daily':mode==='week'?'Weekly':'Monthly'}</button>)}</div>}
 {(view==='Calendar'||view==='Overview')&&<section id="owner-appointment-list" className="panel padded" style={{margin:'16px 0'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap'}}><div><h3>All appointments · List view</h3><p className="muted">View appointments across all dates and manage individual records.</p></div><button type="button" className="outline" onClick={()=>setAppointmentListOpen(v=>!v)}>{appointmentListOpen?'Hide list':'Show all appointments ('+appointments.length+')'}</button></div>
- {appointmentListOpen&&<><div style={{display:'flex',gap:12,flexWrap:'wrap',alignItems:'center',margin:'12px 0'}}>
- <label><input type="checkbox" checked={appointments.length>0&&deleteSelection.length===appointments.length} onChange={e=>setDeleteSelection(e.target.checked?appointments.map((a:Any)=>a.id):[])}/> Select all appointments</label>
- <span>{deleteSelection.length} selected</span>
- <button type="button" className="outline" disabled={busy||!deleteSelection.length} onClick={()=>void deleteSelectedAppointments()}>Delete selected</button>
- <button type="button" className="outline" disabled={busy||!appointments.length} onClick={()=>{setDeleteAllConfirm(v=>!v);setDeleteSelection([]);setDeleteBusinessName('');setDeletePhrase('');}}>Secure delete all…</button></div>
- {deleteAllConfirm&&<div role="group" aria-label="Confirm deletion of all appointments" style={{border:'2px solid #b42318',padding:16,borderRadius:10,marginBottom:14}}>
- <strong>Permanent deletion of ALL {appointments.length} appointments</strong><p>This also removes their reserved time slots and linked booking requests. This cannot be undone. Other business records are not deleted.</p>
- <label>Type exact business name<input value={deleteBusinessName} onChange={e=>setDeleteBusinessName(e.target.value)}/></label>
- <label>Type DELETE ALL APPOINTMENTS<input value={deletePhrase} onChange={e=>setDeletePhrase(e.target.value)}/></label>
- <button type="button" className="primary" disabled={busy||deleteBusinessName!==config.name||deletePhrase!=='DELETE ALL APPOINTMENTS'} onClick={()=>void deleteSelectedAppointments()}>{busy?'Deleting…':'Permanently delete all appointments'}</button>
- <button type="button" className="outline" onClick={()=>setDeleteAllConfirm(false)}>Cancel</button></div>}
- <div className="table-wrap"><SortableTable><thead><tr><th>Select</th><th>Date</th><th>Time</th><th>Client</th><th>Service</th><th>Team member</th><th>Status</th><th>Action</th></tr></thead><tbody>{[...appointments].sort((a:Any,b:Any)=>b.date.localeCompare(a.date)||a.start-b.start).map((a:Any)=><tr key={a.id}><td><input aria-label={'Select appointment '+a.id} type="checkbox" checked={deleteSelection.includes(a.id)} onChange={e=>setDeleteSelection(prev=>e.target.checked?[...prev,a.id]:prev.filter(id=>id!==a.id))}/></td><td>{a.date}</td><td data-sort-value={a.start}>{timeLabel(a.start)}</td><td translate="no">{a.name}</td><td>{(a.services||[]).join(', ')}</td><td>{config.staff.find((m:Any)=>m.id===a.staff)?.name||a.staff}</td><td>{a.status}</td><td><OwnerOnsitePayment appointment={a} config={config} onChanged={refresh}/><AttendanceActions appointment={a} busy={busy} onStatus={(a,s)=>void status(a,s)}/><button type="button" className="text-button" disabled={busy} onClick={()=>{setDeleteSelection([a.id]);if(window.confirm('Permanently delete this appointment?'))void (async()=>{const r=await action({action:'deleteAppointments',ids:[a.id],all:false});if(r){setDeleteSelection([]);await refresh();setToast('Appointment deleted.');}})();}}>Delete</button></td></tr>)}</tbody></SortableTable>{appointments.length===0&&<p className="muted">No appointments yet.</p>}</div></>}
+ {appointmentListOpen&&<>
+ <div className="table-wrap"><SortableTable><thead><tr><th>Date</th><th>Time</th><th>Client</th><th>Service</th><th>Team member</th><th>Status</th><th>Action</th></tr></thead><tbody>{[...appointments].sort((a:Any,b:Any)=>b.date.localeCompare(a.date)||a.start-b.start).map((a:Any)=><tr key={a.id}><td>{a.date}</td><td data-sort-value={a.start}>{timeLabel(a.start)}</td><td translate="no">{a.name}</td><td>{(a.services||[]).join(', ')}</td><td>{config.staff.find((m:Any)=>m.id===a.staff)?.name||a.staff}</td><td>{a.status}</td><td><OwnerOnsitePayment appointment={a} config={config} onChanged={refresh}/><AttendanceActions appointment={a} busy={busy} onStatus={(a,s)=>void status(a,s)}/><button type="button" className="text-button" onClick={()=>{setView('Calendar');setAppointmentDetail(a);}}>View appointment</button></td></tr>)}</tbody></SortableTable>{appointments.length===0&&<p className="muted">No appointments yet.</p>}</div></>}
  </section>}
 {view==='Calendar'&&calendarMode!=='day'?<div className="sf-calendar-period"><h3>{calendarMode==='week'?'Week of '+new Date(date+'T12:00:00').toLocaleDateString() : new Date(date+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})}</h3>
  <div className="sf-calendar-period-grid">{Array.from({length:calendarMode==='week'?7:new Date(Number(date.slice(0,4)),Number(date.slice(5,7)),0).getDate()},(_,i)=>{
@@ -570,6 +556,7 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
  <header className="sf-roster-header"><div><span className="sf-roster-eyebrow"><CalendarDays size={15}/> PRIVATE BUSINESS APPOINTMENT</span><h2 id="sf-appointment-detail-title">{appointmentDetail.services?.join(' + ')||'Appointment'}</h2><p>{appointmentDetail.date} · {timeLabel(appointmentDetail.start)} · {config.staff.find((v:Any)=>v.id===appointmentDetail.staff)?.name||'Team member'}</p></div><button type="button" className="sf-roster-close" aria-label="Close appointment details" onClick={()=>setAppointmentDetail(null)}><X size={20}/></button></header>
  <div style={{padding:24,display:'grid',gap:16}}>
  <h3><span translate="no">{appointmentDetail.name}</span> <span className={'status '+String(appointmentDetail.status).toLowerCase().replace(' ','-')}>{appointmentDetail.status}</span></h3>
+ {view==='Calendar'&&<button type="button" className="outline" disabled={busy} onClick={()=>void deleteCalendarAppointment(appointmentDetail)}>Delete appointment</button>}
  <p><strong>Booking reference:</strong> {appointmentDetail.id}</p>
  <p><strong>Email:</strong> {appointmentDetail.email?<a translate="no" href={'mailto:'+appointmentDetail.email}>{appointmentDetail.email}</a>:'Not provided'}</p>
  <p><strong>Phone:</strong> {appointmentDetail.phone?<a translate="no" href={'tel:'+appointmentDetail.phone}>{appointmentDetail.phone}</a>:'Not provided'}</p>
@@ -650,6 +637,7 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
    {selectedSessionRoster.clients.length?<div className="sf-roster-list" role="list">
     {selectedSessionRoster.clients.map((client:Any,i:number)=><article className="sf-roster-client" role="listitem" key={client.bookingId||i}>
      {appointments.find(a=>a.id===client.bookingId)&&<OwnerOnsitePayment appointment={appointments.find(a=>a.id===client.bookingId)} config={config} onChanged={refresh}/>}<AttendanceActions appointment={appointments.find(a=>a.id===client.bookingId)} busy={busy} onStatus={(a,s)=>void status(a,s)}/><div className="sf-roster-client-top"><div><strong>{i+1}. <span translate="no">{client.name}</span></strong><span className="sf-roster-status">{client.status}</span></div><small>Booking #{client.bookingId.slice(0,8)}</small></div><button type="button" className="outline" disabled={busy} style={{margin:'12px 0',minHeight:42}} onClick={()=>void removeRosterCustomer(client)}>Remove customer</button>
+     {view==='Calendar'&&<button type="button" className="outline" disabled={busy} onClick={()=>{const booking=appointments.find(a=>a.id===client.bookingId);if(booking)void deleteCalendarAppointment(booking);}}>Delete this appointment</button>}
      <dl className="sf-roster-client-details">
       <div><dt>Email</dt><dd>{client.email?<a translate="no" href={'mailto:'+client.email}>{client.email}</a>:'Not provided'}</dd></div>
       <div><dt>Phone</dt><dd>{client.phone?<a translate="no" href={'tel:'+client.phone}>{client.phone}</a>:'Not provided'}</dd></div>

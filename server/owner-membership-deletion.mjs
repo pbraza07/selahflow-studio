@@ -1,9 +1,8 @@
-import {removeMembershipBookings} from './membership-booking-deletion.mjs';
 import {expireClientCheckouts} from './client-checkout-expiry.mjs';
 import {retainDeletedClientFinancials} from './client-financial-retention.mjs';
 import {prepareOwnerMembershipDeletion} from './owner-membership-cancellation.mjs';
 
-/** Remove the enrollment and its client bookings together.
+/** Remove the enrollment independently of scheduled appointments.
  * The caller owns the transaction and authenticated business context. */
 export async function deleteOwnerMembership(db,{owner,businessId,id,cancelRecurringBilling=false,api=undefined}){
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
@@ -16,8 +15,7 @@ export async function deleteOwnerMembership(db,{owner,businessId,id,cancelRecurr
  await expireClientCheckouts(db,{businessId,members:[prepared.member],completedFreeCheckouts:prepared.completedFreeCheckouts},api);
  const specs=[];
  for(const table of ['membership_session_ledger','stripe_payment_receipts'])specs.push({table,rows:(await db.query(`SELECT * FROM ${table} WHERE business_id=$1 AND membership_id=$2`,[businessId,id])).rows});
- const bookingFinancials=await removeMembershipBookings(db,{owner,businessId,member,api});
- const retainedFinancialRecords=bookingFinancials+await retainDeletedClientFinancials(db,{businessId,specs});
+ const retainedFinancialRecords=await retainDeletedClientFinancials(db,{businessId,specs});
  await db.query("UPDATE first_customer_commissions SET source_id=NULL WHERE business_id=$1 AND kind='membership' AND source_id=$2",[businessId,id]);
  await db.query('UPDATE stripe_payment_receipts SET membership_id=NULL WHERE business_id=$1 AND membership_id=$2',[businessId,id]);
  await db.query('UPDATE membership_requests SET membership_id=NULL WHERE business_id=$1 AND membership_id=$2',[businessId,id]);
