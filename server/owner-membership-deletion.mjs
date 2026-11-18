@@ -1,8 +1,9 @@
+import {removeMembershipBookings} from './membership-booking-deletion.mjs';
 import {expireClientCheckouts} from './client-checkout-expiry.mjs';
 import {retainDeletedClientFinancials} from './client-financial-retention.mjs';
 import {prepareOwnerMembershipDeletion} from './owner-membership-cancellation.mjs';
 
-/** Membership-only removal; existing bookings and their client IDs are retained.
+/** Remove the enrollment and its client bookings together.
  * The caller owns the transaction and authenticated business context. */
 export async function deleteOwnerMembership(db,{owner,businessId,id,cancelRecurringBilling=false,api=undefined}){
  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
@@ -15,12 +16,12 @@ export async function deleteOwnerMembership(db,{owner,businessId,id,cancelRecurr
  await expireClientCheckouts(db,{businessId,members:[prepared.member],completedFreeCheckouts:prepared.completedFreeCheckouts},api);
  const specs=[];
  for(const table of ['membership_session_ledger','stripe_payment_receipts'])specs.push({table,rows:(await db.query(`SELECT * FROM ${table} WHERE business_id=$1 AND membership_id=$2`,[businessId,id])).rows});
- const retainedFinancialRecords=await retainDeletedClientFinancials(db,{businessId,specs});
+ const bookingFinancials=await removeMembershipBookings(db,{owner,businessId,member,api});
+ const retainedFinancialRecords=bookingFinancials+await retainDeletedClientFinancials(db,{businessId,specs});
  await db.query("UPDATE first_customer_commissions SET source_id=NULL WHERE business_id=$1 AND kind='membership' AND source_id=$2",[businessId,id]);
  await db.query('UPDATE stripe_payment_receipts SET membership_id=NULL WHERE business_id=$1 AND membership_id=$2',[businessId,id]);
  await db.query('UPDATE membership_requests SET membership_id=NULL WHERE business_id=$1 AND membership_id=$2',[businessId,id]);
  await db.query('DELETE FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2',[businessId,id]);
- await db.query("UPDATE business_client_profiles SET deleted_at=now(),name='Deleted client',email='',phone='',notes='',import_columns='{}'::jsonb,updated_at=now() WHERE owner=$1 AND deleted_at IS NULL AND (member_number=$2 OR source_key=$3)",[owner,member.member_number,'membership-'+id]);
  await db.query('INSERT INTO deleted_client_records(business_id,source_table,record_digest) VALUES($1,$2,md5($3)) ON CONFLICT DO NOTHING',[businessId,'customer_memberships',id]);
  await db.query('DELETE FROM customer_memberships WHERE business_id=$1 AND id=$2',[businessId,id]);
  return {ok:true,deleted:member.customer_name,retainedFinancialRecords};
