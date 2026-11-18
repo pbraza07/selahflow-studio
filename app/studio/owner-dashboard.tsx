@@ -34,6 +34,7 @@ const OwnerWaivers=dynamic(()=>import('../components/owner-waivers'),{loading:se
 const OwnerImportantUrls=dynamic(()=>import('../components/owner-important-urls'),{loading:sectionLoading});
 const OwnerReports=dynamic(()=>import('../components/owner-reports'),{loading:sectionLoading});
 const OwnerPaymentSetup=dynamic(()=>import('../components/owner-payment-setup'),{loading:sectionLoading});
+const OwnerCoupons=dynamic(()=>import('../components/owner-coupons'));
 const OwnerMemberships=dynamic(()=>import('../components/owner-memberships'),{loading:sectionLoading});
 const OwnerHistory=dynamic(()=>import('../components/owner-history'),{loading:sectionLoading});
 const OwnerClientDirectory=dynamic(()=>import('../components/owner-client-directory'),{loading:sectionLoading});
@@ -382,6 +383,7 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
 {loading&&<div className="sf-section-loading" role="status">Loading your business workspace…</div>}
 
 {(view==='Overview'||view==='Calendar')&&<div id="owner-request-inbox"><OwnerCancellationRequests compactEmpty onChanged={()=>void refresh()}/><OwnerMembershipRequests onChanged={()=>void refresh()}/><OwnerBookingApprovals staff={config.staff} showHistory={false} compactEmpty/></div>}
+{(view==='Overview'||(view==='Settings'&&settingsTab==='sessions'))&&<OwnerCoupons quickAdd/>}
 {view==='Overview'&&<section className="sf-owner-quick-actions" aria-label="Everyday tasks"><h2>What would you like to do?</h2><div>
  <button type="button" onClick={()=>setView('Calendar')}><CalendarDays size={21}/><span><b>View schedule</b><small>Sessions, bookings and attendance</small></span><ArrowUpRight size={16}/></button>
  <button type="button" onClick={()=>setView('Clients')}><Users size={21}/><span><b>Find a client</b><small>Details, visits and memberships</small></span><ArrowUpRight size={16}/></button>
