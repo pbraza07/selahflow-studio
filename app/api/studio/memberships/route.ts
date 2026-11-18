@@ -88,7 +88,7 @@ export async function POST(req:Request){
     await client.query('COMMIT');return Response.json({ok:true,weeklyLimitOverride:input.enabled},{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
   }
-  if(['sendPayment','saveCoupon','toggleCoupon','setInitialDate','syncRecurrence'].includes(input.action)){const db=await pool.connect();try{await db.query('BEGIN');await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);const result=await membershipBillingAction(db,{business,owner,input,origin:trustedOrigin(req)});await db.query('COMMIT');return Response.json(result,{headers});}catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}}
+  if(['sendPayment','saveCoupon','deleteCoupon','toggleCoupon','setInitialDate','syncRecurrence'].includes(input.action)){const db=await pool.connect();try{await db.query('BEGIN');await db.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);const result=await membershipBillingAction(db,{business,owner,input,origin:trustedOrigin(req)});await db.query('COMMIT');return Response.json(result,{headers});}catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}}
   if(input.action==='saveIdPolicy'){
    if(!MEMBER_ID_POLICIES.includes(input.policy))throw Error('Choose a valid membership ID format.');
    await pool.query('UPDATE businesses SET member_id_policy=$1 WHERE id=$2',[input.policy,business.id]);
