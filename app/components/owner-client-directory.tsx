@@ -25,7 +25,7 @@ export type Visit={paymentEmailStatus?:string;paymentEmailAt?:string;coupon?:Cli
  answers?:Answer[];originalAnswers?:Answer[];customerName?:string;customerEmail?:string;customerPhone?:string;customerMemberNumber?:string;dateOfBirth?:string;firstName?:string;lastName?:string;
  originalSubmission?:{customerName:string;customerEmail:string;customerPhone:string;customAnswers?:Record<string,string|boolean>}|null;submittedAt?:string|null;policyAccepted?:boolean;policyAcceptedAt?:string|null;
 };
-type Client={enrollmentIds?:string[];paymentEmails?:number;membershipCoupons?:(ClientCoupon&{membershipId:string;planName:string})[];idUsesSequence?:boolean;
+type Client={balances?:{id:string;name:string;status:string;used:number;left:number;total:number;recurring:boolean;nextDate:string|null;nextTotal:number|null}[];enrollmentIds?:string[];paymentEmails?:number;membershipCoupons?:(ClientCoupon&{membershipId:string;planName:string})[];idUsesSequence?:boolean;
  membershipBadge?:MembershipBadgeDesign|null;memberNumber?:string;membershipName?:string;membershipStatus?:string;membershipAnswers?:Answer[];membershipDetails?:MembershipDetails;membershipRegistration?:{name:string;firstName:string;lastName:string;email:string;phone:string;dateOfBirth:string;memberNumber:string};dateOfBirth?:string;
  id:string;firstName?:string;lastName?:string;editToken?:string;previousMemberNumbers?:string[];profileUpdatedAt?:string;name:string;email:string;phone:string;bookedSessions:number;attendedSessions:number;
  attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;importColumns?:Record<string,string|boolean>;registrationAnswers?:Record<string,string|boolean>;registrationFieldLabels?:Record<string,string>;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:Answer[];
@@ -340,6 +340,11 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
    <p className="muted" role="status">{filtered.length} matching {filtered.length===1?'client':'clients'} · Filters apply together</p>
    {filtered.length?<div className="sf-client-directory-grid">{filtered.map(c=><article className="sf-client-summary" key={c.id}>
     <div className="sf-client-summary-top"><span className="sf-client-avatar" aria-hidden="true">{c.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span><div><h3 className="sf-client-name-membership"><span translate="no">{c.name}</span><MembershipBadge memberNumber={c.memberNumber} membershipName={c.membershipName} membershipStatus={c.membershipStatus} sessionsIncluded={c.membershipDetails?.sessionsIncluded} sessionsUsed={c.membershipDetails?.sessionsUsed} badge={c.membershipBadge}/></h3><p>{c.email||c.phone||'Contact not provided'}</p></div></div>
+    {c.balances?.map(plan=><section className="sf-client-card-balance" key={plan.id} aria-label={plan.name+' session balance'}>
+     <header><strong translate="no">{plan.name}</strong><span>{plan.status.replaceAll('_',' ')}</span></header>
+     <dl>{[['Used',plan.used],['Left',plan.left],[plan.recurring?'Period total':'Package total',plan.total]].map(([label,count])=><div key={label}><dt>{label}</dt><dd>{count}</dd></div>)}</dl>
+     {plan.nextDate&&<small>Next period · {humanDate(plan.nextDate)} · {plan.nextTotal} sessions on renewal</small>}
+    </section>)}
     <div className="sf-client-summary-metrics"><span><b>{c.bookedSessions}</b> sessions booked</span><span><b>{c.attendedSessions}</b> attended</span><span><b>{c.paymentEmails??0}</b> membership payment emails submitted</span></div>
     {!!c.latestBookingAnswers?.length&&<p className="sf-client-booking-answer-preview">{c.latestBookingAnswers.length} booking question{c.latestBookingAnswers.length===1?'':'s'} answered · See full details</p>}
     <div className="sf-client-summary-types"><small>Service types</small><strong>{c.serviceTypes.join(' · ')||'Not categorized'}</strong></div>
