@@ -153,7 +153,8 @@ export async function confirmBooking(options){
    "UPDATE booking_requests SET status='accepted',appointment_id=$1,reviewed_by=$2,reviewed_at=now() WHERE id=$3",
    [id,data.reviewedBy||'owner',pendingId]);
   const nextAllowance=weeklyMember?.billing_type!=='package'&&weeklyMember?.credit_period_end&&date>=new Date(weeklyMember.credit_period_end).toISOString().slice(0,10);
-  if(sessionId&&data.membershipCovered===true&&!membershipUsage&&!nextAllowance){
+  const awaitingActivation=weeklyMember?.credit_period_start&&new Date(weeklyMember.credit_period_start)>new Date();
+  if(sessionId&&data.membershipCovered===true&&!membershipUsage&&!nextAllowance&&!awaitingActivation){
    const charge=await debitAppointmentMembershipSession(client,{owner,memberNumber:data.memberNumber,appointmentId:id,status:'Confirmed',confirmedRosterAddition:true,ledgerId:sessionLedgerId()});
    if(!charge.deducted&&!charge.alreadyDeducted)throw conflict('No eligible membership session is available for this booking.');
   }
