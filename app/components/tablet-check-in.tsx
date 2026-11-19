@@ -31,10 +31,10 @@ export default function TabletCheckIn({business}:{business:{slug:string;name:str
    <h1 ref={heading} tabIndex={-1}>{success?'You’re all set!':titles[mode]}</h1>
    {success?<section className={styles.panel} role="status"><CheckCircle size={56}/><p>{success}</p><button onClick={()=>window.dispatchEvent(new Event('sf-kiosk-reset'))}>Done / Next client</button></section>:mode==='home'?<><p className={styles.intro}>Tap an option to get started. Need a hand? Our team is here to help.</p><div className={styles.grid}>
     <button className={styles.primary} onClick={()=>start('checkin')}><CheckCircle/><strong>Check in</strong><span>I’m here for my session</span></button>
-    <a href={'/book/'+business.slug}><CalendarDays/><strong>Book a session</strong><span>Find your next visit</span></a>
+    <a href={'/book/'+business.slug+'?checkIn='+business.slug}><CalendarDays/><strong>Book a session</strong><span>Find your next visit</span></a>
     <button onClick={()=>start('waiver')}><FileSignature/><strong>Review waiver</strong><span>Read and sign your current waiver</span></button>
-    {products&&<a href={'/shop/'+business.slug}><ShoppingBag/><strong>View products</strong><span>Shop with us</span></a>}
-    <a href={'/membership/'+business.slug}><Ticket/><strong>View membership options</strong><span>Explore plans and packages</span></a>
+    {products&&<a href={'/shop/'+business.slug+'?checkIn='+business.slug}><ShoppingBag/><strong>View products</strong><span>Shop with us</span></a>}
+    <a href={'/membership/'+business.slug+'?checkIn='+business.slug}><Ticket/><strong>View membership options</strong><span>Explore plans and packages</span></a>
     <button onClick={()=>start('membership')}><Contact/><strong>Check membership status</strong><span>Remaining sessions &amp; visit history</span></button>
    </div></>:<section className={styles.panel}>
    {!result&&<form onSubmit={lookup} autoComplete="off">{mode==='checkin'?<><p>Check in from 24 hours before until 24 hours after your session starts. After that, please see our team.</p><fieldset><legend>Find your booking with</legend><div className={styles.methods}>{[['email','Email'],['phone','Phone number'],['memberNumber','Member ID']].map(([id,label])=><button key={id} type="button" aria-pressed={kind===id} onClick={()=>{setKind(id);setValue('');}}>{label}</button>)}</div></fieldset></>:<p>Enter your Member ID to {mode==='waiver'?'review and replace your signed waiver':'see your membership and session history'}.</p>}

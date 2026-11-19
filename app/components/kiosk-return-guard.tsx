@@ -4,7 +4,9 @@ import {usePathname} from 'next/navigation';
 export function clearKioskClientStorage(){for(const storage of [window.localStorage,window.sessionStorage])try{for(const key of Object.keys(storage))if(/selahflow|product-order/i.test(key))storage.removeItem(key);}catch{}}
 export default function KioskReturnGuard(){
  const pathname=usePathname(),[slug,setSlug]=useState(''),[left,setLeft]=useState(90);
- useEffect(()=>{const match=document.cookie.match(/(?:^|;\s*)sf_kiosk_slug=([a-z0-9-]+)(?:;|$)/);setSlug(match?.[1]||'');},[pathname]);
+ useEffect(()=>{const match=document.cookie.match(/(?:^|;\s*)sf_kiosk_slug=([a-z0-9-]+)(?:;|$)/);const paired=match?.[1];
+ const fromCheckIn=paired&&(pathname==='/check-in/'+paired||(new URLSearchParams(window.location.search).get('checkIn')===paired&&['/book/','/shop/','/membership/'].some(prefix=>pathname===prefix+paired)));
+ setSlug(fromCheckIn?paired:'');},[pathname]);
  useEffect(()=>{if(!slug||pathname.startsWith('/login')||pathname.startsWith('/studio')||pathname.startsWith('/admin'))return;
  document.body.classList.add('sf-kiosk-active');
  const protectForms=()=>document.querySelectorAll('form,input').forEach(el=>{if(el.getAttribute('autocomplete')!=='off')el.setAttribute('autocomplete','off');});protectForms();const observer=new MutationObserver(protectForms);observer.observe(document.body,{childList:true,subtree:true});
