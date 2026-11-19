@@ -83,12 +83,18 @@ test('past-credit endpoints require owner authentication and same-origin request
   const url=new URL('../app/api/studio/memberships/route.ts',import.meta.url),nativeRequire=createRequire(url),exported={};
   const compiled=ts.transpileModule(await readFile(url,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
   new Function('require','exports',compiled)(path=>path.endsWith('/server/database.mjs')?{getPool:()=>({...f.db,connect:async()=>f.db})}:path.endsWith('/lib/auth')?{requireOwner:async req=>{const owner=req.headers.get('x-test-owner');if(!owner)throw Error('AUTH_REQUIRED');return owner;}}:nativeRequire(path),exported);
-  const request=(owner='owner',origin='https://example.test')=>new Request('https://example.test/api/studio/memberships',{method:'POST',headers:{origin,'content-type':'application/json',...(owner?{'x-test-owner':owner}:{})},body:JSON.stringify({action:'applyPastMemberCredit',...args})});
+  const request=(owner='owner',origin='https://example.test',payload={action:'applyPastMemberCredit',...args})=>new Request('https://example.test/api/studio/memberships',{method:'POST',headers:{origin,'content-type':'application/json',...(owner?{'x-test-owner':owner}:{})},body:JSON.stringify(payload)});
   assert.equal((await exported.POST(request(''))).status,401);
   assert.equal((await exported.POST(request('owner','https://foreign.test'))).status,403);
   const other=await exported.POST(request('other'));assert.notEqual(other.status,200);
   assert.equal((await f.db.query('SELECT sessions_used FROM customer_memberships')).rows[0].sessions_used,0);
-  const applied=await exported.POST(request());assert.equal(applied.status,200,await applied.clone().text());
+  await f.db.query("UPDATE appointments SET data=$1 WHERE id='visit'",[JSON.stringify({...f.data,memberNumber:null,email:''})]);
+  const calendar={action:'applyCalendarCredit',memberNumber:'tp010190',appointmentId:'visit',reason:'Past attendance from schedule'};
+  const apply=()=>exported.POST(request('owner','https://example.test',calendar));
+  const applied=await apply();assert.equal(applied.status,200,await applied.clone().text());
+  assert.equal((await applied.json()).remaining,4);
+  assert.equal((await (await apply()).json()).alreadyDeducted,true);
+  assert.equal((await f.db.query("SELECT data::jsonb->>'memberNumber' AS number FROM appointments WHERE id='visit'")).rows[0].number,'TP010190');
  }finally{if(previous===undefined)delete process.env.APP_URL;else process.env.APP_URL=previous;await f.close();}
 });
 

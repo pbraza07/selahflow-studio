@@ -215,11 +215,22 @@ export async function POST(req:Request){
     return Response.json({ok:true,credited:credits,confirmationEmail:'queued'},{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
   }
-  if(input.action==='pastMemberVisits'||input.action==='applyPastMemberCredit'){
+  if(['pastMemberVisits','applyPastMemberCredit','applyCalendarCredit'].includes(input.action)){
    const client=await pool.connect();
    try{
     await client.query('BEGIN');
-    const options={owner,businessId:business.id,id:String(input.id||''),appointmentId:String(input.appointmentId||''),reason:input.reason,attendance:input.attendance};
+    let enrollmentId=String(input.id||'');
+    const fromCalendar=input.action==='applyCalendarCredit';
+    if(fromCalendar){
+     const number=String(input.memberNumber||'').trim().toUpperCase();
+     if(!number)throw Error('Enter the client’s member ID.');
+     const matches=(await client.query("SELECT m.id,p.name FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 AND m.member_number=$2 AND (m.status='active' OR EXISTS(SELECT 1 FROM membership_session_ledger l WHERE l.membership_id=m.id AND l.appointment_id=$3 AND l.event_type='session_used')) ORDER BY p.name,m.id",[business.id,number,String(input.appointmentId||'')])).rows;
+     if(!matches.length)throw Error('No active membership found for this member ID.');
+     if(matches.length>1&&!enrollmentId){await client.query('COMMIT');return Response.json({plans:matches},{headers});}
+     enrollmentId=enrollmentId||matches[0].id;
+     if(!matches.some((m:{id:string})=>m.id===enrollmentId))throw Error('Select a membership belonging to this member ID.');
+    }
+    const options={owner,businessId:business.id,id:enrollmentId,linkUnassigned:fromCalendar,appointmentId:String(input.appointmentId||''),reason:input.reason,attendance:input.attendance};
     const result=input.action==='pastMemberVisits'?{visits:await pastMemberVisits(client,options)}:await applyPastMemberCredit(client,options);
     await client.query('COMMIT');return Response.json(result,{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
