@@ -85,10 +85,11 @@ export async function recordWeeklyOverrideBooking(db,{member,appointmentId,date}
 
 /** Persist a late debit in its original month without spending this month's
  * credits. The admission check already holds the membership/schedule locks. */
-export async function recordHistoricalOverrideUsage(db,{member,date,allocation}){
+export async function recordHistoricalOverrideUsage(db,{member,date,allocation,appointmentId}){
  if(!allocation)return false;
  const current=member.credit_period_start&&member.credit_period_end&&date>=new Date(member.credit_period_start).toISOString().slice(0,10)&&date<new Date(member.credit_period_end).toISOString().slice(0,10);
  if(current)return false;
+ if(appointmentId)await db.query("UPDATE membership_session_ledger SET usage_period_start=$1 WHERE business_id=$2 AND membership_id=$3 AND appointment_id=$4 AND event_type='session_used'",[allocation.periodStart,member.business_id,member.id,appointmentId]);
  await db.query('INSERT INTO membership_credit_periods(business_id,membership_id,period_start,period_end,sessions_included,sessions_used) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(membership_id,period_start) DO UPDATE SET sessions_used=GREATEST(membership_credit_periods.sessions_used,excluded.sessions_used) WHERE membership_credit_periods.business_id=excluded.business_id',[member.business_id,member.id,allocation.periodStart,allocation.periodEnd,allocation.included,allocation.used+1]);
  return true;
 }

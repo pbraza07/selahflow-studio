@@ -1,3 +1,5 @@
+import {debitAppointmentMembershipSession} from './appointment-membership-usage.mjs';
+import {randomUUID as sessionLedgerId} from 'node:crypto';
 import {applyPastMemberCredit,sessionHasEnded} from './past-session-override.mjs';
 import {sharedService,sharesServiceTime,serviceRemaining} from './shared-service-capacity.mjs';
 import {assertWorkspace} from './team-workspace-state.mjs';
@@ -150,6 +152,11 @@ export async function confirmBooking(options){
   if(pendingId)await client.query(
    "UPDATE booking_requests SET status='accepted',appointment_id=$1,reviewed_by=$2,reviewed_at=now() WHERE id=$3",
    [id,data.reviewedBy||'owner',pendingId]);
+  const nextAllowance=weeklyMember?.billing_type!=='package'&&weeklyMember?.credit_period_end&&date>=new Date(weeklyMember.credit_period_end).toISOString().slice(0,10);
+  if(sessionId&&data.membershipCovered===true&&!membershipUsage&&!nextAllowance){
+   const charge=await debitAppointmentMembershipSession(client,{owner,memberNumber:data.memberNumber,appointmentId:id,status:'Confirmed',confirmedRosterAddition:true,ledgerId:sessionLedgerId()});
+   if(!charge.deducted&&!charge.alreadyDeducted)throw conflict('No eligible membership session is available for this booking.');
+  }
   if(pendingId&&options.notificationOrigin)await queueApprovedBooking(client,{bookingId:id,requestId:pendingId,origin:options.notificationOrigin});
   if(options.submissionOrigin&&!pendingId){const business=(await client.query('SELECT id FROM businesses WHERE owner_id=$1',[owner])).rows[0];if(business)await queueOwnerFormNotification(client,{businessId:business.id,sourceId:id,form:'booking',values:data,answers:data.customAnswers});}
   const receiptOrigin=options.teamNotificationOrigin||options.submissionOrigin;

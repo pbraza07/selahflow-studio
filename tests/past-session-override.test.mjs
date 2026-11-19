@@ -4,6 +4,7 @@ import {readFile,readdir} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
 import {pastSessionOverride,sessionHasEnded,pastMemberVisits,applyPastMemberCredit} from '../server/past-session-override.mjs';
 import {confirmBooking} from '../server/booking-approvals.mjs';
+import {changeAppointmentStatus} from '../server/appointment-membership-usage.mjs';
 import {computeDayAvailability} from '../server/session-scheduling.mjs';
 import {serviceCapacityOpen} from '../server/booking-approvals.mjs';
 const clock={date:'2030-01-02',minutes:600};
@@ -39,6 +40,30 @@ test('past visit before activation debits current balance once, retains activati
  assert.equal((await transaction(f.db,()=>pastMemberVisits(f.db,args))).length,0);
  }finally{await f.close();}
 });
+test('removing a charged participant reverses only their posted debit and never credits twice',async()=>{
+ const f=await fixture();try{
+  await transaction(f.db,()=>applyPastMemberCredit(f.db,args));
+  await f.db.query("UPDATE appointments SET status='Cancelled' WHERE id='visit'");
+  assert.equal((await f.db.query('SELECT sessions_used FROM customer_memberships')).rows[0].sessions_used,0);
+  await f.db.query("UPDATE customer_memberships SET sessions_used=2");
+  await f.db.query("DELETE FROM appointments WHERE id='visit'");
+  assert.equal((await f.db.query('SELECT sessions_used FROM customer_memberships')).rows[0].sessions_used,2);
+  assert.equal((await f.db.query("SELECT id FROM membership_session_ledger WHERE event_type='session_used'")).rows.length,0);
+ }finally{await f.close();}
+});
+
+test('deleting a prior-period visit restores the archived balance without adding a current credit',async()=>{
+ const f=await fixture();try{
+  await f.db.query("UPDATE customer_memberships SET credit_period_start=now()-interval '7 days',credit_period_end=now()+interval '23 days'");
+  await transaction(f.db,()=>applyPastMemberCredit(f.db,args));
+  await f.db.query("INSERT INTO membership_credit_periods(business_id,membership_id,period_start,period_end,sessions_included,sessions_used) SELECT business_id,id,credit_period_start,credit_period_end,5,1 FROM customer_memberships");
+  await f.db.query("UPDATE customer_memberships SET credit_period_start=credit_period_end,credit_period_end=credit_period_end+interval '1 month',sessions_used=2");
+  await f.db.query("DELETE FROM appointments WHERE id='visit'");
+  assert.equal((await f.db.query('SELECT sessions_used FROM membership_credit_periods')).rows[0].sessions_used,0);
+  assert.equal((await f.db.query('SELECT sessions_used FROM customer_memberships')).rows[0].sessions_used,2);
+ }finally{await f.close();}
+});
+
 test('retroactive credits reject tenant mismatch, canceled/future visits, other clients, paid bookings, exhausted and reserved balances',async()=>{
  const f=await fixture();try{
  await assert.rejects(transaction(f.db,()=>applyPastMemberCredit(f.db,{...args,owner:'other'})),/business/);
@@ -73,6 +98,21 @@ test('owner past-session admission keeps published session capacity and ordinary
  await confirmBooking(booking);
  await assert.rejects(()=>confirmBooking({...booking,id:'second-booking'}),/full/);
  assert.equal((await f.db.query("SELECT count(*)::int n FROM appointments WHERE date='2020-01-02'")).rows[0].n,1);
+ }finally{await f.close();}
+});
+
+test('confirm, attend, remove, and re-add a customer synchronizes the roster and current membership balance',async()=>{
+ const f=await fixture();try{
+  const date=new Date(Date.now()+2*86400000).toISOString().slice(0,10);
+  await f.db.query("UPDATE membership_plans SET weekly_sessions=NULL");
+  const service={id:'s',name:'Session',duration:60,price:50};
+  await f.db.query('UPDATE settings SET data=$1 WHERE owner=$2',[JSON.stringify({services:[service],staff:[{id:'coach',services:['s']}],bookableSessions:[{id:'group',date,staff:'coach',service:'s',start:600,capacity:3}]}),'owner']);
+  const book=id=>confirmBooking({pool:{...f.db,connect:async()=>f.db},owner:'owner',services:[service],staff:'coach',date,start:600,duration:60,buffer:0,id,data:{...f.data,sessionId:'group',membershipCovered:true,price:0}});
+  const used=async()=>(await f.db.query('SELECT sessions_used FROM customer_memberships')).rows[0].sessions_used;
+  await book('added');assert.equal(await used(),1);
+  await transaction(f.db,()=>changeAppointmentStatus(f.db,{owner:'owner',appointmentId:'added',status:'Checked in',eventId:'checked-event',ledgerId:'second-charge',createdAt:new Date().toISOString()}));assert.equal(await used(),1);
+  await f.db.query("DELETE FROM appointments WHERE id='added'");assert.equal(await used(),0);
+  await book('re-added');assert.equal(await used(),1);
  }finally{await f.close();}
 });
 

@@ -255,7 +255,7 @@ export async function POST(req:Request){
     const info=typeof selected.data==='string'?JSON.parse(selected.data):selected.data||{};
     if(info.memberNumber!==member.member_number)throw Error('Appointment member number does not match.');
     await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta) VALUES($1,$2,$3,$4,'session_used',-1)",[randomUUID(),business.id,id,selected.id]);
-    if(!await recordHistoricalOverrideUsage(client,{member,date:selected.date,allocation:allowance?.monthlyAllocation}))await client.query('UPDATE customer_memberships SET sessions_used=sessions_used+1,updated_at=now() WHERE id=$1 AND business_id=$2',[id,business.id]);
+    if(!await recordHistoricalOverrideUsage(client,{member,appointmentId:selected.id,date:selected.date,allocation:allowance?.monthlyAllocation}))await client.query('UPDATE customer_memberships SET sessions_used=sessions_used+1,updated_at=now() WHERE id=$1 AND business_id=$2',[id,business.id]);
     await client.query('COMMIT');return Response.json({ok:true},{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
   }
