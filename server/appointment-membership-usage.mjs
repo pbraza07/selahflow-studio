@@ -15,26 +15,23 @@ import {loadOwnerMemberRoster,ownerAppointmentMember} from './owner-appointment-
  */
 export const CREDIT_CONSUMING_STATUSES=new Set(['Checked in','No-show']);
 
-export async function debitAppointmentMembershipSession(client,{owner,memberNumber,appointmentId,status,ledgerId,creditAllowed=true}){
+export async function debitAppointmentMembershipSession(client,{owner,memberNumber,appointmentId,status,ledgerId,confirmedRosterAddition=false,creditAllowed=true}){
  const number=String(memberNumber||'').trim().toUpperCase();
- if(!CREDIT_CONSUMING_STATUSES.has(status)||!number||creditAllowed===false){
+ if(!(CREDIT_CONSUMING_STATUSES.has(status)||(confirmedRosterAddition&&status==='Confirmed'))||!number||creditAllowed===false){
   return {deducted:false,alreadyDeducted:false,memberFound:false,remaining:null};
  }
  const result=await client.query(
   "SELECT m.*,b.id AS business_id,p.weekly_sessions,p.credit_eligibility FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE b.owner_id=$1 AND m.member_number=$2 FOR UPDATE OF m",
   [owner,number]
  );
- let member=result.rows[0];
+ const prior=(await client.query("SELECT l.membership_id FROM membership_session_ledger l JOIN businesses b ON b.id=l.business_id WHERE b.owner_id=$1 AND l.appointment_id=$2 AND l.event_type='session_used' LIMIT 1",[owner,appointmentId])).rows[0];
+ let member=prior?result.rows.find(m=>m.id===prior.membership_id):result.rows.find(m=>m.status==='active')||result.rows[0];
  if(member)member=await refreshMemberPeriod(client,member);
+ if(prior)return {deducted:false,alreadyDeducted:true,memberFound:!!member,active:member?.status==='active',remaining:member?Math.max(0,Number(member.sessions_included)-Number(member.sessions_used)):null};
  if(!member)return {deducted:false,alreadyDeducted:false,memberFound:false,remaining:null};
  if(member.status!=='active')return {deducted:false,alreadyDeducted:false,memberFound:true,active:false,remaining:null};
  let appliesToCurrentPeriod=true,monthlyAllocation=null,appointmentDate=null;
  const remaining=Number(member.sessions_included)-Number(member.sessions_used);
- const prior=await client.query(
-  "SELECT 1 FROM membership_session_ledger WHERE business_id=$1 AND membership_id=$2 AND appointment_id=$3 AND event_type='session_used' LIMIT 1",
-  [member.business_id,member.id,appointmentId]
- );
- if(prior.rowCount)return {deducted:false,alreadyDeducted:true,memberFound:true,active:true,remaining:Math.max(0,remaining)};
  const visit=(await client.query('SELECT data,date FROM appointments WHERE owner=$1 AND id=$2',[owner,appointmentId])).rows[0];
  if(member.billing_type==='package'&&member.paid_through&&visit?.date>=businessDate(member.paid_through))return {deducted:false,alreadyDeducted:false,memberFound:true,active:false,remaining:null};
  const details=storedAppointmentData(visit);
@@ -55,7 +52,7 @@ export async function debitAppointmentMembershipSession(client,{owner,memberNumb
   [ledgerId,member.business_id,member.id,appointmentId]
  );
  if(!inserted.rowCount)return {deducted:false,alreadyDeducted:true,memberFound:true,active:true,remaining};
- if(member.weekly_sessions&&!appliesToCurrentPeriod)await recordHistoricalOverrideUsage(client,{member,date:appointmentDate,allocation:monthlyAllocation});
+ if(member.weekly_sessions&&!appliesToCurrentPeriod)await recordHistoricalOverrideUsage(client,{member,date:appointmentDate,allocation:monthlyAllocation,appointmentId});
  if(member.weekly_sessions&&!appliesToCurrentPeriod)return {deducted:true,alreadyDeducted:false,memberFound:true,active:true,remaining:Math.max(0,remaining)};
  const updated=await client.query(
   "UPDATE customer_memberships SET sessions_used=sessions_used+1,updated_at=now() WHERE business_id=$1 AND id=$2 AND sessions_used<sessions_included RETURNING sessions_used,sessions_included",
@@ -77,7 +74,7 @@ export async function changeAppointmentStatus(client,{owner,appointmentId,status
  if(!appointment)return {notFound:true};
  if(appointment.status===status)return {ok:true,alreadyProcessed:true,membershipDeducted:false};
  const attendanceCorrection=appointment.status==='No-show'&&status==='Checked in';
- if(['Completed','Cancelled','No-show'].includes(appointment.status)&&!attendanceCorrection)throw Error('This appointment is already closed.');
+ if(['Completed','Cancelled','No-show'].includes(appointment.status)&&!attendanceCorrection&&status!=='Cancelled')throw Error('This appointment is already closed.');
  let memberNumber='';
  let appointmentData={};
  try{
