@@ -1,4 +1,5 @@
 'use client';
+import OwnerMemberships from './owner-memberships';
 import ExcelDownload from './excel-download';
 import ExpandableDetailsGroup from './expandable-details-group';
 import OwnerHistory from './owner-history';
@@ -18,13 +19,13 @@ type Answer={id:string;label:string;value:string|boolean;type?:string};
 type MembershipDetails={registeredAt?:string|null;paidThrough?:string|null;lastPaidAt?:string|null;interval?:string;priceCents?:number;sessionsIncluded?:number;sessionsUsed?:number};
 type FormField={id:string;label:string;type:string;options?:string[]};
 type ClientCoupon={code:string;discountAmountUSD:number;duration?:string};
-export type Visit={coupon?:ClientCoupon|null;
+export type Visit={paymentEmailStatus?:string;paymentEmailAt?:string;coupon?:ClientCoupon|null;
  paymentTracking?:string;bookingTimeline?:{status:string;at:string|null}[];id:string;date:string;time:number;duration:number;serviceNames:string[];serviceTypes:string[];
  staff:string;status:string;attended:boolean;sessionType:string;quotedPrice:number;
  answers?:Answer[];originalAnswers?:Answer[];customerName?:string;customerEmail?:string;customerPhone?:string;customerMemberNumber?:string;dateOfBirth?:string;firstName?:string;lastName?:string;
  originalSubmission?:{customerName:string;customerEmail:string;customerPhone:string;customAnswers?:Record<string,string|boolean>}|null;submittedAt?:string|null;policyAccepted?:boolean;policyAcceptedAt?:string|null;
 };
-type Client={membershipCoupons?:(ClientCoupon&{membershipId:string;planName:string})[];idUsesSequence?:boolean;
+type Client={enrollmentIds?:string[];paymentEmails?:number;membershipCoupons?:(ClientCoupon&{membershipId:string;planName:string})[];idUsesSequence?:boolean;
  membershipBadge?:MembershipBadgeDesign|null;memberNumber?:string;membershipName?:string;membershipStatus?:string;membershipAnswers?:Answer[];membershipDetails?:MembershipDetails;membershipRegistration?:{name:string;firstName:string;lastName:string;email:string;phone:string;dateOfBirth:string;memberNumber:string};dateOfBirth?:string;
  id:string;firstName?:string;lastName?:string;editToken?:string;previousMemberNumbers?:string[];profileUpdatedAt?:string;name:string;email:string;phone:string;bookedSessions:number;attendedSessions:number;
  attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;importColumns?:Record<string,string|boolean>;registrationAnswers?:Record<string,string|boolean>;registrationFieldLabels?:Record<string,string>;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:Answer[];
@@ -33,7 +34,8 @@ const humanDate=(date:string)=>date?new Date(date+'T12:00:00Z').toLocaleDateStri
  {month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}):'—';
 const money=(amount:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(amount||0);
 
-export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()=>void;onAddMembership:(client:{name:string;email:string;phone:string})=>void}){
+export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:string;onOpenPayments:()=>void;onBook:()=>void}){
+ const [assignment,setAssignment]=useState<{name:string;email:string;phone:string;memberNumber?:string}|null>(null);
  const importInput=useRef<HTMLInputElement>(null);
  const [importing,setImporting]=useState(false),[importMessage,setImportMessage]=useState('');
  const [bookingRows,setBookingRows]=useState<(Visit&{clientName:string;clientEmail:string;clientPhone:string;clientMemberNumber:string})[]>([]),[directoryView,setDirectoryView]=useState('clients');
@@ -175,7 +177,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    <div className="sf-client-detail-nav">
     <button type="button" className="outline" onClick={()=>{setSelectedId(null);setAttendedOnly(false);}}><ArrowLeft size={17}/> Back to clients</button>
     <div className="sf-client-management-buttons">
-     <button type="button" className="outline" onClick={()=>beginEdit(selected)}><Pencil size={16}/> Edit client</button><button type="button" className="outline" onClick={()=>onAddMembership({name:selected.name,email:selected.email,phone:selected.phone})}>Add membership</button>
+     <button type="button" className="outline" onClick={()=>beginEdit(selected)}><Pencil size={16}/> Edit client</button><button type="button" className="outline" onClick={()=>{setAssignment({name:selected.name,email:selected.email,phone:selected.phone,memberNumber:selected.memberNumber});setProfileTab('Membership');}}>Add membership</button>
      <ExcelDownload className="primary sf-clients-export" href={exported(selected.id)}><Download size={16}/> Export this client to Excel</ExcelDownload>
      <button type="button" className="outline sf-client-remove" disabled={!!actionBusy} onClick={()=>void removeClient(selected)}><Trash2 size={16}/> Delete permanently</button>
      {selected.memberNumber&&!selected.idUsesSequence&&!/^[A-Z]{2}[0-9]{6}$/.test(selected.memberNumber)&&<button type="button" className="outline" disabled={!!actionBusy} onClick={()=>void replaceLegacyId(selected)}>Replace legacy ID with eight characters</button>}
@@ -185,7 +187,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    <article className="sf-client-profile">
     <div className="sf-client-profile-heading"><span className="sf-client-avatar" aria-hidden="true">{selected.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span>
      <div><h3 className="sf-client-name-membership"><span translate="no">{selected.name}</span><MembershipBadge memberNumber={selected.memberNumber} membershipName={selected.membershipName} membershipStatus={selected.membershipStatus} sessionsIncluded={selected.membershipDetails?.sessionsIncluded} sessionsUsed={selected.membershipDetails?.sessionsUsed} badge={selected.membershipBadge}/></h3><p><span translate="no">{selected.email||'No email recorded'}</span>{selected.phone?' · '+selected.phone:''}</p>
-      <span className="sf-client-profile-note">Service history and attendance for this business only</span></div>
+      <span className="sf-client-profile-note">{selected.attendedSessions} sessions attended · {selected.paymentEmails??0} membership payment emails submitted</span></div>
     </div>
     <section hidden={profileTab!=='Details'} className="sf-client-first-booking sf-client-registration-overview">
      <div className="sf-client-history-heading"><h3>Client information & registration</h3><small>Current client record, including original registration details when available</small></div>
@@ -287,6 +289,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
      {selected.attendanceDays.length?<div className="sf-client-day-tags">{selected.attendanceDays.map(day=><time dateTime={day} key={day}>{humanDate(day)}</time>)}</div>:<p>Attendance is recorded when an appointment is marked <strong>Checked in</strong> or <strong>Completed</strong>.</p>}
     </div>
    </article>
+   {profileTab==='Membership'&&(!!selected.enrollmentIds?.length||assignment)&&<OwnerMemberships prefill={assignment} key={selected.id} slug={slug} onOpenPayments={onOpenPayments} enrollmentIds={selected.enrollmentIds||[]}/>}
    {profileTab==='Membership'&&!selected.membershipName&&<p className="notice">No membership package is recorded for this client.</p>}
    {profileTab==='History'&&(selected.memberNumber||selected.email?<OwnerHistory key={selected.id} memberNumber={selected.memberNumber||''} clientEmail={selected.email} clientName={selected.name} compact/>:<p className="notice">This client has no stable membership ID or email for linking history. Use the business History tab to search retained records.</p>)}
    <section hidden={profileTab!=='Sessions'} className="sf-client-history">
@@ -303,7 +306,7 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
        {v.originalAnswers.map(a=><div key={a.id}><strong>{a.label}:</strong> {displayAnswer(a.value)}</div>)}
       </details>}</td><td>{v.serviceTypes.join(', ')||'Not categorized'}</td>
       <td>{v.sessionType}</td><td>{v.staff||'—'}</td>
-      <td><span className={'sf-client-visit-status '+(v.attended?'attended':v.status==='No-show'||v.status==='Cancelled'?'missed':'scheduled')}>{v.status}{v.attended?' · Attended':''}</span><details><summary>+ Booking timeline</summary>{v.bookingTimeline?.map((entry,i)=><p key={i}>{entry.status}{entry.at?' · '+new Date(entry.at).toLocaleString():''}</p>)}</details></td><td><span style={{color:v.paymentTracking==='completed'?'#167347':'#b42318',fontWeight:700}}>{v.paymentTracking==='completed'?'Completed':'Pending'}</span></td>
+      <td><span className={'sf-client-visit-status '+(v.attended?'attended':v.status==='No-show'||v.status==='Cancelled'?'missed':'scheduled')}>{v.status}{v.attended?' · Attended':''}</span><details><summary>+ Booking timeline</summary>{v.paymentEmailStatus&&<p>Payment link email · {v.paymentEmailStatus.replaceAll('_',' ')}{v.paymentEmailAt&&' · '+new Date(v.paymentEmailAt).toLocaleString()}</p>}{v.bookingTimeline?.map((entry,i)=><p key={i}>{entry.status}{entry.at?' · '+new Date(entry.at).toLocaleString():''}</p>)}</details></td><td><span style={{color:v.paymentTracking==='completed'?'#167347':'#b42318',fontWeight:700}}>{v.paymentTracking==='completed'?'Completed':'Pending'}</span></td>
       <td>{money(v.quotedPrice)}</td>
      </tr>)}</tbody></SortableTable></div></ExpandableDetailsGroup>:<p className="sf-client-empty">No {attendedOnly?'attended':'recorded'} sessions to show.</p>}
    </section>
@@ -337,11 +340,11 @@ export default function OwnerClientDirectory({onBook,onAddMembership}:{onBook:()
    <p className="muted" role="status">{filtered.length} matching {filtered.length===1?'client':'clients'} · Filters apply together</p>
    {filtered.length?<div className="sf-client-directory-grid">{filtered.map(c=><article className="sf-client-summary" key={c.id}>
     <div className="sf-client-summary-top"><span className="sf-client-avatar" aria-hidden="true">{c.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span><div><h3 className="sf-client-name-membership"><span translate="no">{c.name}</span><MembershipBadge memberNumber={c.memberNumber} membershipName={c.membershipName} membershipStatus={c.membershipStatus} sessionsIncluded={c.membershipDetails?.sessionsIncluded} sessionsUsed={c.membershipDetails?.sessionsUsed} badge={c.membershipBadge}/></h3><p>{c.email||c.phone||'Contact not provided'}</p></div></div>
-    <div className="sf-client-summary-metrics"><span><b>{c.bookedSessions}</b> sessions booked</span><span><b>{c.attendedSessions}</b> attended</span><span><b>{c.attendanceDays.length}</b> attendance days</span></div>
+    <div className="sf-client-summary-metrics"><span><b>{c.bookedSessions}</b> sessions booked</span><span><b>{c.attendedSessions}</b> attended</span><span><b>{c.paymentEmails??0}</b> membership payment emails submitted</span></div>
     {!!c.latestBookingAnswers?.length&&<p className="sf-client-booking-answer-preview">{c.latestBookingAnswers.length} booking question{c.latestBookingAnswers.length===1?'':'s'} answered · See full details</p>}
     <div className="sf-client-summary-types"><small>Service types</small><strong>{c.serviceTypes.join(' · ')||'Not categorized'}</strong></div>
     <p className="sf-client-last-visit"><CalendarDays size={14}/> Latest appointment: {humanDate(c.latestDate)}</p>
-    <div className="sf-client-summary-actions"><button type="button" className="primary" onClick={()=>{setSelectedId(c.id);setProfileTab('History');setAttendedOnly(false);}}><ChevronRight size={16}/> View history</button>
+    <div className="sf-client-summary-actions"><button type="button" className="primary" onClick={()=>{setAssignment(null);setSelectedId(c.id);setProfileTab('History');setAttendedOnly(false);}}><ChevronRight size={16}/> View client</button>{!!c.enrollmentIds?.length&&<button type="button" className="outline" onClick={()=>{setAssignment(null);setSelectedId(c.id);setProfileTab('Membership');}}>Membership &amp; payments</button>}
      <button type="button" className="outline" aria-label={'Edit '+c.name} onClick={()=>beginEdit(c)}><Pencil size={15}/> Edit</button>
      <ExcelDownload className="outline sf-clients-export" href={exported(c.id)}><Download size={15}/> Excel</ExcelDownload>
      <button type="button" className="outline sf-client-remove" aria-label={'Delete '+c.name} disabled={!!actionBusy} onClick={()=>void removeClient(c)}><Trash2 size={15}/> Delete</button></div>
