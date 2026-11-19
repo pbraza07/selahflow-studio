@@ -54,7 +54,7 @@ export default function BookingRequestCards({
     <div><small>Service(s)</small><b>{(item.details.services||[]).join(', ')}</b></div>
     <div><small>Activity date and time</small><b>{activityDate(item.date)} · {approvalTime(item.start_minute)} Eastern</b></div>
     <div><small>Quote</small><b>{money(item.details.quotedPrice||0)}</b></div>
-    {Object.entries(item.details.customAnswers||{}).map(([id,value])=><div key={id}><small>{item.details.customFieldLabels?.[id]||customFields.find(f=>f.id===id)?.label||id}</small><b>{typeof value==='boolean'?(value?'Yes':'No'):String(value)}</b></div>)}
+    {Object.entries(item.details.customAnswers||{}).filter(([id])=>!customFields.some(f=>f.id===id&&visible(id))).map(([id,value])=><div key={id}><small>{item.details.customFieldLabels?.[id]||customFields.find(f=>f.id===id)?.label||id}</small><b>{typeof value==='boolean'?(value?'Yes':'No'):String(value)}</b></div>)}
     {item.details.originalSubmission&&<div><small>Original customer name before any corrections</small><b translate="no">{item.details.originalSubmission.customerName}</b></div>}
    </div>
   </details>

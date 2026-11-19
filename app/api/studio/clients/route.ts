@@ -1,3 +1,4 @@
+import {currentProfileQuestions} from '../../../../server/current-profile-questions.mjs';
 import {attachCardPayments} from '../../../../server/client-card-payments.mjs';
 import {clientCardBalance} from '../../../../server/client-card-balance.mjs';
 import {deletionErrorMessage} from '../../../../server/deletion-error.mjs';
@@ -88,6 +89,7 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
  for(const c of clients){
   for(const visit of c.history){const email=bookingMail.get(visit.id);if(email)Object.assign(visit,{paymentEmailStatus:email.status,paymentEmailAt:email.updated_at});}
   const enrollments=members.filter((m:any)=>belongsToClient(m,c));
+  (c as any).currentQuestions=currentProfileQuestions({...c,membershipAnswerSources:enrollments.map((m:any)=>({at:m.created_at,rows:memberData(m,c).membershipAnswers}))},fields);
   (c as any).balances=enrollments.map((m:any)=>clientCardBalance(m));
   (c as any).enrollmentIds=enrollments.map((m:any)=>m.id);
   (c as any).paymentEmails=enrollments.reduce((sum:number,m:any)=>sum+Number(m.emails_submitted||0),0);

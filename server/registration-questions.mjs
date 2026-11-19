@@ -1,3 +1,4 @@
+import {uniqueQuestions} from './current-profile-questions.mjs';
 /** Stable field IDs preserve membership identity and historical answers. */
 export const STANDARD_REGISTRATION_FIELDS=Object.freeze([
  {id:'memberNumber',label:'Client ID (returning clients)',type:'text',required:false,placeholder:'e.g. AB031513'},
@@ -8,7 +9,7 @@ export const STANDARD_REGISTRATION_FIELDS=Object.freeze([
  {id:'phone',label:'Phone',type:'tel',required:false},
 ]);
 /** @param {any} config @param {string} form @param {string|null|undefined} sessionId @param {string[]|undefined} serviceIds */
-export function customRegistrationFields(config={},form='booking',sessionId=undefined,serviceIds=undefined){
+function applicableFields(config={},form='booking',sessionId=undefined,serviceIds=undefined){
  const services=Array.isArray(serviceIds)?new Set(serviceIds):null;
  return (config.bookingCustomFields||[]).filter(f=>
   (!f.forms||f.forms.includes(form))&&
@@ -16,9 +17,13 @@ export function customRegistrationFields(config={},form='booking',sessionId=unde
   (form!=='booking'||!f.serviceIds?.length||!services||f.serviceIds.some(id=>services.has(id))));
 }
 /** @param {any} config @param {string} form @param {string|null|undefined} sessionId @param {string[]|undefined} serviceIds */
+export function customRegistrationFields(config={},form='booking',sessionId=undefined,serviceIds=undefined){
+ return uniqueQuestions(applicableFields(config,form,sessionId,serviceIds));
+}
+/** @param {any} config @param {string} form @param {string|null|undefined} sessionId @param {string[]|undefined} serviceIds */
 export function registrationQuestions(config={},form='booking',sessionId=undefined,serviceIds=undefined){
  const edits=config[form+'StandardFields']||{};
- const fields=[...STANDARD_REGISTRATION_FIELDS.map(f=>({...f,...edits[f.id],id:f.id,type:f.type,required:edits[f.id]?.required??f.required,standard:true})),...customRegistrationFields(config,form,sessionId,serviceIds).map(f=>({...f,standard:false}))];
+ const fields=[...STANDARD_REGISTRATION_FIELDS.map(f=>({...f,...edits[f.id],id:f.id,type:f.type,required:edits[f.id]?.required??f.required,standard:true})),...applicableFields(config,form,sessionId,serviceIds).map(f=>({...f,standard:false}))];
  // Each selected service inherits the form requirement unless explicitly
  // overridden. A multi-service visit needs an answer if any service requires it.
  if(form==='booking'&&Array.isArray(serviceIds)&&serviceIds.length)for(const field of fields){
@@ -31,7 +36,7 @@ export function registrationQuestions(config={},form='booking',sessionId=undefin
  if(session?.questionRequired)for(const f of fields)if(typeof session.questionRequired[f.id]==='boolean')f.required=session.questionRequired[f.id];
  const order=config[form+'QuestionOrder']||[];
  const rank=id=>{const i=order.indexOf(id);return i<0?order.length+fields.findIndex(f=>f.id===id):i;};
- return fields.sort((a,b)=>rank(a.id)-rank(b.id));
+ return uniqueQuestions(fields.sort((a,b)=>rank(a.id)-rank(b.id)));
 }
 export function validateRegistrationQuestions(config){
  const standardIds=new Set(STANDARD_REGISTRATION_FIELDS.map(f=>f.id));
@@ -60,10 +65,10 @@ export function validateRegistrationQuestions(config){
    }
   }
   const notices=config[form+'QuestionNotifications'];
-  if(notices!==undefined&&(!notices||typeof notices!=='object'||Array.isArray(notices)||Object.entries(notices).some(([id,value])=>typeof value!=='boolean'||!standardIds.has(id)&&!customRegistrationFields(config,form).some(f=>f.id===id))))throw Error('Invalid question notification selection.');
+  if(notices!==undefined&&(!notices||typeof notices!=='object'||Array.isArray(notices)||Object.entries(notices).some(([id,value])=>typeof value!=='boolean'||!standardIds.has(id)&&!applicableFields(config,form).some(f=>f.id===id))))throw Error('Invalid question notification selection.');
   if(Object.values(edits||{}).some(edit=>edit.showInNotification!==undefined&&typeof edit.showInNotification!=='boolean'))throw Error('Invalid question notification checkbox.');
   const order=config[form+'QuestionOrder'];
-  const allowed=new Set([...standardIds,...customRegistrationFields(config,form).map(f=>f.id)]);
+  const allowed=new Set([...standardIds,...applicableFields(config,form).map(f=>f.id)]);
   if(order!==undefined&&(!Array.isArray(order)||new Set(order).size!==order.length||order.some(id=>!allowed.has(id))))throw Error('Invalid question display order.');
  }
 }

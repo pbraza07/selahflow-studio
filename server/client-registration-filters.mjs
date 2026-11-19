@@ -1,3 +1,4 @@
+import {uniqueQuestions} from './current-profile-questions.mjs';
 import {displayAnswer,dateOnly} from './client-registration-fields.mjs';
 import {hasUsableMembership} from './member-badge-state.mjs';
 
@@ -29,6 +30,7 @@ export function clientFieldValues(client,key){
  const history=Array.isArray(c.history)?c.history:[];
  if(key.startsWith('question:')){
   const id=key.slice(9);
+  if(Array.isArray(c.currentQuestions))return c.currentQuestions.filter(a=>a.id===id).map(a=>displayAnswer(a.value));
   return unique([
    ...(Array.isArray(c.membershipAnswers)?c.membershipAnswers:[]).filter(a=>a.id===id).map(a=>displayAnswer(a.value)),
    ...history.flatMap(h=>[...(h.answers||[]),...(h.originalAnswers||[])].filter(a=>a.id===id).map(a=>displayAnswer(a.value)))
@@ -58,12 +60,12 @@ export function clientFieldValues(client,key){
 
 export function registrationFieldCatalog(clients,formFields=[]){
  const fields=new Map(STANDARD_FILTERS.map(field=>[field.key,{...field,options:[]}]));
- for(const f of formFields||[]){
+ for(const f of uniqueQuestions(formFields||[])){
   if(!f?.id||!f.label)continue;
   fields.set('question:'+f.id,{key:'question:'+f.id,label:f.label,type:f.type||'text',options:Array.isArray(f.options)?f.options:[]});
  }
  for(const c of clients||[]){
-  for(const answer of [...(c.membershipAnswers||[]),...(c.history||[]).flatMap(v=>[...(v.answers||[]),...(v.originalAnswers||[])])]){
+  for(const answer of c.currentQuestions??[...(c.membershipAnswers||[]),...(c.history||[]).flatMap(v=>[...(v.answers||[]),...(v.originalAnswers||[])])]){
    if(!answer||!answer.id)continue;
    const key='question:'+answer.id;
    if(!fields.has(key))fields.set(key,{key,label:answer.label||answer.id,type:answer.type||(typeof answer.value==='boolean'?'checkbox':'text'),options:[]});

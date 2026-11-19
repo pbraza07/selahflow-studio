@@ -1,6 +1,7 @@
 'use client';
 import OwnerMemberships from './owner-memberships';
 import ClientCardPayments,{type CardPayments} from './client-card-payments';
+import {distinctImportedFields} from '../../server/current-profile-questions.mjs';
 import ExcelDownload from './excel-download';
 import ExpandableDetailsGroup from './expandable-details-group';
 import OwnerHistory from './owner-history';
@@ -13,7 +14,6 @@ import MembershipBadge,{type MembershipBadgeDesign} from './membership-badge';
 import {membershipDisplayStatus} from '../../server/member-badge-state.mjs';
 import {timeLabel} from '../../lib/defaults';
 import {registrationFieldCatalog,filterRegistrationClients} from '../../server/client-registration-filters.mjs';
-import {clientProfileAnswers} from '../../server/client-profile-fields.mjs';
 import {displayAnswer,dateOnly} from '../../server/client-registration-fields.mjs';
 
 type Answer={id:string;label:string;value:string|boolean;type?:string};
@@ -26,7 +26,7 @@ export type Visit={paymentEmailStatus?:string;paymentEmailAt?:string;coupon?:Cli
  answers?:Answer[];originalAnswers?:Answer[];customerName?:string;customerEmail?:string;customerPhone?:string;customerMemberNumber?:string;dateOfBirth?:string;firstName?:string;lastName?:string;
  originalSubmission?:{customerName:string;customerEmail:string;customerPhone:string;customAnswers?:Record<string,string|boolean>}|null;submittedAt?:string|null;policyAccepted?:boolean;policyAcceptedAt?:string|null;
 };
-type Client={cardPayments?:CardPayments;balances?:{id:string;name:string;status:string;used:number;left:number;total:number;recurring:boolean;nextDate:string|null;nextTotal:number|null}[];enrollmentIds?:string[];paymentEmails?:number;membershipCoupons?:(ClientCoupon&{membershipId:string;planName:string})[];idUsesSequence?:boolean;
+type Client={currentQuestions?:Answer[];cardPayments?:CardPayments;balances?:{id:string;name:string;status:string;used:number;left:number;total:number;recurring:boolean;nextDate:string|null;nextTotal:number|null}[];enrollmentIds?:string[];paymentEmails?:number;membershipCoupons?:(ClientCoupon&{membershipId:string;planName:string})[];idUsesSequence?:boolean;
  membershipBadge?:MembershipBadgeDesign|null;memberNumber?:string;membershipName?:string;membershipStatus?:string;membershipAnswers?:Answer[];membershipDetails?:MembershipDetails;membershipRegistration?:{name:string;firstName:string;lastName:string;email:string;phone:string;dateOfBirth:string;memberNumber:string};dateOfBirth?:string;
  id:string;firstName?:string;lastName?:string;editToken?:string;previousMemberNumbers?:string[];profileUpdatedAt?:string;name:string;email:string;phone:string;bookedSessions:number;attendedSessions:number;
  attendanceDays:string[];serviceTypes:string[];serviceNames:string[];latestDate:string;history:Visit[];notes?:string;importColumns?:Record<string,string|boolean>;registrationAnswers?:Record<string,string|boolean>;registrationFieldLabels?:Record<string,string>;managed?:boolean;firstBooking?:Visit|null;latestBookingAnswers?:Answer[];
@@ -209,9 +209,9 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
      {selected.history.filter(v=>v.coupon).map(v=><p key={v.id}><strong>{v.coupon!.code}</strong> · {money(v.coupon!.discountAmountUSD)} off · {v.serviceNames.join(', ')} · {v.date}</p>)}
      {!selected.membershipCoupons?.length&&!selected.history.some(v=>v.coupon)&&<p>No recorded coupon applications.</p>}
     </section>}
-    {profileTab==='Details'&&<section className="sf-client-current-fields"><h3>Current profile answers</h3><div className="sf-client-original-answers">{Object.entries(clientProfileAnswers(selected)).map(([id,value])=><div key={id}><small>{selected.registrationFieldLabels?.[id]||formFields.find(f=>f.id===id)?.label||selected.membershipAnswers?.find(f=>f.id===id)?.label||id}</small><b>{displayAnswer(value)}</b></div>)}</div><button type="button" className="outline" onClick={()=>beginEdit(selected)}>Edit all profile fields</button></section>}
+    {profileTab==='Details'&&<section className="sf-client-current-fields"><h3>Current profile answers</h3><div className="sf-client-original-answers">{(selected.currentQuestions||[]).map(answer=><div key={answer.id}><small>{answer.label}</small><b>{displayAnswer(answer.value)}</b></div>)}</div><button type="button" className="outline" onClick={()=>beginEdit(selected)}>Edit all profile fields</button></section>}
     {selected.membershipName&&<section hidden={profileTab!=='Membership'} className="sf-client-first-booking sf-client-membership-registration">
-     <div className="sf-client-history-heading"><h3>Membership registration</h3><small>Membership enrollment and the answers submitted when registering</small></div>
+     <div className="sf-client-history-heading"><h3>Membership registration</h3><small>Membership enrollment details</small></div>
      <div className="sf-client-first-details">
       <div><small>Registered full name</small><b>{selected.membershipRegistration?.name||selected.name}</b></div>
       <div><small>Registered first name</small><b translate="no">{selected.membershipRegistration?.firstName||'Not available'}</b></div>
@@ -230,10 +230,6 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
       <div><small>Last payment confirmed</small><b>{selected.membershipDetails?.lastPaidAt?new Date(selected.membershipDetails.lastPaidAt).toLocaleString('en-US',{timeZone:'America/New_York'}):'Not yet recorded'}</b></div>
       <div><small>Paid through</small><b>{selected.membershipDetails?.paidThrough?humanDate(selected.membershipDetails.paidThrough):'Not yet recorded'}</b></div>
      </div>
-     <h4>Original membership form questions and answers</h4>
-     {!!selected.membershipAnswers?.length?
-      <div className="sf-client-original-answers">{selected.membershipAnswers.map(answer=><div key={answer.id}><small>{answer.label}</small><b>{displayAnswer(answer.value)}</b></div>)}</div>:
-      <p className="muted">No additional membership form answers were saved for this registration.</p>}
     </section>}
     {selected.firstBooking&&<section hidden={profileTab!=='Details'} className="sf-client-first-booking">
      <div className="sf-client-history-heading"><h3>First booking information</h3><small>Copied from the original customer booking request</small></div>
@@ -254,9 +250,6 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
       <div><small>Request received</small><b>{selected.firstBooking.submittedAt?new Date(selected.firstBooking.submittedAt).toLocaleString('en-US',{timeZone:'America/New_York'}):'Not available'}</b></div>
       <div><small>Booking policy consent</small><b>{selected.firstBooking.policyAccepted?'Accepted':'Not recorded'}</b></div>
      </div>
-     {!!(selected.firstBooking.originalAnswers?.length||selected.firstBooking.answers?.length)&&<div className="sf-client-original-answers"><h4>Initial booking questions and answers</h4>
-      {(selected.firstBooking.originalAnswers?.length?selected.firstBooking.originalAnswers:selected.firstBooking.answers||[]).map(answer=><div key={answer.id}><small>{answer.label}</small><b>{displayAnswer(answer.value)}</b></div>)}
-     </div>}
     </section>}
     <div hidden={profileTab!=='Sessions'} className="sf-client-metrics">
      <div><small>Sessions booked</small><strong>{selected.bookedSessions}</strong></div>
@@ -268,7 +261,7 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
      <h4>Services utilized</h4><div className="sf-client-tags">{selected.serviceNames.length?selected.serviceNames.map(name=><span key={name}>{name}</span>):<small>No services recorded</small>}</div>
     </div>
     {!!selected.history?.length&&<section hidden={profileTab!=='Details'} className="sf-client-first-booking sf-client-last-answers">
-     <div className="sf-client-history-heading"><h3>Latest booking registration</h3><small>Latest recorded booking information and submitted answers</small></div>
+     <div className="sf-client-history-heading"><h3>Latest booking registration</h3><small>Latest recorded booking information</small></div>
      <div className="sf-client-first-details">
       <div><small>Customer name</small><b>{selected.history[0].customerName||selected.name}</b></div>
       <div><small>Email address</small><b>{selected.history[0].customerEmail||selected.email||'Not provided'}</b></div>
@@ -281,10 +274,8 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
       <div><small>Booking status</small><b>{selected.history[0].status}</b></div>
       <div><small>Policy consent</small><b>{selected.history[0].policyAccepted?'Accepted':'Not recorded'}</b></div>
      </div>
-     {!!selected.history[0].answers?.length&&<><h4>Booking form questions and answers</h4>
-      <div className="sf-client-original-answers">{selected.history[0].answers.map(answer=><div key={answer.id}><small>{answer.label}</small><b>{displayAnswer(answer.value)}</b></div>)}</div></>}
     </section>}
-    {selected.importColumns&&Object.keys(selected.importColumns).length>0&&selected.notes!=='Membership registration'&&<section hidden={profileTab!=='Details'} className="sf-client-first-booking"><h4>{selected.notes==='First online booking'?'Saved legacy booking fields':'Imported spreadsheet fields'}</h4><div className="sf-client-first-details">{Object.entries(selected.importColumns).map(([heading,value])=><div key={heading}><small>{heading}</small><b>{displayAnswer(value)}</b></div>)}</div></section>}
+    {selected.importColumns&&distinctImportedFields(selected.importColumns,formFields).length>0&&selected.notes!=='Membership registration'&&<section hidden={profileTab!=='Details'} className="sf-client-first-booking"><h4>{selected.notes==='First online booking'?'Saved legacy booking fields':'Imported spreadsheet fields'}</h4><div className="sf-client-first-details">{distinctImportedFields(selected.importColumns,formFields).map(([heading,value])=><div key={heading}><small>{heading}</small><b>{displayAnswer(value)}</b></div>)}</div></section>}
     {selected.notes&&<div hidden={profileTab!=='Details'} className="sf-client-private-notes"><h4>Private business notes</h4><p>{selected.notes}</p></div>}
     <div hidden={profileTab!=='Sessions'} className="sf-client-attendance"><h4>Days attended <span>({selected.attendanceDays.length})</span></h4>
      {selected.attendanceDays.length?<div className="sf-client-day-tags">{selected.attendanceDays.map(day=><time dateTime={day} key={day}>{humanDate(day)}</time>)}</div>:<p>Attendance is recorded when an appointment is marked <strong>Checked in</strong> or <strong>Completed</strong>.</p>}
@@ -301,11 +292,7 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
      <thead><tr><th>Activity date / time</th><th>Service used</th><th>Service type</th><th>Session</th><th>Team</th><th>Status / booking timeline</th><th>Payment</th><th>Quote</th></tr></thead>
      <tbody>{visited.map(v=><tr key={v.id}>
       <td><b>{humanDate(v.date)}</b><small>{timeLabel(v.time)} Eastern</small></td>
-      <td>{v.serviceNames.join(', ')||'Unspecified'}{!!v.answers?.length&&<details className="sf-client-visit-answers"><summary>Booking answers ({v.answers.length})</summary>
-       {v.answers.map(a=><div key={a.id}><strong>{a.label}:</strong> {displayAnswer(a.value)}</div>)}
-      </details>}{!!v.originalAnswers?.length&&<details className="sf-client-visit-answers"><summary>Original registration answers ({v.originalAnswers.length})</summary>
-       {v.originalAnswers.map(a=><div key={a.id}><strong>{a.label}:</strong> {displayAnswer(a.value)}</div>)}
-      </details>}</td><td>{v.serviceTypes.join(', ')||'Not categorized'}</td>
+      <td>{v.serviceNames.join(', ')||'Unspecified'}</td><td>{v.serviceTypes.join(', ')||'Not categorized'}</td>
       <td>{v.sessionType}</td><td>{v.staff||'—'}</td>
       <td><span className={'sf-client-visit-status '+(v.attended?'attended':v.status==='No-show'||v.status==='Cancelled'?'missed':'scheduled')}>{v.status}{v.attended?' · Attended':''}</span><details><summary>+ Booking timeline</summary>{v.paymentEmailStatus&&<p>Payment link email · {v.paymentEmailStatus.replaceAll('_',' ')}{v.paymentEmailAt&&' · '+new Date(v.paymentEmailAt).toLocaleString()}</p>}{v.bookingTimeline?.map((entry,i)=><p key={i}>{entry.status}{entry.at?' · '+new Date(entry.at).toLocaleString():''}</p>)}</details></td><td><span style={{color:v.paymentTracking==='completed'?'#167347':'#b42318',fontWeight:700}}>{v.paymentTracking==='completed'?'Completed':'Pending'}</span></td>
       <td>{money(v.quotedPrice)}</td>
@@ -348,7 +335,7 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
      {plan.nextDate&&<small>Next period · {humanDate(plan.nextDate)} · {plan.nextTotal} sessions on renewal</small>}
     </section>)}
     <div className="sf-client-summary-metrics"><span><b>{c.bookedSessions}</b> sessions booked</span><span><b>{c.attendedSessions}</b> attended</span><span><b>{c.paymentEmails??0}</b> membership payment emails submitted</span></div>
-    {!!c.latestBookingAnswers?.length&&<p className="sf-client-booking-answer-preview">{c.latestBookingAnswers.length} booking question{c.latestBookingAnswers.length===1?'':'s'} answered · See full details</p>}
+    {!!c.currentQuestions?.length&&<p className="sf-client-booking-answer-preview">{c.currentQuestions.length} profile question{c.currentQuestions.length===1?'':'s'} answered · See full details</p>}
     <div className="sf-client-summary-types"><small>Service types</small><strong>{c.serviceTypes.join(' · ')||'Not categorized'}</strong></div>
     <p className="sf-client-last-visit"><CalendarDays size={14}/> Latest appointment: {humanDate(c.latestDate)}</p>
     <div className="sf-client-summary-actions"><button type="button" className="primary" onClick={()=>{setAssignment(null);setSelectedId(c.id);setProfileTab('History');setAttendedOnly(false);}}><ChevronRight size={16}/> View client</button>{!!c.enrollmentIds?.length&&<button type="button" className="outline" onClick={()=>{setAssignment(null);setSelectedId(c.id);setProfileTab('Membership');}}>Membership &amp; payments</button>}

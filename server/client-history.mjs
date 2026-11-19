@@ -191,6 +191,7 @@ export function clientWorkbookSheets(clients){
  const answerColumns=rows=>Object.fromEntries((rows||[]).map(a=>[a.label+' ['+a.id+']',a.value]));
  appendRecordColumns(sheets[0],selected.map(c=>{
   const {history,firstBooking,latestBookingAnswers,membershipAnswers,registrationAnswers,registrationFieldLabels,editToken,...details}=c;
+  if(Array.isArray(c.currentQuestions)){const {currentQuestions,...rest}=details;return {...rest,registrationAnswers:answerColumns(c.currentQuestions)};}
   return {...details,registrationAnswers:Object.fromEntries(Object.entries(registrationAnswers||{}).map(([k,v])=>[(registrationFieldLabels?.[k]||k)+' ['+k+']',v])),membershipAnswers:answerColumns(membershipAnswers),latestBookingAnswers:answerColumns(latestBookingAnswers)};
  }));
  appendRecordColumns(sheets[1],selected.flatMap(c=>(c.history||[]).map(v=>{

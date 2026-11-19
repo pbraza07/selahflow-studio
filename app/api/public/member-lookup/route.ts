@@ -1,3 +1,5 @@
+import {currentProfileQuestions} from '../../../../server/current-profile-questions.mjs';
+import {registrationAnswerRows} from '../../../../server/client-registration-fields.mjs';
 import {getPool} from '../../../../server/database.mjs';
 import {tokenHash,validOrigin} from '../../../../server/security.mjs';
 import {restoreCurrentProfileAnswers,restoredContact} from '../../../../server/returning-member-prefill.mjs';
@@ -41,7 +43,7 @@ export async function POST(req:Request){
   }
 
   const [member,booking,membership,profileIdentity]=await Promise.all([
-   db.query("SELECT customer_name,customer_email,customer_phone,registration_answers,member_number,date_of_birth::text AS dob,status,sessions_included,sessions_used FROM customer_memberships WHERE business_id=$1 AND member_number=$2 AND ($3::date IS NULL OR date_of_birth=$3::date) LIMIT 1",[business.id,memberNumber,dob||null]),
+   db.query("SELECT created_at,registration_field_labels,customer_name,customer_email,customer_phone,registration_answers,member_number,date_of_birth::text AS dob,status,sessions_included,sessions_used FROM customer_memberships WHERE business_id=$1 AND member_number=$2 AND ($3::date IS NULL OR date_of_birth=$3::date) ORDER BY created_at DESC",[business.id,memberNumber,dob||null]),
    db.query("SELECT first_name||' '||last_name AS customer_name,email AS customer_email,phone AS customer_phone,member_number,date_of_birth::text AS dob FROM customer_booking_ids WHERE business_id=$1 AND member_number=$2 AND ($3::date IS NULL OR date_of_birth=$3::date) LIMIT 1",[business.id,memberNumber,dob||null])
    ,db.query("SELECT p.credit_eligibility,p.name AS membership_name,m.status,m.sessions_included,m.sessions_used,m.paid_through,m.initial_paid_at,m.billing_type,m.package_valid_days,m.weekly_limit_override,m.credit_period_start,m.credit_period_end,m.billing_start_override,p.weekly_sessions FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 AND m.member_number=$2 AND ($3::date IS NULL OR m.date_of_birth=$3::date) ORDER BY CASE WHEN m.status='active' THEN 0 ELSE 1 END,m.updated_at DESC LIMIT 1",[business.id,memberNumber,dob||null]),
    db.query("SELECT name AS customer_name,email AS customer_email,phone AS customer_phone,member_number,date_of_birth::text AS dob,registration_answers FROM business_client_profiles WHERE owner=$1 AND member_number=$2 AND deleted_at IS NULL AND archived=false AND ($3::date IS NULL OR date_of_birth=$3::date) LIMIT 1",[business.owner_id,memberNumber,dob||null])
@@ -49,12 +51,12 @@ export async function POST(req:Request){
   const identity=member.rows[0]||booking.rows[0]||profileIdentity.rows[0];
   if(!identity)return Response.json({error:'No registration found for this Membership ID at this business. Check the ID or contact the business.'},{status:404,headers});
   const profile=(await db.query(
-   "SELECT name,first_name,last_name,email,phone,import_columns,registration_answers FROM business_client_profiles WHERE owner=$1 AND deleted_at IS NULL AND (member_number=$2 OR (member_number IS NULL AND lower(trim(name))=lower(trim($3)) AND lower(trim(email))=lower(trim($4)))) ORDER BY CASE WHEN member_number=$2 THEN 0 ELSE 1 END,created_at DESC LIMIT 1",
+   "SELECT name,first_name,last_name,email,phone,import_columns,registration_answers,registration_field_labels,updated_at FROM business_client_profiles WHERE owner=$1 AND deleted_at IS NULL AND (member_number=$2 OR (member_number IS NULL AND lower(trim(name))=lower(trim($3)) AND lower(trim(email))=lower(trim($4)))) ORDER BY CASE WHEN member_number=$2 THEN 0 ELSE 1 END,created_at DESC LIMIT 1",
    [business.owner_id,memberNumber,identity.customer_name,identity.customer_email]
   )).rows[0]||{};
   const [appointment,request,settings]=await Promise.all([
-   db.query("SELECT data FROM appointments WHERE owner=$1 AND data::jsonb->>'memberNumber'=$2 ORDER BY COALESCE(data::jsonb->>'created','') DESC,date DESC,start DESC LIMIT 1",[business.owner_id,memberNumber]),
-   db.query("SELECT details,created_at FROM booking_requests WHERE business_id=$1 AND details::jsonb->>'memberNumber'=$2 ORDER BY created_at DESC LIMIT 1",[business.id,memberNumber]),
+   db.query("SELECT data FROM appointments WHERE owner=$1 AND data::jsonb->>'memberNumber'=$2 ORDER BY COALESCE(data::jsonb->>'created','') DESC,date DESC,start DESC",[business.owner_id,memberNumber]),
+   db.query("SELECT details,created_at FROM booking_requests WHERE business_id=$1 AND details::jsonb->>'memberNumber'=$2 ORDER BY created_at DESC",[business.id,memberNumber]),
    db.query("SELECT data FROM settings WHERE owner=$1 LIMIT 1",[business.owner_id])
   ]);
   let config:any={};
@@ -68,10 +70,11 @@ export async function POST(req:Request){
   const latest=Number.isFinite(requestedAt)&&(!Number.isFinite(appointedAt)||requestedAt>appointedAt)?latestRequest:latestAppointment;
   const backup=latest===latestRequest?latestAppointment:latestRequest;
   const fields=Array.isArray(config.bookingCustomFields)?config.bookingCustomFields:[];
-  const customAnswers=restoreCurrentProfileAnswers(
-   fields,profile.registration_answers,latest.customAnswers,backup.customAnswers,member.rows[0]?.registration_answers,
-   profile.import_columns
-  );
+  const asObject=(value:any)=>{try{return typeof value==='string'?JSON.parse(value):value||{};}catch{return {};}};
+  const history=[...appointment.rows.map((r:any)=>{const d=asObject(r.data);return {submittedAt:d.created,answers:registrationAnswerRows(d.customAnswers,d.customFieldLabels,fields)};}),...request.rows.map((r:any)=>{const d=asObject(r.details);return {submittedAt:r.created_at,answers:registrationAnswerRows(d.customAnswers,d.customFieldLabels,fields)};})];
+  history.push({submittedAt:null,answers:registrationAnswerRows(profile.import_columns,profile.registration_field_labels,fields)});
+  const rows=currentProfileQuestions({history,registrationAnswers:profile.registration_answers,registrationFieldLabels:profile.registration_field_labels,profileUpdatedAt:profile.updated_at,membershipAnswerSources:member.rows.map((m:any)=>({at:m.created_at,rows:registrationAnswerRows(m.registration_answers,m.registration_field_labels,fields)}))},fields);
+  const customAnswers=restoreCurrentProfileAnswers(fields,Object.fromEntries(rows.map(row=>[row.id,row.value])));
   const contact=restoredContact(
    identity,profile,
    Object.keys(latest).length?latest:backup
