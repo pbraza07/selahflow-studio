@@ -35,7 +35,7 @@ export async function pastMemberVisits(db,{owner,businessId,id}){
 }
 /** Owner-only caller holds an open transaction. Override spends today's balance,
  * never rewrites activation dates or old monthly credit snapshots. */
-export async function applyPastMemberCredit(db,{owner,businessId,id,appointmentId,reason,attendance='Checked in',deferWaiver=false}){
+export async function applyPastMemberCredit(db,{owner,businessId,id,appointmentId,reason,attendance='Checked in',deferWaiver=false,linkUnassigned=false}){
  reason=String(reason||'').trim();
  if(reason.length<5||reason.length>500)throw Error('Enter an override reason of 5–500 characters.');
  if(!['Checked in','No-show'].includes(attendance))throw Error('Choose attendance for this past visit.');
@@ -45,7 +45,9 @@ export async function applyPastMemberCredit(db,{owner,businessId,id,appointmentI
  const visit=(await db.query('SELECT * FROM appointments WHERE owner=$1 AND id=$2 FOR UPDATE',[owner,appointmentId])).rows[0];
  if(!visit||!eligibleStatuses.has(visit.status)||!sessionHasEnded(visit))throw Error('Choose an existing past visit that has not been canceled.');
  const data=appointmentData(visit),roster=await loadOwnerMemberRoster(db,owner);
- if(ownerAppointmentMember(data,roster).memberNumber!==member.member_number)throw Error('This visit does not belong to the selected member.');
+ const existingNumber=ownerAppointmentMember(data,roster).memberNumber;
+ if(data.clientProfileDeleted)throw Error('This appointment belongs to a deleted client profile.');
+ if((existingNumber||!linkUnassigned)&&existingNumber!==member.member_number)throw Error('This visit does not belong to the selected member.');
  const prior=(await db.query("SELECT membership_id FROM membership_session_ledger WHERE business_id=$1 AND appointment_id=$2 AND event_type='session_used'",[businessId,appointmentId])).rows[0];
  if(prior){if(prior.membership_id!==id)throw Error('A different membership already paid for this visit.');return {ok:true,alreadyDeducted:true};}
  member=await refreshMemberPeriod(db,member);

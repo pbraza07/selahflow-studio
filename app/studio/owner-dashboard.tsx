@@ -82,6 +82,26 @@ const SETTINGS_AREAS=[
  {id:'communications',title:'Client communications',description:'Sync client contacts and send customized business-branded emails.',icon:MessageCircle},
  {id:'urls',title:'Important URLs',description:'Open and copy your business, booking, owner and team links.',icon:ExternalLink},
 ] as const;
+function CalendarMembershipCredit({visit,onSaved}:{visit:Any;onSaved:(message:string)=>Promise<void>}){
+ const [number,setNumber]=useState(String(visit.memberNumber||'')),[plans,setPlans]=useState<{id:string;name:string}[]>([]),[plan,setPlan]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const saving=useRef(false);
+ async function apply(){
+  if(saving.current||!number.trim())return;
+  if(!window.confirm('Use one current membership session from '+number.trim().toUpperCase()+' for '+visit.name+' on '+visit.date+'?'))return;
+  saving.current=true;setBusy(true);setError('');
+  try{
+   const response=await fetch('/api/studio/memberships',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'applyCalendarCredit',memberNumber:number,id:plan,appointmentId:visit.id,attendance:'Checked in',reason:'Owner recorded past attendance from Schedule'})});
+   const result=await response.json();
+   if(!response.ok)throw Error(result.error||'Unable to apply membership credit.');
+   if(result.plans){setPlans(result.plans);return;}
+   window.dispatchEvent(new Event('selahflow:memberships-updated'));
+   await onSaved(result.alreadyDeducted?'This appointment already used one membership session.':'One session deducted. '+result.remaining+' remaining.');
+  }catch(e){setError((e as Error).message);}finally{saving.current=false;setBusy(false);}
+ }
+ return <section><h3>Past session membership credit</h3><label>Member ID<input value={number} disabled={busy} onChange={e=>{setNumber(e.target.value.toUpperCase());setPlans([]);setPlan('');}}/></label>
+ {plans.length>0&&<label>Membership or package<select value={plan} onChange={e=>setPlan(e.target.value)}><option value="">Choose a plan</option>{plans.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
+ <button type="button" className="outline" disabled={busy||!number.trim()||(plans.length>0&&!plan)} onClick={()=>void apply()}>{busy?'Saving…':'Deduct one session'}</button>{error&&<p role="alert">{error}</p>}</section>;
+}
 export default function OwnerDashboard({businessSlug,isPlatformAdmin=false,supportBusinessName}:{businessSlug:string;isPlatformAdmin?:boolean;supportBusinessName?:string}){
 const [productCount,setProductCount]=useState(0);
 const [newCatalogItem,setNewCatalogItem]=useState<string|null>(null);
@@ -556,6 +576,7 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
  <header className="sf-roster-header"><div><span className="sf-roster-eyebrow"><CalendarDays size={15}/> PRIVATE BUSINESS APPOINTMENT</span><h2 id="sf-appointment-detail-title">{appointmentDetail.services?.join(' + ')||'Appointment'}</h2><p>{appointmentDetail.date} · {timeLabel(appointmentDetail.start)} · {config.staff.find((v:Any)=>v.id===appointmentDetail.staff)?.name||'Team member'}</p></div><button type="button" className="sf-roster-close" aria-label="Close appointment details" onClick={()=>setAppointmentDetail(null)}><X size={20}/></button></header>
  <div style={{padding:24,display:'grid',gap:16}}>
  <h3><span translate="no">{appointmentDetail.name}</span> <span className={'status '+String(appointmentDetail.status).toLowerCase().replace(' ','-')}>{appointmentDetail.status}</span></h3>
+ {view==='Calendar'&&!appointmentDetail.clientProfileDeleted&&['Confirmed','Scheduled','Checked in','Checked-in','Completed','Attended','No-show'].includes(appointmentDetail.status)&&(appointmentDetail.date<rosterClock.date||(appointmentDetail.date===rosterClock.date&&Number(appointmentDetail.start)+Number(appointmentDetail.duration)<=rosterClock.minutes))&&<CalendarMembershipCredit key={appointmentDetail.id} visit={appointmentDetail} onSaved={async message=>{await refresh();setAppointmentDetail(null);setToast(message);}}/>}
  {view==='Calendar'&&<button type="button" className="outline" disabled={busy} onClick={()=>void deleteCalendarAppointment(appointmentDetail)}>Delete appointment</button>}
  {appointmentDetail.memberNumber&&<p><strong>Member ID:</strong> <span translate="no">{appointmentDetail.memberNumber}</span></p>}
  {appointmentDetail.dateOfBirth&&<p><strong>Date of birth:</strong> {appointmentDetail.dateOfBirth}</p>}
@@ -639,6 +660,7 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
    {selectedSessionRoster.clients.length?<div className="sf-roster-list" role="list">
     {selectedSessionRoster.clients.map((client:Any,i:number)=><article className="sf-roster-client" role="listitem" key={client.bookingId||i}>
      {appointments.find(a=>a.id===client.bookingId)&&<OwnerOnsitePayment appointment={appointments.find(a=>a.id===client.bookingId)} config={config} onChanged={refresh}/>}<AttendanceActions appointment={appointments.find(a=>a.id===client.bookingId)} busy={busy} onStatus={(a,s)=>void status(a,s)}/><div className="sf-roster-client-top"><div><strong>{i+1}. <span translate="no">{client.name}</span></strong><span className="sf-roster-status">{client.status}</span></div><small>Booking #{client.bookingId.slice(0,8)}</small></div><button type="button" className="outline" disabled={busy} style={{margin:'12px 0',minHeight:42}} onClick={()=>void removeRosterCustomer(client)}>Remove customer</button>
+     {view==='Calendar'&&<button type="button" className="outline" onClick={()=>{const booking=appointments.find(a=>a.id===client.bookingId);if(booking){setRosterSelection(null);setAppointmentDetail(booking);}}}>View appointment</button>}
      {view==='Calendar'&&<button type="button" className="outline" disabled={busy} onClick={()=>{const booking=appointments.find(a=>a.id===client.bookingId);if(booking)void deleteCalendarAppointment(booking);}}>Delete this appointment</button>}
      <dl className="sf-roster-client-details">
       <div><dt>Email</dt><dd>{client.email?<a translate="no" href={'mailto:'+client.email}>{client.email}</a>:'Not provided'}</dd></div>
