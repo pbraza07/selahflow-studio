@@ -43,7 +43,7 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
  const derived=buildClientDirectory([...decorateBookingTimeline(appointments.rows,requests.rows,payments.rows,clientEvents.rows),...requests.rows.filter((r:any)=>['pending','declined'].includes(r.status)).map(pendingBookingAsAppointment)],settings,owner);
  const combined=applyClientProfiles(derived,profiles.rows);
  const fields=Array.isArray(settings.bookingCustomFields)?settings.bookingCustomFields:[];
- const members=(await db.query("SELECT m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.last_paid_at,m.paid_through,m.owner_coupon,m.applied_coupon,m.first_invoice_cents,m.price_cents,m.sessions_included,m.sessions_used,m.member_number,m.status,p.name AS membership_name,p.interval_unit,COALESCE(p.badge,g.badge) AS membership_badge FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id LEFT JOIN membership_groups g ON g.id=p.group_id AND g.business_id=m.business_id WHERE b.owner_id=$1 ORDER BY m.created_at DESC",[owner])).rows;
+ const members=(await db.query("SELECT (SELECT count(*)::int FROM membership_payment_invitations i WHERE i.business_id=m.business_id AND i.membership_id=m.id AND i.status='submitted') AS emails_submitted,m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.last_paid_at,m.paid_through,m.owner_coupon,m.applied_coupon,m.first_invoice_cents,m.price_cents,m.sessions_included,m.sessions_used,m.member_number,m.status,p.name AS membership_name,p.interval_unit,COALESCE(p.badge,g.badge) AS membership_badge FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id LEFT JOIN membership_groups g ON g.id=p.group_id AND g.business_id=m.business_id WHERE b.owner_id=$1 ORDER BY m.created_at DESC",[owner])).rows;
  const memberData=(m:any,client:any={})=>{
   const legacy=client.notes==='Membership registration'&&m.registration_answers&&Object.keys(m.registration_answers).length===0?client.importColumns||{}:{};
   const submitted=Object.keys(m.registration_answers||{}).length?m.registration_answers:legacy;
@@ -63,9 +63,13 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
    phone:client.phone||m.customer_phone||''
   };
  };
+ const belongsToClient=(m:any,c:any)=>{
+  if(m.member_number&&c.memberNumber)return m.member_number===c.memberNumber;
+  if(c.id==='membership-'+m.id)return true;
+  return !!m.customer_email&&m.customer_email.trim().toLowerCase()===c.email?.trim().toLowerCase()&&m.customer_name?.trim().toLowerCase()===c.name?.trim().toLowerCase();
+ };
  const clients=combined.clients.map((c:any)=>{
-  const m=members.find((x:any)=>(x.member_number&&x.member_number===c.memberNumber)||
-   (x.customer_name?.trim().toLowerCase()===c.name?.trim().toLowerCase()&&x.customer_email?.toLowerCase()===c.email?.toLowerCase()&&(!c.memberNumber||c.memberNumber===x.member_number)));
+  const m=members.find((x:any)=>belongsToClient(x,c));
   return m?{...c,...memberData(m,c)}:c;
  });
  for(const m of members){
@@ -74,11 +78,17 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
   // A membership without appointments is still a client card. Its persisted
   // profile is the source of truth when the owner archives/restores it.
   if(profile?.archived&&!profile.deleted_at)continue;
-  if(!clients.some((c:any)=>c.memberNumber===m.member_number||(c.name?.trim().toLowerCase()===m.customer_name?.trim().toLowerCase()&&c.email?.toLowerCase()===m.customer_email?.toLowerCase())))
+  if(!clients.some((c:any)=>belongsToClient(m,c)))
    clients.push({id:profile?.id||virtualId,name:m.customer_name,email:m.customer_email,bookedSessions:0,attendedSessions:0,attendanceDays:[],serviceTypes:[],serviceNames:[],latestDate:'',history:[],firstBooking:null,latestBookingAnswers:[],...memberData(m)});
  }
+ const mail=await db.query("SELECT msg.booking_id,msg.status,msg.updated_at FROM booking_client_messages msg JOIN appointments a ON a.id=msg.booking_id WHERE a.owner=$1 AND msg.channel='email' AND msg.event_type='payment_link'",[owner]);
+ const bookingMail=new Map(mail.rows.map(row=>[row.booking_id,row]));
  for(const c of clients){
-  (c as any).membershipCoupons=members.filter((m:any)=>(m.member_number&&m.member_number===c.memberNumber)||(m.customer_email?.toLowerCase()===c.email?.toLowerCase()&&m.customer_name?.trim().toLowerCase()===c.name?.trim().toLowerCase()))
+  for(const visit of c.history){const email=bookingMail.get(visit.id);if(email)Object.assign(visit,{paymentEmailStatus:email.status,paymentEmailAt:email.updated_at});}
+  const enrollments=members.filter((m:any)=>belongsToClient(m,c));
+  (c as any).enrollmentIds=enrollments.map((m:any)=>m.id);
+  (c as any).paymentEmails=enrollments.reduce((sum:number,m:any)=>sum+Number(m.emails_submitted||0),0);
+  (c as any).membershipCoupons=enrollments
    .flatMap((m:any)=>{const coupon=memberData(m).membershipCoupon;return coupon?[{...coupon,membershipId:m.id,planName:m.membership_name}]:[];});
   (c as any).editToken=clientProfileEditToken(c);
  }
