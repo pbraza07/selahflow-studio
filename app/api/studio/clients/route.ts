@@ -1,3 +1,4 @@
+import {clientCardBalance} from '../../../../server/client-card-balance.mjs';
 import {deletionErrorMessage} from '../../../../server/deletion-error.mjs';
 import {updateClientProfile,clientProfileEditToken} from '../../../../server/update-client-profile.mjs';
 import {allBookingStatusRows} from '../../../../server/booking-status.mjs';
@@ -43,7 +44,7 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
  const derived=buildClientDirectory([...decorateBookingTimeline(appointments.rows,requests.rows,payments.rows,clientEvents.rows),...requests.rows.filter((r:any)=>['pending','declined'].includes(r.status)).map(pendingBookingAsAppointment)],settings,owner);
  const combined=applyClientProfiles(derived,profiles.rows);
  const fields=Array.isArray(settings.bookingCustomFields)?settings.bookingCustomFields:[];
- const members=(await db.query("SELECT (SELECT count(*)::int FROM membership_payment_invitations i WHERE i.business_id=m.business_id AND i.membership_id=m.id AND i.status='submitted') AS emails_submitted,m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.last_paid_at,m.paid_through,m.owner_coupon,m.applied_coupon,m.first_invoice_cents,m.price_cents,m.sessions_included,m.sessions_used,m.member_number,m.status,p.name AS membership_name,p.interval_unit,COALESCE(p.badge,g.badge) AS membership_badge FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id LEFT JOIN membership_groups g ON g.id=p.group_id AND g.business_id=m.business_id WHERE b.owner_id=$1 ORDER BY m.created_at DESC",[owner])).rows;
+ const members=(await db.query("SELECT (SELECT count(*)::int FROM membership_payment_invitations i WHERE i.business_id=m.business_id AND i.membership_id=m.id AND i.status='submitted') AS emails_submitted,m.billing_type,m.monthly_sessions,m.stripe_sessions_per_period,m.initial_paid_at,m.billing_start_override,m.credit_period_start,m.credit_period_end,p.weekly_sessions,m.id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.last_paid_at,m.paid_through,m.owner_coupon,m.applied_coupon,m.first_invoice_cents,m.price_cents,m.sessions_included,m.sessions_used,m.member_number,m.status,p.name AS membership_name,p.interval_unit,COALESCE(p.badge,g.badge) AS membership_badge FROM customer_memberships m JOIN businesses b ON b.id=m.business_id JOIN membership_plans p ON p.id=m.plan_id LEFT JOIN membership_groups g ON g.id=p.group_id AND g.business_id=m.business_id WHERE b.owner_id=$1 ORDER BY m.created_at DESC",[owner])).rows;
  const memberData=(m:any,client:any={})=>{
   const legacy=client.notes==='Membership registration'&&m.registration_answers&&Object.keys(m.registration_answers).length===0?client.importColumns||{}:{};
   const submitted=Object.keys(m.registration_answers||{}).length?m.registration_answers:legacy;
@@ -86,6 +87,7 @@ async function directory(owner:string,db:{query:(sql:string,values:unknown[])=>P
  for(const c of clients){
   for(const visit of c.history){const email=bookingMail.get(visit.id);if(email)Object.assign(visit,{paymentEmailStatus:email.status,paymentEmailAt:email.updated_at});}
   const enrollments=members.filter((m:any)=>belongsToClient(m,c));
+  (c as any).balances=enrollments.map((m:any)=>clientCardBalance(m));
   (c as any).enrollmentIds=enrollments.map((m:any)=>m.id);
   (c as any).paymentEmails=enrollments.reduce((sum:number,m:any)=>sum+Number(m.emails_submitted||0),0);
   (c as any).membershipCoupons=enrollments
