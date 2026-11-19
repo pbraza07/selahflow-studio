@@ -1,3 +1,4 @@
+import {attachCardPayments} from '../../../../server/client-card-payments.mjs';
 import {clientCardBalance} from '../../../../server/client-card-balance.mjs';
 import {deletionErrorMessage} from '../../../../server/deletion-error.mjs';
 import {updateClientProfile,clientProfileEditToken} from '../../../../server/update-client-profile.mjs';
@@ -112,6 +113,7 @@ export async function GET(req:Request){
   const {clients,bookings,archived,formFields,registrationConfig}=await directory(owner,pool,settings);
   const url=new URL(req.url);
   if(url.searchParams.get('export')!=='xlsx'){
+   await attachCardPayments(pool,{...business,owner_id:owner},clients);
    const permanentDeletions=(await pool.query('SELECT id,deleted_at FROM client_deletion_audit WHERE business_id=$1 ORDER BY deleted_at DESC',[business.id])).rows;
    return Response.json({clients,bookings,archived,permanentDeletions,formFields,registrationConfig,total:clients.length},{headers:noStore});
   }

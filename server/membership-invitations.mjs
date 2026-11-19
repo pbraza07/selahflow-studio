@@ -6,7 +6,7 @@ import {tokenHash} from './security.mjs';
 import {sendNotificationChannel,validEmail} from './notification-delivery.mjs';
 export async function queueMembershipInvitation(db,{businessId,membershipId,origin,requestId,couponCode=null}){
  const r=(await db.query("SELECT m.*,p.name AS plan_name,p.description,p.weekly_sessions,p.sessions_included AS plan_sessions,p.interval_unit,p.interval_count,b.name AS business_name FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id JOIN businesses b ON b.id=m.business_id WHERE m.id=$1 AND m.business_id=$2 AND b.status='active' FOR UPDATE OF m",[membershipId,businessId])).rows[0];
- if(!r||r.stripe_subscription_id||r.status==='active')throw Error('Choose a member awaiting an initial membership payment.');
+ if(!r||r.stripe_subscription_id||!['pending_payment','past_due','payment_failed'].includes(r.status))throw Error('Choose a member awaiting an initial membership payment.');
  const id=requestId??randomUUID();if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id))throw Error('Invalid payment invitation request.');
  const previous=(await db.query('SELECT business_id,membership_id FROM membership_payment_invitations WHERE id=$1',[id])).rows[0];if(previous){if(previous.business_id!==businessId||previous.membership_id!==membershipId)throw Error('Invalid payment invitation request.');return {queued:true,alreadyQueued:true};}
  if(couponCode)r.owner_coupon=await assignOwnerCoupon(db,businessId,membershipId,couponCode);

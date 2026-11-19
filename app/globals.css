@@ -2287,3 +2287,9 @@ input[type="checkbox"]:focus-visible{outline:2px solid #236343;outline-offset:3p
 .sf-client-card-balance dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.4rem;margin:.65rem 0}
 .sf-client-card-balance dt{font-size:.8em}
 .sf-client-card-balance dd{font-size:1.25em;font-weight:700;margin:0}
+
+.sf-card-payment{display:grid;gap:.45rem;margin:.65rem 0;overflow-wrap:anywhere}
+.sf-card-payment>strong{justify-self:start;border-radius:1rem;padding:.2rem .6rem}
+.sf-card-payment-active{background:#d7f5e4;color:#12512c}
+.sf-card-payment-pending{background:#fff0c7;color:#674000}
+.sf-card-payment>div{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
