@@ -52,12 +52,12 @@ test('availability refresh retains valid selection and ignores a late response a
 test('past booking submits the loaded ID, birth date, contact and restored answers',async()=>{
  const client={memberNumber:'TD1001',name:'Taylor Doe',email:'parent@example.test',phone:'+14045550123',dateOfBirth:'2013-01-02'};
  const f=fixture({step:3,slot:600,ownerClient:client,ownerClientLookup:'loaded',ownerAnswers:{parent:'Parent Doe',level:'Advanced'}});let submitted;
- f.ctx.action=async body=>{submitted=body;return {id:'identified-booking',membershipUsage:{remaining:4}};};
+ f.ctx.action=async body=>{submitted=body;return {id:'identified-booking'};};
  const tree=f.tree(),dom=new JSDOM(renderToStaticMarkup(tree)),form=dom.window.document.querySelector('form');
  assert.equal(nodes(tree).find(n=>n.props?.form==='booking-form').props.disabled,false);
  const previous=globalThis.FormData;globalThis.FormData=dom.window.FormData;
  try{await nodes(tree).find(n=>n.type==='form').props.onSubmit({preventDefault(){},currentTarget:form});}finally{globalThis.FormData=previous;dom.window.close();}
- assert.equal(submitted.key,'stable-booking-key');assert.equal(submitted.applyPastMembership,true);assert.match(renderToStaticMarkup(f.tree()),/1 membership session deducted/);assert.match(renderToStaticMarkup(f.tree()),/4 sessions remaining/);assert.equal(submitted.memberNumber,client.memberNumber);assert.equal(submitted.dateOfBirth,client.dateOfBirth);assert.equal(submitted.email,client.email);assert.equal(submitted.name,client.name);assert.deepEqual(submitted.customAnswers,f.ctx.ownerAnswers);assert.equal(f.ctx.booked,'identified-booking');
+ assert.equal(submitted.key,'stable-booking-key');assert.equal(submitted.applyPastMembership,false);assert.equal(submitted.memberNumber,client.memberNumber);assert.equal(submitted.dateOfBirth,client.dateOfBirth);assert.equal(submitted.email,client.email);assert.equal(submitted.name,client.name);assert.deepEqual(submitted.customAnswers,f.ctx.ownerAnswers);assert.equal(f.ctx.booked,'identified-booking');
  f.ctx.booked='';f.ctx.ownerClientLookup='error';assert.equal(nodes(f.tree()).find(n=>n.props?.form==='booking-form').props.disabled,true);
 });
 

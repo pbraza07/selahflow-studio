@@ -45,8 +45,8 @@ export async function GET(req:Request){
   const {pool,business,owner}=await ctx(req);
   await refreshMembershipPeriods(pool,business.id);
   const [plans,members,merchant,usageCounts,ledger,groups]=await Promise.all([
-   pool.query('SELECT hidden_from_clients AS "hiddenFromClients",package_valid_days AS "packageValidDays",billing_type AS "billingType",id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",weekly_sessions AS "weeklySessions",group_id AS "groupId",badge,interval_count AS "intervalCount",credit_eligibility AS "creditEligibility",active FROM membership_plans WHERE business_id=$1 ORDER BY display_order,created_at DESC',[business.id]),
-   pool.query("SELECT m.weekly_limit_override,p.weekly_sessions,m.billing_type,m.id,m.price_cents,m.stripe_account_id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.initial_paid_at,m.billing_start_override,m.credit_period_start,m.credit_period_end,m.stripe_subscription_id,m.stripe_interval_unit,m.stripe_interval_count,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
+   pool.query('SELECT reward_every AS "rewardEvery",hidden_from_clients AS "hiddenFromClients",package_valid_days AS "packageValidDays",billing_type AS "billingType",id,name,description,interval_unit AS interval,price_cents AS "priceCents",sessions_included AS "sessionsIncluded",weekly_sessions AS "weeklySessions",group_id AS "groupId",badge,interval_count AS "intervalCount",credit_eligibility AS "creditEligibility",active FROM membership_plans WHERE business_id=$1 ORDER BY display_order,created_at DESC',[business.id]),
+   pool.query("SELECT p.reward_every AS \"rewardEvery\",(SELECT count(*)::int FROM available_reward_visits v WHERE v.business_id=m.business_id AND v.membership_id=m.id) AS \"rewardVisits\",m.weekly_limit_override,p.weekly_sessions,m.billing_type,m.id,m.price_cents,m.stripe_account_id,m.customer_name,m.customer_email,m.customer_phone,m.date_of_birth::text AS date_of_birth,m.registration_answers,m.registration_field_labels,m.created_at,m.member_number,m.sessions_included,m.sessions_used,m.plan_id,m.status,m.last_paid_at,m.initial_paid_at,m.billing_start_override,m.credit_period_start,m.credit_period_end,m.stripe_subscription_id,m.stripe_interval_unit,m.stripe_interval_count,m.paid_through,p.name AS plan_name,p.interval_unit FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1 ORDER BY m.created_at DESC LIMIT 200",[business.id]),
    pool.query("SELECT external_account_id,charges_enabled,onboarding_complete FROM merchant_accounts WHERE business_id=$1",[business.id]),
    pool.query("SELECT membership_id,COUNT(*)::int AS recorded_sessions FROM membership_session_ledger WHERE business_id=$1 AND event_type='session_used' GROUP BY membership_id",[business.id]),
    pool.query('SELECT l.membership_id,l.appointment_id,l.event_type,l.session_delta,l.amount_cents,l.created_at,a.status AS appointment_status,a.date AS service_date,a.data::jsonb->\'services\' AS service_names FROM membership_session_ledger l LEFT JOIN appointments a ON a.id=l.appointment_id AND a.owner=(SELECT owner_id FROM businesses WHERE id=l.business_id) WHERE l.business_id=$1 ORDER BY l.created_at DESC',[business.id]),
@@ -73,6 +73,20 @@ export async function POST(req:Request){
   const {pool,business,owner}=await ctx(req);
   const raw=await req.text();if(raw.length>8000)throw Error('Request too large.');
   const input=JSON.parse(raw);
+  if(input.action==='redeemVisitReward'){
+   const client=await pool.connect();
+   try{
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
+    const member=(await client.query('SELECT p.reward_every FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id AND p.business_id=m.business_id WHERE m.id=$1 AND m.business_id=$2 FOR UPDATE OF m,p',[input.id,business.id])).rows[0];
+    const visits=(await client.query('SELECT id FROM available_reward_visits WHERE business_id=$1 AND membership_id=$2 ORDER BY id',[business.id,input.id])).rows;
+    if(!member?.reward_every||visits.length!==input.expectedVisits||visits.length<member.reward_every)throw Error('Reward balance changed. Refresh before recording a free service.');
+    const redemption=randomUUID();
+    await client.query('UPDATE membership_session_ledger SET reward_redemption=$1 WHERE business_id=$2 AND membership_id=$3 AND id=ANY($4::text[])',[redemption,business.id,input.id,visits.slice(0,member.reward_every).map((row:{id:string})=>row.id)]);
+    await client.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'free_service_redeemed',$4)",[redemption,owner,new Date().toISOString(),JSON.stringify({membershipId:input.id,visits:member.reward_every})]);
+    await client.query('COMMIT');return Response.json({ok:true},{headers});
+   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
+  }
   if(input.action==='setWeeklyLimitOverride'){
    if(typeof input.id!=='string'||!/^[a-f0-9-]{36}$/i.test(input.id)||typeof input.enabled!=='boolean')throw Error('Choose a valid member and override setting.');
    const client=await pool.connect();
@@ -142,6 +156,8 @@ export async function POST(req:Request){
      const weeklySessions=validateWeeklySessions(input.weeklySessions);
      const sessionsIncluded=weeklySessions?weeklySessions*5:Number(input.sessionsIncluded??0);
      if(!Number.isInteger(sessionsIncluded)||sessionsIncluded<(billingType==='package'?1:0)||sessionsIncluded>100000)throw Error('Enter a valid session allowance.');
+     const reward=input.rewardEvery??null;
+     if(reward!==null&&(!Number.isInteger(reward)||reward<1||reward>10000))throw Error('Enter a reward interval between 1 and 10000 sessions.');
      if(input.id){
       if(!/^[a-f0-9-]{36}$/i.test(input.id))throw Error('Invalid membership offer.');
       const old=(await client.query(
@@ -151,14 +167,14 @@ export async function POST(req:Request){
       if(active&&!old.active&&count>=limit)
        throw Error('Your '+planEntitlements(record?.plan_code,record?.status).name+' plan allows up to '+limit+' active customer membership offers. Existing offers are preserved.');
       await client.query(
-       'UPDATE membership_plans SET name=$1,description=$2,interval_unit=$3,price_cents=$4,active=$5,updated_at=now(),sessions_included=$8,group_id=CASE WHEN $10 THEN $9 ELSE group_id END,badge=CASE WHEN $12 THEN $11::jsonb ELSE badge END,credit_eligibility=COALESCE($13::jsonb,credit_eligibility),interval_count=$14,weekly_sessions=CASE WHEN $16 THEN $15 ELSE weekly_sessions END,billing_type=$17,package_valid_days=CASE WHEN $18 THEN $19 ELSE package_valid_days END,hidden_from_clients=CASE WHEN $20 THEN $21 ELSE hidden_from_clients END WHERE id=$6 AND business_id=$7',
-       [plan.name,plan.description,plan.interval,plan.price,active,input.id,business.id,sessionsIncluded,groupId,input.groupId!==undefined,badge?JSON.stringify(badge):null,input.badge!==undefined,eligibility?JSON.stringify(eligibility):null,intervalCount,weeklySessions,input.weeklySessions!==undefined,billingType,input.packageValidDays!==undefined,validDays,input.hiddenFromClients!==undefined,input.hiddenFromClients===true]);
+       'UPDATE membership_plans SET reward_started_at=CASE WHEN $22 AND reward_every IS NULL AND $23::integer IS NOT NULL THEN now() ELSE reward_started_at END,reward_every=CASE WHEN $22 THEN $23 ELSE reward_every END,name=$1,description=$2,interval_unit=$3,price_cents=$4,active=$5,updated_at=now(),sessions_included=$8,group_id=CASE WHEN $10 THEN $9 ELSE group_id END,badge=CASE WHEN $12 THEN $11::jsonb ELSE badge END,credit_eligibility=COALESCE($13::jsonb,credit_eligibility),interval_count=$14,weekly_sessions=CASE WHEN $16 THEN $15 ELSE weekly_sessions END,billing_type=$17,package_valid_days=CASE WHEN $18 THEN $19 ELSE package_valid_days END,hidden_from_clients=CASE WHEN $20 THEN $21 ELSE hidden_from_clients END WHERE id=$6 AND business_id=$7',
+       [plan.name,plan.description,plan.interval,plan.price,active,input.id,business.id,sessionsIncluded,groupId,input.groupId!==undefined,badge?JSON.stringify(badge):null,input.badge!==undefined,eligibility?JSON.stringify(eligibility):null,intervalCount,weeklySessions,input.weeklySessions!==undefined,billingType,input.packageValidDays!==undefined,validDays,input.hiddenFromClients!==undefined,input.hiddenFromClients===true,input.rewardEvery!==undefined,reward]);
      }else{
       if(active&&count>=limit)
        throw Error('Your '+planEntitlements(record?.plan_code,record?.status).name+' plan allows up to '+limit+' active customer membership offers. Existing offers are preserved.');
       await client.query(
-       'INSERT INTO membership_plans(id,business_id,name,description,interval_unit,price_cents,active,sessions_included,group_id,badge,credit_eligibility,interval_count,weekly_sessions,billing_type,package_valid_days,hidden_from_clients) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16)',
-       [randomUUID(),business.id,plan.name,plan.description,plan.interval,plan.price,active,sessionsIncluded,groupId,badge?JSON.stringify(badge):null,JSON.stringify(eligibility||{mode:'all',serviceIds:[],sessionIds:[]}),intervalCount,weeklySessions,billingType,validDays,input.hiddenFromClients===true]);
+       'INSERT INTO membership_plans(id,business_id,name,description,interval_unit,price_cents,active,sessions_included,group_id,badge,credit_eligibility,interval_count,weekly_sessions,billing_type,package_valid_days,hidden_from_clients,reward_every,reward_started_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16,$17,now())',
+       [randomUUID(),business.id,plan.name,plan.description,plan.interval,plan.price,active,sessionsIncluded,groupId,badge?JSON.stringify(badge):null,JSON.stringify(eligibility||{mode:'all',serviceIds:[],sessionIds:[]}),intervalCount,weeklySessions,billingType,validDays,input.hiddenFromClients===true,reward]);
      }
     }else{
      if(!/^[a-f0-9-]{36}$/i.test(input.id||''))throw Error('Invalid membership offer.');
