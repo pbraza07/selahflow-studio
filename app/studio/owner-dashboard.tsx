@@ -13,7 +13,7 @@ import SessionEditorDialog from '../components/session-editor-dialog';
 import TeamCalendar,{TeamCalendarDialog} from '../components/team-calendar';
 import OwnerTeamSettings from '../components/owner-team-settings';
 import BusinessAssistant from '../components/business-assistant';
-import {removeBookableSession} from '../../server/remove-bookable-session.mjs';
+import {ownerCalendarSessions,removeBookableSession} from '../../server/remove-bookable-session.mjs';
 import OwnerTeamTracking from '../components/owner-team-tracking';
 import {unpaidAppointmentForecast} from '../../server/report-activity.mjs';
 import RegistrationFields from '../components/registration-fields';
@@ -62,7 +62,7 @@ import {US_STATES,canonicalState} from '../../lib/business-options';
 import type {CSSProperties} from 'react';
 import {themeStyles} from '../../server/themes.mjs';
 import {businessServiceTypes} from '../../server/booking-approval-display.mjs';
-import {sessionInstances,recurrenceCount,firstSeriesOccurrence} from '../../server/session-recurrence.mjs';
+import {recurrenceCount,firstSeriesOccurrence} from '../../server/session-recurrence.mjs';
 import {businessPath} from '../../server/route-slugs.mjs';
 import {sessionRosterForOwner} from '../../server/session-roster.mjs';
 import OwnerCommunications from '../components/owner-communications';
@@ -226,7 +226,7 @@ function createSession(past=false){
  setNewSessionId(id);
 }
 const updateSession=(id:string,update:Any)=>setConfig((c:Any)=>({...c,bookableSessions:(c.bookableSessions||[]).map((item:Any)=>item.id===id?{...item,...update}:item)}));
-const removeSession=(id:string)=>{if(window.confirm('Remove this bookable session and all its recurring/rescheduled dates? Existing customer bookings, pending requests, payments and history will be retained. Save business settings to finish removal.'))setConfig((c:Any)=>removeBookableSession(c,id));};
+const removeSession=(id:string)=>{if(window.confirm('Remove this bookable session from future scheduling? Past dates and their client rosters stay on the calendar. Existing customer bookings, pending requests, payments and history will be retained. Save business settings to finish removal.'))setConfig((c:Any)=>removeBookableSession(c,id));};
 const sessionBookings=(id:string)=>appointments.filter((a:Any)=>a.sessionId===id&&!['Cancelled','No-show'].includes(a.status)).length;
 async function toggleSessionFull(full:boolean){
  if(!selectedRosterSession)return;
@@ -251,7 +251,7 @@ async function removeRosterCustomer(client:Any){
  if(result?.ok){await refresh();setToast('Customer removed and seat released.');}
 }
 function openSessionRoster(session:Any){setRosterMemberNumber('');setRosterPastOverride(false);setRosterOverrideReason('');setRosterAnswers({});setRosterAddOpen(false);setRosterSelection({id:session.id,date:session.date});}
-const selectedRosterSession=rosterSelection?sessionInstances(config,rosterSelection.date)
+const selectedRosterSession=rosterSelection?ownerCalendarSessions(config,rosterSelection.date,undefined)
  .find((session:Any)=>session.id===rosterSelection.id):null;
 const selectedSessionRoster=selectedRosterSession?sessionRosterForOwner(selectedRosterSession,appointments):null;
 const rosterClock=easternClock();
@@ -321,9 +321,9 @@ async function saveSessionReschedule(){
  }catch(error){setRescheduleError((error as Error).message);}
  finally{setRescheduleBusy(false);}
 }
-const sessionsOn=(d:string,staffId?:string)=>sessionInstances(config,d,staffId).filter((session:Any)=>config.services.some((v:Any)=>v.id===session.service));
+const sessionsOn=(d:string,staffId?:string)=>ownerCalendarSessions(config,d,staffId).filter((session:Any)=>session.archived||config.services.some((v:Any)=>v.id===session.service));
 const sessionLeft=(session:Any)=>(session.manuallyFull===true||(config.fullSessionIds||[]).includes(session.id))?0:Math.max(0,session.capacity-sessionBookings(session.id));
-const sessionLabel=(session:Any)=>{const service=config.services.find((v:Any)=>v.id===session.service);return (service?.name||'Session')+' · '+sessionLeft(session)+'/'+session.capacity+' slots left'+(session.manuallyFull?' · Session full':'');};
+const sessionLabel=(session:Any)=>{const service=config.services.find((v:Any)=>v.id===session.service);return (session.serviceName||service?.name||'Session')+' · '+sessionLeft(session)+'/'+session.capacity+' slots left'+(session.manuallyFull?' · Session full':'');};
 const studioDate=(d:string)=>d.includes('T')?new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d)):d;
 const inRange=(raw:string)=>financialDateInRange(raw,range,today(),reportDates);
 const sales=events.filter(e=>e.kind==='cash_sale'&&inRange(e.created));const membershipPayments=events.filter(e=>e.kind==='membership_payment'&&inRange(e.created));const revenue=sales.reduce((n,e)=>n+Number(e.total||0),0)+membershipPayments.reduce((n,e)=>n+Number(e.total||0),0);const paidTransactions=[...sales,...membershipPayments].sort((a,b)=>Date.parse(b.created)-Date.parse(a.created));const reportAppointments=appointments.filter(a=>inRange(a.date));
@@ -636,18 +636,19 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
  <section id="sf-owner-roster-dialog" tabIndex={-1} className="sf-roster-dialog" role="dialog" aria-modal="true" aria-labelledby="sf-roster-title" aria-describedby="sf-roster-description">
   <header className="sf-roster-header">
    <div><span className="sf-roster-eyebrow"><Users size={15}/> PRIVATE BUSINESS SESSION ROSTER</span>
-    <h2 id="sf-roster-title">{selectedRosterSession?(config.services.find((v:Any)=>v.id===selectedRosterSession.service)?.name||'Bookable session'):'Session not found'}</h2>
-    <p id="sf-roster-description">{rosterSelection.date} · {selectedRosterSession?timeLabel(selectedRosterSession.start):'—'} Eastern · {selectedRosterSession?(config.staff.find((v:Any)=>v.id===selectedRosterSession.staff)?.name||'Team member'):'—'}</p>
+    <h2 id="sf-roster-title">{selectedRosterSession?(selectedRosterSession.serviceName||config.services.find((v:Any)=>v.id===selectedRosterSession.service)?.name||'Bookable session'):'Session not found'}</h2>
+    <p id="sf-roster-description">{rosterSelection.date} · {selectedRosterSession?timeLabel(selectedRosterSession.start):'—'} Eastern · {selectedRosterSession?(selectedRosterSession.staffName||config.staff.find((v:Any)=>v.id===selectedRosterSession.staff)?.name||'Team member'):'—'}</p>
    </div>
    <button type="button" className="sf-roster-close" aria-label="Close session roster" onClick={()=>setRosterSelection(null)}><X size={20}/></button>
   </header>
   {selectedRosterSession&&selectedSessionRoster?<div className="sf-roster-content">
-   <label className="sf-toggle-row" style={{marginBottom:8}}><input type="checkbox" checked={selectedRosterSession.manuallyFull===true} disabled={busy} onChange={e=>void toggleSessionFull(e.target.checked)}/> Mark session as full</label>
+   {!selectedRosterSession.archived&&<><label className="sf-toggle-row" style={{marginBottom:8}}><input type="checkbox" checked={selectedRosterSession.manuallyFull===true} disabled={busy} onChange={e=>void toggleSessionFull(e.target.checked)}/> Mark session as full</label>
    <p className="muted" style={{marginBottom:16}}>Saves immediately for this date only. The session stays visible and existing customers keep their bookings. Uncheck to reopen available seats.</p>
    <div style={{display:'flex',gap:10,flexWrap:'wrap',marginBottom:16}}>
  <button type="button" className="primary" disabled={busy||selectedSessionRoster.remaining<=0} onClick={()=>setRosterAddOpen(v=>!v)}><Plus size={16}/> Add customer</button>
  <small style={{alignSelf:'center'}}>{selectedSessionRoster.remaining<=0?'Session is full':'Add a customer directly to this session'}</small>
  </div>
+ </>}
  {rosterAddOpen&&<form onSubmit={e=>{e.preventDefault();void addRosterCustomer();}} style={{display:'grid',gap:10,marginBottom:18}}>
  <><label>Membership / Client ID (optional)<input maxLength={8} value={rosterMemberNumber} onChange={e=>setRosterMemberNumber(e.target.value.toUpperCase())}/></label><label>Coupon code (optional)<input maxLength={40} value={rosterCoupon} onChange={e=>setRosterCoupon(e.target.value)}/></label>{rosterIsPast&&<fieldset><legend>Past-session override</legend><label className="sf-toggle-row"><input type="checkbox" required checked={rosterPastOverride} onChange={e=>setRosterPastOverride(e.target.checked)}/> Record this client in a session that already ended</label><label>Reason<input required minLength={5} maxLength={500} value={rosterOverrideReason} onChange={e=>setRosterOverrideReason(e.target.value)}/></label><p>Use the client’s existing full name and email to link their ID and signed waiver. Records the booking without charging or sending a new booking email. Enter a membership ID to check in the client and deduct one available session now.</p></fieldset>}</><label>Customer name<input required maxLength={100} value={rosterName} onChange={e=>setRosterName(e.target.value)}/></label>
  <label>Email<input required type="email" maxLength={200} value={rosterEmail} onChange={e=>setRosterEmail(e.target.value)}/></label>
@@ -680,7 +681,10 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
    </div>:<p className="sf-roster-empty">No confirmed customers have signed up for this session yet. Available seats will appear on the customer booking calendar.</p>}
    <div className="sf-roster-actions">
     <button type="button" className="primary" onClick={()=>{setRosterSelection(null);setView('Clients');}}><Users size={16}/> Open client directory</button>
-    <button type="button" className="outline" onClick={()=>{const session=selectedRosterSession;setRosterSelection(null);openSessionReschedule(session,true);}}><CalendarDays size={16}/> Reschedule session</button>
+    {selectedRosterSession.archived?<button type="button" className="outline" disabled={busy} onClick={async()=>{
+     if(!window.confirm('Delete this date from calendar history? Client appointment records are kept.'))return;
+     if(await action({action:'delete_archived_occurrence',sessionId:selectedRosterSession.id,date:selectedRosterSession.date})){setRosterSelection(null);await refresh();}
+    }}>Delete this session date</button>:<button type="button" className="outline" onClick={()=>{const session=selectedRosterSession;setRosterSelection(null);openSessionReschedule(session,true);}}><CalendarDays size={16}/> Reschedule session</button>}
    </div>
   </div>:<div className="sf-roster-content"><p>This session was changed or removed. Refresh your calendar to see its latest schedule.</p></div>}
  </section>

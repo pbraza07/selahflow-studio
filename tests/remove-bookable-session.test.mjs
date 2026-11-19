@@ -34,3 +34,17 @@ test('removed definitions retain booked-time protection; retained series edits s
  assert.equal(availability.slots.includes(600),false);assert.equal(availability.slots.includes(540),true);assert.equal(JSON.stringify(appointment),before);
  assert.throws(()=>validateExistingSessionReservations(config,{...config,bookableSessions:config.bookableSessions.map(s=>s.id==='series'?{...s,repeat:{...s.repeat,until:'2030-11-01'}}:s)},[appointment]),/confirmed customers/);
 });
+
+test('retired calendars preserve started dates, stable roster IDs and moved dates across later saves',async()=>{
+ const {archiveRemovedSessions,ownerCalendarSessions}=await import('../server/remove-bookable-session.mjs');
+ const source=sessionInstances(config,'2030-11-15')[0];
+ const previous=rescheduledConfig(config,source,{date:'2030-11-07',start:660,staff:'coach',service:'training',capacity:5});
+ const next=removeBookableSession(previous,'series');
+ const clock={date:'2030-11-08',minutes:599};
+ next.archivedOccurrences=archiveRemovedSessions(previous,next,clock);
+ assert.deepEqual(next.archivedOccurrences.map(s=>s.id),['series',source.id]);
+ assert.equal(ownerCalendarSessions(next,'2030-11-07','coach')[0].serviceName,'Training');
+ assert.deepEqual(sessionInstances(next,'2030-11-07'),[]);
+ assert.deepEqual(archiveRemovedSessions(next,next,clock),next.archivedOccurrences);
+ assert.deepEqual(archiveRemovedSessions({...next,archivedOccurrences:[]},next,clock),[]);
+});

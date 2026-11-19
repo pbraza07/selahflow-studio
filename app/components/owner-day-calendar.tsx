@@ -16,7 +16,7 @@ export default function OwnerDayCalendar({config,appointments,sessions,date,staf
   const belongs=(a:Any,s:Any)=>a.sessionId===s.id&&a.date===s.date&&a.staff===s.staff&&a.start===s.start;
   const events=[
    ...booked.filter(a=>a.staff===staff.id&&!staffSessions.some(s=>belongs(a,s))).map(a=>({key:'booking-'+a.id,kind:'booking',start:a.start,duration:a.duration,data:a})),
-   ...staffSessions.map(s=>({key:'session-'+s.id,kind:'session',start:s.start,duration:config.services.find((v:Any)=>v.id===s.service)?.duration||30,clients:booked.filter(a=>belongs(a,s)),data:s})),
+   ...staffSessions.map(s=>({key:'session-'+s.id,kind:'session',start:s.start,duration:s.duration||config.services.find((v:Any)=>v.id===s.service)?.duration||30,clients:booked.filter(a=>belongs(a,s)),data:s})),
    ...(config.teamTimeOff||[]).filter((b:Any)=>b.staff===staff.id&&date>=b.from&&date<=b.to).map((b:Any)=>({key:'off-'+b.id,kind:'off',start:b.start,duration:b.end-b.start,data:b}))
   ];
   const layout=layoutCalendarEvents(events);
@@ -33,7 +33,7 @@ export default function OwnerDayCalendar({config,appointments,sessions,date,staf
    {columns.map(({staff,layout}:Any)=><div className="cal-column" key={staff.id} style={{height}}>
     {hours.map(start=><button type="button" className="sf-team-calendar-trigger" style={{top:(start-range.start)*CALENDAR_PIXELS_PER_MINUTE,height:100}} key={start} aria-label={'Plan '+staff.name+' on '+date+' at '+timeLabel(start)} onClick={()=>onPlan({date,staff:staff.id,start})}>＋</button>)}
     {layout.map((event:Any)=>{
-     const a=event.data,service=event.kind==='session'?config.services.find((s:Any)=>s.id===a.service):null;
+     const a=event.data,service=event.kind==='session'&&a.archived?{name:a.serviceName}:event.kind==='session'?config.services.find((s:Any)=>s.id===a.service):null;
      const style={top:(event.start-range.start)*CALENDAR_PIXELS_PER_MINUTE,height:event.height,left:`calc(${100*event.lane/event.lanes}% + 4px)`,width:`calc(${100/event.lanes}% - 8px)`,right:'auto',...(event.kind==='session'?{'--sf-service-accent':serviceAccent(service?.name||'')||'#387459'}:event.kind==='booking'?{borderLeftColor:serviceAccent(a.services?.[0])}: {})} as CSSProperties;
      const times=timeLabel(a.start)+' – '+(a.start+event.duration===1440?'Midnight':timeLabel(a.start+event.duration));
      if(event.kind==='off')return <button type="button" key={event.key} className="sf-team-time-off-event sf-calendar-lane-event" style={style} onClick={()=>onPlan({date,staff:staff.id})}><b>Time off</b><span>{times}</span><span translate="no">{a.reason||'Personal time'}</span></button>;

@@ -1,3 +1,25 @@
+import {seriesOccurrences,sessionInstances} from './session-recurrence.mjs';
+import {easternClock} from './session-scheduling.mjs';
+
+export function archiveRemovedSessions(previous,next,clock=easternClock()){
+ const retained=new Set(next.bookableSessions.map(s=>s.id));
+ const history=[...(previous.archivedOccurrences||[])];
+ for(const series of previous.bookableSessions||[]){
+  if(retained.has(series.id))continue;
+  for(const occurrence of seriesOccurrences(previous,series.id)){
+   if(occurrence.date>clock.date||occurrence.date===clock.date&&occurrence.start>clock.minutes)continue;
+   const service=previous.services?.find(s=>s.id===occurrence.service);
+   history.push({...occurrence,archived:true,serviceName:service?.name,duration:service?.duration,
+    staffName:previous.staff?.find(s=>s.id===occurrence.staff)?.name});
+  }
+ }
+ return history;
+}
+
+export function ownerCalendarSessions(config,date,staff){
+ return [...sessionInstances(config,date,staff),...(config.archivedOccurrences||[]).filter(s=>s.date===date&&(!staff||staff===s.staff))];
+}
+
 /** Remove a bookable definition and its published reschedules, preserving
  * appointment/request/payment/consent records (which live outside settings).
  */
