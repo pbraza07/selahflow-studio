@@ -223,11 +223,13 @@ export async function POST(req:Request){
     if(existing){await client.query('COMMIT');return Response.json({ok:true,credited:0,alreadyProcessed:true},{headers});}
     if(input.action==='confirmManualPayment')await accrueCashCommission(client,{businessId:business.id,kind:'membership',memberNumber:member.member_number,sourceId:member.id,grossCents:Number(member.price_cents)});
     const allocation=await applyManualPeriod(client,{member:{...member,business_id:business.id},credits,plan:selectedPlan||member});
+    const paymentMethod=input.paymentMethod??'Recorded by the business';
+    if(!['Cash','Zelle','Other offline payment','Recorded by the business'].includes(paymentMethod))throw Error('Choose a valid payment method.');
     const paymentId=randomUUID();
     await client.query("INSERT INTO membership_session_ledger(id,business_id,membership_id,appointment_id,event_type,session_delta,amount_cents) VALUES($1,$2,$3,$4,'payment_confirmed',$5,$6)",[paymentId,business.id,id,requestId,allocation.allocated,selectedPlan?selectedPlan.price_cents:member.price_cents]);
     await client.query('UPDATE customer_memberships SET plan_id=COALESCE($1,plan_id),price_cents=COALESCE($2,price_cents) WHERE business_id=$3 AND id=$4',[selectedPlan?.id||null,selectedPlan?.price_cents??null,business.id,id]);
-    await client.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,'membership_payment',$4)",[randomUUID(),business.id,new Date().toISOString(),JSON.stringify({membershipId:id,memberNumber:member.member_number,requestId,amountCents:Number(selectedPlan?.price_cents??member.price_cents),renewal:input.action==='renewMembership'})]);
-    await queueMembershipPaymentEmail(client,{businessId:business.id,paymentId,origin:trustedOrigin(req),renewal:input.action==='renewMembership'});
+    await client.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,(SELECT owner_id FROM businesses WHERE id=$2),$3,'membership_payment',$4)",[randomUUID(),business.id,new Date().toISOString(),JSON.stringify({membershipId:id,memberNumber:member.member_number,requestId,paymentMethod,amountCents:Number(selectedPlan?.price_cents??member.price_cents),renewal:input.action==='renewMembership'})]);
+    await queueMembershipPaymentEmail(client,{businessId:business.id,paymentId,paymentMethod,origin:trustedOrigin(req),renewal:input.action==='renewMembership'});
     await client.query('COMMIT');
     return Response.json({ok:true,credited:credits,confirmationEmail:'queued'},{headers});
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}

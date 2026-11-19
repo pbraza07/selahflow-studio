@@ -20,8 +20,8 @@ const memberSelect=`SELECT m.*,p.name AS plan_name,p.active AS plan_active,p.pri
  LEFT JOIN settings s ON s.owner=b.owner_id
  LEFT JOIN merchant_accounts ma ON ma.business_id=b.id AND ma.provider='stripe'`;
 
-function eligible(m,now,destination){
- if(!m||object(m.settings).dailyPaymentReminders===false||!validEmail(email(m.customer_email))||destination&&email(destination)!==email(m.customer_email))return false;
+function eligible(m,now,destination,manual=false){
+ if(!m||(!manual&&object(m.settings).dailyPaymentReminders===false)||!validEmail(email(m.customer_email))||destination&&email(destination)!==email(m.customer_email))return false;
  if(['canceled','cancelled'].includes(m.status))return false;
  if(m.stripe_subscription_id)return m.billing_type==='membership'&&(['pending_payment','past_due','payment_failed','expired'].includes(m.status)||m.status==='active'&&m.paid_through&&new Date(m.paid_through)<=now);
  return ['pending_payment','payment_failed'].includes(m.status)&&!m.initial_paid_at&&!m.last_paid_at&&!m.has_payment&&m.plan_active&&amount(m.price_cents)&&Number(m.price_cents)===Number(m.plan_price);
@@ -61,7 +61,7 @@ async function inFlightInvoicePayment(invoice,account,api){
  return false;
 }
 
-async function recurringItems(pool,m,{now,api,destination}){
+async function recurringItems(pool,m,{now,api,destination,manual}){
  if(!/^acct_[A-Za-z0-9]+$/.test(m.stripe_account_id||'')||m.merchant_account!==m.stripe_account_id||!/^sub_[A-Za-z0-9]+$/.test(m.stripe_subscription_id||'')||!/^cus_[A-Za-z0-9]+$/.test(m.stripe_customer_id||''))return [];
  const account=m.stripe_account_id,subscription=await api('subscriptions/'+m.stripe_subscription_id,{method:'GET',account});assertTestPayment(subscription);
  if(subscription.id!==m.stripe_subscription_id||subscription.metadata?.membership_id!==m.id||subscription.metadata?.selahflow_business_id!==m.business_id||id(subscription.customer)!==m.stripe_customer_id||['canceled','incomplete_expired','paused'].includes(subscription.status)||subscription.pause_collection)return [];
@@ -82,13 +82,13 @@ async function recurringItems(pool,m,{now,api,destination}){
   const last=page.data.at(-1)?.id;if(!last||last===cursor||++pages>=20)throw Error('Invoice list requires additional review.');cursor=last;
  }while(true);
  const fresh=await readMember(pool,m.business_id,m.id);
- return sameIdentity(m,fresh)&&eligible(fresh,now,destination)?items.map(x=>({...x,clientName:fresh.customer_name,lastNoticeAt:null})):[];
+ return sameIdentity(m,fresh)&&eligible(fresh,now,destination,manual)?items.map(x=>({...x,clientName:fresh.customer_name,lastNoticeAt:null})):[];
 }
 
 /** Builds only reminders for existing obligations; never creates a charge or subscription. */
-export async function prepareMembershipReminder(pool,{businessId,sourceId,origin,now=new Date(),destination,api=stripeApi,configured=paymentConfigured()}){
- now=new Date(now);const m=await readMember(pool,businessId,sourceId);if(!eligible(m,now,destination))return null;
- if(m.stripe_subscription_id)return configured?recurringItems(pool,m,{now,api,destination}):[];
+export async function prepareMembershipReminder(pool,{businessId,sourceId,origin,now=new Date(),destination,api=stripeApi,configured=paymentConfigured(),manual=false}){
+ now=new Date(now);const m=await readMember(pool,businessId,sourceId);if(!eligible(m,now,destination,manual))return null;
+ if(m.stripe_subscription_id)return configured?recurringItems(pool,m,{now,api,destination,manual}):[];
  const item=base(m);if(!amount(item.amountCents)||m.first_invoice_cents===0)return null;
  if(m.stripe_checkout_session_id){
   if(!configured||!/^cs_[A-Za-z0-9_]+$/.test(m.stripe_checkout_session_id)||!/^acct_[A-Za-z0-9]+$/.test(m.stripe_account_id||'')||m.merchant_account!==m.stripe_account_id)return null;
