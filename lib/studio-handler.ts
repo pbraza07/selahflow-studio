@@ -7,7 +7,7 @@ import {canReviewWaivers,assertWaiverAuthority} from '../server/waiver-authority
 import {publicBookingServiceSummary} from '../server/public-booking-service.mjs';
 import {assertWeeklyMembershipBooking,membershipBookingActive} from '../server/membership-weekly.mjs';
 import {acceptedWaiverVersions,WAIVER_VERSION,LEGACY_WAIVER_VERSION} from '../server/waiver-content.mjs';
-import {cleanRemovedBookableSessions} from '../server/remove-bookable-session.mjs';
+import {archiveRemovedSessions,cleanRemovedBookableSessions} from '../server/remove-bookable-session.mjs';
 import {servicePaymentOptions,validateServicePaymentOptions} from '../server/service-payment-options.mjs';
 import {publicTeamMembers,publicSessionTeam,publicBookingStaff,sessionTeamDefaults,validateTeamBookingPolicy} from '../server/team-booking-policy.mjs';
 import {bookingDiscount} from '../server/booking-discounts.mjs';
@@ -95,6 +95,20 @@ if(b.action==='waiver_records'){
  const records=await getPool().query('SELECT w.* FROM participation_waivers w JOIN businesses biz ON biz.id=w.business_id WHERE biz.owner_id=$1 AND (w.deleted_at IS NOT NULL)=$2 ORDER BY w.signed_at DESC LIMIT 2000',[owner,b.deleted===true]);
  return reply({waivers:records.rows});
 }
+if(b.action==='delete_archived_occurrence'){
+ if(isPublic||isTeam)return reply({error:'Action not permitted.'},403);
+ const client=await getPool().connect();
+ try{
+  await client.query('BEGIN');
+  await client.query('SELECT pg_advisory_xact_lock(hashtext($1))',[owner+':schedule']);
+  const row=(await client.query('SELECT data FROM settings WHERE owner=$1 FOR UPDATE',[owner])).rows[0];
+  const saved=JSON.parse(row.data);
+  saved.archivedOccurrences=(saved.archivedOccurrences||[]).filter((s:any)=>s.id!==b.sessionId||s.date!==b.date);
+  await client.query('UPDATE settings SET data=$1 WHERE owner=$2',[JSON.stringify(saved),owner]);
+  await client.query('COMMIT');
+  return reply({ok:true});
+ }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
+}
 if(b.action==='session_full'){
  if(isPublic||isTeam)return reply({error:'Action not permitted.'},403);
  return reply(await setSessionFullForOwner({owner,input:b}));
@@ -153,6 +167,7 @@ try{
  const oldConfig=persisted?JSON.parse(persisted.data):config;
  const productCount=Number((await client.query('SELECT count(*)::int AS count FROM business_products WHERE business_id=(SELECT id FROM businesses WHERE owner_id=$1) AND archived=false',[owner])).rows[0].count);
  if(Number(c.teamSessionRevision||0)!==Number(oldConfig.teamSessionRevision||0))throw Error('Team sessions changed while these settings were open. Refresh the owner dashboard before saving.');
+ c.archivedOccurrences=archiveRemovedSessions(oldConfig,c);
  c.fullSessionIds=cleanRemovedBookableSessions(oldConfig,{...c,fullSessionIds:oldConfig.fullSessionIds||[]}).fullSessionIds||[]; // Only the immediate owner calendar action changes session closure.
  c.teamTimeOff=oldConfig.teamTimeOff||[]; // Calendar-managed time off cannot be overwritten by stale settings drafts.
  for(const block of c.teamTimeOff){for(let d=Date.parse(block.from);d<=Date.parse(block.to);d+=86400000){const date=new Date(d).toISOString().slice(0,10);if(sessionsForDate(c,date,block.staff).some((s:any)=>overlaps(block.start,block.end-block.start,s.start,s.duration+(c.buffer||0))))throw Error('A session overlaps saved team time off. Edit the block or choose another session time.');}}
