@@ -1,3 +1,4 @@
+import {memberSessionStatus} from '../server/member-session-status.mjs';
 import {publicBookingServiceSummary} from '../server/public-booking-service.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -26,9 +27,9 @@ test('ID-only status lookup returns current membership type and available credit
   const section=source.split("if(b.action==='registration_latest_status'){")[1].split("if(b.action==='verify_registration'){")[0].trim().replace(/\}$/,'');
   const body=ts.transpileModule(section,{compilerOptions:{module:ts.ModuleKind.None,target:ts.ScriptTarget.ES2022}}).outputText;
   const db=()=>({prepare(sql){return {values:[],bind(...v){this.values=v;return this;},async all(){return {results:(await pg.query(postgresSQL(sql),this.values)).rows};}};}});
-  const lookup=new Function('b','owner','req','db','getPool','memberIdMembershipSummary','reply','takeLimit','tokenHash','registrationPaymentSummary','publicBookingServiceSummary','config','return (async()=>{'+body+'})()');
+  const lookup=new Function('b','owner','req','db','getPool','memberSessionStatus','memberIdMembershipSummary','reply','takeLimit','tokenHash','registrationPaymentSummary','publicBookingServiceSummary','config','return (async()=>{'+body+'})()');
   const req=new Request('https://example.com/api/booking?slug=club-one',{headers:{'x-forwarded-for':'198.51.100.5'}});
-  const call=(number,rate=async()=>true)=>lookup({memberNumber:number},'u1',req,db,()=>pg,memberIdMembershipSummary,(d,status=200)=>Response.json(d,{status}),rate,s=>s,registrationPaymentSummary,publicBookingServiceSummary,{services:[{id:'training',name:'Training',category:'Soccer'},{id:'private',name:'Private Session',category:'Private Coaching'}]});
+  const call=(number,rate=async()=>true)=>lookup({memberNumber:number},'u1',req,db,()=>pg,memberSessionStatus,memberIdMembershipSummary,(d,status=200)=>Response.json(d,{status}),rate,s=>s,registrationPaymentSummary,publicBookingServiceSummary,{services:[{id:'training',name:'Training',category:'Soccer'},{id:'private',name:'Private Session',category:'Private Coaching'}]});
   const result=await (await call(' ca0814 ')).json();
   assert.deepEqual(result.latest,{date:'2026-10-16',status:'No-show',service:'Session',serviceType:'Individual appointment'});assert.deepEqual(result.membership,summary);
   assert.doesNotMatch(JSON.stringify(result),/client@example|Other Client|813555|2013-08-14|password_hash/);

@@ -1,3 +1,4 @@
+import {publicBookingServiceSummary} from './public-booking-service.mjs';
 import {ATTENDANCE_WINDOW_MS,checkInWindow} from './attendance-window.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {tokenHash} from './security.mjs';
@@ -56,10 +57,12 @@ export async function kioskMemberStatus(db,ctx,input){
  const plans=[];for(const member of members){const fresh=await refreshMemberPeriod(db,member);plans.push({name:member.plan_name,status:fresh.status,included:fresh.sessions_included,used:fresh.sessions_used,remaining:Math.max(0,fresh.sessions_included-fresh.sessions_used),paidThrough:fresh.paid_through});}
  const names=roster.filter(r=>r.member_number===id).map(r=>String(r.name).trim().toLowerCase());
  const rows=(await db.query("SELECT id,date,start,duration,status,data FROM appointments WHERE owner=$1 AND (data::jsonb->>'memberNumber'=$2 OR lower(trim(data::jsonb->>'name'))=ANY($3::text[])) ORDER BY date DESC,start DESC LIMIT 5000",[ctx.owner_id,id,names])).rows.filter(a=>!kioskObject(a.data).sample&&ownerAppointmentMember(kioskObject(a.data),roster).memberNumber===id);
- const day=kioskDay(new Date(),kioskTimezone(ctx.config));
+ const now=new Date(),zone=kioskTimezone(ctx.config),day=kioskDay(now,zone);
+ const [hour,minute]=new Intl.DateTimeFormat('en-GB',{timeZone:zone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(now).split(':').map(Number);
+ const hasStarted=a=>a.date<day||(a.date===day&&a.start<=hour*60+minute);
  const used=new Set((await db.query("SELECT l.appointment_id FROM membership_session_ledger l JOIN customer_memberships m ON m.id=l.membership_id AND m.business_id=l.business_id WHERE m.business_id=$1 AND m.member_number=$2 AND l.event_type='session_used'",[ctx.id,id])).rows.map(r=>r.appointment_id));
- const item=a=>({...summary(a),membershipSessionUsed:used.has(a.id)});
- return {name:roster.find(r=>r.member_number===id)?.name,plans,upcoming:rows.filter(a=>a.date>=day&&!['Cancelled','No-show','Completed','Checked in'].includes(a.status)).reverse().slice(0,100).map(item),history:rows.filter(a=>a.date<day||['No-show','Completed','Checked in'].includes(a.status)).slice(0,100).map(item)};
+ const item=a=>({...summary(a),...publicBookingServiceSummary(a.data,ctx.config),membershipSessionUsed:used.has(a.id)});
+ return {name:roster.find(r=>r.member_number===id)?.name,plans,upcoming:rows.filter(a=>!hasStarted(a)&&!['Cancelled','No-show','Completed'].includes(a.status)).reverse().slice(0,5).map(item),history:rows.filter(a=>hasStarted(a)).slice(0,5).map(item)};
 }
 export async function kioskWaiver(db,ctx,input){
  const id=kioskIdentity('memberNumber',input.value);await kioskLimit(db,ctx.device_id,'waiver',id);
