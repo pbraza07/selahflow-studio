@@ -16,7 +16,12 @@ export async function updateClientProfile(db,{owner,businessId,selected,profile,
  const values=validateClientInput({...input,name:firstName+' '+lastName}),dob=String(input.dateOfBirth||'');
  if(dob&&(!/^\d{4}-\d{2}-\d{2}$/.test(dob)||!Number.isFinite(Date.parse(dob))||new Date(dob).toISOString().slice(0,10)!==dob||dob>new Date().toISOString().slice(0,10)))throw Error('Enter a valid date of birth.');
  if(clients.some(c=>c.id!==selected.id&&sameClientContact(c,values)))throw Error('Another client with that name and contact already exists.');
- const fields=editableClientProfileFields(config,selected),submitted=input.customAnswers||{};
+ const submitted=input.customAnswers||{};
+ const fields=editableClientProfileFields(config,selected);
+ // Older editors may submit a previously saved field that has since been retired.
+ for(const field of editableClientProfileFields(config,{...selected,currentQuestions:undefined})){
+  if(Object.hasOwn(submitted,field.id)&&!fields.some(f=>f.id===field.id))fields.push(field);
+ }
  if(!submitted||typeof submitted!=='object'||Array.isArray(submitted)||Object.keys(submitted).some(id=>!fields.some(f=>f.id===id)))throw Error('Invalid client profile question.');
  const answers=sanitizeBookingAnswers(fields,{...clientProfileAnswers(selected),...submitted}),labels=Object.fromEntries(fields.map(f=>[f.id,f.label]));
  const imports={...selected.importColumns};
@@ -59,7 +64,7 @@ export async function updateClientProfile(db,{owner,businessId,selected,profile,
   for(const n of previous)await db.query('INSERT INTO member_id_history_aliases(business_id,previous_number,current_number) VALUES($1,$2,$3) ON CONFLICT(business_id,previous_number) DO UPDATE SET current_number=excluded.current_number,changed_at=now()',[businessId,n,number]);
  }
  const id=profile?.id||randomUUID(),anchor=selected.history?.at(-1)?.id||null;
- const args=[values.name,values.email,values.phone,values.notes,number||null,dob||null,JSON.stringify(answers),JSON.stringify(labels),JSON.stringify(imports),firstName,lastName,JSON.stringify(previous),owner,id];
+ const args=[values.name,values.email,values.phone,values.notes,number||null,dob||null,JSON.stringify({...selected.registrationAnswers,...answers}),JSON.stringify({...selected.registrationFieldLabels,...labels}),JSON.stringify(imports),firstName,lastName,JSON.stringify(previous),owner,id];
  if(profile)await db.query('UPDATE business_client_profiles SET name=$1,email=$2,phone=$3,notes=$4,member_number=$5,date_of_birth=$6::date,registration_answers=$7::jsonb,registration_field_labels=$8::jsonb,import_columns=$9::jsonb,first_name=$10,last_name=$11,previous_member_numbers=$12::jsonb,registration_identity=COALESCE(registration_identity,$15::uuid),updated_at=now() WHERE owner=$13 AND id=$14 AND deleted_at IS NULL',[...args,newKey.startsWith('registration:')?newKey.slice(13):null]);
  else await db.query('INSERT INTO business_client_profiles(name,email,phone,notes,member_number,date_of_birth,registration_answers,registration_field_labels,import_columns,first_name,last_name,previous_member_numbers,owner,id,source_key,anchor_appointment_id,registration_identity) VALUES($1,$2,$3,$4,$5,$6::date,$7::jsonb,$8::jsonb,$9::jsonb,$10,$11,$12::jsonb,$13,$14,$15,$16,$17::uuid)',[...args,selected.id,anchor,newKey.startsWith('registration:')?newKey.slice(13):null]);
  await db.query('UPDATE customer_memberships SET customer_name=$1,customer_email=$2,customer_phone=$3,date_of_birth=$4::date,member_number=$5,updated_at=now() WHERE business_id=$6 AND id=ANY($7::text[])',[values.name,values.email,values.phone,dob||null,number||null,businessId,memberIds]);

@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {Check,UserRoundPlus,X} from 'lucide-react';
+import {distinctImportedFields} from '../../server/current-profile-questions.mjs';
 import {editableClientProfileFields,clientProfileAnswers} from '../../server/client-profile-fields.mjs';
 import {birthdateMemberId} from '../../server/member-id-policy.mjs';
 import RegistrationFields from './registration-fields';
@@ -36,7 +37,7 @@ export default function ClientEditor({client,config,onClose,onSave,busy,error}:{
    <form id="sf-client-edit-form" onSubmit={async e=>{e.preventDefault();await onSave({...values,name:(values.firstName.trim()+' '+values.lastName.trim()).trim()});}}>
     <RegistrationFields config={editorConfig} form="booking" sessionId={null} values={{memberNumber:values.memberNumber,dateOfBirth:values.dateOfBirth,firstName:values.firstName,lastName:values.lastName,email:values.email,phone:values.phone}} answers={values.customAnswers} onValue={setField} onAnswer={(id,value)=>setValues(v=>({...v,customAnswers:{...v.customAnswers,[id]:value}}))}/>
     <p className="sf-client-editor-notice">With a birth date, Unique IDs use first/last initials + MMDDYY. Without one, the server assigns initials + this business’s next number starting at 1001 when you save. Existing sequence IDs stay unchanged when a name or birth date is edited. Correcting a birth-date-based identity can update its suggested ID; collisions are checked before saving. Identity or ID changes require a fresh waiver signature, while earlier signed documents stay retained.</p>
-    {client&&Object.keys(values.importColumns||{}).length>0&&<fieldset><legend>Imported profile fields</legend>{Object.entries(values.importColumns||{}).map(([id,value])=><label key={id}>{id}{typeof value==='boolean'?<input type="checkbox" checked={value} onChange={e=>setValues(v=>({...v,importColumns:{...v.importColumns,[id]:e.target.checked}}))}/>:<input maxLength={500} value={String(value??'')} onChange={e=>setValues(v=>({...v,importColumns:{...v.importColumns,[id]:e.target.value}}))}/>}</label>)}</fieldset>}
+    {client&&distinctImportedFields(values.importColumns,profileFields).length>0&&<fieldset><legend>Imported profile fields</legend>{distinctImportedFields(values.importColumns,profileFields).map(([id,value])=><label key={id}>{id}{typeof value==='boolean'?<input type="checkbox" checked={value} onChange={e=>setValues(v=>({...v,importColumns:{...v.importColumns,[id]:e.target.checked}}))}/>:<input maxLength={500} value={String(value??'')} onChange={e=>setValues(v=>({...v,importColumns:{...v.importColumns,[id]:e.target.value}}))}/>}</label>)}</fieldset>}
     <label>Internal notes (optional)<textarea maxLength={1000} rows={3} value={values.notes} onChange={set('notes')} placeholder="Notes for the business owner only"/></label>
     <p className="sf-client-editor-notice">Clients with different names are kept separate, even when they share an email address or phone number.</p>
     {error&&<p className="sf-client-editor-error" role="alert">{error}</p>}
