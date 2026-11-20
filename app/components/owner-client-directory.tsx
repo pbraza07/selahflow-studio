@@ -47,6 +47,7 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
  const [membershipLevel,setMembershipLevel]=useState(''),[filterField,setFilterField]=useState(''),[filterValue,setFilterValue]=useState('');
  const [attendedOnly,setAttendedOnly]=useState(false);
  const [profileTab,setProfileTab]=useState('History');
+ const [advancedFilters,setAdvancedFilters]=useState(false);
  const [permanentDeletions,setPermanentDeletions]=useState<{id:string;deleted_at:string}[]>([]);
  const [archived,setArchived]=useState<{id:string;name:string;email:string;phone:string}[]>([]);
  const [editing,setEditing]=useState<Client|'new'|null>(null),[saving,setSaving]=useState(false),[editError,setEditError]=useState('');
@@ -150,7 +151,6 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
     <input ref={importInput} type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style={{display:'none'}} aria-label="Choose Excel or CSV client spreadsheet" onChange={e=>{const file=e.target.files?.[0];if(file)void importSpreadsheet(file);}}/>
     <button type="button" className="outline" disabled={importing} onClick={()=>importInput.current?.click()}><Upload size={17}/> {importing?'Importing…':'Import clients from Excel'}</button>
     <button type="button" className="primary" onClick={()=>beginEdit('new')}><UserPlus size={17}/> Add client</button>
-    <button type="button" className="outline" onClick={()=>void reload()} disabled={busy}><RefreshCw size={16}/> Refresh</button>
     <ExcelDownload className="primary sf-clients-export" href={exported()}><Download size={16}/> Export all to Excel</ExcelDownload>
    </div>
   </header>
@@ -167,13 +167,12 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
   <div className="sf-clients-stats" aria-label="Client directory totals">
    <div><Users size={19}/><small>Clients in directory</small><strong>{clients.length}</strong></div>
    <div><CheckCircle2 size={19}/><small>Sessions attended</small><strong>{totalAttended}</strong></div>
-   <div><CalendarDays size={19}/><small>Client attendance days</small><strong>{totalDays}</strong></div>
   </div>
   {error&&<p role="alert" className="alert">{error}</p>}
   {actionError&&<p role="alert" className="alert">{actionError}</p>}
   {importMessage&&<p role="status" className="notice">{importMessage}</p>}
   {busy&&<p role="status" className="muted">Loading client attendance and services…</p>}
-  <div className="sf-client-profile-tabs" role="group" aria-label="Client workspace views"><button type="button" className={directoryView==='clients'?'primary':'outline'} aria-pressed={directoryView==='clients'} onClick={()=>setDirectoryView('clients')}>Clients</button><button type="button" className={directoryView==='bookings'?'primary':'outline'} aria-pressed={directoryView==='bookings'} onClick={()=>{setDirectoryView('bookings');setSelectedId(null);}}>Booking Status</button></div>
+  <div className="sf-client-directory-tools"><button type="button" className="outline" onClick={()=>setDirectoryView(directoryView==='clients'?'bookings':'clients')}>{directoryView==='clients'?'View all appointments':'Back to clients'}</button></div>
   {directoryView==='bookings'?<OwnerBookingStatus bookings={bookingRows}/>:selected?<>
    <div className="sf-client-detail-nav">
     <button type="button" className="outline" onClick={()=>{setSelectedId(null);setAttendedOnly(false);}}><ArrowLeft size={17}/> Back to clients</button>
@@ -184,7 +183,7 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
      {selected.memberNumber&&!selected.idUsesSequence&&!/^[A-Z]{2}[0-9]{6}$/.test(selected.memberNumber)&&<button type="button" className="outline" disabled={!!actionBusy} onClick={()=>void replaceLegacyId(selected)}>Replace legacy ID with eight characters</button>}
     </div>
    </div>
-   <div className="sf-client-profile-tabs" role="group" aria-label="Client profile sections">{['History','Details','Membership','Sessions'].map(tab=><button type="button" key={tab} className={profileTab===tab?'primary':'outline'} aria-pressed={profileTab===tab} onClick={()=>setProfileTab(tab)}>{tab}</button>)}</div>
+   <div className="sf-client-profile-tabs" role="group" aria-label="Client profile sections">{[{id:'History',label:'Overview'},{id:'Sessions',label:'Visits'},{id:'Membership',label:'Membership & Payments'},{id:'Details',label:'Details'}].map(tab=><button type="button" key={tab.id} className={profileTab===tab.id?'primary':'outline'} aria-pressed={profileTab===tab.id} onClick={()=>setProfileTab(tab.id)}>{tab.label}</button>)}</div>
    <article className="sf-client-profile">
     <div className="sf-client-profile-heading"><span className="sf-client-avatar" aria-hidden="true">{selected.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span>
      <div><h3 className="sf-client-name-membership"><span translate="no">{selected.name}</span><MembershipBadge memberNumber={selected.memberNumber} membershipName={selected.membershipName} membershipStatus={selected.membershipStatus} sessionsIncluded={selected.membershipDetails?.sessionsIncluded} sessionsUsed={selected.membershipDetails?.sessionsUsed} badge={selected.membershipBadge}/></h3><p><span translate="no">{selected.email||'No email recorded'}</span>{selected.phone?' · '+selected.phone:''}</p>
@@ -204,7 +203,7 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
       <div><small>Membership status</small><b>{membershipDisplayStatus({status:selected.membershipStatus,sessionsIncluded:selected.membershipDetails?.sessionsIncluded,sessionsUsed:selected.membershipDetails?.sessionsUsed}).replaceAll('_',' ')}</b></div>
      </div>
     </section>
-    {(profileTab==='Details'||profileTab==='History')&&<section className="sf-client-first-booking"><h3>Coupons applied</h3>
+    {profileTab==='Details'&&<section className="sf-client-first-booking"><h3>Coupons applied</h3>
      {selected.membershipCoupons?.map(coupon=><p key={coupon.membershipId}><strong>{coupon.code}</strong> · {money(coupon.discountAmountUSD)} off · {coupon.planName} ({coupon.duration==='forever'?'each payment':'first payment'})</p>)}
      {selected.history.filter(v=>v.coupon).map(v=><p key={v.id}><strong>{v.coupon!.code}</strong> · {money(v.coupon!.discountAmountUSD)} off · {v.serviceNames.join(', ')} · {v.date}</p>)}
      {!selected.membershipCoupons?.length&&!selected.history.some(v=>v.coupon)&&<p>No recorded coupon applications.</p>}
@@ -231,26 +230,6 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
       <div><small>Paid through</small><b>{selected.membershipDetails?.paidThrough?humanDate(selected.membershipDetails.paidThrough):'Not yet recorded'}</b></div>
      </div>
     </section>}
-    {selected.firstBooking&&<section hidden={profileTab!=='Details'} className="sf-client-first-booking">
-     <div className="sf-client-history-heading"><h3>First booking information</h3><small>Copied from the original customer booking request</small></div>
-     <div className="sf-client-first-details">
-      <div><small>Customer name</small><b>{selected.firstBooking.originalSubmission?.customerName||selected.firstBooking.customerName||selected.name}</b></div>
-      <div><small>First name as booked</small><b>{selected.firstBooking.firstName||selected.firstBooking.customerName?.trim().split(/\s+/)[0]||'Not recorded'}</b></div>
-      <div><small>Last name as booked</small><b>{selected.firstBooking.lastName||selected.firstBooking.customerName?.trim().split(/\s+/).slice(1).join(' ')||'Not recorded'}</b></div>
-      <div><small>Date of birth provided</small><b>{dateOnly(selected.firstBooking.dateOfBirth||selected.dateOfBirth)?humanDate(dateOnly(selected.firstBooking.dateOfBirth||selected.dateOfBirth)):'Not recorded'}</b></div>
-      <div><small>Membership ID provided</small><b>{selected.firstBooking.customerMemberNumber||selected.memberNumber||'Not recorded'}</b></div>
-      <div><small>Email provided</small><b>{selected.firstBooking.originalSubmission?.customerEmail||selected.firstBooking.customerEmail||selected.email}</b></div>
-      <div><small>Phone provided</small><b>{selected.firstBooking.originalSubmission?.customerPhone||selected.firstBooking.customerPhone||'Not provided'}</b></div>
-      <div><small>Activity date & time</small><b>{humanDate(selected.firstBooking.date)} · {timeLabel(selected.firstBooking.time)} Eastern</b></div>
-      <div><small>Service(s)</small><b>{selected.firstBooking.serviceNames.join(', ')||'Not specified'}</b></div>
-      <div><small>Service type(s)</small><b>{selected.firstBooking.serviceTypes.join(', ')||'Not specified'}</b></div>
-      <div><small>Staff / team</small><b>{selected.firstBooking.staff||'Not specified'}</b></div>
-      <div><small>Requested booking status</small><b>{selected.firstBooking.status}</b></div>
-      <div><small>Price quoted</small><b>{money(selected.firstBooking.quotedPrice)}</b></div>
-      <div><small>Request received</small><b>{selected.firstBooking.submittedAt?new Date(selected.firstBooking.submittedAt).toLocaleString('en-US',{timeZone:'America/New_York'}):'Not available'}</b></div>
-      <div><small>Booking policy consent</small><b>{selected.firstBooking.policyAccepted?'Accepted':'Not recorded'}</b></div>
-     </div>
-    </section>}
     <div hidden={profileTab!=='Sessions'} className="sf-client-metrics">
      <div><small>Sessions booked</small><strong>{selected.bookedSessions}</strong></div>
      <div><small>Sessions attended</small><strong>{selected.attendedSessions}</strong></div>
@@ -260,21 +239,6 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
     <div hidden={profileTab!=='Sessions'} className="sf-client-service-panel"><h4>Service types utilized</h4><div className="sf-client-tags">{selected.serviceTypes.length?selected.serviceTypes.map(type=><span key={type}>{type}</span>):<small>No current service type recorded</small>}</div>
      <h4>Services utilized</h4><div className="sf-client-tags">{selected.serviceNames.length?selected.serviceNames.map(name=><span key={name}>{name}</span>):<small>No services recorded</small>}</div>
     </div>
-    {!!selected.history?.length&&<section hidden={profileTab!=='Details'} className="sf-client-first-booking sf-client-last-answers">
-     <div className="sf-client-history-heading"><h3>Latest booking registration</h3><small>Latest recorded booking information</small></div>
-     <div className="sf-client-first-details">
-      <div><small>Customer name</small><b>{selected.history[0].customerName||selected.name}</b></div>
-      <div><small>Email address</small><b>{selected.history[0].customerEmail||selected.email||'Not provided'}</b></div>
-      <div><small>Phone number</small><b>{selected.history[0].customerPhone||selected.phone||'Not provided'}</b></div>
-      <div><small>Date of birth</small><b>{dateOnly(selected.history[0].dateOfBirth||selected.dateOfBirth)?humanDate(dateOnly(selected.history[0].dateOfBirth||selected.dateOfBirth)):'Not recorded'}</b></div>
-      <div><small>Membership ID</small><b>{selected.history[0].customerMemberNumber||selected.memberNumber||'Not assigned'}</b></div>
-      <div><small>Booking date and time</small><b>{humanDate(selected.history[0].date)} · {timeLabel(selected.history[0].time)} Eastern</b></div>
-      <div><small>Service(s)</small><b>{selected.history[0].serviceNames.join(', ')||'Not specified'}</b></div>
-      <div><small>Team member</small><b>{selected.history[0].staff||'Not specified'}</b></div>
-      <div><small>Booking status</small><b>{selected.history[0].status}</b></div>
-      <div><small>Policy consent</small><b>{selected.history[0].policyAccepted?'Accepted':'Not recorded'}</b></div>
-     </div>
-    </section>}
     {selected.importColumns&&distinctImportedFields(selected.importColumns,formFields).length>0&&selected.notes!=='Membership registration'&&<section hidden={profileTab!=='Details'} className="sf-client-first-booking"><h4>{selected.notes==='First online booking'?'Saved legacy booking fields':'Imported spreadsheet fields'}</h4><div className="sf-client-first-details">{distinctImportedFields(selected.importColumns,formFields).map(([heading,value])=><div key={heading}><small>{heading}</small><b>{displayAnswer(value)}</b></div>)}</div></section>}
     {selected.notes&&<div hidden={profileTab!=='Details'} className="sf-client-private-notes"><h4>Private business notes</h4><p>{selected.notes}</p></div>}
     <div hidden={profileTab!=='Sessions'} className="sf-client-attendance"><h4>Days attended <span>({selected.attendanceDays.length})</span></h4>
@@ -300,7 +264,9 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
    </section>
   </>:<>
    <div className="sf-clients-search"><label><Search size={18}/><input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, contact, service or service type…" aria-label="Search clients"/></label><small>{filtered.length} of {clients.length} clients</small></div>
-   <div className="sf-clients-registration-filters" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(185px,1fr))',gap:12,alignItems:'end',margin:'16px 0',padding:16,border:'1px solid #d9e2dc',borderRadius:14}}>
+   <details className="sf-client-advanced-filters" open={advancedFilters} onToggle={e=>setAdvancedFilters(e.currentTarget.open)}>
+    <summary>Advanced filters</summary>
+   <div className="sf-clients-registration-filters">
     <label>Membership level
      <select aria-label="Filter by membership level" value={membershipLevel} onChange={e=>setMembershipLevel(e.target.value)}>
       <option value="">All membership levels</option>
@@ -324,7 +290,7 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
      }
     </label>}
     {(search||membershipLevel||filterField||filterValue)&&<button type="button" className="outline" onClick={resetFilters}>Clear all filters</button>}
-   </div>
+   </div></details>
    <p className="muted" role="status">{filtered.length} matching {filtered.length===1?'client':'clients'} · Filters apply together</p>
    {filtered.length?<div className="sf-client-directory-grid">{filtered.map(c=><article className="sf-client-summary" key={c.id}>
     <div className="sf-client-summary-top"><span className="sf-client-avatar" aria-hidden="true">{c.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span><div><h3 className="sf-client-name-membership"><span translate="no">{c.name}</span><MembershipBadge memberNumber={c.memberNumber} membershipName={c.membershipName} membershipStatus={c.membershipStatus} sessionsIncluded={c.membershipDetails?.sessionsIncluded} sessionsUsed={c.membershipDetails?.sessionsUsed} badge={c.membershipBadge}/></h3><p>{c.email||c.phone||'Contact not provided'}</p></div></div>
@@ -339,9 +305,11 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
     <div className="sf-client-summary-types"><small>Service types</small><strong>{c.serviceTypes.join(' · ')||'Not categorized'}</strong></div>
     <p className="sf-client-last-visit"><CalendarDays size={14}/> Latest appointment: {humanDate(c.latestDate)}</p>
     <div className="sf-client-summary-actions"><button type="button" className="primary" onClick={()=>{setAssignment(null);setSelectedId(c.id);setProfileTab('History');setAttendedOnly(false);}}><ChevronRight size={16}/> View client</button>{!!c.enrollmentIds?.length&&<button type="button" className="outline" onClick={()=>{setAssignment(null);setSelectedId(c.id);setProfileTab('Membership');}}>Membership &amp; payments</button>}
-     <button type="button" className="outline" aria-label={'Edit '+c.name} onClick={()=>beginEdit(c)}><Pencil size={15}/> Edit</button>
-     <ExcelDownload className="outline sf-clients-export" href={exported(c.id)}><Download size={15}/> Excel</ExcelDownload>
-     <button type="button" className="outline sf-client-remove" aria-label={'Delete '+c.name} disabled={!!actionBusy} onClick={()=>void removeClient(c)}><Trash2 size={15}/> Delete</button></div>
+     <details className="sf-client-card-more"><summary>More actions</summary><div>
+      <button type="button" className="outline" aria-label={'Edit '+c.name} onClick={()=>beginEdit(c)}><Pencil size={15}/> Edit</button>
+      <ExcelDownload className="outline sf-clients-export" href={exported(c.id)}><Download size={15}/> Excel</ExcelDownload>
+      <button type="button" className="outline sf-client-remove" aria-label={'Delete '+c.name} disabled={!!actionBusy} onClick={()=>void removeClient(c)}><Trash2 size={15}/> Delete</button>
+     </div></details></div>
    </article>)}</div>:<div className="sf-client-empty"><Users size={26}/><h3>{clients.length?'No matching clients':'No client bookings yet'}</h3><p>{clients.length?'Try searching for another name or service.':'Client profiles and attendance will appear here as customers book and appointments are marked attended.'}</p><button type="button" className="primary" onClick={onBook}>Create appointment</button></div>}
   </>}
   {editing&&<ClientEditor config={registrationConfig} client={editing==='new'?null:editing}

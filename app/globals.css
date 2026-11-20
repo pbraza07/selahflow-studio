@@ -793,6 +793,20 @@ button:focus-visible,a:focus-visible{outline:3px solid #123F3A;outline-offset:3p
 .sf-client-editor form textarea{min-height:100px;resize:vertical}
 .sf-client-editor form :is(input,textarea):focus-visible{outline:2px solid var(--sf-accent)}
 .sf-client-editor-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.sf-client-directory-tools{display:flex;justify-content:flex-end;margin:8px 0 16px}
+.sf-client-advanced-filters{margin:14px 0;border:1px solid var(--sf-border);border-radius:12px;background:var(--sf-surface);color:var(--sf-on-surface)}
+.sf-client-advanced-filters>summary{cursor:pointer;padding:13px 15px;font-weight:800;min-height:44px;box-sizing:border-box}
+.sf-client-advanced-filters[open]>summary{border-bottom:1px solid var(--sf-border)}
+.sf-clients-registration-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:12px;align-items:end;padding:15px}
+.sf-client-card-more{position:relative}
+.sf-client-card-more>summary{list-style:none;cursor:pointer;min-height:44px;padding:11px 14px;border:1px solid var(--sf-border);border-radius:9px;font-weight:700}
+.sf-client-card-more>summary::-webkit-details-marker{display:none}
+.sf-client-card-more>div{position:absolute;right:0;z-index:20;display:grid;gap:7px;width:min(230px,80vw);padding:9px;background:var(--sf-surface);border:1px solid var(--sf-border);border-radius:10px;box-shadow:0 15px 38px #0002}
+.sf-client-card-more>div>*{width:100%;justify-content:flex-start}
+.app-shell .overview-grid{display:none}
+.app-shell .page-heading{align-items:center}
+.app-shell .page-heading>div:first-child{max-width:780px}
+.app-shell .page-heading h1{margin-top:0}
 .sf-client-editor-notice{font-size:11px;line-height:1.65;color:var(--sf-on-surface)!important;margin:0;opacity:.8}
 .sf-client-editor-error{font-size:12px;margin:0;padding:11px;background:var(--sf-policy);color:var(--sf-on-policy)!important;border-left:3px solid var(--sf-accent);border-radius:8px}
 .sf-client-editor>footer{display:flex;justify-content:flex-end;flex-wrap:wrap;align-items:center;gap:10px;padding:15px 20px;border-top:1px solid var(--sf-border);position:sticky;bottom:0;background:var(--sf-surface)}

@@ -1,12 +1,11 @@
 // Shared presentation metadata. Permissions remain enforced by the existing APIs.
 export const workspaceGroups = [
- {title:'Daily work',items:['Overview','Calendar','Sessions','Clients','Team']},
- {title:'Sales & memberships',items:['Memberships','Checkout','Reports','Payments']},
- {title:'Business setup',items:['Services','Branding','Settings','Receptionist']},
- {title:'History & account',items:['Guide','History','Security']}
+ {title:'Daily work',items:['Overview','Calendar','Clients']},
+ {title:'Business',items:['Memberships','Services','Checkout','Reports']},
+ {title:'Manage',items:['Team','Branding','Settings']}
 ];
 /** @type {Record<string,string>} */
-export const workspaceLabels={Sessions:'Bookable sessions',Team:'Team management',Payments:'Payment setup',Overview:'Dashboard',Calendar:'Schedule',Clients:'Clients',Services:'Services & pricing',Memberships:'Membership / Packages',Checkout:'Sales & payments',Reports:'Financial reports',History:'Activity history',Receptionist:'Client assistant',Branding:'Website & branding',Settings:'Business settings',Guide:'Owner guide',Security:'Account security'};
+export const workspaceLabels={Sessions:'Bookable sessions',Team:'Team',Payments:'Payment setup',Overview:'Dashboard',Calendar:'Schedule',Clients:'Clients',Services:'Services',Memberships:'Memberships & Packages',Checkout:'Sales & Payments',Reports:'Reports',History:'Activity log',Receptionist:'Client assistant',Branding:'Website',Settings:'Settings',Guide:'Help',Security:'Account security'};
 /** @type {Record<string,string>} */
 export const workspaceDescriptions = {
  Sessions:'Create and manage one-time or recurring sessions, times and capacity.',
@@ -37,7 +36,7 @@ export function hasUnsavedWorkspaceChanges(view,config,savedConfig) {
 
 // Aliases open existing settings panels; authorization and saved data stay unchanged.
 /** @type {Record<string,{view:string,area:string}>} */
-export const workspaceDestinations={Sessions:{view:'Settings',area:'sessions'},Team:{view:'Settings',area:'team'},Payments:{view:'Settings',area:'payments'}};
+export const workspaceDestinations={Sessions:{view:'Calendar',area:'sessions'},Team:{view:'Settings',area:'team'},Payments:{view:'Checkout',area:'payments'}};
 export function activeWorkspaceSection(view,area){
  return view==='Settings'?(area==='sessions'?'Sessions':area==='team'||area==='team-access'?'Team':area==='payments'?'Payments':'Settings'):view;
 }
