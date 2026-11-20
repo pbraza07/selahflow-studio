@@ -38,9 +38,9 @@ async function rows(db,{businessId,sourceId=null,lock=false}){
  ORDER BY a.date,a.start,a.id ${lock?'FOR UPDATE OF a':''}`,[businessId,sourceId])).rows;
 }
 
-function candidate(row,{destination=null}={}){
+function candidate(row,{destination=null,manual=false}={}){
  const d=obj(row.data),config=obj(row.settings),email=String(d.email||d.customerEmail||'').trim().toLowerCase();
- if(config.dailyPaymentReminders===false||!statuses.has(row.status)||!validEmail(email)||destination&&email!==String(destination).trim().toLowerCase())return null;
+ if((!manual&&config.dailyPaymentReminders===false)||!statuses.has(row.status)||!validEmail(email)||destination&&email!==String(destination).trim().toLowerCase())return null;
  if(d.membershipCovered===true||d.paymentStatus==='paid'||row.payment_status==='paid'||row.linked_payment||row.payment_status==='pending'&&row.terminal_payment_intent_id)return null;
  const amount=Math.round(Number(d.price)*100);
  if(!Number.isSafeInteger(amount)||amount<=0||amount>100000000)return null;
@@ -104,19 +104,19 @@ async function providerStillUnpaid(row,{api,configured}){
  * Only private access links are created/refreshed; no charge, approval or payment
  * preference is created. Existing transaction clients can be passed by workers.
  */
-export async function prepareBookingReminder(pool,{businessId,sourceId,origin,now=new Date(),destination=null,api=stripeApi,configured=paymentConfigured()}={}){
+export async function prepareBookingReminder(pool,{businessId,sourceId,origin,now=new Date(),destination=null,api=stripeApi,configured=paymentConfigured(),manual=false}={}){
  if(typeof sourceId!=='string'||!sourceId)return null;
  const host=new URL(origin);if(host.protocol!=='https:'&&host.hostname!=='localhost')throw Error('A secure application URL is required.');
  const owns=typeof pool.connect==='function'&&typeof pool.release!=='function',db=owns?await pool.connect():pool;
  try{
   if(owns)await db.query('BEGIN');
   let row=(await rows(db,{businessId,sourceId,lock:true}))[0];
-  let item=row&&candidate(row,{destination});
+  let item=row&&candidate(row,{destination,manual});
   if(!item){if(owns)await db.query('COMMIT');return null;}
   if(!await providerStillUnpaid(row,{api,configured})){if(owns)await db.query('COMMIT');return null;}
   // Provider reads can outlast a webhook or owner update. Never prepare a link
   // against replacement payment references or a newly settled local balance.
-  const fresh=(await rows(db,{businessId,sourceId,lock:true}))[0],freshItem=fresh&&candidate(fresh,{destination:item.destination});
+  const fresh=(await rows(db,{businessId,sourceId,lock:true}))[0],freshItem=fresh&&candidate(fresh,{destination:item.destination,manual});
   if(!freshItem){if(owns)await db.query('COMMIT');return null;}
   if(['stripe_account_id','stripe_checkout_session_id','stripe_payment_intent_id','terminal_payment_intent_id'].some(key=>row[key]!==fresh[key])||item.amountCents!==freshItem.amountCents)throw Error('Booking payment changed while preparing its reminder.');
   row=fresh;item=freshItem;
