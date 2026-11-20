@@ -103,7 +103,7 @@ export default function MembershipEnrollment(){
   <main className="sf-membership-public-main">
    <section className="sf-membership-public-intro">
     <span className="sf-membership-kicker">MEMBERSHIP/PACKAGES</span>
-    <h1>{data?.registrationConfig?.pageContent?.membershipTitle||(data?'Membership/Packages at '+data.name:'Choose a membership')}</h1>
+    <h1>{data?.registrationConfig?.pageContent?.membershipTitle||(data?'Memberships & Packages at '+data.name:'Choose a membership')}</h1>
     <p>{data?.registrationConfig?.pageContent?.membershipIntro||'Choose a membership and pay securely. No membership approval is required; sessions activate after verified payment.'}</p>
    </section>
    <section ref={flowContent} tabIndex={-1} aria-label={requested?"Registration result":checkoutId?"Payment result":"Membership or package step "+step+" of 2"} className="sf-membership-join-panel">
@@ -124,7 +124,6 @@ export default function MembershipEnrollment(){
      </button>)}</div>:<p className="sf-membership-empty">No memberships are available yet. Contact the business for more information.</p>}
      </div>
      {data.plans.length>0&&<p className="sf-membership-warning">{data.registrationConfig?.pageContent?.membershipRequestNote||('Choose your membership and complete registration. No owner approval is required; benefits activate after payment is verified.')}</p>}
-     <button type="button" className="primary sf-membership-next" disabled={!planId} onClick={()=>setStep(2)}>Continue <ArrowRight size={17}/></button>
     </>:<form onSubmit={pay}><button type="button" className="sf-membership-back" onClick={()=>setStep(1)}><ArrowLeft size={16}/> Choose another plan</button>
      <label>Coupon code (optional)<input maxLength={40} value={coupon} onChange={e=>{setCoupon(e.target.value.toUpperCase());setDiscount(null);}}/></label><button type="button" disabled={busy||!coupon||!plan} onClick={async()=>{try{const r=await fetch('/api/public/memberships',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'quoteCoupon',slug,planId:plan?.id,couponCode:coupon})}),d=await r.json();if(!r.ok)throw Error(d.error);setDiscount(d);}catch(e){setError((e as Error).message);}}}>Apply coupon</button>{discount&&<p>{discount.description} · {discount.duration==='once'?'First payment':'Each payment'}: {price(discount.totalCents)}</p>}<h2>{data.registrationConfig?.pageContent?.membershipDetailsTitle||"Review your membership"}</h2>{plan&&<div className="sf-membership-order"><b translate="no">{plan.name}</b><p>{plan.description}</p><p>{plan.usageSummary}</p><p>{plan.creditSummary}</p>
       <div><strong>{price(discount?.totalCents??plan.priceCents)} {plan.billingType==='package'?'one-time':'/ '+(plan.intervalCount||1)+' '+plan.interval}</strong><span>{plan.billingType==='package'?'Service package':'Recurring membership'}</span></div></div>}
