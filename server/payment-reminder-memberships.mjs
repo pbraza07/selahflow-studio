@@ -102,7 +102,7 @@ export async function prepareMembershipReminder(pool,{businessId,sourceId,origin
   if(!amount(item.amountCents))return null;
   if(session.payment_intent){const reference=id(session.payment_intent);if(!/^pi_[A-Za-z0-9]+$/.test(reference||''))return null;const intent=typeof session.payment_intent==='object'?session.payment_intent:await api('payment_intents/'+reference,{method:'GET',account:m.stripe_account_id});assertTestPayment(intent);if(intent.id!==reference||id(intent.customer)&&id(session.customer)&&id(intent.customer)!==id(session.customer)||m.stripe_customer_id&&id(intent.customer)!==m.stripe_customer_id||['processing','succeeded','requires_capture'].includes(intent.status))return null;}
  }
- const fresh=await readMember(pool,businessId,sourceId);if(!sameIdentity(m,fresh)||!eligible(fresh,now,destination))return null;
+ const fresh=await readMember(pool,businessId,sourceId);if(!sameIdentity(m,fresh)||!eligible(fresh,now,destination,manual))return null;
  // Pending manual registrations remain payable onsite when card setup is unavailable.
  if(!fresh.stripe_checkout_session_id&&fresh.status==='pending_payment'&&configured&&fresh.charges_enabled&&fresh.onboarding_complete&&/^acct_[A-Za-z0-9]+$/.test(fresh.merchant_account||'')&&(!fresh.stripe_account_id||fresh.stripe_account_id===fresh.merchant_account)){
   item.url=await reminderLink(pool,fresh,safeOrigin(origin),now);item.actionLabel=fresh.billing_type==='package'?'Pay for package':'Pay for membership';

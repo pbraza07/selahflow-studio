@@ -1,9 +1,10 @@
 'use client';
 import {useRef,useState} from 'react';
+import WhatsAppShare from './whatsapp-share';
 import OwnerEmailPaymentLink from './owner-email-payment-link';
 type Due={kind:'membership'|'offlineMembership'|'booking'|'invoice'|'product';id:string;label:string;email:string;date?:string;price?:number};
 export type CardPayments={due:Due[];methods:string[]};
-export default function ClientCardPayments({payments,name,onChange}:{payments:CardPayments;name:string;onChange:()=>void}){
+export default function ClientCardPayments({payments,name,phone,onChange}:{phone:string;payments:CardPayments;name:string;onChange:()=>void}){
  const [busy,setBusy]=useState(false),[notice,setNotice]=useState('');
  const keys=useRef(new Map<string,string>());
  async function send(item:Due){
@@ -20,7 +21,7 @@ export default function ClientCardPayments({payments,name,onChange}:{payments:Ca
  return <section className="sf-card-payment" aria-label="Payment status">
   <strong className={payments.due.length?'sf-card-payment-pending':payments.methods.length?'sf-card-payment-active':''}>{payments.due.length?'Pending payment':payments.methods.length?'Active · Paid':'No payment recorded'}</strong>
   {!!payments.methods.length&&<div>Payment method: {payments.methods.join(', ')}</div>}
-  {payments.due.map(item=><div key={item.kind+item.id}><span>{item.label}</span>{item.kind==='booking'?<OwnerEmailPaymentLink appointment={{...item,name}} label="Send for payment"/>:<button className="outline small" type="button" disabled={busy||!item.email} onClick={()=>void send(item)}>Send for payment</button>}{!item.email&&<small>Add a payment email first.</small>}</div>)}
+  {payments.due.map(item=><div key={item.kind+item.id}><span>{item.label}</span>{item.kind==='booking'?<OwnerEmailPaymentLink appointment={{...item,name}} label="Send for payment"/>:<button className="outline small" type="button" disabled={busy||!item.email} onClick={()=>void send(item)}>Send for payment</button>}<WhatsAppShare key={item.id+phone+item.label} name={name} phone={phone} payment={item}/>{!item.email&&<small>Add a payment email first.</small>}</div>)}
   {notice&&<p role="status">{notice}</p>}
  </section>;
 }

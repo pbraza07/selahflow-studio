@@ -20,6 +20,7 @@ import RegistrationFields from '../components/registration-fields';
 import {APP_VERSION} from '../../lib/app-version';
 import {easternClock,selectedSession as findBookingSession} from '../../server/session-scheduling.mjs';
 import OwnerMembershipRequests from '../components/owner-membership-requests';
+import WhatsAppShare from '../components/whatsapp-share';
 import OwnerOnsitePayment from '../components/owner-onsite-payment';
 import AttendanceActions from '../components/attendance-actions';
 import SortableTable from '../components/sortable-table';
@@ -579,6 +580,7 @@ return <div className="app-shell" data-business-slug={publicSlug||businessSlug} 
  <header className="sf-roster-header"><div><span className="sf-roster-eyebrow"><CalendarDays size={15}/> PRIVATE BUSINESS APPOINTMENT</span><h2 id="sf-appointment-detail-title">{appointmentDetail.services?.join(' + ')||'Appointment'}</h2><p>{appointmentDetail.date} · {timeLabel(appointmentDetail.start)} · {config.staff.find((v:Any)=>v.id===appointmentDetail.staff)?.name||'Team member'}</p></div><button type="button" className="sf-roster-close" aria-label="Close appointment details" onClick={()=>setAppointmentDetail(null)}><X size={20}/></button></header>
  <div style={{padding:24,display:'grid',gap:16}}>
  <h3><span translate="no">{appointmentDetail.name}</span> <span className={'status '+String(appointmentDetail.status).toLowerCase().replace(' ','-')}>{appointmentDetail.status}</span></h3>
+ {!appointmentDetail.clientProfileDeleted&&['Confirmed','Scheduled'].includes(appointmentDetail.status)&&<WhatsAppShare key={appointmentDetail.id} name={appointmentDetail.name} phone={appointmentDetail.phone} confirmation={config.name+' · Booking confirmation\n'+appointmentDetail.name+' · '+appointmentDetail.services.join(', ')+'\n'+appointmentDetail.date+' at '+timeLabel(appointmentDetail.start)+' Eastern time\nStatus: '+appointmentDetail.status}/>}
  {view==='Calendar'&&!appointmentDetail.clientProfileDeleted&&['Confirmed','Scheduled','Checked in','Checked-in','Completed','Attended','No-show'].includes(appointmentDetail.status)&&(appointmentDetail.date<rosterClock.date||(appointmentDetail.date===rosterClock.date&&Number(appointmentDetail.start)+Number(appointmentDetail.duration)<=rosterClock.minutes))&&<CalendarMembershipCredit key={appointmentDetail.id} visit={appointmentDetail} onSaved={async message=>{await refresh();setAppointmentDetail(null);setToast(message);}}/>}
  {view==='Calendar'&&<button type="button" className="outline" disabled={busy} onClick={()=>void deleteCalendarAppointment(appointmentDetail)}>Delete appointment</button>}
  {appointmentDetail.memberNumber&&<p><strong>Member ID:</strong> <span translate="no">{appointmentDetail.memberNumber}</span></p>}

@@ -294,7 +294,7 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
    <p className="muted" role="status">{filtered.length} matching {filtered.length===1?'client':'clients'} · Filters apply together</p>
    {filtered.length?<div className="sf-client-directory-grid">{filtered.map(c=><article className="sf-client-summary" key={c.id}>
     <div className="sf-client-summary-top"><span className="sf-client-avatar" aria-hidden="true">{c.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span><div><h3 className="sf-client-name-membership"><span translate="no">{c.name}</span><MembershipBadge memberNumber={c.memberNumber} membershipName={c.membershipName} membershipStatus={c.membershipStatus} sessionsIncluded={c.membershipDetails?.sessionsIncluded} sessionsUsed={c.membershipDetails?.sessionsUsed} badge={c.membershipBadge}/></h3><p>{c.email||c.phone||'Contact not provided'}</p></div></div>
-    {c.cardPayments&&<ClientCardPayments name={c.name} payments={c.cardPayments} onChange={()=>void reload(true)}/>}
+    {c.cardPayments&&<ClientCardPayments phone={c.phone} name={c.name} payments={c.cardPayments} onChange={()=>void reload(true)}/>}
     {c.balances?.map(plan=><section className="sf-client-card-balance" key={plan.id} aria-label={plan.name+' session balance'}>
      <header><strong translate="no">{plan.name}</strong><span>{plan.status.replaceAll('_',' ')}</span></header>
      <dl>{[['Used',plan.used],['Left',plan.left],[plan.recurring?'Period total':'Package total',plan.total]].map(([label,count])=><div key={label}><dt>{label}</dt><dd>{count}</dd></div>)}</dl>
