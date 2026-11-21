@@ -1,6 +1,7 @@
 'use client';
 import OwnerMemberships from './owner-memberships';
 import ClientCardPayments,{type CardPayments} from './client-card-payments';
+import AttendanceActions from './attendance-actions';
 import {distinctImportedFields} from '../../server/current-profile-questions.mjs';
 import ExcelDownload from './excel-download';
 import ExpandableDetailsGroup from './expandable-details-group';
@@ -20,7 +21,7 @@ type Answer={id:string;label:string;value:string|boolean;type?:string};
 type MembershipDetails={registeredAt?:string|null;paidThrough?:string|null;lastPaidAt?:string|null;interval?:string;priceCents?:number;sessionsIncluded?:number;sessionsUsed?:number};
 type FormField={id:string;label:string;type:string;options?:string[]};
 type ClientCoupon={code:string;discountAmountUSD:number;duration?:string};
-export type Visit={paymentEmailStatus?:string;paymentEmailAt?:string;coupon?:ClientCoupon|null;
+export type Visit={sample?:boolean;paymentEmailStatus?:string;paymentEmailAt?:string;coupon?:ClientCoupon|null;
  paymentTracking?:string;bookingTimeline?:{status:string;at:string|null}[];id:string;date:string;time:number;duration:number;serviceNames:string[];serviceTypes:string[];
  staff:string;status:string;attended:boolean;sessionType:string;quotedPrice:number;
  answers?:Answer[];originalAnswers?:Answer[];customerName?:string;customerEmail?:string;customerPhone?:string;customerMemberNumber?:string;dateOfBirth?:string;firstName?:string;lastName?:string;
@@ -35,7 +36,33 @@ const humanDate=(date:string)=>date?new Date(date+'T12:00:00Z').toLocaleDateStri
  {month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}):'—';
 const money=(amount:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(amount||0);
 
-export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:string;onOpenPayments:()=>void;onBook:()=>void}){
+type SaveAttendance=(appointment:{id:string;name:string},status:string)=>Promise<boolean|undefined>;
+
+function ClientAttendance({client,onSave}:{client:Client;onSave:SaveAttendance}){
+ const [selectedId,setSelectedId]=useState('');
+ const [saving,setSaving]=useState(false);
+ const savingRef=useRef(false);
+ const visits=client.history.filter(v=>!v.sample&&['Confirmed','Scheduled','Checked in','Checked-in','No-show'].includes(v.status));
+ if(!visits.length)return null;
+ const visit=visits.length===1?visits[0]:visits.find(v=>v.id===selectedId);
+ const label=(v:Visit)=>[humanDate(v.date),timeLabel(v.time),v.serviceNames.join(', ')||v.sessionType,v.staff,v.status].filter(Boolean).join(' · ');
+ async function save(_:unknown,status:string){
+  if(!visit||savingRef.current)return;
+  savingRef.current=true;
+  setSaving(true);
+  try{await onSave({id:visit.id,name:client.name},status);}
+  finally{savingRef.current=false;setSaving(false);}
+ }
+ return <details className="sf-client-card-attendance"><summary>Attendance</summary>
+  {visits.length===1?<p>{label(visits[0])}</p>:<label>Appointment<select disabled={saving} value={visit?.id||''} onChange={e=>setSelectedId(e.target.value)}>
+   <option value="">Choose an appointment</option>
+   {visits.map(v=><option key={v.id} value={v.id}>{label(v)}</option>)}
+  </select></label>}
+  {visit&&<AttendanceActions appointment={{...visit,status:visit.status==='Checked-in'?'Checked in':visit.status}} busy={saving} onStatus={save}/>}
+ </details>;
+}
+
+export default function OwnerClientDirectory({onBook,slug,onOpenPayments,onAttendance}:{slug:string;onOpenPayments:()=>void;onBook:()=>void;onAttendance:SaveAttendance}){
  const [assignment,setAssignment]=useState<{name:string;email:string;phone:string;memberNumber?:string}|null>(null);
  const importInput=useRef<HTMLInputElement>(null);
  const [importing,setImporting]=useState(false),[importMessage,setImportMessage]=useState('');
@@ -295,6 +322,11 @@ export default function OwnerClientDirectory({onBook,slug,onOpenPayments}:{slug:
    {filtered.length?<div className="sf-client-directory-grid">{filtered.map(c=><article className="sf-client-summary" key={c.id}>
     <div className="sf-client-summary-top"><span className="sf-client-avatar" aria-hidden="true">{c.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase()}</span><div><h3 className="sf-client-name-membership"><span translate="no">{c.name}</span><MembershipBadge memberNumber={c.memberNumber} membershipName={c.membershipName} membershipStatus={c.membershipStatus} sessionsIncluded={c.membershipDetails?.sessionsIncluded} sessionsUsed={c.membershipDetails?.sessionsUsed} badge={c.membershipBadge}/></h3><p>{c.email||c.phone||'Contact not provided'}</p></div></div>
     {c.cardPayments&&<ClientCardPayments phone={c.phone} name={c.name} payments={c.cardPayments} onChange={()=>void reload(true)}/>}
+    <ClientAttendance client={c} onSave={async(visit,status)=>{
+     const saved=await onAttendance(visit,status);
+     if(saved)await reload(true);
+     return saved;
+    }}/>
     {c.balances?.map(plan=><section className="sf-client-card-balance" key={plan.id} aria-label={plan.name+' session balance'}>
      <header><strong translate="no">{plan.name}</strong><span>{plan.status.replaceAll('_',' ')}</span></header>
      <dl>{[['Used',plan.used],['Left',plan.left],[plan.recurring?'Period total':'Package total',plan.total]].map(([label,count])=><div key={label}><dt>{label}</dt><dd>{count}</dd></div>)}</dl>
