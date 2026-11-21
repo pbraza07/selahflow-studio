@@ -7,5 +7,10 @@ export default async function sitemap():Promise<MetadataRoute.Sitemap>{
  if(isStaging())return [];
  // Match the marketplace's existing publication rule; inactive/pending businesses remain excluded.
  const rows=(await getPool().query("SELECT slug FROM businesses WHERE status='active' ORDER BY slug")).rows;
- return [...SEARCH_PAGES.map(([path])=>({url:SEARCH_ORIGIN+path})),...rows.filter((r:{slug:string})=>validPublicSlug(r.slug)&&!SEARCH_PAGES.some(([path])=>path==='/'+r.slug)).map((r:{slug:string})=>({url:SEARCH_ORIGIN+'/'+encodeURIComponent(r.slug)}))];
+ const businessPages = rows.filter((row:{slug:string}) => validPublicSlug(row.slug))
+   .flatMap((row:{slug:string}) => {
+     const slug = encodeURIComponent(row.slug);
+     return [{url: SEARCH_ORIGIN+'/'+slug}, {url: SEARCH_ORIGIN+'/book/'+slug}];
+   });
+ return [...SEARCH_PAGES.map(([path])=>({url:SEARCH_ORIGIN+path})), ...businessPages];
 }

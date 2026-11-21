@@ -13,7 +13,7 @@ function load(file){
  new Function('require','exports',source)(id=>{
   if(id.includes('/components/')){
    if(id.endsWith('/registration-fields'))return {__esModule:true,default:({values,onValue})=>React.createElement('label',null,'First name',React.createElement('input',{required:true,value:values.firstName||'',onChange:e=>onValue('firstName',e.target.value)}))};
-   if(id.endsWith('/service-booking-actions'))return load(resolve(dirname(file),id+'.tsx'));
+   if(id.endsWith('/booking-introduction')||id.endsWith('/service-booking-actions'))return load(resolve(dirname(file),id+'.tsx'));
    return {__esModule:true,default:()=>null,makeBookingPayment:()=>{throw Error('Payment must not start during navigation');}};
   }
   if(id.startsWith('.')){const path=resolve(dirname(file),id);if(id.endsWith('.mjs'))return require(path);return load(path+'.ts');}
@@ -63,16 +63,16 @@ test('offer selection advances to details, focuses the step and preserves entere
   assert.equal(f.calls.filter(c=>c.body.action).length,0,'Navigation must not purchase or register');
  }finally{await f.cleanup();}
 });
-test('multi-service selection remains on Services; choosing an available time advances and Back restores selection',async()=>{
+test('replacing a selected service stays on Services; choosing an available time advances and Back restores selection',async()=>{
  const f=await fixture('booking');try{
-  await f.click('Training');await f.click('Coaching');assert.equal(document.querySelectorAll('.booking-service[aria-pressed=true]').length,2);
+  await f.click('Training');await f.click('Coaching');assert.equal(document.querySelectorAll('.booking-service[aria-pressed=true]').length,1);
   await f.click('Continue to available times');await f.change(document.querySelector('select'),'coach');
   assert.equal(document.activeElement.getAttribute('aria-label'),'Choose an available time');
   const slot=document.querySelector('.slot-grid button');assert.ok(slot);await act(async()=>slot.click());
   assert.equal(document.activeElement.getAttribute('aria-label'),'Booking step 3 of 3');
   assert.ok(document.querySelector('#public-confirm'));await f.click('Back');assert.equal(document.activeElement.getAttribute('aria-label'),'Booking step 2 of 3');
   await f.click('Edit services');assert.equal(document.activeElement.getAttribute('aria-label'),'Booking step 1 of 3');
-  assert.equal(document.querySelectorAll('.booking-service[aria-pressed=true]').length,2);assert.equal(f.calls.some(c=>c.body.action==='book'),false);
+  assert.equal(document.querySelectorAll('.booking-service[aria-pressed=true]').length,1);assert.equal(f.calls.some(c=>c.body.action==='book'),false);
  }finally{await f.cleanup();}
 });
 test('scheduled session waits for availability, then advances without making a booking',async()=>{
