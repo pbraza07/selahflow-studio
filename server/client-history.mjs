@@ -130,6 +130,7 @@ export function buildClientDirectory(appointments,settings={},owner=''){
       type:savedTypes[key]||current?.type||(typeof value==='boolean'?'checkbox':'text')};
     }):[];
   const visit={
+   sample:data.sample===true,
    id:String(row.id),date,time:Number(row.start)||0,duration:Number(row.duration)||0,
    serviceNames,serviceTypes:types,staff,status,attended,
    sessionType:data.sessionId?'Group session':'Individual appointment',
