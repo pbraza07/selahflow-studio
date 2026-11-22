@@ -77,7 +77,7 @@ const SETTINGS_AREAS=[
  {id:'availability',title:'Booking rules',description:'Booking intervals, preparation buffer, policies and tax.',icon:CalendarDays},
  {id:'questions',title:'Questions',description:'Manage all standard and custom questions, requirements and notification display here.',icon:ClipboardList},
  {id:'team',title:'Team members',description:'Staff profiles, services and contact preferences.',icon:Users},
- {id:'team-access',title:'Team logins & workspace fees',description:'Manage team access, workspace fees, service percentages and transaction balances.',icon:Users},
+ {id:'team-access',title:'Team percentages, logins & fees',description:'Manage team access, workspace fees, service percentages and transaction balances.',icon:Users},
  {id:'payments',title:'Payment setup',description:'Choose Stripe or Helcim, compare fees and manage payment connections.',icon:CreditCard},
  {id:'notifications',title:'Notifications',description:'Approval requests and business-specific delivery settings.',icon:MessageCircle},
  {id:'communications',title:'Client communications',description:'Sync client contacts and send customized business-branded emails.',icon:MessageCircle},
@@ -390,7 +390,7 @@ function download(){downloadExcel('Appointments',reportAppointments.map(a=>({...
 function add(item:Any){setCart(old=>old.some(x=>x.id===item.id)?old.map(x=>x.id===item.id?{...x,qty:x.qty+1}:x):[...old,{...item,qty:1}]);}
 
 const activeSection=activeWorkspaceSection(view,settingsTab);
-const settingsNavigation=SETTINGS_AREAS.filter(area=>['business','availability','questions','notifications','communications','urls'].includes(area.id)||area.id===settingsTab);
+const settingsNavigation=SETTINGS_AREAS.filter(area=>['business','availability','questions','notifications','communications','urls','team-access'].includes(area.id)||area.id===settingsTab);
 function openWorkspace(section:string){const target=workspaceDestinations[section];if(!setView(target?.view||section))return false;if(target)setSettingsTab(target.area as typeof settingsTab);setMobile(false);setSearch('');window.scrollTo({top:0,behavior:'instant'});return true;}
 function openDayReports(){setRange('Custom date range');setReportDates({from:date,to:date});setView('Reports');}
 function openAppointmentList(){setAppointmentListOpen(true);requestAnimationFrame(()=>document.getElementById('owner-appointment-list')?.scrollIntoView({behavior:'smooth',block:'start'}));}
