@@ -17,7 +17,7 @@ test('owner guide is searchable and renders usable back, open and download contr
  const links=all.filter(n=>n.type==='a');assert.equal(links.length,2);assert.ok(links.some(n=>n.props.download===true));
  assert.ok(links.every(n=>n.props.href==='/api/owner-guide'));
  const frame=all.find(n=>n.type==='iframe');assert.ok(frame.props.title);assert.equal(frame.props.src,'/api/owner-guide#view=FitH');
- const dashboard=await read('app/studio/owner-dashboard.tsx');assert.ok(dashboard.includes("setView('Guide')"));assert.ok(dashboard.includes("<OwnerGuide onBack={()=>setView('Overview')}/>"));
+ const dashboard=await read('app/studio/owner-dashboard.tsx');assert.ok(dashboard.includes("onClick={()=>openWorkspace(n)}"));assert.ok(dashboard.includes("<OwnerGuide onBack={()=>setView('Overview')}/>"));
 });
 test('owner guide endpoint serves the current environment PDF with correct headers',async()=>{
  const compiled=ts.transpileModule(await read('app/api/owner-guide/route.ts'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
