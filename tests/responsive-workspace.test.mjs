@@ -76,8 +76,13 @@ test('real owner React interactions open settings aliases, actionable metrics an
  const click=async b=>{assert.ok(b);await act(async()=>b.click());};
  try{
   const Owner=load(rootPath+'app/studio/owner-dashboard.tsx').default;await act(async()=>root.render(React.createElement(Owner,{businessSlug:'fixture'})));
+  await click(button('Settings'));
+  const menuCategories=[...document.querySelectorAll('.sf-settings-nav-item b')].map(b=>b.textContent);
+  const mobileCategories=[...document.querySelectorAll('.sf-settings-category-picker option')].map(o=>o.textContent);
+  assert.deepEqual(mobileCategories,menuCategories);
+  for(const category of ['Team percentages, logins & fees','Team members','Bookable sessions','Service catalog','Payment setup'])assert.ok(menuCategories.includes(category));
   await click(button('Payment setup'));assert.equal(document.querySelector('form').dataset.settingsTab,'payments');assert.equal(document.querySelector('[aria-current=page]').textContent,'Payment setup');
-  await click(button('Team management'));assert.equal(document.querySelector('form').dataset.settingsTab,'team');
+  await click(button('Team'));assert.equal(document.querySelector('form').dataset.settingsTab,'team');
   await click(button('Bookable sessions'));assert.equal(document.querySelector('form').dataset.settingsTab,'sessions');
   await click(button('Create session'));assert.match(document.body.textContent,/Unsaved/);
   await act(async()=>document.querySelector('form').dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true})));

@@ -1,8 +1,8 @@
 // Shared presentation metadata. Permissions remain enforced by the existing APIs.
 export const workspaceGroups = [
- {title:'Daily work',items:['Overview','Calendar','Clients']},
- {title:'Business',items:['Memberships','Services','Checkout','Reports']},
- {title:'Manage',items:['Team','Branding','Settings']}
+ {title:'Daily work',items:['Overview','Calendar','Clients','History']},
+ {title:'Business',items:['Memberships','Services','Sessions','Checkout','Reports']},
+ {title:'Manage',items:['Team','Payments','Branding','Receptionist','Settings','Security','Guide']}
 ];
 /** @type {Record<string,string>} */
 export const workspaceLabels={Sessions:'Bookable sessions',Team:'Team',Payments:'Payment setup',Overview:'Dashboard',Calendar:'Schedule',Clients:'Clients',Services:'Services',Memberships:'Memberships & Packages',Checkout:'Sales & Payments',Reports:'Reports',History:'Activity log',Receptionist:'Client assistant',Branding:'Website',Settings:'Settings',Guide:'Help',Security:'Account security'};
@@ -36,9 +36,9 @@ export function hasUnsavedWorkspaceChanges(view,config,savedConfig) {
 
 // Aliases open existing settings panels; authorization and saved data stay unchanged.
 /** @type {Record<string,{view:string,area:string}>} */
-export const workspaceDestinations={Sessions:{view:'Calendar',area:'sessions'},Team:{view:'Settings',area:'team'},Payments:{view:'Checkout',area:'payments'}};
+export const workspaceDestinations={Sessions:{view:'Settings',area:'sessions'},Team:{view:'Settings',area:'team'},Payments:{view:'Settings',area:'payments'}};
 export function activeWorkspaceSection(view,area){
  return view==='Settings'?(area==='sessions'?'Sessions':area==='team'||area==='team-access'?'Team':area==='payments'?'Payments':'Settings'):view;
 }
 /** @type {Record<string,string>} */
-const workspaceSearchTerms={Overview:'inicio painel resumen',Calendar:'agenda calendario reservas agendamentos bookings',Sessions:'sesiones sessoes horarios',Clients:'clientes customers',Team:'equipo equipe funcionarios empleados',Memberships:'membresias assinaturas pacotes paquetes',Checkout:'pagos pagamentos ventas vendas',Reports:'informes relatorios receitas ingresos',Payments:'pagos pagamentos Stripe Helcim',Settings:'ajustes configuracoes configuracion',Branding:'marca site sitio',History:'historial historico',Security:'seguridad seguranca senha contrasena',Guide:'guia ayuda ajuda',Receptionist:'asistente assistente'};
+const workspaceSearchTerms={Overview:'inicio painel resumen',Calendar:'agenda calendario reservas agendamentos bookings',Sessions:'sesiones sessoes horarios',Clients:'clientes customers',Team:'equipo equipe funcionarios empleados fees percentages commissions',Memberships:'membresias assinaturas pacotes paquetes',Checkout:'pagos pagamentos ventas vendas',Reports:'informes relatorios receitas ingresos',Payments:'pagos pagamentos Stripe Helcim',Settings:'ajustes configuracoes configuracion',Branding:'marca site sitio',History:'historial historico',Security:'seguridad seguranca senha contrasena',Guide:'guia ayuda ajuda',Receptionist:'asistente assistente'};
