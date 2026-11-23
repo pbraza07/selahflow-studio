@@ -107,6 +107,8 @@ export async function changeAppointmentStatus(client,{owner,appointmentId,status
  const usage=await debitAppointmentMembershipSession(client,{
   owner,memberNumber,appointmentId,status,ledgerId,creditAllowed:appointmentData.membershipCreditAllowed!==false
  });
+ if(appointmentData.membershipRenewalRequired && CREDIT_CONSUMING_STATUSES.has(status) && !usage.deducted && !usage.alreadyDeducted)
+  throw Error('Renew the membership and verify service eligibility before recording this session against membership credits.');
  await client.query('UPDATE appointments SET status=$1 WHERE owner=$2 AND id=$3',[status,owner,appointmentId]);
  if(status==='Cancelled'||status==='No-show')
   await client.query('DELETE FROM slots WHERE owner=$1 AND appointment=$2',[owner,appointmentId]);

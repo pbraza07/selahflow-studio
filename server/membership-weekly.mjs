@@ -21,6 +21,11 @@ export function weeklyMembershipWindow(member,date){
  const start=new Date(+month.start+index*604800000),end=new Date(Math.min(+start+604800000,+month.end));
  return {start:start.toISOString().slice(0,10),end:end.toISOString().slice(0,10),monthStart:month.start.toISOString().slice(0,10),monthEnd:month.end.toISOString().slice(0,10),weeks:Math.ceil(days/7)};
 }
+export function awaitingMembershipRenewal(member,date){
+ return member?.billing_type==='membership' && !!member.weekly_sessions && member.status==='active' && !!member.paid_through &&
+  date>=businessDate(member.paid_through);
+}
+export const renewalBookingMessage='This session falls in a new membership period. Book after renewal to use membership credits. No separate session payment is due now.';
 export function membershipBookingActive(member,date){
  if(member?.billing_type==='package'&&member.paid_through&&date>=businessDate(member.paid_through))return false;
  if(!member?.weekly_sessions)return hasUsableMembership(member);

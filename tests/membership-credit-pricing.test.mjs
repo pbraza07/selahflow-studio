@@ -53,3 +53,12 @@ test('owner quote applies lifetime credits only to covered services and honors o
  assert.equal(ownerBookingQuote({...input,membership:{...member,pastCreditAvailable:false},past:true}).covered,false);
  assert.equal(ownerBookingQuote({...input,membership:{...member,bookingEligibility:{...member.bookingEligibility,sessions_used:10}}}).covered,false);
 });
+
+test('a covered recurring service on the renewal date waits for its new paid period',async()=>{
+ const {awaitingMembershipRenewal}=await import('../server/membership-weekly.mjs');
+ const member={status:'active',billing_type:'membership',weekly_sessions:1,paid_through:'2030-11-27T12:00:00Z'};
+ assert.equal(awaitingMembershipRenewal(member,'2030-11-26'),false);
+ assert.equal(awaitingMembershipRenewal(member,'2030-11-27'),true);
+ assert.equal(awaitingMembershipRenewal({...member,paid_through:'2030-12-27T12:00:00Z'},'2030-11-27'),false);
+ assert.equal(awaitingMembershipRenewal({...member,billing_type:'package'},'2030-11-27'),false);
+});
