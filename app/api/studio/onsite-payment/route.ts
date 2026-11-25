@@ -19,6 +19,11 @@ export async function POST(req:Request){
   if(body.action==='cashMembership'){if(!/^[-a-f0-9]{36}$/i.test(body.membershipId||''))throw Error('Invalid membership.');return Response.json(await confirmCashMembership(pool,{owner,membershipId:body.membershipId,confirmed:body.confirmed,origin:trustedOrigin(req)}),{headers});}
   if(!/^[-a-f0-9]{36}$/i.test(body.bookingId||''))throw Error('Invalid appointment.');
   const b=(await pool.query("SELECT id FROM businesses WHERE owner_id=$1 AND status='active'",[owner])).rows[0];if(!b)throw Error('Business unavailable.');
+  if(body.action==='manualReceipt'){
+   if(body.confirmed!==true||!['Cash','Zelle'].includes(body.paymentMethod))throw Error('Confirm the payment method and amount received.');
+   await recordCashSale(pool,{owner,eventId:randomUUID(),bookingId:body.bookingId,onsiteConfirmed:true,ownerManualReceipt:true,paymentMethod:body.paymentMethod,expectedPrice:body.expectedPrice});
+   return Response.json({paid:true},{headers});
+  }
   if(body.action==='cash'){if(body.confirmed!==true)throw Error('Confirm cash was received before recording payment.');await recordCashSale(pool,{owner,eventId:randomUUID(),bookingId:body.bookingId,onsiteConfirmed:true});return Response.json({paid:true,provider:'cash'},{headers});}
   if(body.action==='checkout')return Response.json(await startOwnerOnsiteCheckout(pool,{owner,bookingId:body.bookingId,origin:trustedOrigin(req)}),{headers});
   if(!['check','cancel'].includes(body.action))throw Error('Choose an onsite payment action.');

@@ -7,7 +7,8 @@ import {bookingConfirmationInstructions} from './booking-confirmation-copy.mjs';
 import {sendNotificationChannel,validEmail,maskDestination} from './notification-delivery.mjs';
 const clean=x=>String(x??'').replace(/[<>\r\n]/g,' ').slice(0,300);
 const obj=x=>typeof x==='string'?JSON.parse(x):x||{};
-export function receiptLinks(origin,slug){const host=new URL(origin);if(host.protocol!=='https:'&&host.hostname!=='localhost')throw Error('A secure application URL is required.');const booking=host.origin+'/book/'+encodeURIComponent(slug);return {booking,status:booking+'#registration-status',membership:host.origin+'/membership/'+encodeURIComponent(slug)};}
+import {receiptLinks,receiptActions} from './receipt-links.mjs';
+export {receiptLinks};
 export async function bookingReceiptSnapshot(db,{owner,bookingId,date,start,duration,staff,data,origin,pending=false}){
  const business=(await db.query("SELECT b.id,b.slug,b.name,s.data AS settings FROM businesses b LEFT JOIN settings s ON s.owner=b.owner_id WHERE b.owner_id=$1 AND b.status='active'",[owner])).rows[0];
  if(!business)throw Error('Business not found.');
@@ -27,7 +28,7 @@ export function bookingReceiptMessage(receipt,{event='submission',paymentLink=''
  const amount=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(r.price);
  const options=r.paymentOptions||{online:true,onsite:true},due=!paid&&!r.membershipCovered&&r.price>0;
  const onsiteLink=paymentLink?paymentLink+'&choice=onsite':'';
- const actions=[...(due&&paymentLink&&options.online?[{label:'Make Payment',url:paymentLink}]:[]),...(due&&onsiteLink&&options.onsite?[{label:'Pay on Site',url:onsiteLink}]:[]),{label:'Check membership & booking status',url:r.links.status},{label:'Explore membership options',url:r.links.membership},{label:'Book another appointment',url:r.links.booking}];
+ const actions=[...(due&&paymentLink&&options.online?[{label:'Make Payment',url:paymentLink}]:[]),...(due&&onsiteLink&&options.onsite?[{label:'Pay on Site',url:onsiteLink}]:[]),...receiptActions(r.links)];
  const membership=r.membership?`\nActive membership: ${r.membership.name}\nSessions left: ${r.membership.sessionsLeft}\nSessions taken / used: ${r.membership.sessionsUsed}\nBalance at the time of this email.\n`:'';
  const answers=(r.answers||[]).length?'\nRegistration answers:\n'+r.answers.map(a=>a.label+': '+a.value).join('\n')+'\n':'';
  const discount=r.coupon?`\nCoupon: ${clean(r.coupon.code)} — ${clean(r.coupon.description)}\nOriginal subtotal: $${(r.coupon.originalCents/100).toFixed(2)}\nDiscount: -$${(r.coupon.discountCents/100).toFixed(2)}\n`:'';

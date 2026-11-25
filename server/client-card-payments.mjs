@@ -10,7 +10,7 @@ export async function attachCardPayments(db,business,clients){
   db.query(`SELECT a.id,a.data::jsonb AS details,p.status AS checkout_status,
    EXISTS(SELECT 1 FROM events e WHERE e.owner=a.owner AND e.kind='cash_sale' AND e.data::jsonb->>'bookingId'=a.id) AS cash_paid
    FROM appointments a LEFT JOIN booking_payments p ON p.booking_id=a.id AND p.business_id=$1 WHERE a.owner=$2`,[business.id,business.owner_id]),
-  db.query(`SELECT EXISTS(SELECT 1 FROM merchant_accounts ma WHERE ma.business_id=m.business_id AND ma.charges_enabled AND ma.onboarding_complete) AS online_ready,m.id,m.status,m.customer_email,m.stripe_subscription_id,m.last_paid_at,m.initial_paid_at,p.name,
+  db.query(`SELECT EXISTS(SELECT 1 FROM merchant_accounts ma WHERE ma.business_id=m.business_id AND ma.charges_enabled AND ma.onboarding_complete) AS online_ready,m.id,m.status,m.customer_email,m.stripe_account_id,p.price_cents,m.stripe_subscription_id,m.last_paid_at,m.initial_paid_at,p.name,
    (SELECT e.snapshot->>'paymentMethod' FROM membership_payment_emails e WHERE e.business_id=m.business_id AND e.membership_id=m.id AND (e.snapshot->>'amountCents')::int>0 ORDER BY e.created_at DESC LIMIT 1) AS method,
    EXISTS(SELECT 1 FROM stripe_payment_receipts r WHERE r.business_id=m.business_id AND r.membership_id=m.id) AS stripe_paid
    FROM customer_memberships m JOIN membership_plans p ON p.id=m.plan_id WHERE m.business_id=$1`,[business.id]),
@@ -31,10 +31,10 @@ export async function attachCardPayments(db,business,clients){
   for(const id of c.enrollmentIds||[]){
    const m=plans.get(id);if(!m)continue;
    if(m.method||m.stripe_paid||m.last_paid_at||m.initial_paid_at)methods.add(methodName(m.method||(m.stripe_paid?'Stripe':'')));
-   if(['pending_payment','past_due','payment_failed'].includes(m.status))due.push({kind:m.stripe_subscription_id?'invoice':m.online_ready?'membership':'offlineMembership',id,label:m.name,email:m.customer_email});
+   if(['pending_payment','past_due','payment_failed'].includes(m.status))due.push({kind:m.stripe_subscription_id?'invoice':m.online_ready?'membership':'offlineMembership',id,label:m.name,email:m.customer_email,price:Number(m.price_cents)/100,manualMethods:!m.stripe_subscription_id&&!m.stripe_account_id?.startsWith('acct_')?['Cash','Zelle']:[]});
   }
   for(const o of products.get(c.memberNumber)||[]){
-   if(o.status==='pending')due.push({kind:'product',id:o.id,label:'Product order · $'+(o.total_cents/100).toFixed(2),email:o.customer_email});
+   if(o.status==='pending')due.push({kind:'product',id:o.id,label:'Product order · $'+(o.total_cents/100).toFixed(2),email:o.customer_email,price:Number(o.total_cents)/100,manualMethods:o.payment_method==='cash'?['Cash']:o.payment_method==='zelle'?['Zelle']:[]});
    else methods.add(methodName(o.payment_method));
   }
   c.cardPayments={due,methods:[...methods]};

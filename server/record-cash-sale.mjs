@@ -4,10 +4,11 @@ import {bookingServicePaymentOptions} from './service-payment-options.mjs';
 import {assertBookingWaiver} from './participation-waivers.mjs';
 const read=v=>typeof v==='string'?JSON.parse(v):v||{};
 /** Record received cash atomically; linking is explicit and never inferred from a client name. */
-export async function recordCashSale(pool,{owner,eventId,bookingId,memberNumber=/** @type {string|null} */ (null),lines=[],taxRate=0,onsiteConfirmed=false,teamAccountId=null}){
+export async function recordCashSale(pool,{owner,eventId,bookingId,memberNumber=/** @type {string|null} */ (null),lines=[],taxRate=0,onsiteConfirmed=false,teamAccountId=null,paymentMethod='Cash',ownerManualReceipt=false,expectedPrice=undefined}){
  const db=await pool.connect();
  try{
   await db.query('BEGIN');
+  if(!['Cash','Zelle'].includes(paymentMethod))throw Error('Choose Cash or Zelle.');
   if(onsiteConfirmed){
    if(teamAccountId){
     const team=(await db.query("SELECT a.*,b.owner_id FROM team_accounts a JOIN businesses b ON b.id=a.business_id WHERE a.id=$1 AND b.owner_id=$2 AND b.status='active' AND a.active=true AND a.must_change_password=false FOR SHARE OF a",[teamAccountId,owner])).rows[0];
@@ -16,11 +17,15 @@ export async function recordCashSale(pool,{owner,eventId,bookingId,memberNumber=
    }
    const saved=(await db.query("SELECT a.data,b.id AS business_id,s.data AS config FROM appointments a JOIN businesses b ON b.owner_id=a.owner AND b.status='active' JOIN settings s ON s.owner=a.owner WHERE a.id=$1 AND a.owner=$2 FOR UPDATE OF a",[bookingId,owner])).rows[0];
    if(!saved)throw Error('Appointment unavailable.');const d=read(saved.data),config=read(saved.config);
-   if(!bookingServicePaymentOptions(config,d).onsite)throw Error('Pay on Site is not enabled for this service.');
+   if(!(ownerManualReceipt&&!teamAccountId)&&!bookingServicePaymentOptions(config,d).onsite)throw Error('Pay on Site is not enabled for this service.');
    if(d.bookingRequestId){const review=(await db.query('SELECT status,appointment_id FROM booking_requests WHERE id=$1 AND business_id=$2',[d.bookingRequestId,saved.business_id])).rows[0];if(review?.status!=='accepted'||review.appointment_id!==bookingId)throw Error('Approve this booking before recording cash.');}
    await assertBookingWaiver(db,{owner,config,serviceIds:d.serviceIds||[],memberNumber:d.memberNumber});
    const ids=d.serviceIds||[],names=d.services||[];
    lines=Array.isArray(d.paymentLines)&&d.paymentLines.length?d.paymentLines:ids.length===1||names.length===1?[{id:ids[0]||'',name:names[0]||'Appointment',price:Number(d.price),qty:1,type:'service'}]:null;
+   if(ownerManualReceipt){
+    if(typeof expectedPrice!=='number'||expectedPrice!==Number(d.price))throw Error('The booking amount changed. Refresh the client card.');
+    if(lines?.length===1&&lines[0].qty===1)lines=[{...lines[0],price:Number(d.price)}];
+   }
    if(!lines)throw Error('This appointment needs itemized payment lines. Record its exact services from Sales.');
    taxRate=0;
   }
@@ -64,11 +69,11 @@ export async function recordCashSale(pool,{owner,eventId,bookingId,memberNumber=
    booking.data=data;
    await accrueCashCommission(db,{businessId:booking.business_id,kind:'booking',memberNumber:data.memberNumber,sourceId:booking.id,grossCents:expected});
   }
-  const data={lines,total:total/100,tax:total/100*taxRate/100,payment:'Cash recorded manually',confirmedBy:teamAccountId||owner,confirmedRole:teamAccountId?'team':'owner',...(booking?{bookingId:booking.id,client:booking.data.name||''}:cashClient?{memberNumber:cashClient.member_number,client:cashClient.name}:{})};
+  const data={lines,total:total/100,tax:total/100*taxRate/100,payment:paymentMethod+' recorded manually',confirmedBy:teamAccountId||owner,confirmedRole:teamAccountId?'team':'owner',...(booking?{bookingId:booking.id,client:booking.data.name||''}:cashClient?{memberNumber:cashClient.member_number,client:cashClient.name}:{})};
   const saved=await db.query("INSERT INTO events(id,owner,created,kind,data) VALUES($1,$2,$3,'cash_sale',$4) ON CONFLICT DO NOTHING RETURNING id",[eventId,owner,new Date().toISOString(),JSON.stringify(data)]);
   if(!saved.rows.length)throw Error('This sale reference was already recorded. Refresh before recording another sale.');
   if(booking){
-   await db.query('UPDATE appointments SET data=$1 WHERE id=$2 AND owner=$3',[JSON.stringify({...booking.data,paymentStatus:'paid',paymentProvider:'cash',paymentReference:eventId}),booking.id,owner]);
+   await db.query('UPDATE appointments SET data=$1 WHERE id=$2 AND owner=$3',[JSON.stringify({...booking.data,paymentStatus:'paid',paymentProvider:paymentMethod.toLowerCase(),paymentTracking:'completed',paymentReference:eventId}),booking.id,owner]);
    await db.query("UPDATE booking_client_messages SET status='superseded',detail='Payment recorded by owner',updated_at=now() WHERE booking_id=$1 AND event_type='payment_link' AND status IN ('queued','failed','not_configured')",[booking.id]);
   }
   await db.query('COMMIT');return {ok:true,bookingSettled:!!booking};

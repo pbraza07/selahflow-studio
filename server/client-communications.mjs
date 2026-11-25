@@ -1,3 +1,4 @@
+import {receiptLinks,receiptActions} from './receipt-links.mjs';
 import {randomUUID,randomBytes,createHash} from 'node:crypto';
 import {buildClientDirectory,pendingBookingAsAppointment} from './client-history.mjs';
 import {applyClientProfiles} from './client-profile-logic.mjs';
@@ -49,13 +50,22 @@ export function validateCommunication(input){
  if(!body||body.length>10000||/\u0000/.test(body))throw Error('Enter a message up to 10,000 characters.');
  if(actionLabel.length>60||actionUrl.length>2000||!!actionLabel!==!!actionUrl)throw Error('Enter both a button label and secure URL, or leave both blank.');
  if(actionUrl){try{const u=new URL(actionUrl);if(u.protocol!=='https:'||u.username||u.password)throw Error();}catch{throw Error('Use an HTTPS URL for the email button.');}}
- return {subject,body,actionLabel,actionUrl};
+ const attachments=input.attachments??[];
+ if(!Array.isArray(attachments)||attachments.length>5)throw Error('Choose up to five attachments.');
+ let bytes=0;
+ for(const file of attachments){
+  if(!file||typeof file.filename!=='string'||!/^([a-zA-Z0-9 _().-]{1,110})\.(pdf|png|jpe?g|txt|csv|docx|xlsx)$/i.test(file.filename)||typeof file.content!=='string'||!file.content.length||Buffer.from(file.content,'base64').toString('base64')!==file.content)throw Error('Choose a supported attachment with a valid filename.');
+  bytes+=Buffer.byteLength(file.content,'base64');
+ }
+ if(bytes>5*1024*1024)throw Error('Choose attachments totaling 5 MB or less.');
+ return {subject,body,actionLabel,actionUrl,attachments:attachments.map(({filename,content})=>({filename,content}))};
 }
 const digestBrand=brand=>tokenHash(JSON.stringify({...brand,logo:brand.logo?.toString('base64')||null}));
 export function communicationMessage(campaign,recipient,business){
  const personalize=s=>String(s).replace(/\{\{client_name\}\}/g,()=>recipient.names).replace(/\{\{business_name\}\}/g,()=>business.name);
- return {subject:personalize(campaign.subject).replace(/[\r\n\u0000-\u001f]/g,' ').slice(0,180),text:personalize(campaign.body)+'\n\n'+business.name+'\n'+String(obj(business.data).address||'')+'\nYou received this message as a client of '+business.name+'.\nUnsubscribe from business communications: '+recipient.unsubscribe_url,
-  actions:[...(campaign.action_url?[{label:campaign.action_label,url:campaign.action_url}]:[]),{label:'Unsubscribe from communications',url:recipient.unsubscribe_url}]};
+ const links=receiptActions(receiptLinks(recipient.unsubscribe_url,business.slug));
+ return {attachments:campaign.attachments||[],subject:personalize(campaign.subject).replace(/[\r\n\u0000-\u001f]/g,' ').slice(0,180),text:personalize(campaign.body)+'\n\n'+business.name+'\n'+String(obj(business.data).address||'')+'\nYou received this message as a client of '+business.name+'.\nUnsubscribe from business communications: '+recipient.unsubscribe_url,
+  actions:[...links,...(campaign.action_url?[{label:campaign.action_label,url:campaign.action_url}]:[]),{label:'Unsubscribe from communications',url:recipient.unsubscribe_url}]};
 }
 function previewDelivery(recipients,env=process.env){
  return {deliveryWarning:isStaging(env)&&env.STAGING_NOTIFICATIONS_ENABLED!=='true'?'Staging email delivery is disabled. Ask the platform administrator to enable email delivery.':''};
@@ -71,7 +81,7 @@ export async function reviewCommunication(pool,{owner,campaignId,env=process.env
   const current=(await communicationContacts(db,business)).contacts,brand=await loadBusinessEmailBrand(db,{businessId:business.id});
   const changed=recipients.some(r=>r.status!=='draft'||!current.some(x=>x.id===r.contact_id&&!x.unsubscribed&&x.email===r.email&&x.names.join(', ')===r.names&&JSON.stringify([...x.sourceIds].sort())===JSON.stringify([...obj(r.source_ids)].sort())));
   const refreshReason=!recipients.length||changed?'Contacts changed. Review your current recipients and create a fresh preview.':Date.now()-new Date(c.created_at).getTime()>24*3600000?'Preview expired. Create a fresh preview before sending.':digestBrand(brand)!==c.brand_digest?'Business branding changed. Create a fresh preview before sending.':'';
-  const result={id:c.id,subject:c.subject,body:c.body,actionLabel:c.action_label,actionUrl:c.action_url,contactIds:recipients.map(r=>r.contact_id),recipientCount:recipients.length,recipients:recipients.map(r=>({email:r.email,names:[r.names]})),refreshReason,...previewDelivery(recipients,env),html:recipients.length?brandedEmailHtml({...communicationMessage(c,recipients[0],business),emailBrand:brand,reviewUrl:brand.googleReviewUrl},{logoSrc:brand.logo?'data:image/png;base64,'+brand.logo.toString('base64'):undefined}):''};
+  const result={id:c.id,attachments:c.attachments,subject:c.subject,body:c.body,actionLabel:c.action_label,actionUrl:c.action_url,contactIds:recipients.map(r=>r.contact_id),recipientCount:recipients.length,recipients:recipients.map(r=>({email:r.email,names:[r.names]})),refreshReason,...previewDelivery(recipients,env),html:recipients.length?brandedEmailHtml({...communicationMessage(c,recipients[0],business),emailBrand:brand,reviewUrl:brand.googleReviewUrl},{logoSrc:brand.logo?'data:image/png;base64,'+brand.logo.toString('base64'):undefined}):''};
   await db.query('COMMIT');return result;
  }catch(e){await db.query('ROLLBACK');throw e;}finally{db.release();}
 }
@@ -83,8 +93,8 @@ export async function previewCommunication(pool,{owner,input,origin,env=process.
   await db.query('BEGIN');const business=await communicationBusiness(db,owner),directory=await communicationContacts(db,business);
   const recipients=ids.map(id=>directory.contacts.find(c=>c.id===id&&!c.unsubscribed));if(recipients.some(c=>!c))throw Error('Selected contacts changed or unsubscribed. Sync contacts and try again.');
   const brand=await loadBusinessEmailBrand(db,{businessId:business.id}),id=randomUUID();
-  await db.query('INSERT INTO business_email_campaigns(id,business_id,subject,body,action_label,action_url,brand_digest) VALUES($1,$2,$3,$4,$5,$6,$7)',[id,business.id,content.subject,content.body,content.actionLabel,content.actionUrl,digestBrand(brand)]);
-  const campaign={subject:content.subject,body:content.body,action_label:content.actionLabel,action_url:content.actionUrl};let example=null;
+  await db.query('INSERT INTO business_email_campaigns(id,business_id,subject,body,action_label,action_url,brand_digest,attachments) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb)',[id,business.id,content.subject,content.body,content.actionLabel,content.actionUrl,digestBrand(brand),JSON.stringify(content.attachments)]);
+  const campaign={attachments:content.attachments,subject:content.subject,body:content.body,action_label:content.actionLabel,action_url:content.actionUrl};let example=null;
   for(const r of recipients){
    const token=randomBytes(32).toString('base64url'),recipient={...r,names:r.names.join(', '),unsubscribe_url:host.origin+'/communications/unsubscribe/'+token};
    await db.query('INSERT INTO business_communication_recipients(id,campaign_id,business_id,contact_id,email,names,source_ids,unsubscribe_hash,unsubscribe_url) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9)',[randomUUID(),id,business.id,r.id,r.email,recipient.names,JSON.stringify(r.sourceIds),tokenHash(token),recipient.unsubscribe_url]);
@@ -136,7 +146,7 @@ export async function processCommunicationEmails(pool,{send=sendNotificationChan
  for(let i=0;i<limit;i++){
   const r=(await pool.query("UPDATE business_communication_recipients SET status='processing',updated_at=now() WHERE id=(SELECT r.id FROM business_communication_recipients r JOIN business_email_campaigns c ON c.id=r.campaign_id AND c.business_id=r.business_id WHERE c.status='queued' AND r.status IN ('queued','failed','not_configured') AND r.attempts<3 AND r.next_attempt_at<=now() ORDER BY r.next_attempt_at,r.id FOR UPDATE OF r SKIP LOCKED LIMIT 1) RETURNING *")).rows[0];if(!r)break;
   try{
-   const business=(await pool.query("SELECT b.id,b.owner_id,b.name,s.data FROM businesses b LEFT JOIN settings s ON s.owner=b.owner_id WHERE b.id=$1 AND b.status='active'",[r.business_id])).rows[0];
+   const business=(await pool.query("SELECT b.id,b.owner_id,b.name,b.slug,s.data FROM businesses b LEFT JOIN settings s ON s.owner=b.owner_id WHERE b.id=$1 AND b.status='active'",[r.business_id])).rows[0];
    const c=(await pool.query('SELECT * FROM business_email_campaigns WHERE id=$1 AND business_id=$2',[r.campaign_id,r.business_id])).rows[0];
    const contact=business&&(await communicationContacts(pool,business)).contacts.find(x=>x.id===r.contact_id&&!x.unsubscribed&&x.email===r.email&&x.names.join(', ')===r.names&&JSON.stringify([...x.sourceIds].sort())===JSON.stringify([...obj(r.source_ids)].sort()));
    let result={status:'skipped',detail:'Client removed, edited, archived, unsubscribed or campaign cancelled'};

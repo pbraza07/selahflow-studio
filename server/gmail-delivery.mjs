@@ -69,6 +69,15 @@ export function gmailMime(sender,destination,message){
  const related='sf-related-'+randomUUID(),alternative='sf-alternative-'+randomUUID();
  const inline=emailInlineLogo(message);
  const mime=[`From: SelahFlow <${sender}>`,`To: <${destination}>`,`Subject: ${subjectWords}`,'MIME-Version: 1.0',`Content-Type: multipart/related; boundary="${related}"`,'',`--${related}`,`Content-Type: multipart/alternative; boundary="${alternative}"`,'',`--${alternative}`,'Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',encode(brandedEmailText(message)),`--${alternative}`,'Content-Type: text/html; charset=UTF-8','Content-Transfer-Encoding: base64','',encode(brandedEmailHtml(message)),`--${alternative}--`,...(inline?[`--${related}`,`Content-Type: image/png; name="${inline.filename}"`,'Content-Transfer-Encoding: base64',`Content-ID: <${inline.cid}>`,`Content-Disposition: inline; filename="${inline.filename}"`,'',encode(inline.bytes)]:[]),`--${related}--`,''].join('\r\n');
+ if(message.attachments?.length){
+  const mixed='sf-mixed-'+randomUUID(), start=mime.indexOf('Content-Type: multipart/related');
+  const parts=[mime.slice(0,start)+'Content-Type: multipart/mixed; boundary="'+mixed+'"','','--'+mixed,mime.slice(start)];
+  for(const file of message.attachments){
+   parts.push('--'+mixed,'Content-Type: application/octet-stream','Content-Disposition: attachment; filename="'+file.filename+'"','Content-Transfer-Encoding: base64','',encode(Buffer.from(file.content,'base64')));
+  }
+  parts.push('--'+mixed+'--','');
+  return Buffer.from(parts.join('\r\n')).toString('base64url');
+ }
  return Buffer.from(mime).toString('base64url');
 }
 /** Serialize refresh, reconnect and disconnect across workers and instances.

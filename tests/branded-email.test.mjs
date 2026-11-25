@@ -31,3 +31,18 @@ test('Gmail contains original plain text, escaped HTML and a matching inline PNG
  assert.equal(resend.attachments[0].content_id,'selahflow-logo');
  assert.deepEqual(Buffer.from(resend.attachments[0].content,'base64'),emailLogo());
 });
+
+test('communication attachments remain downloadable alongside the inline logo in both transports',async()=>{
+ const {validateCommunication,communicationMessage}=await import('../server/client-communications.mjs');
+ const file={filename:'schedule.pdf',content:Buffer.from('%PDF sample').toString('base64')};
+ const campaign=validateCommunication({subject:'Schedule',body:'Attached schedule',attachments:[file]});
+ const rendered=communicationMessage(campaign,{names:'Test',unsubscribe_url:'https://example.test/communications/unsubscribe/token'},{slug:'studio',name:'Studio'});
+ assert.equal(rendered.actions.length,4);
+ assert.equal(rendered.actions[0].url,'https://example.test/book/studio?view=status#registration-status');
+ assert.deepEqual(resendBrand(rendered).attachments[1],file);
+ const mime=Buffer.from(gmailMime('sender@example.test','client@example.test',rendered),'base64url').toString();
+ assert.match(mime,/multipart\/mixed/);
+ assert.ok(mime.includes('attachment; filename="schedule.pdf"'));
+ assert.ok(mime.includes(file.content));
+ assert.throws(()=>validateCommunication({...campaign,attachments:[{...file,filename:'bad\r\nname.pdf'}]}),/attachment/);
+});
