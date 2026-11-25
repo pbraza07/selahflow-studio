@@ -4,6 +4,7 @@ import {useEffect,useRef,useState} from 'react';
 import {CalendarDays,CheckCircle2,CreditCard,Download,X} from 'lucide-react';
 import SortableTable from './sortable-table';
 import OwnerTermTracker from './owner-term-tracker';
+import RevenueTrend from './revenue-trend';
 import FinancialPipeline from './financial-pipeline';
 import ReportPeriodSelector,{type ReportDates} from './report-period-selector';
 import {appointmentActivity} from '../../server/report-activity.mjs';
@@ -25,7 +26,7 @@ export default function OwnerReports({appointments,allAppointments,projected,upc
  const paymentView=open==='paid'||open==='memberships',rows=open==='appointments'?appointments:open==='booked'?booked:open==='checkedIn'?checkedIn:open==='paidAppointments'?paidAppointments:open==='completed'?completed:open==='cancelled'?cancelled:open==='noShows'?noShows:open==='projected'?projected:open==='upcoming'?upcoming:open==='memberships'?memberships:paid;
  function exportPaid(source=paid){downloadExcel('Paid revenue',source,['Created','Client','Member Number','Kind','Total']);}
  async function reset(){setBusy(true);setError('');try{const response=await fetch('/api/studio/reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'resetPaidRevenue',businessName:resetName,confirmPhrase:phrase})}),data=await response.json();if(!response.ok)throw Error(data.error||'Revenue could not be reset.');await onReset();setOpen(null);setNotice(`${data.cleared} paid revenue entries removed from Reports. New payments will appear here.`);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
- return <><OwnerTermTracker services={config.services} compact/><div className="toolbar"><ReportPeriodSelector range={range} onRange={onRange} date={selectedDate} custom={customDates} onCustom={onCustomDates}/><div className="button-row" style={{flexWrap:'wrap'}}><button type="button" className="outline" onClick={onExport}><Download size={16}/> Export appointments</button><button type="button" className="outline" onClick={()=>exportPaid()}>Export paid revenue</button><button type="button" className="outline" disabled={busy} onClick={()=>{setResetName('');setPhrase('');setUnderstood(false);setError('');setOpen('reset');}}>Delete paid revenue history</button></div></div>
+ return <><RevenueTrend payments={allPaid} through={selectedDate}/><OwnerTermTracker services={config.services} compact/><div className="toolbar"><ReportPeriodSelector range={range} onRange={onRange} date={selectedDate} custom={customDates} onCustom={onCustomDates}/><div className="button-row" style={{flexWrap:'wrap'}}><button type="button" className="outline" onClick={onExport}><Download size={16}/> Export appointments</button><button type="button" className="outline" onClick={()=>exportPaid()}>Export paid revenue</button><button type="button" className="outline" disabled={busy} onClick={()=>{setResetName('');setPhrase('');setUnderstood(false);setError('');setOpen('reset');}}>Delete paid revenue history</button></div></div>
  <FinancialPipeline allAppointments={allAppointments} allPaid={allPaid} range={range} date={selectedDate} customDates={customDates}/>
  {notice&&<p role="status" className={styles.notice}>{notice}</p>}
  <section className={'panel '+styles.summary} aria-labelledby="sf-revenue-summary-title">
