@@ -1,0 +1,19 @@
+.card{background:linear-gradient(125deg,#102c35,#10282c 58%,#133c40);color:#ecfff9;border:1px solid #34595c;border-radius:20px;padding:clamp(16px,3vw,32px);margin:0 0 24px;min-width:0;font-variant-numeric:tabular-nums}
+.card header,.readout,.switcher,.card footer{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.card header{justify-content:space-between;align-items:flex-start}
+.card h2{color:#d6efe9;font-size:1rem;margin:0 0 6px}
+.card header strong{color:white;font-size:clamp(1.8rem,4vw,2.8rem);line-height:1.2;overflow-wrap:anywhere}
+.card header p,.card footer,.axis{font-size:.8rem;color:#c2dcd7}
+.card header p{margin:6px 0}
+.switcher{gap:2px;border:1px solid #577377;border-radius:12px;padding:3px}
+.switcher button{border:0;border-radius:8px;padding:8px 12px;background:transparent;color:white;cursor:pointer;font:inherit;font-size:.85rem}
+.switcher button[aria-pressed=true]{background:#9ff5dd;color:#103730;font-weight:700}
+.readout{font-size:.9rem;margin:20px 0 8px;color:#d1e9e3}
+.readout b{color:white}
+.chart{display:grid;grid-template-columns:minmax(3em,auto) 1fr;gap:8px}
+.axis{display:flex;flex-direction:column;justify-content:space-between;text-align:right;padding:8px 0}
+.plot{height:clamp(125px,17vw,190px);position:relative;min-width:0}
+.plot svg,.plot input{width:100%;height:100%;display:block}
+.plot input{position:absolute;inset:0;opacity:0;cursor:crosshair;margin:0}
+.plot:focus-within,.switcher button:focus-visible{outline:2px solid #ffe497;outline-offset:3px}
+.card footer{justify-content:space-between;padding-left:3.8em;margin-top:5px}

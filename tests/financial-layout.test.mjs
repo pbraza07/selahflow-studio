@@ -42,6 +42,14 @@ test('financial summary tables retain exact amounts, stage filters and paid/acti
  try{
   const Reports=componentLoader()(rootPath+'app/components/owner-reports.tsx').default;
   await act(async()=>root.render(React.createElement(Reports,props)));
+  const trend=document.querySelector('section[aria-label="Paid revenue trend"]');
+  for(const interval of ['Daily','Weekly','Monthly']){
+   const toggle=[...trend.querySelectorAll('button')].find(b=>b.textContent===interval);
+   await click(toggle);
+   assert.equal(toggle.getAttribute('aria-pressed'),'true');
+   assert.equal(trend.querySelector('header strong').textContent,'$320.00');
+   assert.match(trend.querySelector('input').getAttribute('aria-valuetext'),/320.00/);
+  }
   assert.equal(table('Payment stages').querySelectorAll('tbody tr').length,4);
   assert.equal(table('Revenue summary').querySelectorAll('tbody tr').length,4);
   const revenueRows=[...table('Revenue summary').querySelectorAll('tbody tr')];
